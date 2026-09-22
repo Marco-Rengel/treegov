@@ -1,0 +1,60 @@
+# =============================================================================
+# REGLAS DE GOBERNANZA Y DIRECTRICES PARA AGENTES IA — TREEGOV
+# Proyecto: TreeGov — Risk Segmentation Workbench
+# =============================================================================
+
+## OBLIGATORIO al iniciar o reanudar una sesión
+
+1. Leer README.md completo.
+2. Leer docs/methodology.md, docs/audit_log.md y docs/filosofia.md.
+3. Leer este archivo (.treegovrules) completo.
+
+## Reglas de caja blanca (RESTRICCIÓN DURA)
+
+1. PROHIBIDO usar: sklearn, scikit-learn, statsmodels, xgboost, lightgbm, catboost.
+2. Solo se permite: numpy, pandas, scipy.stats.
+3. Cada fórmula estadística debe estar escrita explícitamente en el código, con su cita bibliográfica en el docstring.
+
+## Arquitectura de sala limpia
+
+1. backend_v3/ NO importa PySide6 ni nada de frontend_v3/.
+2. frontend_v3/ NO implementa lógica analítica.
+3. SplitConfig es el contrato común entre motores. Su inmutabilidad (frozen dataclass) es sagrada.
+
+## Gobernanza MRM / IFRS 9
+
+1. Cualquier cálculo de PD debe incluir el estimador de Jeffreys y el PD Floor.
+2. Toda decisión de modelo debe ser auditable: log DEBUG transaccional por corrida.
+3. Los tests deben incluir valores de referencia verificados a mano (no solo autoreferencias).
+
+## Zonas protegidas (NUNCA tocar sin autorización explícita)
+
+- .venv/
+- data/
+- archive/
+- logs/ (solo escritura vía log_config.py)
+
+## Documentación obligatoria
+
+1. Toda decisión arquitectónica se registra en docs/audit_log.md.
+2. Toda corrección de bug se registra con su traza numérica.
+3. Los documentos obsoletos se mueven a archive/legacy_docs/ con cabecera histórica, nunca se borran.
+
+## Idioma
+
+- Código: inglés.
+- Documentación: español.
+- Nombres de archivos y módulos: inglés.
+
+## Anti-leakage
+
+Cualquier imputación (media/moda) se calcula EXCLUSIVAMENTE sobre el fold de entrenamiento. TrainOnlyImputer es el único canal autorizado.
+
+## Prohibiciones en documentación pública
+
+- No mencionar marcas registradas de terceros ni nombres del proyecto antecesor.
+- Sí mencionar: citas académicas (Kass, Breiman, etc.), estándares regulatorios (Basilea, IFRS 9, SR 11-7).
+
+## Verificación
+
+Antes de modificar código existente: leer README.md, docs/methodology.md y este archivo.

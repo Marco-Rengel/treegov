@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/*.log
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Datos confidenciales (nunca subir)
+data/*
+!data/.gitkeep
+
+# Archivo histórico
+archive/legacy_docs/*.pyc
+
+# Frontend legacy (Antigravity, no forma parte de TreeGov)
+archive/legacy_ui_sprint3/

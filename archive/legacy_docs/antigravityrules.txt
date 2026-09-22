@@ -1,0 +1,60 @@
+# [DOCUMENTO HISTÓRICO — era pre-TreeGov]
+# Este documento fue parte del proyecto DecisionTree_Modeler (fases previas
+# a la reconstrucción de TreeGov, septiembre 2026). Se conserva como
+# evidencia de auditoría. No forma parte de la documentación vigente.
+# Para la documentación actual, ver docs/methodology.md y docs/audit_log.md.
+
+# =============================================================================
+# REGLAS DE GOBERNANZA Y DIRECTRICES DE AUTONOMÍA — ANTIGRAVITY AGENT
+# Proyecto: Decision Tree Modeler - Risk Segmentation Workbench
+# =============================================================================
+
+[AUTONOMY_POLICY]
+# 1. Permiso Perpetuo (Auto-Execute — Ejecución Autónoma sin Bloqueo):
+# El agente tiene autorización explícita para ejecutar de forma autónoma:
+# - Comandos de lectura, inspección de archivos y análisis estático.
+# - Exploración de directorios, git status, git log, git diff (solo lectura).
+# - Ejecución de pruebas automatizadas no destructivas (pytest, smoke tests en /scratch).
+
+# 2. Interrupción Obligatoria (Require Confirmation — Pausa para Confirmación Humana):
+# El agente DEBE solicitar confirmación explícita del usuario antes de:
+# - Comandos de mutación git: git commit, git push, git rebase, git reset hard.
+# - Eliminación o sobreescritura masiva de archivos fuente fuera de refactorizaciones aprobadas.
+# - Modificaciones a bases de datos o borrado de artefactos de validación.
+# - Ejecución interactiva de scripts principales de producción (e.g. main.py con GUI) sin entorno headless.
+
+[INITIALIZATION_PROTOCOL]
+# Obligación Estricta de Ingesta Contextual:
+# Al reanudar o inicializar una sesión de trabajo sobre este repositorio,
+# cualquier agente IA DEBE ingerir y comprender rigurosamente:
+# 1. `README.md` (Visión del workbench, arquitectura general, pipeline analítico).
+# 2. El directorio `/docs` en su totalidad:
+#    - `docs/technical_reference_manual.md` (Manual de referencia técnica, arquitectura frontend_v2, gestión de ventanas y MRM).
+#    - `docs/model_methodology_mrm.md` (Metodología analítica, CHAID/CRT, MRM, IFRS 9).
+#    - `docs/ui_architecture_changelog.md` (Evolución arquitectónica y estándares de UX/UI).
+#    - `docs/model_risk_assessment.md` (Políticas de mitigación de riesgo de modelos).
+# Queda terminantemente prohibido proponer o implementar cambios estructurales
+# o arquitectónicos sin contrastar previamente con la documentación técnica oficial.
+
+[UI_UX_STANDARDS]
+# Directrices de Diseño y Experiencia de Usuario en PySide6:
+# 1. Prohibición del Anti-Patrón BI:
+#    - NO transformar la aplicación en un dashboard o grilla densa de tablas editables interactuando entre sí.
+#    - Preservar la estética institucional, sobria y de alta fidelidad estadística (estilo Stata / SPSS / SAS).
+# 2. Paradigma de Lienzo Central (Workspace-Centric):
+#    - El área de trabajo central (`centralWidget`) es un QSplitter permanente con el Lienzo del Árbol (70%)
+#      y el panel de Cortes Candidatos Asistidos (30%).
+#    - NO reintroducir QTabWidget como contenedor de nivel superior en la ventana principal.
+# 3. Output Viewer Estadístico Desacoplado:
+#    - Los reportes analíticos (Resumen del Modelo, Tabla de Ganancias, Matriz de Clasificación,
+#      Panel de Validación OOS/OOT, Monitor de Estabilidad PSI/CSI, Bitácora de Intervenciones)
+#      deben implementarse dentro de `ReportWindow` flotantes/acoplables.
+#    - El renderizado de métricas y tablas debe emplear `QTextBrowser` con marcado HTML/CSS minimalista,
+#      garantizando copia limpia en formato TSV y exportación directa a CSV.
+# 4. HUD Lateral Compacto:
+#    - El panel lateral acoplable (`PropertiesPanel`) debe mantenerse como un visor compacto (HUD)
+#      restringido exclusivamente a métricas clave del nodo activo y botones de acción, envuelto
+#      en un `QScrollArea` elástico con `widgetResizable=True` y sin bordes.
+# 5. Modularidad Regulatoria:
+#    - La gobernanza MRM / IFRS 9 (Bitácora, Corte Asimétrico, Alertas de Auditoría) debe estar gobernada
+#      por el conmutador global ("Habilitar Modo MRM / IFRS 9").

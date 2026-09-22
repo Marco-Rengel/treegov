@@ -1,0 +1,252 @@
+"""Tests de backend_v3/session_state.py (Fase 1). Dual: pytest o python directo.
+
+Fixture: CSV sintetico en tempfile (fuera del repo; ninguna escritura en
+data/). y = 1_{edad >= 40} con 120 filas: la particion por defecto es
+determinista y los cortes del arbol quedan asegurados por CRT.
+"""
+
+import logging
+import math
+import sys
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from backend_v3.crt_engine import CrtEngine  # noqa: E402
+from backend_v3.session_state import FlowState, Session, SessionState  # noqa: E402
+from backend_v3.types import PredictorType  # noqa: E402
+
+
+def _quiet_logger(name="treegov.session.tests"):
+    lg = logging.getLogger(name)
+    if not lg.handlers:
+        lg.addHandler(logging.NullHandler())
+    lg.propagate = False
+    return lg
+
+
+def _assert_raises(exc_type, fn, *args, **kwargs):
+    try:
+        fn(*args, **kwargs)
+    except exc_type:
+        return
+    except Exception as e:
+        raise AssertionError(
+            f"{fn.__name__} lanzo {type(e).__name__} en vez de {exc_type.__name__}: {e}"
+        ) from e
+    raise AssertionError(f"{fn.__name__} no lanzo {exc_type.__name__}")
+
+
+def _csv(tmp: Path) -> Path:
+    n = 120
+    edad = np.tile(np.arange(20, 60), 3)  # 40 valores distintos x 3
+    seg = np.tile(["a", "b", "c"], 40)
+    y = (edad >= 40).astype(int)
+    df = pd.DataFrame({"edad": edad, "seg": seg, "default": y})
+    p = tmp / "mini.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+# ---------------------------------------------------------------------------
+# estado cero y transiciones
+# ---------------------------------------------------------------------------
+
+
+def test_estado_cero_formal():
+    s = Session(logger=_quiet_logger())
+    st = s.state
+    assert st.state is FlowState.EMPTY
+    assert st.csv_path is None and st.tree is None and st.spec is None
+    assert st.train_idx is None and st.test_idx is None
+    assert st.event_log == ("init/state=EMPTY",)
+
+
+def test_transiciones_ilegales():
+    s = Session(logger=_quiet_logger())
+    _assert_raises(ValueError, s.fix_spec, "default")
+    _assert_raises(ValueError, s.partition)
+    _assert_raises(ValueError, s.train, CrtEngine())
+
+
+def test_flujo_completo_y_bitacora():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+
+        st1 = s.load_dataset(str(csv_path))
+        assert st1.state is FlowState.DATA_LOADED
+        assert st1.n_rows == 120 and st1.n_cols == 3
+
+        st2 = s.fix_spec("default")
+        assert st2.state is FlowState.SPEC_FIXED
+        assert st2.spec is not None
+        spec_d = dict(st2.spec)
+        assert spec_d["edad"] == PredictorType.CONTINUOUS
+        assert spec_d["seg"] == PredictorType.NOMINAL
+        assert isinstance(st2.spec, tuple)  # inmutable (OBS 4)
+
+        st3 = s.partition(train_frac=0.7, seed=42)
+        assert st3.state is FlowState.PARTITIONED
+        assert st3.train_idx is not None and st3.test_idx is not None
+        assert len(st3.train_idx) == 84 and len(st3.test_idx) == 36
+
+        st4 = s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert st4.state is FlowState.TRAINED
+        assert st4.tree is not None
+        assert st4.tree.method == "CRT"
+        assert st4.tree.nodes[0].split is not None
+
+        # bitacora: init + 4 transiciones, en orden
+        assert len(st4.event_log) == 5
+        assert st4.event_log[0] == "init/state=EMPTY"
+        assert st4.event_log[1].startswith("load_dataset:")
+        assert st4.event_log[2].startswith("fix_spec:default")
+        assert st4.event_log[3].startswith("partition:")
+        assert st4.event_log[4].startswith("train:CRT")
+
+
+def test_atomicidad_fallo_no_corrompe_estado():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        # target invalido -> ValueError; el estado debe quedar DATA_LOADED
+        _assert_raises(ValueError, s.fix_spec, "no_existe")
+        assert s.state.state is FlowState.DATA_LOADED
+        # reintento valido tiene que funcionar
+        s.fix_spec("default")
+        assert s.state.state is FlowState.SPEC_FIXED
+
+
+def test_guards_target():
+    with tempfile.TemporaryDirectory() as td:
+        # target con 3 clases
+        df = pd.DataFrame({"edad": [25, 35, 45], "y3": [0, 1, 2]})
+        p1 = Path(td) / "m3.csv"
+        df.to_csv(p1, index=False)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(p1))
+        _assert_raises(ValueError, s.fix_spec, "y3")
+        # target con NaN
+        df2 = pd.DataFrame({"edad": [1.0, 2.0, 3.0], "yn": [0.0, np.nan, 1.0]})
+        p2 = Path(td) / "mnan.csv"
+        df2.to_csv(p2, index=False)
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(p2))
+        _assert_raises(ValueError, s2.fix_spec, "yn")
+        # target no 0/1 (p. ej. 1/2)
+        df3 = pd.DataFrame({"edad": [1.0, 2.0, 3.0, 4.0], "y12": [1, 1, 2, 2]})
+        p3 = Path(td) / "m12.csv"
+        df3.to_csv(p3, index=False)
+        s3 = Session(logger=_quiet_logger())
+        s3.load_dataset(str(p3))
+        _assert_raises(ValueError, s3.fix_spec, "y12")
+
+
+def test_determinismo_dos_sesiones():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        arboles = []
+        for _ in range(2):
+            s = Session(logger=_quiet_logger())
+            s.load_dataset(str(csv_path))
+            s.fix_spec("default")
+            s.partition(train_frac=0.7, seed=42)
+            s.train(CrtEngine(), max_depth=4, min_child_size=5)
+            arboles.append(s.state.tree)
+        assert arboles[0] is not None and arboles[0] == arboles[1]
+        assert (
+            arboles[0].params_fingerprint == arboles[1].params_fingerprint
+        )
+
+
+def test_partition_guard_frac():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        _assert_raises(ValueError, s.partition, 1.5)
+
+
+# ---------------------------------------------------------------------------
+# Fase 1.2: evaluate_oos + prune
+# ---------------------------------------------------------------------------
+
+
+def test_evaluate_oos_e2e_valores_exactos():
+    """Modelo CRT sobre y = 1_{edad>=40}: OOS perfecto. Valores a mano:
+    pd hoja baja = 0.5/43, pd alta = 42.5/43; AUC=KS=Gini=PR=1;
+    BS = (0.5/43)^2 ; BSS = 1 - BS/0.25."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st = s.evaluate_oos(n_groups=3)
+
+        m = st.oos_metrics
+        assert m is not None
+        assert m.n_test == 36 and m.n_events == 18
+        assert m.auc == 1.0 and m.gini == 1.0 and m.ks == 1.0
+        assert m.pr_auc == 1.0
+        esperado_bs = (0.5 / 43.0) ** 2  # 0.25/1849
+        assert math.isclose(m.brier, esperado_bs, rel_tol=1e-9)
+        assert math.isclose(m.brier_ref, 0.25, rel_tol=1e-12)
+        assert math.isclose(m.brier_skill, 1.0 - esperado_bs / 0.25, rel_tol=1e-9)
+        assert m.hl_df == 1
+        assert math.isclose(m.hl_stat, 24.0 / 85.0, rel_tol=1e-12)
+        # ROC de separacion perfecta: (0,0,inf) -> (0,1,pd_alta) -> (1,1,pd_baja)
+        assert m.roc_points[0] == (0.0, 0.0, math.inf)
+        assert m.roc_points[1] == (0.0, 1.0, 42.5 / 43.0)
+        # event_log sigue siendo determinista (sin timestamps)
+        assert st.event_log[-1].startswith("evaluate_oos:")
+
+
+def test_transiciones_oos_requieren_trained():
+    s = Session(logger=_quiet_logger())
+    _assert_raises(ValueError, s.evaluate_oos)
+    _assert_raises(ValueError, s.prune, 1.0)
+
+
+def test_prune_flujo_completo():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st0 = s.state
+        # el fixture produce raiz con 2 hijos puros: alpha de la secuencia > 0
+        st = s.prune(0.0)  # alpha 0: si ningun paso es 0, modelo intacto
+        assert st.pruned_tree is not None
+        assert st.prune_alpha == 0.0
+        assert st.event_log[-1].startswith("prune:alpha=0")
+        # poda fuerte colapsa a raiz sola
+        st2 = s.prune(999999.0)
+        assert len(st2.pruned_tree.nodes) == 1
+        assert st2.pruned_tree.nodes[0].is_leaf
+        # idempotencia sobre el ORIGINAL: no apila (sigue 1 nodo)
+        st3 = s.prune(999999.0)
+        assert len(st3.pruned_tree.nodes) == 1
+        # tree original sigue intacto (inmutable)
+        assert len(st3.tree.nodes) == len(st0.tree.nodes)
+
+
+if __name__ == "__main__":
+    tests = [
+        obj for name, obj in sorted(globals().items())
+        if name.startswith("test_") and callable(obj)
+    ]
+    for t in tests:
+        t()
+        print(f"PASS {t.__name__}")
+    print(f"\nOK - {len(tests)} tests superados")
