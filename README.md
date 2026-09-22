@@ -115,10 +115,9 @@ TreeGov/
 
 ## Licencia
 
-Apache License 2.0 (pendiente de confirmar antes de la publicación).
-
+Apache License 2.0
 ---
 
 ## Contacto
 
-Marco Antonio Rengel Calvopiña — [pendiente de definir correo o GitHub].
+Marco Rengel — marcrengel@gmail.com — github.com/Marco-Rengel
