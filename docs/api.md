@@ -1,21 +1,21 @@
-# API pública de TreeGov
+# TreeGov Public API
 
-## Estabilidad de la API
+## API stability
 
-Los módulos y símbolos listados aquí son **públicos y estables** dentro de
-la versión 1.x. Cualquier cambio rompe compatibilidad y requiere bump de
-versión mayor. Los símbolos no listados (en particular, los que empiezan
-por guion bajo) son internos y pueden cambiar sin aviso.
+The modules and symbols listed here are **public and stable** within
+version 1.x. Any change breaks compatibility and requires a major version
+bump. Symbols not listed (in particular, those starting with an
+underscore) are internal and may change without notice.
 
 ## backend_v3.types
 
-- `SplitConfig` (frozen dataclass) — contrato común de los 4 motores.
+- `SplitConfig` (frozen dataclass) — common contract of the 4 engines.
 - `TargetType`, `PredictorType`, `CutKind` (Enums).
-- `MethodName`, `StatisticName` (alias Literales de validación del contrato).
+- `MethodName`, `StatisticName` (Literal validation aliases of the contract).
 
 ## backend_v3.statistics
 
-- `TestResult` (frozen dataclass): salida canónica de una prueba.
+- `TestResult` (frozen dataclass): canonical output of a statistical test.
 - `pearson_chi2(table) -> TestResult`
 - `f_oneway(*groups) -> TestResult`
 - `brown_forsythe(*groups) -> TestResult`
@@ -74,13 +74,13 @@ por guion bajo) son internos y pueden cambiar sin aviso.
 
 ---
 
-> **Nota:** esta lista refleja la API al cierre de Fase 1.2. Las fases
-> posteriores (ver `docs/roadmap.md`) añadirán nuevos módulos públicos,
-> que se documentarán aquí cuando se estabilicen.
+> **Note:** this list reflects the API as of the close of Phase 1.2. Later
+> phases (see `docs/roadmap.md`) will add new public modules, which will be
+> documented here once they stabilize.
 
-*Generado contra el `__all__` real de cada módulo (verificación en Fase 1.2).
-`log_config` e `import_guard` no declaran `__all__`; lo listado es su API
-pública canónica (solo funciones sin guion bajo).*
+*Generated against the actual `__all__` of each module (verified at Phase
+1.2). `log_config` and `import_guard` declare no `__all__`; the listing is
+their canonical public API (only non-underscore functions).*
 
-> **Mantenimiento:** este documento debe actualizarse tras cada fase que
-> añada módulos públicos. Ver `docs/audit_log.md` para el historial.
+> **Maintenance:** this document must be updated after any phase that adds
+> public modules. See `docs/audit_log.md` for the history.
