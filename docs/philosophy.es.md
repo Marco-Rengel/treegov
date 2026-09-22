@@ -33,3 +33,6 @@ TreeGov no compite en precisión predictiva bruta. Compite en gobernanza y audit
 - EBA/GL/2017/16: validación de parámetros PD/LGD.
 - IFRS 9: clasificación por etapas y ECL.
 - SR 11-7 / OCC 2011-12: Model Risk Management.
+
+---
+*[Read in English](philosophy.md)*

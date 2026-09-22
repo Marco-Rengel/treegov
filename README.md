@@ -1,61 +1,61 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Versión**: 1.0.0a0
-**Autor**: Marco Rengel
-**Licencia**: Apache 2.0
-**Motor gráfico**: PySide6
-**Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Aviso regulatorio**: Software en fase de validación técnica (Model Risk Management - MRM).
+**Version**: 1.0.0a0
+**Author**: Marco Rengel
+**License**: Apache 2.0
+**Graphics engine**: PySide6
+**Analytical engine**: Python (NumPy, pandas, scipy.stats)
+**Regulatory notice**: Software under technical validation (Model Risk Management - MRM).
 
 ---
 
-## Filosofía
+## Philosophy
 
-> "Python le da el motor. TreeGov le da el motor, el freno, el tablero, el cinturón de seguridad y el registro de mantenimiento. ¿Cuál prefiere para un modelo que va a ser auditado por el regulador?"
+> "Python gives you the engine. TreeGov gives you the engine, the brakes, the dashboard, the seatbelt, and the maintenance log. Which would you choose for a model that will be audited by the regulator?"
 
-TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añade al final, sino un principio que se teje en cada componente. Mientras que las librerías estadísticas y los entornos de scripting ofrecen el motor analítico, TreeGov ofrece además el freno (controles MRM), el tablero (visualización gráfica), el cinturón de seguridad (auditabilidad) y el registro de mantenimiento (bitácora inmutable). Para un modelo que será auditado por un regulador, la elección no es técnica: es de gobernanza.
-
----
-
-## ¿Qué es TreeGov?
-
-Herramienta de segmentación analítica para riesgo de crédito con gobernanza MRM/IFRS 9 nativa. Implementa CHAID (Kass, 1980), C&RT (Breiman et al., 1984) y QUEST (Loh & Shih, 1997) con matemática de caja blanca auditable.
+TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and scripting environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
 
 ---
 
-## Principios de diseño
+## What is TreeGov?
 
-1. **Arquitectura de sala limpia**: separación estricta entre el backend analítico (backend_v3/, sin dependencias de GUI) y la capa de presentación (frontend_v3/, sin lógica analítica).
-2. **Caja blanca**: prohibido el uso de sklearn, statsmodels o cualquier librería de caja negra. Cada fórmula estadística está escrita explícitamente en el código con su cita bibliográfica.
-3. **Gobernanza nativa**: logging transaccional DEBUG, configuración inmutable (SplitConfig frozen), validación de invariantes matemáticos en construcción.
+An analytical segmentation tool for credit risk with native MRM/IFRS 9 governance. It implements CHAID (Kass, 1980), C&RT (Breiman et al., 1984) and QUEST (Loh & Shih, 1997) with auditable white-box mathematics.
 
 ---
 
-## Capacidades analíticas
+## Design principles
 
-- **CHAID clásico y Exhaustive CHAID**: fusión iterativa de categorías con corrección de Bonferroni de Kass (1980), soporte multiclase.
-- **C&RT binario**: partición por impureza de Gini (clasificación) y varianza (regresión), con surrogate splits (Breiman et al., 1984).
-- **QUEST binario**: selección insesgada de variable (ANOVA + chi-cuadrado + Levene) con punto de corte QDA univariante (Loh & Shih, 1997).
-- **Estimador de Jeffreys + PD Floor**: mitigación de probabilidades nulas en carteras de bajo impago (BCBS CRE 20.39).
-- **Partición Hamilton-Hare**: split train/test estratificado exacto, sin sesgo de redondeo.
-- **Imputación anti-leakage**: TrainOnlyImputer ajustado exclusivamente sobre train_fold.
+1. **Clean-room architecture**: strict separation between the analytical backend (backend_v3/, with no GUI dependencies) and the presentation layer (frontend_v3/, with no analytical logic).
+2. **White box**: sklearn, statsmodels, and any other black-box library are forbidden. Every statistical formula is written explicitly in the code, with its bibliographic citation.
+3. **Native governance**: DEBUG-grade transactional logging, immutable configuration (frozen SplitConfig), and mathematical invariant validation at construction time.
 
 ---
 
-## Stack tecnológico
+## Analytical capabilities
+
+- **Classic CHAID and Exhaustive CHAID**: iterative category merging with the Bonferroni correction of Kass (1980), multiclass support.
+- **Binary C&RT**: Gini impurity partitioning (classification) and variance (regression), with surrogate splits (Breiman et al., 1984).
+- **Binary QUEST**: unbiased variable selection (ANOVA + chi-square + Levene) with univariate QDA split point (Loh & Shih, 1997).
+- **Jeffreys estimator + PD Floor**: mitigation of zero probabilities in low-default portfolios (BCBS CRE 20.39).
+- **Hamilton-Hare partition**: exact stratified train/test split, with no rounding bias.
+- **Anti-leakage imputation**: TrainOnlyImputer fitted exclusively on the train fold.
+
+---
+
+## Technology stack
 
 - Python 3.11 / 3.12
-- PySide6 (interfaz gráfica)
-- numpy, pandas, scipy.stats (cálculo estadístico)
-- pyarrow, openpyxl (ingesta de datos)
-- pytest (opcional: los tests son ejecutables con python directo)
+- PySide6 (graphical interface)
+- numpy, pandas, scipy.stats (statistical computation)
+- pyarrow, openpyxl (data ingestion)
+- pytest (optional: the tests are also runnable with plain python)
 
 ---
 
-## Estructura del repositorio
+## Repository structure
 
 TreeGov/
-- backend_v3/  — Capa analítica pura (0 imports Qt)
+- backend_v3/  — Pure analytical layer (0 Qt imports)
   - import_guard.py
   - log_config.py
   - types.py
@@ -64,60 +64,73 @@ TreeGov/
   - chaid_engine.py
   - crt_engine.py
   - quest_engine.py
-- frontend_v3/  — Capa de presentación (placeholder Fase 2)
-- tests/  — Tests unitarios
-- docs/  — Documentación vigente (methodology.md, audit_log.md, filosofia.md)
-- archive/  — Documentos y código históricos (NO editar)
-- data/  — Datasets (solo lectura)
-- logs/  — Logs de ejecución por corrida
-- treegov.py  — Orquestador headless
-- requirements.txt  — Dependencias
-- .treegovrules  — Reglas de gobernanza para agentes IA
+  - splitting.py
+  - profiling.py
+  - tree_builder.py
+  - session_state.py
+  - validation.py
+  - pruning.py
+- frontend_v3/  — Presentation layer (Phase 2 placeholder)
+- tests/  — Unit tests
+- docs/  — Current documentation (methodology.md, api.md, roadmap.md, philosophy.md, audit_log.md)
+- archive/  — Historical documents and code (do NOT edit)
+- data/  — Datasets (read-only)
+- logs/  — Per-run execution logs
+- treegov.py  — Headless orchestrator
+- requirements.txt  — Dependencies
+- .treegovrules  — Governance rules for AI agents
 
 ---
 
-## Ejecución
+## Execution
 
-### Instalación
+### Installation
 
 .\.venv\Scripts\python -m pip install -r requirements.txt
 
-### Demo headless (Fase 0)
+### Headless demo (Phase 0)
 
 .\.venv\Scripts\python treegov.py
 
-### Benchmark de rendimiento (N=1M)
+### Performance benchmark (N=1M)
 
 .\.venv\Scripts\python tests\benchmark_1m.py --n 1000000 --seed 42
 
-### Suite de tests
+### Test suite
 
 .\.venv\Scripts\python -m pytest tests -q
 
 ---
 
-## Estado del proyecto
+## Project status
 
-**Fase 0 (núcleo algorítmico)**: completada. 4 motores + imputación + orquestador + benchmark, auditados.
-**Fases 1-4 (interfaz, wizard, reportes)**: en desarrollo.
+**Phase 0 (algorithmic core)**: completed. 4 engines + imputation + orchestrator + benchmark, audited.
+**Phases 1-4 (interface, wizard, reports)**: in development.
 
 ---
 
-## Referencias académicas
+## Academic references
 
 - Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics 29(2), 119-127.
 - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
-- Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica 7(4), 815-840.
 - Cochran, W.G. (1954). Some Methods for Strengthening the Common Chi-2 Tests. Biometrics 10(4), 417-451.
+- Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica 7(4), 815-840.
 - Biggs, D., de Ville, B. & Suen, E. (1991). A Method of Choosing Multiway Partitions for Classification and Decision Trees. Journal of Applied Statistics 18(1), 49-62.
 
 ---
 
-## Licencia
+## License
 
 Apache License 2.0
+
 ---
 
-## Contacto
+## Contact
 
 Marco Rengel — marcrengel@gmail.com — github.com/Marco-Rengel
+
+---
+
+## Translations
+
+- [Español (Spanish)](README.es.md)

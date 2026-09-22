@@ -1,60 +1,62 @@
 # =============================================================================
-# REGLAS DE GOBERNANZA Y DIRECTRICES PARA AGENTES IA — TREEGOV
-# Proyecto: TreeGov — Risk Segmentation Workbench
+# GOVERNANCE RULES AND GUIDELINES FOR AI AGENTS — TREEGOV
+# Project: TreeGov — Risk Segmentation Workbench
 # =============================================================================
 
-## OBLIGATORIO al iniciar o reanudar una sesión
+## MANDATORY when starting or resuming a session
 
-1. Leer README.md completo.
-2. Leer docs/methodology.md, docs/audit_log.md y docs/filosofia.md.
-3. Leer este archivo (.treegovrules) completo.
+1. Read README.md in full.
+2. Read docs/methodology.md, docs/audit_log.md, and the philosophy document (docs/philosophy.md in English, docs/philosophy.es.md in Spanish).
+3. Read this file (.treegovrules) in full.
 
-## Reglas de caja blanca (RESTRICCIÓN DURA)
+## White-box rules (HARD RESTRICTION)
 
-1. PROHIBIDO usar: sklearn, scikit-learn, statsmodels, xgboost, lightgbm, catboost.
-2. Solo se permite: numpy, pandas, scipy.stats.
-3. Cada fórmula estadística debe estar escrita explícitamente en el código, con su cita bibliográfica en el docstring.
+1. FORBIDDEN to use: sklearn, scikit-learn, statsmodels, xgboost, lightgbm, catboost.
+2. Only allowed: numpy, pandas, scipy.stats.
+3. Every statistical formula must be written explicitly in the code, with its bibliographic citation in the docstring.
 
-## Arquitectura de sala limpia
+## Clean-room architecture
 
-1. backend_v3/ NO importa PySide6 ni nada de frontend_v3/.
-2. frontend_v3/ NO implementa lógica analítica.
-3. SplitConfig es el contrato común entre motores. Su inmutabilidad (frozen dataclass) es sagrada.
+1. backend_v3/ MUST NOT import PySide6 or anything from frontend_v3/.
+2. frontend_v3/ MUST NOT implement analytical logic.
+3. SplitConfig is the common contract between engines. Its immutability (frozen dataclass) is sacred.
 
-## Gobernanza MRM / IFRS 9
+## MRM / IFRS 9 governance
 
-1. Cualquier cálculo de PD debe incluir el estimador de Jeffreys y el PD Floor.
-2. Toda decisión de modelo debe ser auditable: log DEBUG transaccional por corrida.
-3. Los tests deben incluir valores de referencia verificados a mano (no solo autoreferencias).
+1. Any PD calculation must include the Jeffreys estimator and the PD Floor.
+2. Every model decision must be auditable: transactional DEBUG log per run.
+3. Tests must include reference values verified by hand (not just self-references).
 
-## Zonas protegidas (NUNCA tocar sin autorización explícita)
+## Protected zones (NEVER touch without explicit authorization)
 
 - .venv/
 - data/
 - archive/
-- logs/ (solo escritura vía log_config.py)
+- logs/ (write-access only via log_config.py)
 
-## Documentación obligatoria
+## Mandatory documentation
 
-1. Toda decisión arquitectónica se registra en docs/audit_log.md.
-2. Toda corrección de bug se registra con su traza numérica.
-3. Los documentos obsoletos se mueven a archive/legacy_docs/ con cabecera histórica, nunca se borran.
+1. Every architectural decision is recorded in docs/audit_log.md.
+2. Every bug fix is recorded with its numerical trace.
+3. Obsolete documents are moved to archive/legacy_docs/ with a historical header, never deleted.
 
-## Idioma
+## Language
 
-- Código: inglés.
-- Documentación: español.
-- Nombres de archivos y módulos: inglés.
+- Code: English.
+- Documentation: English (default).
+- Bilingual documents: README and philosophy (both English and Spanish).
+- Historical document: audit_log.md (kept in Spanish for traceability).
+- File and module names: English.
 
 ## Anti-leakage
 
-Cualquier imputación (media/moda) se calcula EXCLUSIVAMENTE sobre el fold de entrenamiento. TrainOnlyImputer es el único canal autorizado.
+Any imputation (mean/mode) is computed EXCLUSIVELY on the training fold. TrainOnlyImputer is the only authorized channel.
 
-## Prohibiciones en documentación pública
+## Prohibitions in public documentation
 
-- No mencionar marcas registradas de terceros ni nombres del proyecto antecesor.
-- Sí mencionar: citas académicas (Kass, Breiman, etc.), estándares regulatorios (Basilea, IFRS 9, SR 11-7).
+- Do not mention third-party trademarks nor the names of the predecessor project.
+- Do mention: academic citations (Kass, Breiman, etc.), regulatory standards (Basel, IFRS 9, SR 11-7).
 
-## Verificación
+## Verification
 
-Antes de modificar código existente: leer README.md, docs/methodology.md y este archivo.
+Before modifying existing code: read README.md, docs/methodology.md and this file.

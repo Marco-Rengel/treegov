@@ -261,6 +261,19 @@ Garantiza que la tasa de eventos en train coincida exactamente con la población
 
 ### 8.1. Gini canónico
 
+> **Nota sobre convenciones de Gini.** TreeGov utiliza
+> **Gini = 2·AUC − 1**, donde AUC se calcula por
+> Wilcoxon-Mann-Whitney con mid-ranks. Esta es la convención estándar
+> en credit scoring y MRM bancario.
+>
+> NO confundir con:
+> - La convención alternativa **Gini = AUC − 0.5** (rango 0 a 0.5),
+>   usada en algunos contextos académicos.
+> - El **coeficiente de Gini económico** (desigualdad de ingresos).
+>
+> La confusión entre estas tres convenciones es común en la industria;
+> documentar la elegida es requisito de trazabilidad MRM.
+
 Derivado del área bajo la curva ROC (AUC) mediante el estadístico U de Wilcoxon-Mann-Whitney:
 
 AUC = U / (n_1 × n_0)
