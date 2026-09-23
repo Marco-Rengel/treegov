@@ -107,10 +107,11 @@ TreeGov/
 - **Fase 0 (núcleo algorítmico)**: completada.
 - **Fase 1 (flujo transaccional)**: completada.
 - **Fase 1.2 (evaluación OOS + poda)**: completada.
-- **Fase 1.3 (validación OOT + PSI/CSI)**: en diseño.
-- **Fase 2 (GUI PySide6)**: en desarrollo.
+- **Fase 1.3 (validación OOT + PSI/CSI)**: completada.
+- **Fase 2 (GUI PySide6)**: en diseño.
+- **Fases 3-5**: planificadas.
 
-Suite de tests: 107/107 passing.
+Suite de tests: 119/119 passing.
 
 ---
 

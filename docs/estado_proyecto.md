@@ -201,7 +201,8 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ### Corto plazo
 - [ ] Decidir próxima fase: Fase 2 (GUI) vs Fase 3 (reportes + MCP).
-- [ ] Actualizar entrada de Fase 1.3 en `docs/audit_log.md`.
+- [ ] Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en
+      `docs/audit_log.md` (actualmente el log salta de Fase 0 a Fase 1.3).
 
 ### Medio plazo
 - [ ] Implementar GUI PySide6 (wizard + visor de árbol + panel de métricas).

@@ -8,25 +8,40 @@
   session_state.
 - **Phase 1.2** (OOS evaluation + pruning): validation + pruning.
   - Test suite: 107/107.
+- **Phase 1.3** (OOT + stability): stability.py + extensions to
+  session_state.py.
+  - Test suite: 119/119.
 
 ## Upcoming phases
 
-### Phase 1.3 — OOT validation and basic monitoring
-**Priority: HIGH (indispensable in credit risk)**
-**Status: in design.**
+### Phase 2.0 — Application skeleton
+**Priority: HIGH**
+- Entry point treegov_gui.py.
+- QMainWindow with horizontal QSplitter (left panel, central tabs, right HUD).
+- Top menu (File / Model / View / Help) and status bar.
+- Light/dark theme via QSS.
 
-- Out-of-Time (OOT) validation: a later time cohort, not a random partition.
-- Gini Drop computation (train vs OOS vs OOT).
-- Population stability: PSI (leaves) and CSI (covariates) with
-  Basel / EBA traffic lights (STABLE < 0.10, MODERATE 0.10-0.25, UNSTABLE >= 0.25).
+### Phase 2.1 — Transactional wizard (4 steps)
+**Priority: HIGH**
+- Step 1: engine selection (CHAID / Exhaustive / C&RT / QUEST).
+- Step 2: predictors + target.
+- Step 3: validation scheme (train/test, seed).
+- Step 4: MRM governance (max_depth, min_child_size, PD floor).
 
-### Phase 2 — GUI with PySide6
-**Priority: HIGH (visible deliverable)**
+### Phase 2.2 — Interactive tree viewer
+**Priority: HIGH**
+- QGraphicsView tree render, zoom (Ctrl + +/-), node selection.
 
-- Transactional wizard (4 steps).
-- Interactive tree viewer with zoom.
-- OOS metrics panel.
-- Pruning report (original vs pruned tree comparison).
+### Phase 2.3 — OOS/OOT metrics panel
+**Priority: HIGH**
+- Gini, KS, HL, Brier, ROC + AUC, PR-AUC.
+- PSI, CSI, Gini Drop with Basel/EBA traffic lights.
+
+### Phase 2.4 — Reports + integration
+**Priority: MEDIUM**
+- Gains table, classification matrix.
+- HTML export via QTextBrowser.
+- End-to-end GUI tests + screenshots for README.
 
 ### Phase 3 — Analytical reports + MCP layer
 **Priority: MEDIUM**
