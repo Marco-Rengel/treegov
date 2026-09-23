@@ -13,6 +13,7 @@
 
 ### Phase 1.3 — OOT validation and basic monitoring
 **Priority: HIGH (indispensable in credit risk)**
+**Status: in design.**
 
 - Out-of-Time (OOT) validation: a later time cohort, not a random partition.
 - Gini Drop computation (train vs OOS vs OOT).

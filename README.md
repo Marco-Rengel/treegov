@@ -104,8 +104,13 @@ TreeGov/
 
 ## Project status
 
-**Phase 0 (algorithmic core)**: completed. 4 engines + imputation + orchestrator + benchmark, audited.
-**Phases 1-4 (interface, wizard, reports)**: in development.
+- **Phase 0 (algorithmic core)**: completed.
+- **Phase 1 (transactional flow)**: completed.
+- **Phase 1.2 (OOS evaluation + pruning)**: completed.
+- **Phase 1.3 (OOT validation + PSI/CSI)**: in design.
+- **Phase 2 (GUI PySide6)**: in development.
+
+Test suite: 107/107 passing.
 
 ---
 

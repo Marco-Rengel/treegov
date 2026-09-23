@@ -104,8 +104,13 @@ TreeGov/
 
 ## Estado del proyecto
 
-**Fase 0 (núcleo algorítmico)**: completada. 4 motores + imputación + orquestador + benchmark, auditados.
-**Fases 1-4 (interfaz, wizard, reportes)**: en desarrollo.
+- **Fase 0 (núcleo algorítmico)**: completada.
+- **Fase 1 (flujo transaccional)**: completada.
+- **Fase 1.2 (evaluación OOS + poda)**: completada.
+- **Fase 1.3 (validación OOT + PSI/CSI)**: en diseño.
+- **Fase 2 (GUI PySide6)**: en desarrollo.
+
+Suite de tests: 107/107 passing.
 
 ---
 
