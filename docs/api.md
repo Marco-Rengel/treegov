@@ -49,7 +49,15 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.validation
 
-- `OOSMetrics`, `predict_pd`, `compute_oos_metrics`
+- `OOSMetrics`, `predict_pd(model, X, *, unseen_policy="error")`,
+  `predict_leaf_assignment(model, X, *, unseen_policy="error")`,
+  `compute_oos_metrics`
+
+## backend_v3.stability
+
+- `PSIReport`, `CSIReport`, `GiniDropReport`, `OOTReport`.
+- `StabilityMonitor` (leaf_psi / covariate_csi / report).
+- `psi_index(expected, actual)`, `traffic_light(value)`, `gini_drop_alert(drop)`.
 
 ## backend_v3.pruning
 

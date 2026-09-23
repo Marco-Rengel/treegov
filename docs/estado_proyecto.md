@@ -1,0 +1,260 @@
+# TreeGov — Estado del Proyecto y Contexto para Auditoría
+
+**Fecha de última actualización:** 22/09/2026
+**Autor:** Marco Rengel
+**Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
+y trazabilidad del proyecto, apto para:
+1. Reconstruir contexto en una nueva sesión de trabajo asistido por IA.
+2. Servir como dossier introductorio para un auditor/validador MRM.
+
+---
+
+## 1. Identificación del proyecto
+
+| Campo | Valor |
+|---|---|
+| Nombre | TreeGov — Risk Segmentation Workbench |
+| Versión | 1.0.0a0 (alpha) |
+| Licencia | Apache 2.0 |
+| GitHub | github.com/Marco-Rengel/treegov (privado) |
+| PyPI | pypi.org/project/treegov |
+| Autor | Marco Rengel (marcrengel@gmail.com) |
+| Motor gráfico | PySide6 |
+| Motor analítico | Python (NumPy, pandas, scipy.stats) |
+| Modelo de IA usado en desarrollo | Kimi K3 vía NVIDIA NIM (max reasoning) |
+
+---
+
+## 2. Resumen ejecutivo
+
+TreeGov es una herramienta de segmentación analítica para riesgo de crédito
+con gobernanza MRM/IFRS 9 nativa. Implementa los algoritmos clásicos de
+árboles de decisión (CHAID, C&RT, QUEST) con matemática de caja blanca
+auditable, sin dependencia de librerías de caja negra (sklearn/statsmodels).
+
+**Diferenciador principal:** la gobernanza no es una capa añadida al final,
+sino un principio integrado en cada componente. Esto se traduce en:
+- Configuración inmutable (SplitConfig frozen) como evidencia auditable.
+- Logging DEBUG transaccional por corrida.
+- Fórmulas estadísticas explícitas en el código con cita bibliográfica.
+- Bloqueo de librerías de caja negra a nivel de import guard.
+
+---
+
+## 3. Estado técnico por fase
+
+### Fase 0 — Núcleo algorítmico ✅ Completada
+
+Módulos:
+- `backend_v3/import_guard.py` — bloqueo de sklearn/statsmodels/xgboost/lightgbm/catboost
+- `backend_v3/log_config.py` — logger `treegov` con doble handler (archivo + consola)
+- `backend_v3/types.py` — SplitConfig frozen + enums (TargetType, PredictorType, CutKind)
+- `backend_v3/statistics.py` — χ² Pearson, F ANOVA, Brown-Forsythe, Stirling, multiplicadores de Kass
+- `backend_v3/chaid_engine.py` — CHAID clásico + Exhaustive CHAID (multiclase)
+- `backend_v3/crt_engine.py` — C&RT binario + surrogate splits
+- `backend_v3/quest_engine.py` — QUEST binario con QDA univariante
+- `backend_v3/imputation.py` — TrainOnlyImputer (anti-leakage)
+- `treegov.py` — orquestador headless
+
+Rendimiento verificado: N=1M filas, peor caso 0.29 s/evaluación (objetivo <1.5s).
+
+### Fase 1 — Flujo transaccional ✅ Completada
+
+Módulos:
+- `backend_v3/splitting.py` — Hamilton-Hare estratificado exacto
+- `backend_v3/profiling.py` — inferencia de tipos de predictores
+- `backend_v3/tree_builder.py` — TreeBuilder (BFS determinista) + TreeModel + TreeNode
+- `backend_v3/session_state.py` — FlowState + SessionState + Session (máquina de estados)
+
+### Fase 1.2 — Evaluación OOS + poda ✅ Completada
+
+Módulos:
+- `backend_v3/validation.py` — métricas OOS (Gini, KS, HL, Brier, ROC, PR-AUC)
+- `backend_v3/pruning.py` — poda coste-complejidad de Breiman
+
+### Fase 1.3 — OOT + monitoreo de estabilidad ✅ Completada
+
+Módulos:
+- `backend_v3/stability.py` — PSI (hojas), CSI (covariables), Gini Drop
+- Extensiones de `session_state.py`: load_oot, evaluate_oot, estados OOT_LOADED/OOT_EVALUATED
+
+### Fases pendientes
+
+- **Fase 2** — GUI PySide6 (wizard transaccional, visor de árbol, panel de métricas)
+- **Fase 3** — Reportes analíticos (tabla de ganancias, matriz de clasificación) + capa MCP
+- **Fase 4** — Scoring batch y champion-challenger
+- **Fase 5** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
+
+---
+
+## 4. Arquitectura
+
+### Principio de sala limpia
+
+- `backend_v3/` — capa analítica pura (0 imports Qt)
+- `frontend_v3/` — capa de presentación (placeholder, sin lógica analítica)
+
+### Estructura de directorios
+
+TreeGov/
+├── backend_v3/ # Capa analítica pura
+├── frontend_v3/ # Capa de presentación (placeholder Fase 2)
+├── tests/ # Suite de tests (119 tests)
+├── docs/ # Documentación bilingüe
+│ ├── methodology.md # Metodología matemática (inglés)
+│ ├── api.md # API pública congelada (inglés)
+│ ├── roadmap.md # Plan de fases (inglés)
+│ ├── philosophy.md # Filosofía (inglés)
+│ ├── philosophy.es.md # Filosofía (español)
+│ └── audit_log.md # Bitácora de auditoría (español)
+├── archive/ # Documentos y código históricos
+├── data/ # Datasets (solo lectura, excluido de Git)
+├── logs/ # Logs por corrida (excluido de Git)
+├── treegov.py # Orquestador headless
+├── pyproject.toml # Empaquetado
+├── README.md # README principal (inglés)
+├── README.es.md # README en español
+└── .treegovrules # Reglas de gobernanza para agentes IA
+
+
+---
+
+## 5. Decisiones arquitectónicas clave
+
+| Decisión | Justificación |
+|---|---|
+| **GUI: PySide6** (no Streamlit) | Confidencialidad de datos bancarios: los datos no deben salir del escritorio del analista |
+| **Caja blanca** (solo numpy/pandas/scipy) | Auditabilidad MRM: cada fórmula explícita con cita bibliográfica |
+| **Gini = 2·AUC − 1** | Convención estándar en credit scoring (no confundir con Gini económico ni Gini = AUC − 0.5) |
+| **Licencia Apache 2.0** | Permisiva, con cláusula de patentes, apta para uso bancario comercial |
+| **Idioma de documentación** | Inglés por defecto (estándar open source); bilingüe README y philosophy; audit_log en español (histórico interno) |
+| **Anti-leakage** | TrainOnlyImputer exclusivo sobre fold de entrenamiento |
+| **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
+
+---
+
+## 6. Auditorías y bugs resueltos
+
+### Fase 0
+- **Bug detectado:** `_group_sizes` con shape ambiguo cuando K=3 (target multiclase). Corregido con flag explícito.
+
+### Fase 1.2
+- **Bug crítico detectado en auditoría post-implementación:** confusión de cuadrantes `q_lr`/`q_rl` en el cálculo del agreement de surrogates (3 sitios). Corregido con reescritura usando cuadrantes explícitos.
+- **Cobertura de tests ampliada:** 2 tests asimétricos + fixture exhaustivo limpio.
+
+### Fase 1.3
+- **FIX obligatorio:** `predict_leaf_assignment` con política `unseen_policy` (error/majority/exclude) para categorías nuevas en OOT.
+- **FIX Media:** `gini_drop_alert(NaN) → "INDETERMINADO"` (evita reportar degradación indefinida como "sin alerta").
+- **5 observaciones menores** aplicadas (tipado, numpy puro, RuntimeError, spec_order, oot_source).
+
+Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numérica.
+
+---
+
+## 7. Suite de tests
+
+| Módulo | Tests |
+|---|---|
+| statistics.py | 13 |
+| chaid_engine.py | 19 |
+| crt_engine.py | 15 |
+| quest_engine.py | 13 |
+| imputation.py | 5 |
+| splitting.py | 4 |
+| profiling.py | 3 |
+| tree_builder.py | 11 |
+| session_state.py | 10 |
+| validation.py | 8 |
+| pruning.py | 6 |
+| stability.py | 12 |
+| **Total** | **119** |
+
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 119/119 PASSED
+
+**Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
+
+---
+
+## 8. Estándares regulatorios cubiertos
+
+- **Basilea (BCBS CRE 20.39)** — PD Floors regulatorios (mínimo 0.03% / 3 bps)
+- **EBA/GL/2017/16** — Validación de parámetros PD/LGD en modelos IRB
+- **IFRS 9 / NIIF 9** — Staging, ECL, optimización de umbrales asimétricos
+- **SR 11-7 / OCC 2011-12** — Model Risk Management (MRM)
+
+---
+
+## 9. Repositorios y recursos
+
+| Recurso | Ubicación |
+|---|---|
+| GitHub | https://github.com/Marco-Rengel/treegov |
+| PyPI | https://pypi.org/project/treegov/ |
+| Instalación | `pip install treegov` |
+| Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
+| Demo headless | `.\.venv\Scripts\python treegov.py` |
+| Benchmark N=1M | `.\.venv\Scripts\python tests\benchmark_1m.py --n 1000000 --seed 42` |
+
+---
+
+## 10. Pendientes y decisiones abiertas
+
+### Corto plazo
+- [ ] Decidir próxima fase: Fase 2 (GUI) vs Fase 3 (reportes + MCP).
+- [ ] Actualizar entrada de Fase 1.3 en `docs/audit_log.md`.
+
+### Medio plazo
+- [ ] Implementar GUI PySide6 (wizard + visor de árbol + panel de métricas).
+- [ ] Reportes analíticos (tabla de ganancias, matriz de clasificación, exportación SQL/Python).
+- [ ] Capa MCP para consumo desde agentes LLM.
+
+### Largo plazo / decisiones
+- [ ] **Distribución:** método de empaquetado (PyInstaller / Inno Setup / MSI).
+- [ ] **Firma digital:** certificado code signing para distribución a bancos.
+- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato laboral actual
+      (cláusula de propiedad intelectual) antes de hacerlo público.
+- [ ] **Licencia comercial paralela** (si alguna vez se considera).
+
+---
+
+## 11. Cómo reconstruir el contexto en una nueva sesión
+
+Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
+
+1. Leer en orden:
+   - `README.md` (inglés) o `README.es.md` (español)
+   - `.treegovrules` (reglas de gobernanza)
+   - `docs/methodology.md` (metodología matemática)
+   - `docs/api.md` (API pública)
+   - `docs/roadmap.md` (plan de fases)
+   - `docs/audit_log.md` (histórico de decisiones)
+
+2. Comando para retomar el desarrollo:
+
+cd "C:\Riesgos - copia\DecisionTree_Modeler"
+git pull
+opencode -c
+
+
+
+3. Primer mensaje sugerido al agente:
+> "Retomamos TreeGov. Estado actual: Fase 0, 1, 1.2 y 1.3 cerradas.
+> Suite 119/119. Decidir siguiente fase: [Fase 2 GUI / Fase 3 reportes]."
+
+---
+
+## 12. Contacto y autoría
+
+**Marco Rengel**
+- Matemático con 16 años de experiencia en modelos de riesgo de crédito.
+- Ex-analista en buró de crédito transnacional (2009-2016).
+- Actualmente científico de datos en riesgos integrales en banca (desde 2023).
+- GitHub: github.com/Marco-Rengel
+- Email: marcrengel@gmail.com
+
+---
+
+*Documento generado el 22/09/2026. Mantener actualizado tras cada fase
+cerrada. Fuente de verdad: el repositorio en GitHub.*
+
+

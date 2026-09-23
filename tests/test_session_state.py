@@ -241,6 +241,159 @@ def test_prune_flujo_completo():
         assert len(st3.tree.nodes) == len(st0.tree.nodes)
 
 
+# ---------------------------------------------------------------------------
+# Fase 1.3: OOT + estabilidad
+# ---------------------------------------------------------------------------
+
+
+def _csv_seg_driven(tmp: Path) -> Path:
+    """Dev donde el target depende de la categorica 'seg' (y=1 si seg=='b'):
+    el arbol DEBE cortar por seg; la categoria nueva en OOT no enruta."""
+    n = 120
+    seg = np.tile(["a", "b", "c"], 40)
+    edad = np.tile(np.arange(20, 60), 3)
+    df = pd.DataFrame({"edad": edad, "seg": seg,
+                       "default": (seg == "b").astype(int)})
+    p = tmp / "dev2.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def _csv_oot(tmp: Path, *, temporal: bool, con_nueva_cat: bool = False) -> Path:
+    """Cohorte OOT: con seg-driven dev, la categoria 'd' (nueva) no enruta."""
+    n = 60
+    seg = np.tile(["a", "b", "d"], 20)            # 'd' no existe en train
+    if not con_nueva_cat:
+        seg = np.tile(["a", "b", "c"], 20)
+    edad = np.tile(np.arange(20, 60), 2)[:n]
+    df = pd.DataFrame({"edad": edad, "seg": seg,
+                       "default": (seg == "b").astype(int)})
+    if temporal:
+        df["fecha"] = pd.Series(
+            pd.date_range("2026-03-01", periods=n, freq="D")
+        ).astype(str)
+    p = tmp / "oot.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def test_load_oot_y_evaluate_oot_e2e():
+    """Dev seg-driven (120 filas) -> train (arbol corta por seg) -> OOT con
+    categoria nueva 'd': no aborta, n_excluded == 20 (un tercio de 60)."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_seg_driven(tmp)
+        csv_oot = _csv_oot(tmp, temporal=False, con_nueva_cat=True)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+
+        st = s.load_oot(str(csv_oot))
+        assert st.state.name == "OOT_LOADED"
+        assert st.n_oot == 60
+        assert st.temporal_verified is False     # sin time_col -> WARNING
+
+        st2 = s.evaluate_oot(n_groups=3)
+        assert st2.state.name == "OOT_EVALUATED"
+        rep = st2.oot_report
+        assert rep is not None
+        # la categoria nueva 'd' no enruta -> exactamente 20 filas excluidas
+        assert rep.n_excluded == 20
+        assert rep.metrics is not None
+        # PSI de hojas incluye el bin UNSEEN con eps -> psi > 0 (deriva nueva)
+        assert rep.psi.psi > 0.0
+        # CSI de 'seg' contiene <OTHER> con contribucion positiva
+        seg_rows = [r for r in rep.csi if r.predictor == "seg"]
+        assert seg_rows and seg_rows[0].csi > 0.0
+        etiquetas = [e for (e, _, _, _) in seg_rows[0].per_bin]
+        assert "<OTHER>" in etiquetas
+        # CSI de 'edad': mismas distribuciones base, pero el train es un
+        # subset estratificado por target (Hamilton-Hare); los deciles del
+        # train distan un poco del OOT completo. Senal correcta: STABLE.
+        edad_rows = [r for r in rep.csi if r.predictor == "edad"]
+        assert edad_rows and edad_rows[0].flag in ("STABLE", "MODERATE")
+        # narrative verifiable
+        assert rep.drop.temporal_verified is False
+        assert "excluidas" in st2.event_log[-1]
+
+
+def test_load_oot_temporal_verificado():
+    """Con time_col presente en AMBOS datasets: OOT posterior -> True;
+    solapamiento -> ValueError."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        # dev con columna temporal febrero
+        n = 120
+        edad = np.tile(np.arange(20, 60), 3)
+        seg = np.tile(["a", "b", "c"], 40)
+        y = (edad >= 40).astype(int)
+        df = pd.DataFrame({"edad": edad, "seg": seg, "default": y})
+        df["fecha"] = pd.Series(
+            pd.date_range("2026-01-01", periods=n, freq="D")
+        ).astype(str)
+        csv_dev = tmp / "dev_t.csv"
+        df.to_csv(csv_dev, index=False)
+
+        # OOT con febrero/marzo posterior
+        n2 = 60
+        edad2 = np.tile(np.arange(20, 60), 2)[:n2]
+        seg2 = np.tile(["a", "b", "c"], 20)
+        df2 = pd.DataFrame({
+            "edad": edad2, "seg": seg2, "default": (edad2 >= 40).astype(int),
+        })
+        df2["fecha"] = pd.Series(
+            pd.date_range("2026-05-01", periods=n2, freq="D")
+        ).astype(str)
+        csv_oot = tmp / "oot_t.csv"
+        df2.to_csv(csv_oot, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec("default", spec={"edad": PredictorType.CONTINUOUS,
+                                    "seg": PredictorType.NOMINAL})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # time_col es metadato (fuera del spec): fecha presente en ambos
+        st = s.load_oot(str(csv_oot), time_col="fecha")
+        assert st.temporal_verified is True
+
+        # fuga temporal: dev tiene mayo en un CSV aparte...
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(csv_oot))            # este archivo es "posterior"
+        s2.fix_spec("default", spec={"edad": PredictorType.CONTINUOUS,
+                                     "seg": PredictorType.NOMINAL})
+        s2.partition(train_frac=0.7, seed=42)
+        s2.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # OOT = el dev (enero) es mas viejo que el "train" (mayo) -> ValueError
+        _assert_raises(ValueError, s2.load_oot, str(csv_dev), time_col="fecha")
+
+
+def test_load_oot_guards():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv(tmp)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # archivo inexistente
+        _assert_raises(FileNotFoundError, s.load_oot, str(tmp / "no.csv"))
+        # columnas que no coinciden
+        mal = pd.DataFrame({"edad": [30, 40], "seg": ["a", "b"], "otra": [1, 2]})
+        pm = tmp / "mal.csv"
+        mal.to_csv(pm, index=False)
+        _assert_raises(ValueError, s.load_oot, str(pm))
+        # target no binario
+        mal2 = pd.DataFrame({"edad": [30, 40], "seg": ["a", "b"], "default": [1, 2]})
+        pm2 = tmp / "mal2.csv"
+        mal2.to_csv(pm2, index=False)
+        _assert_raises(ValueError, s.load_oot, str(pm2))
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

@@ -160,3 +160,31 @@ Registro cronológico de decisiones arquitectónicas, hallazgos y correcciones d
 - Creación de README.md, .treegovrules, docs/methodology.md, docs/audit_log.md, docs/filosofia.md.
 
 **Resumen**: 4 motores (CHAID, CHAID_EXHAUSTIVE, CRT, QUEST) + imputación + orquestador + benchmark auditados y aprobados.
+
+---
+
+### 22/09/2026 — stability.py + extensiones de session_state (Fase 1.3)
+
+**Estado**: Aprobado tras 2 fixes
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: backend_v3/stability.py, backend_v3/session_state.py,
+backend_v3/validation.py (predict_leaf_assignment), tests/test_stability.py,
+docs/methodology.md §8.5, docs/api.md.
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Media | OOTReport.metrics | Tipado como object | OOSMetrics vía TYPE_CHECKING |
+| 2 | Media | gini_drop_alert | NaN se reportaba como "none" | "INDETERMINADO" |
+| 3 | Baja | covariate_csi | Series |= ndarray frágil | numpy puro |
+| 4 | Baja | load_oot | sorted() innecesario | spec_order |
+| 5 | Baja | load_oot | assert desactivable con -O | RuntimeError |
+| 6 | Baja | evaluate_oot | narrativa sin granularidad de origen | oot_source="external-file" |
+
+**Identidades verificadas**:
+- PSI: 0 (identidad), 0.0875469 (cambio moderado), 0.8788898 (UNSTABLE), 9.2093 (bin vacío con clip eps).
+- Gini Drop: 0.5 crítico / 0.25 preventivo / 0.1 none / None-NaN INDETERMINADO.
+- e2e: categoría nueva en variable del árbol -> 20/60 filas excluidas registradas; PSI con bin `<UNSEEN>`; CSI con bin `<OTHER>`; verificación temporal con time_col; fuga temporal -> ValueError.
+
+**Tests**: 12 nuevos. Suite total: 119/119.

@@ -302,16 +302,48 @@ BSS = 1 − BS / BS_ref
 
 where BS_ref = ȳ(1 − ȳ) is the Brier Score of the null model.
 
-### 8.5. PSI and CSI
+### 8.5. PSI, CSI and Gini Drop (Phase 1.3 monitoring, `backend_v3/stability.py`)
 
-PSI = Σ_k (P_actual,k − P_expected,k) × ln(P_actual,k / P_expected,k)
+**Population Stability Index (PSI)** over the tree-leaf distribution and
+**Characteristic Stability Index (CSI)** per covariate, always against the
+**training partition** (the development population, by definition).
+
+```
+PSI = Σ_k (P_actual,k − P_expected,k) · ln(P_actual,k / P_expected,k)
+    = KL(actual || expected) + KL(expected || actual)    (symmetric KL)
+```
+
+TreeGov policy:
+- Clip ε = 1e-4 per bin **before the log and without renormalization**: this
+  preserves the signal of empty OOT bins; the scale error is negligible
+  against the 0.10 / 0.25 thresholds when bins are non-empty.
+- Leaf PSI: bins are the leaves. OOT rows that cannot be routed (unseen
+  categories/values) form the extra bin `<UNSEEN>` with P_expected = ε.
+- CSI: continuous variables are binned into the **deciles learned on train
+  only** (first and last bins open: −inf / +inf absorb out-of-range OOT
+  values); nominal variables use the train categories, and unseen OOT
+  categories are grouped into `<OTHER>` with P_expected = ε.
 
 Regulatory traffic lights (Basel / EBA):
-- PSI < 0.10 → STABLE (green).
-- 0.10 ≤ PSI < 0.25 → MODERATE (amber).
-- PSI ≥ 0.25 → UNSTABLE (red).
+- PSI/CSI < 0.10 → STABLE.
+- 0.10 ≤ PSI/CSI < 0.25 → MODERATE.
+- PSI/CSI ≥ 0.25 → UNSTABLE.
 
-CSI applies the same formula but per individual covariate.
+**Gini Drop** (relative degradation of discriminative power):
+
+```
+drop_X = (Gini_train − Gini_X) / Gini_train      (X in {OOS, OOT})
+alert: drop > 0.40 → critico;  drop > 0.20 → preventivo;  else none.
+If Gini_train == 0 → drop = None (undefined; WARNING in the log).
+```
+
+Temporal governance: the OOT cohort is an external, independent file
+(`Session.load_oot`), never a random partition. Temporal order is certified
+only when a `time_col` exists in both dev and OOT (else the report is
+flagged `temporal_verified=False`: "OOS, not OOT").
+
+**Citation:** Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and
+Implementing Intelligent Credit Scoring*. Wiley.
 
 ### 8.6. Asymmetric cut optimization (IFRS 9)
 
@@ -336,6 +368,7 @@ Search for θ* = argmin_θ E[Loss](θ) via grid search.
 - Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics, 29(2), 119-127.
 - Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica, 7(4), 815-840.
 - Pearson, K. (1900). On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling. Philosophical Magazine, Ser. 5, 50(302), 157-175.
+- Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring. Wiley.
 
 ---
 

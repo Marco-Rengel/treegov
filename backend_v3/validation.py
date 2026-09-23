@@ -46,7 +46,7 @@ from scipy.stats import chi2 as _chi2_dist
 from .log_config import get_logger
 from .tree_builder import TreeModel
 
-__all__ = ["OOSMetrics", "predict_pd", "compute_oos_metrics"]
+__all__ = ["OOSMetrics", "predict_pd", "predict_leaf_assignment", "compute_oos_metrics"]
 
 _HL_EPS = 1e-15
 
@@ -71,13 +71,20 @@ class OOSMetrics:
     roc_points: tuple[tuple[float, float, float], ...]
 
 
-def predict_pd(model: TreeModel, X: pd.DataFrame) -> np.ndarray:
-    """Asigna a cada fila su hoja y devuelve pd_final por fila.
+def predict_leaf_assignment(
+    model: TreeModel, X: pd.DataFrame, *, unseen_policy: str = "error"
+) -> np.ndarray:
+    """Asigna a cada fila el node_id de su hoja.
 
-    X_test se asume imputado con TrainOnlyImputer ajustado SOLO sobre train
-    (politica anti-leakage); el chequeo de filas sin asignacion es defensa
-    defensiva (p. ej. NaN residual), no el caso esperado.
+    unseen_policy:
+      - "error"    (default): ValueError si alguna fila no puede enrutarse
+                   (NaN residual o categoria no vista en train).
+      - "majority": las filas sin ruta se asignan a la hoja mas poblada del
+                   arbol (empate -> menor node_id; determinista).
+      - "exclude" : las filas sin ruta quedan con -1 (el llamador decide).
     """
+    if unseen_policy not in ("error", "majority", "exclude"):
+        raise ValueError(f"[validation] unseen_policy invalida: {unseen_policy!r}")
     if not model.nodes:
         raise ValueError("[validation] modelo vacio")
     n_rows = int(len(X))
@@ -94,23 +101,54 @@ def predict_pd(model: TreeModel, X: pd.DataFrame) -> np.ndarray:
         col = X[cfg.predictor]
         if cfg.threshold is not None:
             vals = col.iloc[idx].to_numpy(dtype=float)
-            valido = ~np.isnan(vals)  # NaN -> sin asignar -> ValueError final
+            valido = ~pd.isna(vals)  # NaN -> sin ruta
             izq = valido & (vals <= float(cfg.threshold))
             der = valido & (vals > float(cfg.threshold))
             cola.append((nd.child_ids[0], idx[izq]))
             cola.append((nd.child_ids[1], idx[der]))
         else:
             etiquetas = col.iloc[idx]
+            asignadas = np.zeros(len(idx), dtype=bool)
             for rama, cid in zip(cfg.branches or (), nd.child_ids):
                 mask = etiquetas.isin(list(rama)).to_numpy()
+                asignadas |= mask
                 cola.append((cid, idx[mask]))
-    faltan = int((asign < 0).sum())
-    if faltan:
-        raise ValueError(
-            f"[validation] {faltan} filas sin hoja asignada (routing incompleto; "
-            "¿NaN no imputado o categoria no vista en train?)"
-        )
-    return np.array([model.nodes[nid].pd_final for nid in asign], dtype=float)
+            # categorias no vistas o NaN quedan sin ruta (se resuelven abajo)
+
+    sin_ruta = np.flatnonzero(asign < 0)
+    if sin_ruta.size:
+        if unseen_policy == "majority":
+            hojas = [nd for nd in model.nodes if nd.is_leaf]
+            destino = max(hojas, key=lambda h: (-h.n, h.node_id))
+            asign[sin_ruta] = destino.node_id
+            get_logger("validation").info(
+                "[validation] %d filas sin ruta -> hoja mayoritaria id=%d",
+                int(sin_ruta.size), destino.node_id,
+            )
+        elif unseen_policy == "error":
+            raise ValueError(
+                f"[validation] {sin_ruta.size} filas sin hoja asignada "
+                "(routing incompleto; use unseen_policy='majority'/'exclude')"
+            )
+        # "exclude": quedan en -1
+    return asign
+
+
+def predict_pd(
+    model: TreeModel, X: pd.DataFrame, *, unseen_policy: str = "error"
+) -> np.ndarray:
+    """Devuelve pd_final por fila (np.nan en filas excluidas por politica).
+
+    X_test se asume imputado con TrainOnlyImputer ajustado SOLO sobre train
+    (politica anti-leakage); la politica ante valores no vistos es visible
+    via 'unseen_policy' (default conservador: error).
+    """
+    asign = predict_leaf_assignment(model, X, unseen_policy=unseen_policy)
+    out = np.full(len(X), np.nan, dtype=float)
+    ok = asign >= 0
+    for nid in {int(a) for a in asign[ok]}:
+        out[asign == nid] = model.nodes[nid].pd_final
+    return out
 
 
 def compute_oos_metrics(
