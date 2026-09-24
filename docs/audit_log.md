@@ -219,3 +219,49 @@ auditores, reguladores, colaboradores y reclutadores. La mejora responde
 a feedback de auditor externo y refuerza la filosofía de "gobernanza
 primero". Los cambios se aplicaron a ambos READMEs (EN y ES) para evitar
 divergencia documental.
+
+---
+
+### 23/09/2026 — Esqueleto GUI + i18n bilingüe (Fase 2.0)
+
+**Estado**: Aprobado tras 1 micro-ajuste
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: treegov_gui.py, frontend_v3/{__init__,app,i18n,
+main_window,theme}.py, frontend_v3/resources/styles.qss,
+tests/test_gui_smoke.py, docs/roadmap.md.
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Baja | main_window.py | Status bar mostraba "light"/"dark" crudo en lugar de etiqueta traducida | tr(f'menu_view_theme_{name}') |
+| 2 | Trivial | styles.qss | Comentario $TOKENS interpretado como placeholder por string.Template | Comentario reescrito sin $ |
+
+**Bugs auto-detectados durante desarrollo**:
+- FIX 1 aplicado: 3 claves i18n del menú Model (Train / Evaluate OOS /
+  Load OOT Cohort).
+- 2 claves i18n extra detectadas honestamente por el agente: toggles de
+  paneles (menu_view_toggle_left/right). Total: 29 claves por idioma.
+- Bug propio capturado por los tests: $TOKENS en QSS rompía el render.
+
+**Decisiones arquitectónicas**:
+- QSS con string.Template y tokens $X (evita colisión con llaves {} de
+  QSS). Fail-fast en palette/template mismatch.
+- i18n con diccionario Python plano (no Qt Linguist .ts/.qm): auditable
+  en texto plano, cambio de idioma en caliente con retranslate_ui().
+- Widgets construidos vacíos; retranslate_ui() es única fuente de verdad
+  de textos (llamada al final de __init__).
+- Excepthook condicional a platformName() != "offscreen" (evita modal
+  colgado en CI).
+- TREEGOV_GUI_AUTOQUIT_MS: mecanismo de auto-quit para CI headless.
+- Session importada solo bajo TYPE_CHECKING (sala limpia).
+
+**Identidades verificadas**:
+- Suite: 128/128 PASSED (119 previos + 9 nuevos: 6 smoke + 3 i18n).
+- Guardrail AST: import numpy en frontend_v3/ → FAILED (bloqueo OK).
+- treegov_gui.py offscreen con auto-quit → exit 0, log limpio.
+- treegov.py backend → exit 0, sin regresión.
+
+**Documentación adicional**: OBS 1 (mnemonics "&") y OBS 3 (guardrail
+runtime de imports backend) registradas en docs/roadmap.md para fases
+posteriores.
