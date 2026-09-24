@@ -27,6 +27,8 @@
 - Step 2: predictors + target.
 - Step 3: validation scheme (train/test, seed).
 - Step 4: MRM governance (max_depth, min_child_size, PD floor).
+- Runtime backend-import guardrail in the GUI process (deferred from
+  Phase 2.0; the AST smoke check only covers numpy/pandas/scipy).
 
 ### Phase 2.2 — Interactive tree viewer
 **Priority: HIGH**
@@ -36,6 +38,7 @@
 **Priority: HIGH**
 - Gini, KS, HL, Brier, ROC + AUC, PR-AUC.
 - PSI, CSI, Gini Drop with Basel/EBA traffic lights.
+- Evaluate keyboard mnemonics ("&") for menus (out of scope in 2.0).
 
 ### Phase 2.4 — Reports + integration
 **Priority: MEDIUM**

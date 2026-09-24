@@ -1,0 +1,71 @@
+/* TreeGov base stylesheet - token placeholders substituted by frontend_v3/theme.py */
+
+QWidget {
+    background: $BG;
+    color: $FG;
+    font-size: 13px;
+}
+
+QMainWindow::separator {
+    background: $BORDER;
+    width: 2px;
+}
+
+QSplitter::handle {
+    background: $BORDER;
+}
+
+QMenuBar {
+    background: $SURFACE;
+    border-bottom: 1px solid $BORDER;
+}
+
+QMenuBar::item:selected {
+    background: $ACCENT;
+    color: $ACCENT_FG;
+}
+
+QMenu {
+    background: $SURFACE;
+    border: 1px solid $BORDER;
+}
+
+QMenu::item:selected {
+    background: $ACCENT;
+    color: $ACCENT_FG;
+}
+
+QMenu::item:disabled {
+    color: $DISABLED;
+}
+
+QTabWidget::pane {
+    border: 1px solid $BORDER;
+}
+
+QTabBar::tab {
+    background: $SURFACE;
+    padding: 6px 14px;
+    border: 1px solid $BORDER;
+}
+
+QTabBar::tab:selected {
+    background: $BG;
+    border-bottom-color: $BG;
+}
+
+QStatusBar {
+    background: $SURFACE;
+    border-top: 1px solid $BORDER;
+}
+
+QToolTip {
+    background: $SURFACE;
+    color: $FG;
+    border: 1px solid $BORDER;
+}
+
+QLabel#panelTitle {
+    font-weight: bold;
+    color: $ACCENT;
+}
