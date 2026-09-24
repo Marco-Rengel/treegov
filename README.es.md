@@ -5,7 +5,17 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Aviso regulatorio**: Software en fase de validación técnica (Model Risk Management - MRM).
+**Suite de tests**: 119/119 passing
+
+> **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **No está apto todavía para producción bancaria.** Su uso previsto es la exploración analítica y la validación técnica MRM. Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
+
+---
+
+## Resumen ejecutivo
+
+TreeGov es una estación de trabajo analítica para **segmentación de riesgo de crédito** con **gobernanza de modelos (MRM)** e **IFRS 9** nativas. Implementa los tres algoritmos clásicos de árboles de decisión — CHAID, C&RT y QUEST — con **matemática de caja blanca**: cada fórmula estadística está escrita explícitamente en el código y citada a su publicación original.
+
+A diferencia de las librerías de propósito general (scikit-learn, statsmodels, paquetes de R) que exigen programar, TreeGov ofrece un **entorno gráfico** donde el analista se concentra en el análisis, no en el código. A diferencia de las herramientas GUI descontinuadas, es open source, mantenida activamente, y construida desde cero con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño de primera clase.
 
 ---
 
@@ -25,20 +35,25 @@ Herramienta de segmentación analítica para riesgo de crédito con gobernanza M
 
 ## Principios de diseño
 
-1. **Arquitectura de sala limpia**: separación estricta entre el backend analítico (backend_v3/, sin dependencias de GUI) y la capa de presentación (frontend_v3/, sin lógica analítica).
-2. **Caja blanca**: prohibido el uso de sklearn, statsmodels o cualquier librería de caja negra. Cada fórmula estadística está escrita explícitamente en el código con su cita bibliográfica.
-3. **Gobernanza nativa**: logging transaccional DEBUG, configuración inmutable (SplitConfig frozen), validación de invariantes matemáticos en construcción.
+1. **Arquitectura de sala limpia**: separación estricta entre el backend analítico (`backend_v3/`, sin dependencias de GUI) y la capa de presentación (`frontend_v3/`, sin lógica analítica).
+2. **Caja blanca**: prohibido el uso de sklearn, statsmodels o cualquier librería de caja negra. Cada fórmula estadística está escrita explícitamente en el código, con su cita bibliográfica.
+3. **Gobernanza nativa**: logging transaccional DEBUG, configuración inmutable (`SplitConfig` frozen), y validación de invariantes matemáticos en la construcción.
 
 ---
 
 ## Capacidades analíticas
 
-- **CHAID clásico y Exhaustive CHAID**: fusión iterativa de categorías con corrección de Bonferroni de Kass (1980), soporte multiclase.
-- **C&RT binario**: partición por impureza de Gini (clasificación) y varianza (regresión), con surrogate splits (Breiman et al., 1984).
-- **QUEST binario**: selección insesgada de variable (ANOVA + chi-cuadrado + Levene) con punto de corte QDA univariante (Loh & Shih, 1997).
-- **Estimador de Jeffreys + PD Floor**: mitigación de probabilidades nulas en carteras de bajo impago (BCBS CRE 20.39).
-- **Partición Hamilton-Hare**: split train/test estratificado exacto, sin sesgo de redondeo.
-- **Imputación anti-leakage**: TrainOnlyImputer ajustado exclusivamente sobre train_fold.
+| Capacidad | Referencia | Características clave |
+|---|---|---|
+| **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
+| **C&RT** binario | Breiman et al. (1984) | Impureza de Gini / varianza, surrogate splits para valores nulos |
+| **QUEST** binario | Loh & Shih (1997) | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante |
+| **Estimador de Jeffreys + PD Floor** | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
+| **Partición Hamilton-Hare** | — | Split train/test estratificado exacto, sin sesgo de redondeo |
+| **Imputación anti-leakage** | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
+| **Poda coste-complejidad** | Breiman et al. (1984) | Post-poda con la secuencia alpha; reindexado determinista de nodos |
+| **Validación OOS / OOT** | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; soporte de cohorte out-of-time |
+| **Monitoreo de estabilidad** | Basilea / EBA | PSI (hojas), CSI (covariables), Gini Drop con semáforos |
 
 ---
 
@@ -54,80 +69,116 @@ Herramienta de segmentación analítica para riesgo de crédito con gobernanza M
 
 ## Estructura del repositorio
 
+```
 TreeGov/
-- backend_v3/  — Capa analítica pura (0 imports Qt)
-  - import_guard.py
-  - log_config.py
-  - types.py
-  - statistics.py
-  - imputation.py
-  - chaid_engine.py
-  - crt_engine.py
-  - quest_engine.py
-  - splitting.py
-  - profiling.py
-  - tree_builder.py
-  - session_state.py
-  - validation.py
-  - pruning.py
-- frontend_v3/  — Capa de presentación (placeholder Fase 2)
-- tests/  — Tests unitarios
-- docs/  — Documentación vigente (methodology.md, api.md, roadmap.md, philosophy.md, audit_log.md)
-- archive/  — Documentos y código históricos (NO editar)
-- data/  — Datasets (solo lectura)
-- logs/  — Logs de ejecución por corrida
-- treegov.py  — Orquestador headless
-- requirements.txt  — Dependencias
-- .treegovrules  — Reglas de gobernanza para agentes IA
+├── backend_v3/              # Capa analítica pura (0 imports Qt)
+│   ├── import_guard.py      # Bloqueo de librerías de caja negra
+│   ├── log_config.py        # Logger transaccional DEBUG
+│   ├── types.py             # SplitConfig (frozen) + enums
+│   ├── statistics.py        # chi2, F, Brown-Forsythe, Stirling, Kass
+│   ├── imputation.py        # TrainOnlyImputer (anti-leakage)
+│   ├── chaid_engine.py      # CHAID clásico + Exhaustive
+│   ├── crt_engine.py        # C&RT binario + surrogate splits
+│   ├── quest_engine.py      # QUEST binario + QDA univariante
+│   ├── splitting.py         # Partición Hamilton-Hare
+│   ├── profiling.py         # Inferencia de tipos de predictor
+│   ├── tree_builder.py      # Construcción BFS + TreeModel
+│   ├── session_state.py     # Máquina de estados (EMPTY a TRAINED a OOT)
+│   ├── validation.py        # Métricas OOS + evaluación OOT
+│   ├── pruning.py           # Poda coste-complejidad (Breiman)
+│   └── stability.py         # PSI / CSI / Gini Drop
+├── frontend_v3/             # Capa de presentación (Fase 2)
+├── tests/                   # Tests unitarios (dual: pytest / python directo)
+├── docs/                    # Documentación
+│   ├── methodology.md       # Metodología matemática (EN)
+│   ├── api.md               # API pública (EN)
+│   ├── roadmap.md           # Plan de fases (EN)
+│   ├── philosophy.md        # Filosofía (EN)
+│   ├── philosophy.es.md     # Filosofía (ES)
+│   ├── estado_proyecto.md   # Dossier de estado del proyecto (ES)
+│   └── audit_log.md         # Bitácora de auditoría (ES)
+├── archive/                 # Documentos históricos (solo lectura)
+├── data/                    # Datasets (solo lectura, Git-ignored)
+├── logs/                    # Logs por corrida (Git-ignored)
+├── treegov.py               # Orquestador headless (CLI)
+├── treegov_gui.py           # Entry point de la GUI (Fase 2)
+├── pyproject.toml           # Empaquetado
+├── README.md                # README principal (EN)
+├── README.es.md             # Este archivo (ES)
+├── LICENSE                  # Apache 2.0
+└── .treegovrules            # Reglas de gobernanza para agentes IA
+```
 
 ---
 
-## Ejecución
+## Inicio rápido
 
 ### Instalación
 
+```powershell
 .\.venv\Scripts\python -m pip install -r requirements.txt
+```
 
 ### Demo headless (Fase 0)
 
+```powershell
 .\.venv\Scripts\python treegov.py
+```
 
 ### Benchmark de rendimiento (N=1M)
 
+```powershell
 .\.venv\Scripts\python tests\benchmark_1m.py --n 1000000 --seed 42
+```
 
 ### Suite de tests
 
+```powershell
 .\.venv\Scripts\python -m pytest tests -q
+```
 
 ---
 
 ## Estado del proyecto
 
-- **Fase 0 (núcleo algorítmico)**: completada.
-- **Fase 1 (flujo transaccional)**: completada.
-- **Fase 1.2 (evaluación OOS + poda)**: completada.
-- **Fase 1.3 (validación OOT + PSI/CSI)**: completada.
-- **Fase 2 (GUI PySide6)**: en diseño.
-- **Fases 3-5**: planificadas.
+| Fase | Descripción | Estado |
+|---|---|---|
+| **0** | Núcleo algorítmico: 4 motores + statistics + imputación | Completada |
+| **1** | Flujo transaccional: splitting, profiling, tree_builder, session_state | Completada |
+| **1.2** | Evaluación OOS + poda coste-complejidad | Completada |
+| **1.3** | Validación OOT + monitoreo PSI/CSI | Completada |
+| **2.0-2.4** | GUI con PySide6 (esqueleto, wizard, visor de árbol, métricas, reportes) | En progreso |
+| **3** | Reportes analíticos + capa MCP para agentes LLM | Planificada |
+| **4** | Scoring batch + champion-challenger | Planificada |
+| **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planificada |
 
-Suite de tests: 119/119 passing.
+**Suite de tests: 119/119 passing.**
 
 ---
 
 ## Referencias académicas
 
-- Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics 29(2), 119-127.
-- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
-- Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica 7(4), 815-840.
-- Cochran, W.G. (1954). Some Methods for Strengthening the Common Chi-2 Tests. Biometrics 10(4), 417-451.
-- Biggs, D., de Ville, B. & Suen, E. (1991). A Method of Choosing Multiway Partitions for Classification and Decision Trees. Journal of Applied Statistics 18(1), 49-62.
+- Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
+- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
+- Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
+- Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
+- Biggs, D., de Ville, B. & Suen, E. (1991). *A Method of Choosing Multiway Partitions for Classification and Decision Trees*. Journal of Applied Statistics 18(1), 49-62.
+- Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring*. Wiley.
+
+---
+
+## Referencias regulatorias
+
+- **Basilea (BCBS CRE 20.39)**: suelos regulatorios de PD.
+- **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
+- **IFRS 9 / NIIF 9**: clasificación por etapas (staging), ECL, y optimización de umbrales asimétricos.
+- **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).
 
 ---
 
 ## Licencia
 
-Apache License 2.0
+Apache License 2.0 — ver [LICENSE](LICENSE).
 
 ---
 

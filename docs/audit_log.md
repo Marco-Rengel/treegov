@@ -188,3 +188,34 @@ docs/methodology.md §8.5, docs/api.md.
 - e2e: categoría nueva en variable del árbol -> 20/60 filas excluidas registradas; PSI con bin `<UNSEEN>`; CSI con bin `<OTHER>`; verificación temporal con time_col; fuga temporal -> ValueError.
 
 **Tests**: 12 nuevos. Suite total: 119/119.
+
+---
+
+### 23/09/2026 — Mejora del README (bilingüe)
+
+**Estado**: Aprobado
+**Revisor**: Marco Rengel
+**Artefactos**: README.md, README.es.md
+
+**Cambios aplicados** (feedback de colega auditor externo):
+- Resumen ejecutivo no técnico al inicio (facilita lectura a no técnicos).
+- Tabla de capacidades analíticas (capacidad / referencia / características
+  clave) reemplazando la lista en bullets.
+- Timeline visual de fases (tabla con estados Completada / En progreso /
+  Planificada).
+- Aviso regulatorio reforzado con la frase "No está apto todavía para
+  producción bancaria" — protege al autor y clarifica el estado ante
+  reguladores.
+- Consistencia visual de headings (## principales, ### subsecciones).
+- Cita Siddiqi (2006) añadida a referencias académicas.
+- Sección "Regulatory references" separada de "Academic references".
+- Estructura del repositorio actualizada (14 módulos backend).
+- Suite de tests (119/119) en el header.
+- Sección "Contributions" deliberadamente omitida (pendiente de decisión
+  legal sobre el contrato laboral actual antes de aceptar PRs externos).
+
+**Justificación**: el README es la primera impresión del proyecto ante
+auditores, reguladores, colaboradores y reclutadores. La mejora responde
+a feedback de auditor externo y refuerza la filosofía de "gobernanza
+primero". Los cambios se aplicaron a ambos READMEs (EN y ES) para evitar
+divergencia documental.
