@@ -27,6 +27,16 @@ __all__ = ["MAX_ORDINAL_CATS", "infer_spec"]
 MAX_ORDINAL_CATS: int = 20
 
 
+def _infer_column(s: pd.Series) -> PredictorType:
+    """Heuristica por columna (extraida en Fase 2.1 para reuso en
+    Session.describe_dataset sin duplicar la regla)."""
+    if not pd.api.types.is_numeric_dtype(s):
+        return PredictorType.NOMINAL
+    if int(s.nunique(dropna=True)) <= MAX_ORDINAL_CATS:
+        return PredictorType.ORDINAL
+    return PredictorType.CONTINUOUS
+
+
 def infer_spec(
     df: pd.DataFrame,
     target: str,
@@ -42,17 +52,11 @@ def infer_spec(
         if col == target:
             continue
         s = df[col]
-        n_dist = int(s.nunique(dropna=True))
-        if not pd.api.types.is_numeric_dtype(s):
-            ptype = PredictorType.NOMINAL
-        elif n_dist <= MAX_ORDINAL_CATS:
-            ptype = PredictorType.ORDINAL
-        else:
-            ptype = PredictorType.CONTINUOUS
+        ptype = _infer_column(s)
         spec[col] = ptype
         log.info(
             "[profiling] %-24s dtype=%-8s n_distinct=%-5d -> %s",
-            col, str(s.dtype), n_dist, ptype.name,
+            col, str(s.dtype), int(s.nunique(dropna=True)), ptype.name,
         )
     if not spec:
         raise ValueError("[profiling] el dataset no tiene predictores")

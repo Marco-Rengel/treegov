@@ -11,6 +11,8 @@ underscore) are internal and may change without notice.
 
 - `SplitConfig` (frozen dataclass) — common contract of the 4 engines.
 - `TargetType`, `PredictorType`, `CutKind` (Enums).
+- `GovernanceMode` (Enum): `BANKING` (Jeffreys + PD Floor, default) |
+  `RESEARCH` (raw k/n, no floor).
 - `MethodName`, `StatisticName` (Literal validation aliases of the contract).
 
 ## backend_v3.statistics
@@ -46,6 +48,17 @@ underscore) are internal and may change without notice.
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
+- `Session.describe_dataset() -> (columns, types)` — read-only profile of
+  the loaded dataset (types as `PredictorType.name` strings; Phase 2.1).
+- `Session.fix_spec(target, spec=None, *, predictors=None)` — optional
+  predictor subset filter applied inside the backend (Phase 2.1).
+- `Session.train(engine, *, target_type, max_depth, min_child_size,
+  pd_floor=0.0003, apply_jeffreys=True)` — `engine` accepts an engine
+  instance or its name ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST");
+  `pd_floor=None` + `apply_jeffreys=False` yields Research mode
+  (Phase 2.1).
+- `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
+  cached DataFrame (no CSV re-read; Phase 2.1).
 
 ## backend_v3.validation
 
@@ -82,13 +95,16 @@ underscore) are internal and may change without notice.
 
 ---
 
-> **Note:** this list reflects the API as of the close of Phase 1.2. Later
+> **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be
 > documented here once they stabilize.
 
 *Generated against the actual `__all__` of each module (verified at Phase
-1.2). `log_config` and `import_guard` declare no `__all__`; the listing is
-their canonical public API (only non-underscore functions).*
+2.1). `log_config` and `import_guard` declare no `__all__`; the listing is
+their canonical public API (only non-underscore functions). `frontend_v3`
+is the presentation layer (no analytical logic); its modules
+(`app`, `main_window`, `wizard`, `theme`, `i18n`) are internal to the GUI
+and therefore not listed here.*
 
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.

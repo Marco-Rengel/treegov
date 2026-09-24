@@ -23,6 +23,7 @@ __all__ = [
     "MethodName",
     "StatisticName",
     "SplitConfig",
+    "GovernanceMode",
 ]
 
 
@@ -47,6 +48,20 @@ class CutKind(Enum):
 
     THRESHOLD = auto()        # continuo: x <= t / x > t
     CATEGORY_GROUPS = auto()  # categorico: pertenencia a rama por grupos de categorias
+
+
+class GovernanceMode(Enum):
+    """Modo de gobernanza de la PD por hoja (TreeGov, Fase 2.1).
+
+    BANKING (defecto): estimador de Jeffreys + PD Floor (BCBS CRE 20.39);
+        capa MRM/IFRS 9 para modelos bancarios.
+    RESEARCH: PD empirica cruda (k/n), sin suavizado bayesiano ni floor,
+        para dominios no bancarios (salud, ciencias sociales, marketing)
+        donde la restriccion regulatoria no aplica.
+    """
+
+    BANKING = auto()
+    RESEARCH = auto()
 
 
 MethodName = Literal["CHAID", "CHAID_EXHAUSTIVE", "CRT", "QUEST"]

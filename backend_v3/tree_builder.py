@@ -14,8 +14,10 @@ Reglas duras:
     rechaza (no hay fusion de respaldo; se documenta y el nodo queda hoja).
   - Si el motor lanza una excepcion, TreeBuilder la PROPAGA (fail-fast):
     nunca se traduce a hoja (el error no se disfraza de decision analitica).
-  - PD por nodo: estimador de Jeffreys (k + 0.5) / (n + 1.0) y
-    pd_final = max(pd_floor, pd_jeffreys)   [BCBS CRE 20.39].
+  - PD por nodo, segun GovernanceMode (Fase 2.1, types.GovernanceMode):
+      BANKING (defecto): Jeffreys (k + 0.5) / (n + 1.0) y
+          pd_final = max(pd_floor, pd_j)          [BCBS CRE 20.39]
+      RESEARCH: PD empirica cruda k/n y pd_final = pd_j (sin floor).
     La PD OPERATIVA solo es la de las hojas (is_leaf=True); la de nodos
     internos se expone solo con fines de trazabilidad.
   - Determinismo estructural: dos build() con los mismos datos y parametros
@@ -39,7 +41,7 @@ import numpy as np
 import pandas as pd
 
 from .log_config import get_logger
-from .types import PredictorType, SplitConfig, TargetType
+from .types import GovernanceMode, PredictorType, SplitConfig, TargetType
 
 __all__ = ["TreeNode", "TreeModel", "TreeBuilder"]
 
@@ -53,8 +55,10 @@ class TreeNode:
     parent_id: int | None
     n: int
     n_events: int
-    pd_jeffreys: float  # (k + 0.5) / (n + 1)
-    pd_final: float     # max(pd_floor, pd_jeffreys); operativa solo en hojas
+    # Jeffreys (k+0.5)/(n+1) en modo BANKING; k/n crudo en modo RESEARCH
+    pd_jeffreys: float
+    pd_final: float     # max(pd_floor, pd_j) si hay floor; si no, pd_j.
+                        # Operativa solo en hojas
     is_leaf: bool
     split: SplitConfig | None
     child_ids: tuple[int, ...]
@@ -138,7 +142,8 @@ class TreeBuilder:
         target_type: TargetType,
         max_depth: int | None = 4,
         min_child_size: int = 50,
-        pd_floor: float = 0.0003,
+        pd_floor: float | None = 0.0003,
+        apply_jeffreys: bool = True,
         seed: int | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -146,7 +151,11 @@ class TreeBuilder:
 
         Ese modo existe para alimentar la poda coste-complejidad
         (Breiman et al. 1984, §3) de backend_v3.pruning; sin poda, usar el
-        default 4 (pre-pruning)."""
+        default 4 (pre-pruning).
+
+        pd_floor=None + apply_jeffreys=False -> modo RESEARCH (PD cruda
+        k/n, sin floor); los defaults son el modo BANKING (BCBS CRE 20.39).
+        """
         if not hasattr(engine, "best_split"):
             raise TypeError("engine debe exponer best_split(X, y, spec, ...)")
         if max_depth is not None and (
@@ -160,13 +169,22 @@ class TreeBuilder:
             raise ValueError(
                 f"min_child_size debe ser entero >= 1: {min_child_size!r}"
             )
-        if isinstance(pd_floor, bool) or not (0.0 <= float(pd_floor) < 1.0):
-            raise ValueError(f"pd_floor fuera de [0, 1): {pd_floor!r}")
+        if pd_floor is not None and (
+            isinstance(pd_floor, bool) or not (0.0 <= float(pd_floor) < 1.0)
+        ):
+            raise ValueError(f"pd_floor fuera de [0, 1) o None: {pd_floor!r}")
+        if not isinstance(apply_jeffreys, bool):
+            raise ValueError(
+                f"apply_jeffreys debe ser bool: {apply_jeffreys!r}"
+            )
         self._engine = engine
         self._target_type = target_type
-        self.max_depth = int(max_depth)
+        # None -> modo grow_full (el docstring lo promete desde Fase 1.2;
+        # antes int(None) lanzaba TypeError: bug corregido en Fase 2.1)
+        self.max_depth = None if max_depth is None else int(max_depth)
         self.min_child_size = int(min_child_size)
-        self.pd_floor = float(pd_floor)
+        self.pd_floor = None if pd_floor is None else float(pd_floor)
+        self.apply_jeffreys = apply_jeffreys
         self.seed = seed
         self._log = logger if logger is not None else get_logger("builder")
 
@@ -205,8 +223,12 @@ class TreeBuilder:
             Yn = ycodes[idx]
             n = int(len(idx))
             k_ev = int(Yn.sum())
-            pd_j = (k_ev + 0.5) / (n + 1.0)
-            pd_f = max(self.pd_floor, pd_j)
+            if self.apply_jeffreys:
+                pd_j = (k_ev + 0.5) / (n + 1.0)   # Jeffreys (BANKING)
+            else:
+                pd_j = k_ev / n if n > 0 else 0.0  # PD cruda (RESEARCH)
+            pd_f = (max(self.pd_floor, pd_j) if self.pd_floor is not None
+                    else pd_j)
 
             razon: str | None = None
             cfg: SplitConfig | None = None
@@ -305,11 +327,26 @@ class TreeBuilder:
             return "QUEST"
         return cls
 
+    def _governance_label(self) -> str:
+        """Etiqueta del modo de gobernanza EFECTIVO (para el fingerprint).
+
+        BANKING  = Jeffreys + floor; RESEARCH = cruda + sin floor; CUSTOM =
+        cualquier combinacion intermedia (posible via API; la GUI solo emite
+        BANKING/RESEARCH, el fingerprint registra la verdad computacional).
+        """
+        if self.apply_jeffreys and self.pd_floor is not None:
+            return GovernanceMode.BANKING.name
+        if not self.apply_jeffreys and self.pd_floor is None:
+            return GovernanceMode.RESEARCH.name
+        return "CUSTOM"
+
     def _fingerprint(self, spec: dict[str, PredictorType]) -> str:
         """sha256 (16 hex) del dict canonico determinista.
 
         Incluye los hiperparametros PUBLICOS del motor (engine_params):
         dos ChaidEngine con alpha_merge distinto NO comparten fingerprint.
+        Incluye el modo de gobernanza (Fase 2.1): dos arboles con distinto
+        modo NO comparten fingerprint (trazabilidad MRM).
         """
         engine_params = {
             k: str(v) for k, v in sorted(vars(self._engine).items())
@@ -321,7 +358,9 @@ class TreeBuilder:
             "spec": {k: v.name for k, v in sorted(spec.items())},
             "max_depth": self.max_depth if self.max_depth is not None else "None",
             "min_child_size": self.min_child_size,
-            "pd_floor": self.pd_floor,
+            "governance_mode": self._governance_label(),
+            "apply_jeffreys": self.apply_jeffreys,
+            "pd_floor": self.pd_floor,  # None serializa como null (json)
             "seed": self.seed,
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")

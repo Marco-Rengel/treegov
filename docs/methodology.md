@@ -240,6 +240,20 @@ PD_final(t) = max(PD_floor, PD_Jeffreys(t))
 
 **Citation**: Basel (BCBS CRE 20.39), EBA/GL/2017/16, IFRS 9.
 
+### 6.4. Governance modes
+
+TreeGov supports two modes (`backend_v3.types.GovernanceMode`):
+
+- **Banking (default):** Jeffreys estimator + PD Floor (BCBS CRE 20.39).
+- **Research:** raw empirical PD (k/n) without Bayesian smoothing or
+  floor, for non-banking domains (health, social sciences, marketing)
+  where regulatory constraints do not apply.
+
+Intermediate combinations (e.g. Jeffreys without a floor) are reachable
+through the API; `TreeModel.params_fingerprint` labels the effective mode
+("BANKING" | "RESEARCH" | "CUSTOM"), so two trees trained under
+different governance never share the same fingerprint.
+
 ---
 
 ## 7. Hamilton-Hare partition (Largest Remainder)

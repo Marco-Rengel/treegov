@@ -295,6 +295,94 @@ def test_guards_builder():
     )
 
 
+# ---------------------------------------------------------------------------
+# Fase 2.1: Governance Mode (BANKING / RESEARCH)
+# ---------------------------------------------------------------------------
+
+
+def test_governance_banking_default():
+    """Default = BANKING: Jeffreys (k+0.5)/(n+1) y floor 0.0003."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    tb = TreeBuilder(_crt(), target_type=_BIN, max_depth=4, min_child_size=2)
+    assert tb.apply_jeffreys is True and tb.pd_floor == 0.0003
+    m = tb.build(X, y, {"x": _CONT})
+    izq = m.nodes[1]                       # hoja pura: k=0, n=5
+    assert math.isclose(izq.pd_jeffreys, 0.5 / 6.0, rel_tol=1e-12)
+    assert math.isclose(izq.pd_final, max(0.0003, 0.5 / 6.0), rel_tol=1e-12)
+    assert tb._governance_label() == "BANKING"
+
+
+def test_governance_research_raw_pd():
+    """RESEARCH: PD cruda k/n, SIN floor -> una hoja pura puede ser 0.0."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    tb = TreeBuilder(_crt(), target_type=_BIN, max_depth=4, min_child_size=2,
+                     apply_jeffreys=False, pd_floor=None)
+    m = tb.build(X, y, {"x": _CONT})
+    izq, der = m.nodes[1], m.nodes[2]
+    assert izq.pd_jeffreys == 0.0          # k/n = 0/5 (crudo, sin suavizado)
+    assert izq.pd_final == 0.0             # sin floor: el 0 respira
+    assert math.isclose(der.pd_jeffreys, 1.0, rel_tol=1e-12)   # 5/5
+    assert der.pd_final == 1.0
+    assert tb._governance_label() == "RESEARCH"
+
+
+def test_fingerprint_distingue_modos():
+    """MRM: dos arboles con distinto governance mode NO comparten fingerprint."""
+    spec = {"x": _CONT}
+    base = dict(target_type=_BIN, max_depth=4, min_child_size=2)
+    fp_banking = TreeBuilder(_crt(), **base)._fingerprint(spec)
+    fp_research = TreeBuilder(_crt(), apply_jeffreys=False,
+                              pd_floor=None, **base)._fingerprint(spec)
+    fp_custom = TreeBuilder(_crt(), apply_jeffreys=False,
+                            pd_floor=0.0003, **base)._fingerprint(spec)
+    assert len({fp_banking, fp_research, fp_custom}) == 3
+    tb_custom = TreeBuilder(_crt(), apply_jeffreys=False,
+                            pd_floor=0.0003, **base)
+    assert tb_custom._governance_label() == "CUSTOM"
+
+
+def test_guards_governance():
+    # apply_jeffreys no bool -> ValueError
+    _assert_raises(
+        ValueError, TreeBuilder, _crt(), target_type=_BIN,
+        apply_jeffreys="yes",
+    )
+    # pd_floor negativo -> ValueError; None explicito es valido
+    _assert_raises(
+        ValueError, TreeBuilder, _crt(), target_type=_BIN, pd_floor=-0.1,
+    )
+    tb = TreeBuilder(_crt(), target_type=_BIN, pd_floor=None)
+    assert tb.pd_floor is None
+
+
+def test_grow_full_max_depth_none():
+    """max_depth=None permite crecer mas alla de 4 niveles hasta
+    min_child_size (modo grow_full para la poda de Breiman 1984 §3).
+
+    Regresa el bug latente: int(None) lanzaba TypeError en __init__.
+    """
+    rng = np.random.default_rng(42)
+    n = 500
+    x = pd.Series(rng.normal(0, 1, n))
+    y = pd.Series((x + rng.normal(0, 0.3, n) > 0).astype(int))
+    X = pd.DataFrame({"x": x})
+    spec = {"x": PredictorType.CONTINUOUS}
+    # contraste: max_depth=4 vs max_depth=None sobre el mismo dataset
+    m4 = TreeBuilder(_crt(), target_type=_BIN, max_depth=4,
+                     min_child_size=5).build(X, y, spec)
+    m_full = TreeBuilder(_crt(), target_type=_BIN, max_depth=None,
+                         min_child_size=5).build(X, y, spec)
+    depth_m4 = max(nd.depth for nd in m4.nodes)
+    depth_full = max(nd.depth for nd in m_full.nodes)
+    assert depth_m4 == 4                       # pre-pruning respeta el tope
+    assert depth_full >= depth_m4              # grow_full no se corta antes
+    assert m_full.nodes[-1].node_id == len(m_full.nodes) - 1  # BFS integro
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

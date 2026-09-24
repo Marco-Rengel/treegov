@@ -1,8 +1,9 @@
-"""Main window of the TreeGov GUI (Phase 2.0 - application skeleton).
+"""Main window of the TreeGov GUI (Phase 2.0 skeleton + 2.1 wizard flow).
 
-Clean room: no analytical logic here. The window may hold a reference to
-backend_v3.session_state.Session (injected via the constructor), but the
-import is TYPE_CHECKING-only; the frontend never computes.
+Clean room: no analytical logic here. The window orchestrates the backend
+EXCLUSIVELY via backend_v3.session_state.Session (the authorized contract);
+heavy data (DataFrames) never crosses into the frontend, only plain
+metadata (column names, PredictorType.name strings) via describe_dataset().
 
 Internationalization: every user-visible string goes through
 frontend_v3.i18n.tr (bilingual EN/ES). Qt's self.tr()/lrelease workflow is
@@ -17,11 +18,14 @@ retranslate_ui(), so language switch and first paint share one code path.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+import os
+from typing import Callable
 
 from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
     QFrame,
     QLabel,
     QMainWindow,
@@ -33,20 +37,19 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from backend_v3.session_state import FlowState, Session
 from frontend_v3 import __version__
 from frontend_v3.i18n import (
     SUPPORTED,
     detect_system_language,
     get_language,
+    language_bus,
     set_language,
     tr,
 )
 from frontend_v3.theme import apply_theme
+from frontend_v3.wizard import ModelWizard
 
-if TYPE_CHECKING:  # clean room: typing only, no runtime backend import
-    from backend_v3.session_state import Session
-
-_TT_PHASE21 = "Available in Phase 2.1"
 _TT_PHASE23 = "Available in Phase 2.3"
 
 
@@ -63,6 +66,10 @@ class MainWindow(QMainWindow):
         self._session = session
         self._logger = logger
         self._theme_name: str = "light"
+        # Phase 2.1: dataset profile (columns, types) and live wizard handle
+        self._dataset_info: tuple[tuple[str, ...], dict[str, str]] | None = None
+        self._wizard: ModelWizard | None = None
+        self._mode_name: str = "—"
 
         # Language before any widget text is built. QSettings without an
         # eager default: detect_system_language() runs only when unset,
@@ -119,7 +126,8 @@ class MainWindow(QMainWindow):
         self._hud_title.setText(tr("panel_right_title"))
         self._tabs.setTabText(0, tr("tab_welcome_title"))
 
-        self._lbl_session.setText(f"{tr('status_session')}: —")
+        self._refresh_session_indicator()
+        self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{self._theme_name}')}"
         )
@@ -156,12 +164,13 @@ class MainWindow(QMainWindow):
         # --- File ---
         self._menu_file = QMenu(self)
         self._menu_file.setObjectName("menu_file")
+        # gated: the wizard needs a loaded dataset (Phase 2.1)
         self._act_new_wizard = self._new_action(
-            "act_new_wizard", "Ctrl+N", enabled=False, tooltip=_TT_PHASE21
+            "act_new_wizard", "Ctrl+N", enabled=False
         )
-        self._act_open = self._new_action(
-            "act_open", "Ctrl+O", enabled=False, tooltip=_TT_PHASE21
-        )
+        self._act_new_wizard.triggered.connect(self._on_new_wizard)
+        self._act_open = self._new_action("act_open", "Ctrl+O")
+        self._act_open.triggered.connect(self._on_open_dataset)
         self._act_exit = self._new_action("act_exit", "Ctrl+Q")
         self._act_exit.triggered.connect(self.close)
         self._menu_file.addAction(self._act_new_wizard)
@@ -170,12 +179,11 @@ class MainWindow(QMainWindow):
         self._menu_file.addAction(self._act_exit)
         bar.addMenu(self._menu_file)
 
-        # --- Model (all placeholder until its phase lands) ---
+        # --- Model (train opens the wizard; OOS/OOT land in Phase 2.3) ---
         self._menu_model = QMenu(self)
         self._menu_model.setObjectName("menu_model")
-        self._act_train = self._new_action(
-            "act_train", enabled=False, tooltip=_TT_PHASE21
-        )
+        self._act_train = self._new_action("act_train", enabled=False)
+        self._act_train.triggered.connect(self._on_new_wizard)
         self._act_evaluate_oos = self._new_action(
             "act_evaluate_oos", enabled=False, tooltip=_TT_PHASE23
         )
@@ -302,9 +310,12 @@ class MainWindow(QMainWindow):
         sb = self.statusBar()
         self._lbl_session = QLabel()
         self._lbl_session.setObjectName("statusSessionLabel")
+        self._lbl_mode = QLabel()
+        self._lbl_mode.setObjectName("statusModeLabel")
         self._lbl_theme = QLabel()
         self._lbl_theme.setObjectName("statusThemeLabel")
         sb.addPermanentWidget(self._lbl_session)
+        sb.addPermanentWidget(self._lbl_mode)
         sb.addPermanentWidget(self._lbl_theme)
 
     # ------------------------------------------------------------------
@@ -320,10 +331,144 @@ class MainWindow(QMainWindow):
         if self._logger is not None:
             self._logger.info("Theme switched to %s", name)
 
+    # ------------------------------------------------------------------
+    # Slots (Phase 2.1: dataset load + transactional wizard orchestration)
+    # ------------------------------------------------------------------
+
+    def _on_open_dataset(self) -> None:
+        path, _filt = QFileDialog.getOpenFileName(
+            self, tr("dlg_open_dataset_title"), "",
+            tr("dlg_open_dataset_filter"),
+        )
+        if path:
+            self._load_dataset_path(path)
+
+    def _load_dataset_path(self, path: str) -> bool:
+        """Load a CSV into a fresh Session and cache its profile (columns,
+        inferred types). Returns True on success. Dialog-free so tests can
+        drive it headless."""
+        if self._session is None:
+            self._session = Session()
+        if not self._run_guarded(self._session.load_dataset, path):
+            return False
+        columns, types = self._session.describe_dataset()
+        self._dataset_info = (columns, types)
+        self._act_new_wizard.setEnabled(True)
+        self._act_train.setEnabled(True)
+        self._refresh_session_indicator()
+        st = self._session.state
+        self.statusBar().showMessage(
+            f"{os.path.basename(path)} — {st.n_rows} × {st.n_cols}"
+        )
+        if self._logger is not None:
+            self._logger.info("Dataset loaded via GUI: %s", path)
+        return True
+
+    def _on_new_wizard(self) -> None:
+        if self._dataset_info is None or self._session is None:
+            return
+        # reconfigure over the SAME loaded dataset (no CSV re-IO) when the
+        # session already advanced past DATA_LOADED
+        if self._session.state.state is not FlowState.DATA_LOADED:
+            self._session.reset_to_data_loaded()
+        columns, types = self._dataset_info
+        wiz = ModelWizard(columns, types, parent=self)
+        wiz.finished_with_config.connect(self._on_wizard_finished)
+        wiz.finished.connect(self._on_wizard_closed)
+        self._wizard = wiz
+        # one configuration at a time; View (theme/language) stays active
+        self._act_open.setEnabled(False)
+        self._act_new_wizard.setEnabled(False)
+        self._act_train.setEnabled(False)
+        wiz.show()
+
+    def _on_wizard_closed(self, _result: int) -> None:
+        if self._wizard is not None:
+            self._wizard.deleteLater()
+            self._wizard = None
+        self._act_open.setEnabled(True)
+        has_ds = self._dataset_info is not None
+        self._act_new_wizard.setEnabled(has_ds)
+        self._act_train.setEnabled(has_ds)
+
+    def _on_wizard_finished(self, cfg: dict) -> None:
+        """Consume the wizard config: fix_spec -> partition -> train."""
+        if self._session is None:
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ok = self._run_guarded(self._train_pipeline, cfg,
+                                   reset_on_error=True)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if not ok:
+            return
+        st = self._session.state
+        self._mode_name = (
+            "Banking" if cfg["governance_mode"] == "BANKING" else "Research"
+        )
+        self._refresh_session_indicator()
+        self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
+        tree = st.tree
+        if tree is not None:
+            self.statusBar().showMessage(
+                tr("msg_model_trained").format(
+                    method=tree.method, n=len(tree.nodes)
+                ),
+                8000,
+            )
+
+    def _train_pipeline(self, cfg: dict) -> None:
+        self._session.fix_spec(cfg["target"], predictors=cfg["predictors"])
+        self._session.partition(cfg["train_frac"], cfg["seed"])
+        self._session.train(
+            cfg["engine"],
+            max_depth=cfg["max_depth"],
+            min_child_size=cfg["min_child_size"],
+            pd_floor=cfg["pd_floor"],
+            apply_jeffreys=cfg["apply_jeffreys"],
+        )
+
+    def _run_guarded(
+        self,
+        fn: Callable,
+        *args,
+        reset_on_error: bool = False,
+        **kwargs,
+    ) -> bool:
+        """Run a backend call; on exception: full trace to the log, state
+        rollback via reset_to_data_loaded (if requested), and a user dialog
+        (suppressed under offscreen so CI never hangs on a modal)."""
+        try:
+            fn(*args, **kwargs)
+            return True
+        except Exception as exc:  # noqa: BLE001 - last UI line of defense
+            if self._logger is not None:
+                self._logger.exception("Backend operation failed")
+            if reset_on_error and self._session is not None:
+                try:
+                    self._session.reset_to_data_loaded()
+                except ValueError:
+                    pass  # nothing loaded to reset
+            app = QApplication.instance()
+            if app is not None and app.platformName() != "offscreen":
+                QMessageBox.warning(self, tr("msg_error_title"), str(exc))
+            self._refresh_session_indicator()
+            return False
+
+    def _refresh_session_indicator(self) -> None:
+        name = (
+            self._session.state.state.name
+            if self._session is not None
+            else "—"
+        )
+        self._lbl_session.setText(f"{tr('status_session')}: {name}")
+
     def _switch_language(self, lang: str) -> None:
         set_language(lang)
         QSettings().setValue("language", lang)
         self.retranslate_ui()
+        language_bus.language_changed.emit(lang)  # wizard & future dialogs
         if self._logger is not None:
             self._logger.info("Language switched to %s", lang)
 

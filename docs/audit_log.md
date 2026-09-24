@@ -265,3 +265,67 @@ tests/test_gui_smoke.py, docs/roadmap.md.
 **Documentación adicional**: OBS 1 (mnemonics "&") y OBS 3 (guardrail
 runtime de imports backend) registradas en docs/roadmap.md para fases
 posteriores.
+
+---
+
+### 23/09/2026 — Wizard transaccional + Governance Mode (Fase 2.1)
+
+**Estado**: Aprobado tras remediación de 2 hallazgos de implementación
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/wizard.py, frontend_v3/main_window.py,
+frontend_v3/i18n.py, backend_v3/types.py, backend_v3/tree_builder.py,
+backend_v3/session_state.py, backend_v3/profiling.py,
+tests/test_wizard.py, tests/test_session_state.py,
+tests/test_tree_builder.py, tests/test_gui_smoke.py, docs/{roadmap,
+methodology, api, estado_proyecto}.md.
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Media | wizard.py | El spec pedía `QWizard.WizardOption.NoHelpButton`: NO existe en Qt 6 (existe `HaveHelpButton`; el botón Help está oculto por defecto) | Documentado en código; micro-ajuste resuelto por omisión (sin llamada) |
+| 2 | Media | tests/test_wizard.py | El slot programático `QWizard.next()` no invoca el override `validateCurrentPage` (verificado con espía); el gate REAL del usuario es el botón Next deshabilitado vía isComplete/completeChanged | Test de navegación reescrito sobre el estado del botón (lo observable); override mantenido como defensa en profundidad |
+| 3 | Baja | state_proyecto.md §7 | Tabla de tests desactualizada: decía session_state 10 / stability 12; los reales eran 13+6=19 y 9 | Tabla regenerada con `pytest --collect-only` |
+| 4 | Media | wizard.py _refresh_summary | "Engine:" y el modo de gobernanza crudos (sin tr()) en el resumen del Step 4 | tr() + 3 claves i18n nuevas (step4_summary_engine, step4_govmode_*_short) |
+| 5 | Baja | wizard.py ModelWizard | language_bus sin disconnect al cerrar (referencia viva a bound method) | closeEvent con disconnect defensivo (try/except RuntimeError/TypeError) |
+
+**Bug preexistente detectado y corregido durante esta fase**:
+`TreeBuilder.__init__` ejecutaba `int(max_depth)` incondicional, así que
+`max_depth=None` (modo grow_full) lanzaba TypeError. El docstring lo
+prometía desde Fase 1.2 (alimenta la poda coste-complejidad de
+pruning.py) pero nunca se había ejercido. Corregido con validación
+explícita de None + test_grow_full_max_depth_none.
+
+**Decisiones arquitectónicas**:
+- GovernanceMode (types.py): BANKING (Jeffreys + PD Floor, BCBS CRE 20.39;
+  defecto) / RESEARCH (PD cruda k/n, sin floor). La UI solo emite los dos
+  modos; combinaciones intermedias vía API se etiquetan CUSTOM.
+- params_fingerprint incluye governance_mode/apply_jeffreys/pd_floor: dos
+  árboles con distinta gobernanza NUNCA comparten fingerprint.
+- Deltas backend (sala limpia): `describe_dataset()` (lectura pura),
+  `fix_spec(predictors=...)` (filtro dentro del backend),
+  `train(motor_por_nombre)` (factory interna), `reset_to_data_loaded()`
+  (sin re-IO del CSV). El frontend jamás instancia motores ni toca
+  PredictorType/DataFrame.
+- LanguageBus (QObject singleton en i18n.py): única vía de retraducción
+  en caliente; el wizard es NO modal justamente para permitir el cambio
+  de idioma/tema mientras está abierto.
+- Regla espejo CHAID en Step 2: los predictores [CONT] se deshabilitan en
+  la UI cuando el motor es CHAID (el backend los rechaza por contrato).
+- Diálogo de error suprimido bajo QT_QPA_PLATFORM=offscreen (CI jamás se
+  cuelga en un modal).
+
+**Identidades verificadas**:
+- Research: hoja pura k=0 -> pd_final == 0.0 exacto (sin Jeffreys ni floor);
+  Banking: pd_final = max(0.0003, (k+0.5)/(n+1)).
+- fingerprint BANKING != RESEARCH != CUSTOM (mismo dataset/parámetros).
+- grow_full: max_depth=None alcanza profundidad >= 4 sin TypeError.
+- train("CRT") == train(CrtEngine()) (mismo fingerprint, factory OK).
+- Reset conserva el DataFrame en caché (mismo objeto) y limpia artefactos.
+- Test micro-ajuste 3: combo target preserva currentText/currentData tras
+  cambio de idioma en caliente.
+- Guardrail AST: import numpy en frontend_v3/ -> FAILED (bloqueo OK).
+- treegov_gui.py offscreen con auto-quit -> exit 0, log limpio.
+- treegov.py backend -> exit 0, sin regresión.
+- Suite: 148/148 PASSED (128 previos + 6 session + 4 builder + 9 wizard
+  + 1 grow_full).

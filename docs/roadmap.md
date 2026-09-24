@@ -11,22 +11,24 @@
 - **Phase 1.3** (OOT + stability): stability.py + extensions to
   session_state.py.
   - Test suite: 119/119.
+- **Phase 2.0** (GUI skeleton): PySide6 QMainWindow (menus, 3-panel
+  splitter, status bar), QSS light/dark themes, bilingual EN/ES i18n via
+  plain-Python dictionary with live retranslate.
+  - Test suite: 128/128.
+- **Phase 2.1** (transactional wizard): 4-step QWizard (engine,
+  predictors/target, validation scheme, MRM governance) feeding Session.
+  Governance Mode (Banking/Research) added: Banking is the default;
+  Research disables Jeffreys + PD Floor for non-banking domains (health,
+  social sciences). Backend gained Session.describe_dataset() /
+  fix_spec(predictors=...) / train(engine by name) /
+  reset_to_data_loaded().
+  - Test suite: 148/148.
 
 ## Upcoming phases
 
-### Phase 2.0 — Application skeleton
-**Priority: HIGH**
-- Entry point treegov_gui.py.
-- QMainWindow with horizontal QSplitter (left panel, central tabs, right HUD).
-- Top menu (File / Model / View / Help) and status bar.
-- Light/dark theme via QSS.
-
-### Phase 2.1 — Transactional wizard (4 steps)
-**Priority: HIGH**
-- Step 1: engine selection (CHAID / Exhaustive / C&RT / QUEST).
-- Step 2: predictors + target.
-- Step 3: validation scheme (train/test, seed).
-- Step 4: MRM governance (max_depth, min_child_size, PD floor).
+### Phase 2.1.b — Hardening extras
+**Priority: MEDIUM**
+- Cross-validation scheme (Step 3 combo placeholder already in place).
 - Runtime backend-import guardrail in the GUI process (deferred from
   Phase 2.0; the AST smoke check only covers numpy/pandas/scipy).
 

@@ -105,10 +105,11 @@ def test_menus_exist():
         "menu_language",
     } <= menu_names
 
-    # (objectName, expected enabled) - placeholder actions stay disabled
+    # (objectName, expected enabled) - wizard gated hasta DATA_LOADED (2.1);
+    # evaluate_oos / load_oot siguen como placeholder hasta Phase 2.3
     expected = [
         ("act_new_wizard", False),
-        ("act_open", False),
+        ("act_open", True),
         ("act_exit", True),
         ("act_train", False),
         ("act_evaluate_oos", False),

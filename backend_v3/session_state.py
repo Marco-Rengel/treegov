@@ -25,16 +25,20 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from enum import Enum, auto
 
 import numpy as np
 import pandas as pd
 
+from .chaid_engine import ChaidEngine
+from .crt_engine import CrtEngine
 from .imputation import TrainOnlyImputer
 from .log_config import get_logger
+from .profiling import _infer_column, infer_spec  # _infer_column: reuso interno backend
 from .pruning import Pruner
-from .profiling import infer_spec
+from .quest_engine import QuestEngine
 from .splitting import stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
@@ -44,6 +48,15 @@ from .validation import (
 )
 
 __all__ = ["FlowState", "SessionState", "Session"]
+
+# Factoria de motores por nombre (Fase 2.1): el frontend/MCP nunca instancia
+# motores directamente (sala limpia); invocan Session.train("CRT", ...).
+_ENGINE_FACTORIES = {
+    "CHAID": ChaidEngine,
+    "CHAID_EXHAUSTIVE": lambda: ChaidEngine(exhaustive=True),
+    "CRT": CrtEngine,
+    "QUEST": QuestEngine,
+}
 
 
 class FlowState(Enum):
@@ -134,12 +147,58 @@ class Session:
             csv_path=csv_path, n_rows=df.shape[0], n_cols=df.shape[1],
         )
 
+    # ------------------------------------------------------------------
+    # lecturas puras (sin transicion de estado)
+    # ------------------------------------------------------------------
+
+    def describe_dataset(self) -> tuple[tuple[str, ...], dict[str, str]]:
+        """Columnas y tipos inferidos del dataset cargado (lectura pura).
+
+        Pensado para GUI/MCP (Fase 2.1): tras load_dataset permite poblar
+        selectores de target/predictores sin exponer el DataFrame ni el
+        enum PredictorType (los tipos viajan como strings .name).
+        """
+        if self._df is None:
+            raise RuntimeError("[session] describe_dataset sin dataset cargado")
+        cols = tuple(str(c) for c in self._df.columns)
+        tipos = {str(c): _infer_column(self._df[c]).name for c in self._df.columns}
+        self._log.info("[session] describe_dataset: %d columnas", len(cols))
+        return cols, tipos
+
+    def reset_to_data_loaded(self) -> SessionState:
+        """Vuelve a DATA_LOADED conservando el DataFrame en cache.
+
+        Uso (GUI, Fase 2.1): rehacer el flujo (nuevo target/predictores o
+        nueva particion) tras un modelo ya entrenado o un fallo en una
+        transicion posterior, SIN releer el CSV. Los artefactos y caches
+        posteriores a DATA_LOADED se descartan (defensivo).
+        """
+        if self._df is None:
+            raise ValueError("[session] reset_to_data_loaded en estado EMPTY")
+        self._X_train = self._X_test = None
+        self._y_train = self._y_test = None
+        self._imputer = None
+        self._X_oot = self._y_oot = None
+        self._state = SessionState(
+            state=FlowState.DATA_LOADED,
+            csv_path=self._state.csv_path,
+            n_rows=self._state.n_rows,
+            n_cols=self._state.n_cols,
+            event_log=(*self._state.event_log, "reset_to_data_loaded"),
+        )
+        self._log.info("[session] reset_to_data_loaded | estado=DATA_LOADED")
+        return self._state
+
     def fix_spec(
-        self, target: str, spec: dict[str, PredictorType] | None = None
+        self, target: str, spec: dict[str, PredictorType] | None = None,
+        *, predictors: Sequence[str] | None = None,
     ) -> SessionState:
         """DATA_LOADED -> SPEC_FIXED. Target EXCLUSIVAMENTE binario (Fase 1).
 
         Si spec es None, se infiere con profiling.infer_spec.
+        Si se pasa `predictors` (Fase 2.1, GUI wizard), el spec resuelto se
+        filtra a ese subconjunto; el filtrado vive AQUI (la GUI jamas toca
+        el enum PredictorType).
         """
         self._require(FlowState.DATA_LOADED, "fix_spec")
         assert self._df is not None
@@ -159,6 +218,18 @@ class Session:
             )
         if spec is None:
             spec = infer_spec(self._df, target, self._log)
+        if predictors is not None:
+            sel = {str(p) for p in predictors}
+            if target in sel:
+                raise ValueError(
+                    f"[session] el target {target!r} no puede ser predictor"
+                )
+            faltantes = sorted(sel - set(spec))
+            if faltantes:
+                raise ValueError(
+                    f"[session] predictores ausentes en el dataset: {faltantes!r}"
+                )
+            spec = {k: v for k, v in spec.items() if k in sel}
         if not spec:
             raise ValueError("[session] spec vacio")
         return self._commit(
@@ -206,16 +277,36 @@ class Session:
         target_type: TargetType = TargetType.BINARY,
         max_depth: int = 4,
         min_child_size: int = 50,
-        pd_floor: float = 0.0003,
+        pd_floor: float | None = 0.0003,
+        apply_jeffreys: bool = True,
     ) -> SessionState:
-        """PARTITIONED -> TRAINED (TreeBuilder sobre train imputado)."""
+        """PARTITIONED -> TRAINED (TreeBuilder sobre train imputado).
+
+        `engine` puede ser una instancia con best_split() o su nombre
+        ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST"); la factoria
+        interna (Fase 2.1) permite al frontend/MCP invocar por nombre sin
+        importar motores (sala limpia).
+
+        Gobernanza (types.GovernanceMode): los defaults son BANKING
+        (Jeffreys + PD Floor, BCBS CRE 20.39); apply_jeffreys=False con
+        pd_floor=None produce el modo RESEARCH (PD cruda k/n).
+        """
         self._require(FlowState.PARTITIONED, "train")
         st = self._state
         assert st.spec is not None
         assert self._X_train is not None and self._y_train is not None
+        if isinstance(engine, str):
+            try:
+                engine = _ENGINE_FACTORIES[engine]()
+            except KeyError:
+                raise ValueError(
+                    f"[session] motor desconocido: {engine!r} "
+                    f"(validos: {sorted(_ENGINE_FACTORIES)})"
+                ) from None
         builder = TreeBuilder(
             engine, target_type=target_type, max_depth=max_depth,
             min_child_size=min_child_size, pd_floor=pd_floor,
+            apply_jeffreys=apply_jeffreys,
             seed=st.seed, logger=get_logger("builder"),
         )
         modelo = builder.build(self._X_train, self._y_train, dict(st.spec))

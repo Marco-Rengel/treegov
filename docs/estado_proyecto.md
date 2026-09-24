@@ -78,10 +78,33 @@ Módulos:
 - `backend_v3/stability.py` — PSI (hojas), CSI (covariables), Gini Drop
 - Extensiones de `session_state.py`: load_oot, evaluate_oot, estados OOT_LOADED/OOT_EVALUATED
 
+### Fase 2.0 — Esqueleto GUI ✅ Completada
+
+Módulos:
+- `frontend_v3/app.py` — QApplication + excepthook a `treegov.gui` + auto-quit CI
+- `frontend_v3/main_window.py` — QMainWindow (menús, splitter 3 paneles, status bar)
+- `frontend_v3/theme.py` — temas light/dark vía QSS + string.Template
+- `frontend_v3/i18n.py` — diccionario bilingüe EN/ES + LanguageBus
+- `frontend_v3/resources/styles.qss` — plantilla de estilos
+- `treegov_gui.py` — entry point
+
+### Fase 2.1 — Wizard transaccional + Governance Mode ✅ Completada
+
+Módulos:
+- `frontend_v3/wizard.py` — ModelWizard (4 pasos) con retraducción en caliente
+- `backend_v3/types.py` — GovernanceMode (BANKING / RESEARCH)
+- `backend_v3/tree_builder.py` — apply_jeffreys, pd_floor anulable, fingerprint con governance_mode
+- `backend_v3/session_state.py` — describe_dataset, reset_to_data_loaded,
+  fix_spec(predictors=...), train(engine por nombre, apply_jeffreys, pd_floor)
+- `backend_v3/profiling.py` — helper interno _infer_column (reuso sin duplicar)
+
 ### Fases pendientes
 
-- **Fase 2** — GUI PySide6 (wizard transaccional, visor de árbol, panel de métricas)
-- **Fase 3** — Reportes analíticos (tabla de ganancias, matriz de clasificación) + capa MCP
+- **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
+- **Fase 2.2** — Visor interactivo de árbol
+- **Fase 2.3** — Panel de métricas OOS/OOT
+- **Fase 2.4** — Reportes + integración (tabla de ganancias, exportación HTML, tests e2e GUI)
+- **Fase 3** — Capa MCP + exportación SQL/Python
 - **Fase 4** — Scoring batch y champion-challenger
 - **Fase 5** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
 
@@ -98,8 +121,8 @@ Módulos:
 
 TreeGov/
 ├── backend_v3/ # Capa analítica pura
-├── frontend_v3/ # Capa de presentación (placeholder Fase 2)
-├── tests/ # Suite de tests (119 tests)
+├── frontend_v3/ # Capa de presentación PySide6 (app, main_window, wizard, theme, i18n)
+├── tests/ # Suite de tests (147 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md # Metodología matemática (inglés)
 │ ├── api.md # API pública congelada (inglés)
@@ -130,6 +153,7 @@ TreeGov/
 | **Idioma de documentación** | Inglés por defecto (estándar open source); bilingüe README y philosophy; audit_log en español (histórico interno) |
 | **Anti-leakage** | TrainOnlyImputer exclusivo sobre fold de entrenamiento |
 | **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
+| **GovernanceMode opcional (Fase 2.1)** | BANKING por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el fingerprint del modelo etiqueta el modo efectivo (BANKING/RESEARCH/CUSTOM) |
 
 ---
 
@@ -162,14 +186,16 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 4 |
 | profiling.py | 3 |
-| tree_builder.py | 11 |
-| session_state.py | 10 |
+| tree_builder.py | 16 |
+| session_state.py | 19 |
 | validation.py | 8 |
 | pruning.py | 6 |
-| stability.py | 12 |
-| **Total** | **119** |
+| stability.py | 9 |
+| gui_smoke (frontend) | 9 |
+| wizard (frontend) | 9 |
+| **Total** | **148** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 119/119 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 148/148 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

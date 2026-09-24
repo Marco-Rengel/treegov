@@ -394,6 +394,116 @@ def test_load_oot_guards():
         _assert_raises(ValueError, s.load_oot, str(pm2))
 
 
+# ---------------------------------------------------------------------------
+# Fase 2.1: describe_dataset / fix_spec(predictors) / train(str) / reset
+# ---------------------------------------------------------------------------
+
+
+def test_describe_dataset():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        # sin dataset -> RuntimeError (lectura pura, no hay transicion)
+        _assert_raises(RuntimeError, s.describe_dataset)
+        s.load_dataset(str(csv_path))
+        cols, tipos = s.describe_dataset()
+        assert cols == ("edad", "seg", "default")
+        # edad: 40 valores > 20 -> CONTINUOUS; seg: texto -> NOMINAL;
+        # default: numerico binario (2 <= 20) -> ORDINAL
+        assert tipos == {"edad": "CONTINUOUS", "seg": "NOMINAL",
+                         "default": "ORDINAL"}
+        # lectura pura: el estado no cambia
+        assert s.state.state is FlowState.DATA_LOADED
+
+
+def test_fix_spec_predictors_subset():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        st = s.fix_spec("default", predictors=["edad"])
+        spec_d = dict(st.spec)
+        assert list(spec_d) == ["edad"]            # solo el predictor elegido
+        assert spec_d["edad"] is PredictorType.CONTINUOUS
+        # el flujo completo funciona con el subset
+        s.partition(train_frac=0.7, seed=42)
+        st4 = s.train("CRT", max_depth=4, min_child_size=5)
+        assert st4.tree is not None
+        assert st4.tree.nodes[0].split.predictor == "edad"
+
+
+def test_fix_spec_predictors_invalidos():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        # predictor inexistente
+        _assert_raises(ValueError, s.fix_spec, "default",
+                       predictors=["no_existe"])
+        # target no puede ser predictor
+        _assert_raises(ValueError, s.fix_spec, "default",
+                       predictors=["edad", "default"])
+        # subset vacio -> spec vacio
+        _assert_raises(ValueError, s.fix_spec, "default", predictors=[])
+        # atomicidad: tras los fallos el estado sigue DATA_LOADED
+        assert s.state.state is FlowState.DATA_LOADED
+
+
+def test_train_engine_por_string():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        arboles = []
+        for eng in ("CRT", CrtEngine()):
+            s = Session(logger=_quiet_logger())
+            s.load_dataset(str(csv_path))
+            s.fix_spec("default")
+            s.partition(train_frac=0.7, seed=42)
+            s.train(eng, max_depth=4, min_child_size=5)
+            arboles.append(s.state.tree)
+        # factory por nombre == instancia manual (mismo fingerprint)
+        assert arboles[0] == arboles[1]
+        assert arboles[0].params_fingerprint == arboles[1].params_fingerprint
+        assert arboles[0].method == "CRT"
+
+
+def test_train_engine_string_invalido():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        _assert_raises(ValueError, s.train, "XGBOOST")
+        assert s.state.state is FlowState.PARTITIONED   # atomicidad
+
+
+def test_reset_to_data_loaded():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        # en EMPTY no hay nada que resetear
+        _assert_raises(ValueError, s.reset_to_data_loaded)
+        s.load_dataset(str(csv_path))
+        df_ref = s._df                       # cache interno (privado, test ok)
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert s.state.state is FlowState.TRAINED
+
+        st = s.reset_to_data_loaded()
+        assert st.state is FlowState.DATA_LOADED
+        assert st.csv_path == str(csv_path)
+        assert st.n_rows == 120 and st.n_cols == 3
+        # artefactos posteriores descartados
+        assert st.spec is None and st.tree is None and st.train_idx is None
+        assert s._df is df_ref               # CSV NO releido (mismo objeto)
+        assert s._X_train is None and s._imputer is None
+        assert st.event_log[-1] == "reset_to_data_loaded"
+        # el flujo puede rehacerse sin releer el archivo
+        s.fix_spec("default", predictors=["seg"])
+        assert dict(s.state.spec) == {"seg": PredictorType.NOMINAL}
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

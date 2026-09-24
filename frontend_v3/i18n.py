@@ -16,7 +16,7 @@ tr() performs no formatting; composed strings are assembled by the caller
 
 from __future__ import annotations
 
-from PySide6.QtCore import QLocale
+from PySide6.QtCore import QObject, QLocale, Signal
 
 _STRINGS: dict[str, dict[str, str]] = {
     "en": {
@@ -47,11 +47,74 @@ _STRINGS: dict[str, dict[str, str]] = {
         "status_ready": "Ready",
         "status_session": "Session",
         "status_theme": "Theme",
+        "status_mode": "Mode",
         "about_title": "About TreeGov",
         "about_body": (
             "Risk segmentation workbench with native MRM/IFRS 9 governance.\n"
             "Version {version} · Apache 2.0 License"
         ),
+        # --- Phase 2.1: transactional wizard ---
+        "wizard_title": "New Model Wizard",
+        "wizard_next": "Next",
+        "wizard_back": "Back",
+        "wizard_finish": "Finish",
+        "wizard_cancel": "Cancel",
+        "step1_title": "Step 1 — Engine selection",
+        "step1_subtitle": "Choose the splitting algorithm.",
+        "step1_desc_chaid": (
+            "CHAID — multiway category merging with Bonferroni correction "
+            "(Kass, 1980)"
+        ),
+        "step1_desc_chaid_exhaustive": (
+            "Exhaustive CHAID — merging until exhaustion "
+            "(Biggs, de Ville & Suen, 1991)"
+        ),
+        "step1_desc_crt": (
+            "C&RT — binary Gini/variance partitioning with surrogate splits "
+            "(Breiman et al., 1984)"
+        ),
+        "step1_desc_quest": (
+            "QUEST — unbiased variable selection with univariate QDA split "
+            "(Loh & Shih, 1997)"
+        ),
+        "step2_title": "Step 2 — Predictors and target",
+        "step2_subtitle": "Pick the binary target and at least one predictor.",
+        "step2_target_label": "Target (binary 0/1):",
+        "step2_available": "Available predictors",
+        "step2_selected": "Selected predictors",
+        "step2_hint_min_one": "Select at least one predictor to continue.",
+        "step2_chaid_cont_note": (
+            "Note: CHAID engines reject [CONT] predictors by contract."
+        ),
+        "step3_title": "Step 3 — Validation scheme",
+        "step3_subtitle": "Stratified holdout partition (Hamilton-Hare).",
+        "step3_scheme_label": "Scheme",
+        "step3_scheme_holdout": "Holdout (stratified, Hamilton-Hare)",
+        "step3_scheme_cv_todo": "Cross-validation (Phase 2.1.b)",
+        "step3_seed_label": "Random seed",
+        "step3_train_label": "Train",
+        "step3_test_label": "Test",
+        "step4_title": "Step 4 — MRM governance",
+        "step4_subtitle": "Regularisation and regulatory controls.",
+        "step4_govmode_title": "Governance mode",
+        "step4_govmode_banking": "Banking (MRM / IFRS 9)",
+        "step4_govmode_banking_desc": (
+            "Jeffreys estimator ON · PD Floor 0.0003 (Basel 3 bps)"
+        ),
+        "step4_govmode_research": "Research (raw)",
+        "step4_govmode_research_desc": "Jeffreys estimator OFF · no PD Floor",
+        "step4_apply_jeffreys": "Apply Jeffreys correction",
+        "step4_max_depth": "Max depth",
+        "step4_min_child": "Min child size",
+        "step4_pd_floor": "PD floor",
+        "step4_summary_label": "Summary",
+        "step4_summary_engine": "Engine",
+        "step4_govmode_banking_short": "Banking",
+        "step4_govmode_research_short": "Research",
+        "dlg_open_dataset_title": "Open dataset",
+        "dlg_open_dataset_filter": "CSV files (*.csv)",
+        "msg_model_trained": "Model trained: {method} ({n} nodes)",
+        "msg_error_title": "TreeGov — Error",
     },
     "es": {
         "window_title": "TreeGov — Risk Segmentation Workbench",
@@ -81,11 +144,76 @@ _STRINGS: dict[str, dict[str, str]] = {
         "status_ready": "Listo",
         "status_session": "Sesión",
         "status_theme": "Tema",
+        "status_mode": "Modo",
         "about_title": "Acerca de TreeGov",
         "about_body": (
             "Herramienta de segmentación de riesgo con gobernanza MRM/IFRS 9 "
             "nativa.\nVersión {version} · Licencia Apache 2.0"
         ),
+        # --- Fase 2.1: wizard transaccional ---
+        "wizard_title": "Asistente de nuevo modelo",
+        "wizard_next": "Siguiente",
+        "wizard_back": "Atrás",
+        "wizard_finish": "Finalizar",
+        "wizard_cancel": "Cancelar",
+        "step1_title": "Paso 1 — Selección del motor",
+        "step1_subtitle": "Elija el algoritmo de partición.",
+        "step1_desc_chaid": (
+            "CHAID — fusión multirrama de categorías con corrección de "
+            "Bonferroni (Kass, 1980)"
+        ),
+        "step1_desc_chaid_exhaustive": (
+            "CHAID exhaustivo — fusión hasta el agotamiento "
+            "(Biggs, de Ville y Suen, 1991)"
+        ),
+        "step1_desc_crt": (
+            "C&RT — partición binaria por Gini/varianza con splits surrogate "
+            "(Breiman et al., 1984)"
+        ),
+        "step1_desc_quest": (
+            "QUEST — selección insesgada de variable con corte QDA "
+            "univariante (Loh y Shih, 1997)"
+        ),
+        "step2_title": "Paso 2 — Predictores y objetivo",
+        "step2_subtitle": "Elija el objetivo binario y al menos un predictor.",
+        "step2_target_label": "Objetivo (binario 0/1):",
+        "step2_available": "Predictores disponibles",
+        "step2_selected": "Predictores seleccionados",
+        "step2_hint_min_one": "Seleccione al menos un predictor para continuar.",
+        "step2_chaid_cont_note": (
+            "Nota: los motores CHAID rechazan predictores [CONT] por contrato."
+        ),
+        "step3_title": "Paso 3 — Esquema de validación",
+        "step3_subtitle": "Partición holdout estratificada (Hamilton-Hare).",
+        "step3_scheme_label": "Esquema",
+        "step3_scheme_holdout": "Holdout (estratificado, Hamilton-Hare)",
+        "step3_scheme_cv_todo": "Validación cruzada (Fase 2.1.b)",
+        "step3_seed_label": "Semilla aleatoria",
+        "step3_train_label": "Entrenamiento",
+        "step3_test_label": "Prueba",
+        "step4_title": "Paso 4 — Gobernanza MRM",
+        "step4_subtitle": "Regularización y controles regulatorios.",
+        "step4_govmode_title": "Modo de gobernanza",
+        "step4_govmode_banking": "Banca (MRM / IFRS 9)",
+        "step4_govmode_banking_desc": (
+            "Estimador de Jeffreys ON · PD Floor 0.0003 (Basilea 3 bps)"
+        ),
+        "step4_govmode_research": "Investigación (crudo)",
+        "step4_govmode_research_desc": (
+            "Estimador de Jeffreys OFF · sin PD Floor"
+        ),
+        "step4_apply_jeffreys": "Aplicar corrección de Jeffreys",
+        "step4_max_depth": "Profundidad máxima",
+        "step4_min_child": "Tamaño mínimo de hijo",
+        "step4_pd_floor": "PD floor",
+        "step4_summary_label": "Resumen",
+        "step4_summary_engine": "Motor",
+        "step4_govmode_banking_short": "Bancario",
+        "step4_govmode_research_short": "Investigación",
+        "dlg_open_dataset_title": "Abrir dataset",
+        "dlg_open_dataset_filter": "Archivos CSV (*.csv)",
+        "msg_model_trained": "Modelo entrenado: {method} ({n} nodos)",
+        "msg_error_title": "TreeGov — Error",
     },
 }
 
@@ -131,3 +259,18 @@ def detect_system_language() -> str:
     """
     code = QLocale.system().name().split("_")[0].lower()
     return code if code in _STRINGS else _DEFAULT
+
+
+class LanguageBus(QObject):
+    """Notification channel for live language switches (Phase 2.1).
+
+    Design invariant: every language change enters through
+    MainWindow._switch_language(), which (1) calls set_language(), then
+    (2) emits this bus. Dialogs/wizards connect to the bus to retranslate
+    themselves while open. The bus never mutates the active language.
+    """
+
+    language_changed = Signal(str)
+
+
+language_bus = LanguageBus()  # process-wide singleton
