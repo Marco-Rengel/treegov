@@ -48,6 +48,11 @@ from frontend_v3.i18n import (
     tr,
 )
 from frontend_v3.theme import apply_theme
+from frontend_v3.tree_view import (
+    TreePanel,
+    model_summary_lines,
+    node_detail_lines,
+)
 from frontend_v3.wizard import ModelWizard
 
 _TT_PHASE23 = "Available in Phase 2.3"
@@ -125,12 +130,14 @@ class MainWindow(QMainWindow):
         self._center_title.setText(tr("panel_center_title"))
         self._hud_title.setText(tr("panel_right_title"))
         self._tabs.setTabText(0, tr("tab_welcome_title"))
+        self._tabs.setTabText(1, tr("tab_tree_title"))
 
         self._refresh_session_indicator()
         self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{self._theme_name}')}"
         )
+        self._hud_reset()
 
     # ------------------------------------------------------------------
     # Construction
@@ -270,6 +277,12 @@ class MainWindow(QMainWindow):
 
         self._left_panel, self._left_title = self._make_panel("leftPanel")
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
+        # Properties body (Phase 2.2): node details / model summary
+        self._hud_body = QLabel()
+        self._hud_body.setObjectName("hudBody")
+        self._hud_body.setWordWrap(True)
+        self._hud_body.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._hud_panel.layout().insertWidget(1, self._hud_body)
 
         self._tabs = QTabWidget()
         self._tabs.setObjectName("centralTabs")
@@ -282,6 +295,13 @@ class MainWindow(QMainWindow):
         welcome_layout.addWidget(self._center_title)
         welcome_layout.addStretch(1)
         self._tabs.addTab(welcome, "")
+
+        # Phase 2.2: interactive tree viewer tab (empty until TRAINED)
+        self._tree_panel = TreePanel()
+        self._tree_panel.setObjectName("treePanel")
+        self._tabs.addTab(self._tree_panel, "")
+        self._tree_panel.node_selected.connect(self._on_tree_node_selected)
+        self._tree_panel.selection_cleared.connect(self._hud_reset)
 
         splitter.addWidget(self._left_panel)
         splitter.addWidget(self._tabs)
@@ -328,6 +348,8 @@ class MainWindow(QMainWindow):
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{name}')}"
         )
+        # QGraphicsItems ignore the app QSS: recolor the scene explicitly
+        self._tree_panel.set_theme(name)
         if self._logger is not None:
             self._logger.info("Theme switched to %s", name)
 
@@ -371,6 +393,10 @@ class MainWindow(QMainWindow):
         # session already advanced past DATA_LOADED
         if self._session.state.state is not FlowState.DATA_LOADED:
             self._session.reset_to_data_loaded()
+            # transactional consistency: the session no longer holds a
+            # tree, so the viewer must not keep displaying the old one
+            self._tree_panel.clear_model()
+            self._hud_reset()
         columns, types = self._dataset_info
         wiz = ModelWizard(columns, types, parent=self)
         wiz.finished_with_config.connect(self._on_wizard_finished)
@@ -402,6 +428,10 @@ class MainWindow(QMainWindow):
         finally:
             QApplication.restoreOverrideCursor()
         if not ok:
+            # rollback already applied (reset_on_error); the viewer must
+            # not keep a tree the session state no longer holds
+            self._tree_panel.clear_model()
+            self._hud_reset()
             return
         st = self._session.state
         self._mode_name = (
@@ -411,6 +441,14 @@ class MainWindow(QMainWindow):
         self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
         tree = st.tree
         if tree is not None:
+            self._tree_panel.set_model(tree, cfg["governance_mode"])
+            self._tabs.setCurrentWidget(self._tree_panel)
+            self._hud_reset()
+            if self._logger is not None:
+                self._logger.info(
+                    "[gui] tree rendered: %s | nodos=%d | fp=%s",
+                    tree.method, len(tree.nodes), tree.params_fingerprint,
+                )
             self.statusBar().showMessage(
                 tr("msg_model_trained").format(
                     method=tree.method, n=len(tree.nodes)
@@ -463,6 +501,42 @@ class MainWindow(QMainWindow):
             else "—"
         )
         self._lbl_session.setText(f"{tr('status_session')}: {name}")
+
+    # ------------------------------------------------------------------
+    # Slots (Phase 2.2: tree viewer -> properties panel)
+    # ------------------------------------------------------------------
+
+    def _on_tree_node_selected(self, node_id: int) -> None:
+        """Show the selected node card (read-only, from the frozen tree)."""
+        model = (
+            self._session.state.tree if self._session is not None else None
+        )
+        if model is None or not (0 <= node_id < len(model.nodes)):
+            return
+        node = model.nodes[node_id]
+        self._hud_body.setText("\n".join(node_detail_lines(node)))
+        self.statusBar().showMessage(f"{tr('tree_prop_node')} #{node_id}", 5000)
+        if self._logger is not None:
+            self._logger.debug("[gui] node selected: %d", node_id)
+
+    def _hud_reset(self) -> None:
+        """Properties panel default: node detail > model summary > empty."""
+        model = (
+            self._session.state.tree if self._session is not None else None
+        )
+        sel = self._tree_panel.selected_node_id()
+        if model is not None and (
+            sel is not None and 0 <= sel < len(model.nodes)
+        ):
+            self._hud_body.setText(
+                "\n".join(node_detail_lines(model.nodes[sel]))
+            )
+        elif model is not None:
+            self._hud_body.setText(
+                "\n".join(model_summary_lines(model, self._mode_name))
+            )
+        else:
+            self._hud_body.setText(tr("tree_prop_empty"))
 
     def _switch_language(self, lang: str) -> None:
         set_language(lang)

@@ -115,6 +115,41 @@ _STRINGS: dict[str, dict[str, str]] = {
         "dlg_open_dataset_filter": "CSV files (*.csv)",
         "msg_model_trained": "Model trained: {method} ({n} nodes)",
         "msg_error_title": "TreeGov — Error",
+        # --- Phase 2.2: interactive tree viewer ---
+        "tab_tree_title": "Model tree",
+        "tree_empty": "Train a model to display the tree (Ctrl+N).",
+        "tree_hdr_nodes": "nodes",
+        "tree_hdr_leaves": "leaves",
+        "tree_hdr_fp": "Fingerprint",
+        "tree_large_warning": (
+            "Large tree ({n} nodes). Consider reducing max_depth or "
+            "pruning (Phase 2.4)."
+        ),
+        "tree_zoom_in": "Zoom in (Ctrl++)",
+        "tree_zoom_out": "Zoom out (Ctrl+-)",
+        "tree_zoom_fit": "Fit (Ctrl+0)",
+        "tree_leaf_badge": "LEAF",
+        "tree_leaf_reason_max_depth": "max depth reached",
+        "tree_leaf_reason_min_child": "min child size",
+        "tree_leaf_reason_sin_split": "no valid split",
+        "tree_leaf_reason_rama_insuficiente": "child branch too small",
+        "tree_groups": "groups",
+        "tree_node_events": "events",
+        "tree_node_pd": "PD",
+        "tree_prop_node": "Node",
+        "tree_prop_depth": "Depth",
+        "tree_prop_pd_jeffreys": "PD (Jeffreys)",
+        "tree_prop_pd_final": "PD (final, operational on leaves)",
+        "tree_prop_floor_note": "PD floor binding (BCBS CRE 20.39)",
+        "tree_prop_leaf": "Leaf reason",
+        "tree_prop_predictor": "Predictor",
+        "tree_prop_statistic": "Statistic",
+        "tree_prop_gain": "Impurity gain",
+        "tree_prop_branch": "Branch",
+        "tree_prop_method": "Method",
+        "tree_prop_empty": (
+            "Train a model and select a node to see its properties."
+        ),
     },
     "es": {
         "window_title": "TreeGov — Risk Segmentation Workbench",
@@ -214,6 +249,41 @@ _STRINGS: dict[str, dict[str, str]] = {
         "dlg_open_dataset_filter": "Archivos CSV (*.csv)",
         "msg_model_trained": "Modelo entrenado: {method} ({n} nodos)",
         "msg_error_title": "TreeGov — Error",
+        # --- Fase 2.2: visor interactivo de árbol ---
+        "tab_tree_title": "Árbol del modelo",
+        "tree_empty": "Entrene un modelo para visualizar el árbol (Ctrl+N).",
+        "tree_hdr_nodes": "nodos",
+        "tree_hdr_leaves": "hojas",
+        "tree_hdr_fp": "Huella",
+        "tree_large_warning": (
+            "Árbol grande ({n} nodos). Considere reducir max_depth o "
+            "podar (Fase 2.4)."
+        ),
+        "tree_zoom_in": "Acercar (Ctrl++)",
+        "tree_zoom_out": "Alejar (Ctrl+-)",
+        "tree_zoom_fit": "Ajustar (Ctrl+0)",
+        "tree_leaf_badge": "HOJA",
+        "tree_leaf_reason_max_depth": "profundidad máxima alcanzada",
+        "tree_leaf_reason_min_child": "tamaño mínimo de hijo",
+        "tree_leaf_reason_sin_split": "sin split válido",
+        "tree_leaf_reason_rama_insuficiente": "rama hija insuficiente",
+        "tree_groups": "grupos",
+        "tree_node_events": "eventos",
+        "tree_node_pd": "PD",
+        "tree_prop_node": "Nodo",
+        "tree_prop_depth": "Profundidad",
+        "tree_prop_pd_jeffreys": "PD (Jeffreys)",
+        "tree_prop_pd_final": "PD (final, operativa en hojas)",
+        "tree_prop_floor_note": "PD floor activo (BCBS CRE 20.39)",
+        "tree_prop_leaf": "Motivo de hoja",
+        "tree_prop_predictor": "Predictor",
+        "tree_prop_statistic": "Estadístico",
+        "tree_prop_gain": "Ganancia de impureza",
+        "tree_prop_branch": "Rama",
+        "tree_prop_method": "Método",
+        "tree_prop_empty": (
+            "Entrene un modelo y seleccione un nodo para ver sus propiedades."
+        ),
     },
 }
 

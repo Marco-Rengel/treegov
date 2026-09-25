@@ -69,3 +69,12 @@ QLabel#panelTitle {
     font-weight: bold;
     color: $ACCENT;
 }
+
+QLabel#treeLargeWarning {
+    color: $ACCENT;
+    font-weight: bold;
+}
+
+QLabel#hudBody {
+    padding: 4px;
+}
