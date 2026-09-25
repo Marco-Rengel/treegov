@@ -5,9 +5,9 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 119/119 passing
+**Suite de tests**: 148/148 passing
 
-> **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **No está apto todavía para producción bancaria.** Su uso previsto es la exploración analítica y la validación técnica MRM. Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
+> ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
 ---
 
@@ -24,6 +24,8 @@ A diferencia de las librerías de propósito general (scikit-learn, statsmodels,
 > "Python le da el motor. TreeGov le da el motor, el freno, el tablero, el cinturón de seguridad y el registro de mantenimiento. ¿Cuál prefiere para un modelo que va a ser auditado por el regulador?"
 
 TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añade al final, sino un principio que se teje en cada componente. Mientras que las librerías estadísticas y los entornos de scripting ofrecen el motor analítico, TreeGov ofrece además el freno (controles MRM), el tablero (visualización gráfica), el cinturón de seguridad (auditabilidad) y el registro de mantenimiento (bitácora inmutable). Para un modelo que será auditado por un regulador, la elección no es técnica: es de gobernanza.
+
+*Lee la filosofía completa → [Español](docs/philosophy.es.md) · [English](docs/philosophy.md)*
 
 ---
 
@@ -43,17 +45,17 @@ Herramienta de segmentación analítica para riesgo de crédito con gobernanza M
 
 ## Capacidades analíticas
 
-| Capacidad | Referencia | Características clave |
-|---|---|---|
-| **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
-| **C&RT** binario | Breiman et al. (1984) | Impureza de Gini / varianza, surrogate splits para valores nulos |
-| **QUEST** binario | Loh & Shih (1997) | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante |
-| **Estimador de Jeffreys + PD Floor** | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
-| **Partición Hamilton-Hare** | — | Split train/test estratificado exacto, sin sesgo de redondeo |
-| **Imputación anti-leakage** | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
-| **Poda coste-complejidad** | Breiman et al. (1984) | Post-poda con la secuencia alpha; reindexado determinista de nodos |
-| **Validación OOS / OOT** | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; soporte de cohorte out-of-time |
-| **Monitoreo de estabilidad** | Basilea / EBA | PSI (hojas), CSI (covariables), Gini Drop con semáforos |
+| Capacidad | Referencia | Anclaje regulatorio | Características clave |
+|---|---|---|---|
+| **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
+| **C&RT** binario | Breiman et al. (1984) | — | Impureza de Gini / varianza, surrogate splits para valores nulos |
+| **QUEST** binario | Loh & Shih (1997) | — | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante |
+| **Estimador de Jeffreys + PD Floor** | — | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
+| **Partición Hamilton-Hare** | — | — | Split train/test estratificado exacto, sin sesgo de redondeo |
+| **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
+| **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos |
+| **Validación OOS / OOT** | — | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; soporte de cohorte out-of-time |
+| **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | PSI (hojas), CSI (covariables), Gini Drop con semáforos |
 
 ---
 
@@ -152,7 +154,7 @@ TreeGov/
 | **4** | Scoring batch + champion-challenger | Planificada |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planificada |
 
-**Suite de tests: 119/119 passing.**
+**Suite de tests: 148/148 passing.**
 
 ---
 

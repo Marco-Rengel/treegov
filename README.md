@@ -5,9 +5,9 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 119/119 passing
+**Test suite**: 148/148 passing
 
-> **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). It is **not yet fit for banking production.** Its intended use is analytical exploration and MRM technical validation. Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
+> ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
 ---
 
@@ -24,6 +24,8 @@ Unlike general-purpose libraries (scikit-learn, statsmodels, R packages) that re
 > "Python gives you the engine. TreeGov gives you the engine, the brakes, the dashboard, the seatbelt, and the maintenance log. Which would you choose for a model that will be audited by the regulator?"
 
 TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and scripting environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
+
+*Read the full project philosophy → [English](docs/philosophy.md) · [Español](docs/philosophy.es.md)*
 
 ---
 
@@ -43,17 +45,17 @@ An analytical segmentation tool for credit risk with native MRM/IFRS 9 governanc
 
 ## Analytical capabilities
 
-| Capability | Reference | Key characteristics |
-|---|---|---|
-| **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
-| **C&RT** binary | Breiman et al. (1984) | Gini impurity / variance reduction, surrogate splits for missing values |
-| **QUEST** binary | Loh & Shih (1997) | Unbiased variable selection (ANOVA + χ² + Levene), univariate QDA split |
-| **Jeffreys estimator + PD Floor** | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
-| **Hamilton-Hare partition** | — | Exact stratified train/test split, no rounding bias |
-| **Anti-leakage imputation** | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
-| **Cost-complexity pruning** | Breiman et al. (1984) | Post-pruning with the α sequence; deterministic node re-indexing |
-| **OOS / OOT validation** | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; out-of-time cohort support |
-| **Stability monitoring** | Basel / EBA | PSI (leaves), CSI (covariates), Gini Drop with traffic lights |
+| Capability | Reference | Regulatory anchor | Key characteristics |
+|---|---|---|---|
+| **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | — | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
+| **C&RT** binary | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits for missing values |
+| **QUEST** binary | Loh & Shih (1997) | — | Unbiased variable selection (ANOVA + χ² + Levene), univariate QDA split |
+| **Jeffreys estimator + PD Floor** | — | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
+| **Hamilton-Hare partition** | — | — | Exact stratified train/test split, no rounding bias |
+| **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
+| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing |
+| **OOS / OOT validation** | — | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; out-of-time cohort support |
+| **Stability monitoring** | Siddiqi (2006) | Basel / EBA | PSI (leaves), CSI (covariates), Gini Drop with traffic lights |
 
 ---
 
@@ -152,7 +154,7 @@ TreeGov/
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 119/119 passing.**
+**Test suite: 148/148 passing.**
 
 ---
 
