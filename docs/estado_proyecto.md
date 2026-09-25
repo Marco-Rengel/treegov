@@ -225,15 +225,15 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-### Sesión documental (prioridad alta — agendada)
+### Sesión documental — ✅ Bloque completo (24/09/2026)
 
 - [x] ~~Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en
       `docs/audit_log.md`~~ — **Resuelto el 24/09/2026**.
-- [ ] Enlace Filosofía → `docs/philosophy.md` en ambos READMEs.
-- [ ] Columna "Regulatory anchor" en la tabla de capacidades analíticas.
-- [ ] Aviso regulatorio reforzado con bloque visual (⚠️).
-- [ ] Estado del proyecto visual con emojis/checklist en `roadmap.md`.
-- [ ] Bloque "Cómo se refleja esto en el diseño" en `philosophy.md`.
+- [x] ~~Enlace Filosofía → `docs/philosophy.md` en ambos READMEs~~ — **Resuelto el 24/09/2026**.
+- [x] ~~Columna "Regulatory anchor" en la tabla de capacidades analíticas~~ — **Resuelto el 24/09/2026**.
+- [x] ~~Aviso regulatorio reforzado con bloque visual (⚠️)~~ — **Resuelto el 24/09/2026**.
+- [x] ~~Estado del proyecto visual con emojis/checklist en `roadmap.md`~~ — **Resuelto el 24/09/2026**.
+- [x] ~~Bloque "Cómo se refleja esto en el diseño" en `philosophy.md`~~ — **Resuelto el 24/09/2026**.
 
 ### Pendientes técnicos
 

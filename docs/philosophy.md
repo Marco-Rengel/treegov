@@ -34,5 +34,26 @@ TreeGov does not compete on raw predictive accuracy. It competes on governance a
 - IFRS 9: staging and ECL.
 - SR 11-7 / OCC 2011-12: Model Risk Management.
 
+## How this maps to the design
+
+The philosophy is not abstract: it translates into concrete design
+decisions that are auditable in the source code.
+
+- **Clean-room architecture** → `backend_v3/` has zero GUI imports;
+  `frontend_v3/` has zero analytical logic. Enforced by an AST-based
+  test (`test_frontend_clean_room`).
+- **White-box mathematics** → Every statistical formula is written
+  explicitly, with bibliographic citations (Kass 1980, Breiman 1984,
+  Loh & Shih 1997, Cochran 1954). Black-box libraries (sklearn,
+  statsmodels) are blocked at the interpreter level by
+  `backend_v3/import_guard.py`.
+- **Native governance** → `SplitConfig` is a frozen dataclass (immutable
+  auditable evidence); `params_fingerprint` identifies every model
+  uniquely; the DEBUG transactional logger records each decision.
+- **Optional governance, banking by default** → `GovernanceMode`
+  (BANKING / RESEARCH) makes the regulatory layer opt-out, opening the
+  tool to non-banking domains (health, social sciences) without
+  sacrificing MRM rigor where it matters.
+
 ---
 *[Leer en español](philosophy.es.md)*
