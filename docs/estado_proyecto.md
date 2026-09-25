@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 22/09/2026
+**Fecha de última actualización:** 24/09/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -122,7 +122,7 @@ Módulos:
 TreeGov/
 ├── backend_v3/ # Capa analítica pura
 ├── frontend_v3/ # Capa de presentación PySide6 (app, main_window, wizard, theme, i18n)
-├── tests/ # Suite de tests (147 tests)
+├── tests/ # Suite de tests (148 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md # Metodología matemática (inglés)
 │ ├── api.md # API pública congelada (inglés)
@@ -225,22 +225,56 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-### Corto plazo
-- [ ] Decidir próxima fase: Fase 2 (GUI) vs Fase 3 (reportes + MCP).
-- [ ] Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en
-      `docs/audit_log.md` (actualmente el log salta de Fase 0 a Fase 1.3).
+### Sesión documental (prioridad alta — agendada)
 
-### Medio plazo
-- [ ] Implementar GUI PySide6 (wizard + visor de árbol + panel de métricas).
-- [ ] Reportes analíticos (tabla de ganancias, matriz de clasificación, exportación SQL/Python).
-- [ ] Capa MCP para consumo desde agentes LLM.
+- [x] ~~Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en
+      `docs/audit_log.md`~~ — **Resuelto el 24/09/2026**.
+- [ ] Enlace Filosofía → `docs/philosophy.md` en ambos READMEs.
+- [ ] Columna "Regulatory anchor" en la tabla de capacidades analíticas.
+- [ ] Aviso regulatorio reforzado con bloque visual (⚠️).
+- [ ] Estado del proyecto visual con emojis/checklist en `roadmap.md`.
+- [ ] Bloque "Cómo se refleja esto en el diseño" en `philosophy.md`.
 
-### Largo plazo / decisiones
-- [ ] **Distribución:** método de empaquetado (PyInstaller / Inno Setup / MSI).
-- [ ] **Firma digital:** certificado code signing para distribución a bancos.
-- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato laboral actual
-      (cláusula de propiedad intelectual) antes de hacerlo público.
-- [ ] **Licencia comercial paralela** (si alguna vez se considera).
+### Pendientes técnicos
+
+- [ ] **Fase 2.2** — Visor interactivo de árbol (QGraphicsView, zoom,
+      selección de nodo).
+- [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
+- [ ] Publicar `treegov 1.0.0a1` en PyPI (al cierre de Fase 2).
+- [ ] Añadir `pyproject.toml` en la raíz del repo (antes del cierre de
+      Fase 2).
+- [ ] Datasets públicos (German Credit, UCI health/social) para
+      validación multi-dominio (Fase 3).
+
+### Pendientes de CV y carrera profesional
+
+- [ ] **Solicitar contrato a RRHH (Banco de Loja)** — acción personal,
+      fuera del proyecto.
+- [ ] Revisar cláusula de propiedad intelectual del contrato.
+- [ ] Regenerar PDF del CV (encoding UTF-8 roto en encabezado).
+- [ ] Mover sección "Idiomas" a la parte superior del CV.
+- [ ] Añadir "IA agéntica" a Habilidades del CV.
+- [ ] Agregar TreeGov al CV (formulación personal/open source) —
+      depende de la cláusula IP.
+- [ ] Actualizar LinkedIn con mención genérica de TreeGov (sin enlace al
+      repo) — decisión estratégica.
+
+### Pendientes diferidos / estructurales
+
+- [ ] `CONTRIBUTING.md` en el repo (bloqueado por contrato).
+- [ ] `docs/i18n/` para centralizar traducciones (cuando haya 5+ docs
+      bilingües).
+- [ ] Mnemonics `&` en menús GUI (Fase 2.3).
+- [ ] QSettings persistencia de parámetros de gobernanza (Fase 2.1.b).
+- [ ] QThread para entrenamiento largo (Fase 2.3+).
+- [ ] Firma digital + instalador PyInstaller/Inno Setup (Fase 4).
+- [ ] Licencia comercial paralela (análisis legal si se considera).
+
+### Decisiones de largo plazo
+
+- [ ] **Distribución:** método de empaquetado, firma digital, canal.
+- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato
+      laboral antes de hacerlo público.
 
 ---
 
@@ -265,8 +299,9 @@ opencode -c
 
 
 3. Primer mensaje sugerido al agente:
-> "Retomamos TreeGov. Estado actual: Fase 0, 1, 1.2 y 1.3 cerradas.
-> Suite 119/119. Decidir siguiente fase: [Fase 2 GUI / Fase 3 reportes]."
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1 cerradas.
+> Suite 148/148. Decidir siguiente fase: [Fase 2.2 visor de árbol /
+> cierre documental / Fase 3]."
 
 ---
 
@@ -281,7 +316,7 @@ opencode -c
 
 ---
 
-*Documento generado el 22/09/2026. Mantener actualizado tras cada fase
-cerrada. Fuente de verdad: el repositorio en GitHub.*
+*Documento mantenido tras cada fase cerrada. Fuente de verdad: el
+repositorio en GitHub.*
 
 

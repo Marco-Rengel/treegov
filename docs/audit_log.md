@@ -163,6 +163,87 @@ Registro cronológico de decisiones arquitectónicas, hallazgos y correcciones d
 
 ---
 
+### 20/09/2026 — Flujo transaccional y estado cero (Fase 1)
+
+**Estado**: Aprobado
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: backend_v3/splitting.py, backend_v3/profiling.py,
+backend_v3/tree_builder.py, backend_v3/session_state.py,
+tests/test_splitting.py, tests/test_profiling.py,
+tests/test_tree_builder.py, tests/test_session_state.py.
+
+**Hallazgos**: Ninguno bloqueante. El diseño fue auditado antes de
+implementar (diseño → auditoría → código → verificación).
+
+**Decisiones arquitectónicas**:
+- Separación clean-room: `tree_builder.py` contiene TreeModel/TreeNode/
+  TreeBuilder (construcción BFS determinista); `session_state.py` es la
+  máquina de estados (EMPTY → DATA_LOADED → SPEC_FIXED → PARTITIONED →
+  TRAINED), con atomicidad transaccional.
+- Split train/test con Hamilton-Hare (largest remainder) para
+  estratificación exacta sin sesgo de redondeo.
+- Inferencia de tipos de predictor (nominal/ordinal/continuous) por
+  cardinalidad (MAX_ORDINAL_CATS=20) — heurística documentada y auditable.
+- `TreeBuilder` aplica la regla "min_child_size es piso absoluto": si
+  alguna rama queda con menos filas que el mínimo, el split entero se
+  rechaza (el nodo queda hoja). Sin fusión de respaldo.
+- `Session` delega al backend; el frontend nunca lo toca directamente
+  (sala limpia).
+
+**Identidades verificadas**:
+- `stratified_split` reprodujo proporciones exactas en fixtures
+  controlados (largest remainder con empates resueltos determinísticamente).
+- `TreeBuilder` con C&RT sobre fixture simple generó árbol conocido
+  (raíz con split en x<=t, hojas 1 y 2 con n exactos).
+- `Session` respetó transiciones legales y lanzó ValueError en ilegales.
+
+**Tests**: 22 nuevos. Suite total: 87/87.
+
+---
+
+### 20/09/2026 — Evaluación OOS + poda coste-complejidad (Fase 1.2)
+
+**Estado**: Aprobado tras remediación
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: backend_v3/validation.py, backend_v3/pruning.py,
+tests/test_validation.py, tests/test_pruning.py.
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Media | validation.py | Métricas retornadas como tuplas sueltas | Contenedor OOSMetrics (frozen) |
+| 2 | Media | validation.py | `predict_pd` abortaba en categorías nuevas (OOT real) | Política `unseen_policy` (error/majority/exclude) |
+| 3 | Media | pruning.py | Secuencia de poda con descendientes "fantasma" tras podar | `_eliminar_descendientes` recursivo |
+| 4 | Baja | validation.py | Dependencia de pandas en cálculo de mid-ranks | Vectorización numpy pura |
+
+**Bugs auto-detectados durante desarrollo**:
+- ROC/KS/PR-AUC con empates: acumulados al inicio del bloque en lugar del final (el umbral cubre TODO el grupo de empate).
+
+**Decisiones arquitectónicas**:
+- Métricas OOS: Gini canónico (2·AUC−1) vía Wilcoxon-Mann-Whitney con
+  mid-ranks; KS; Hosmer-Lemeshow; Brier + BSS; ROC puntos completos;
+  PR-AUC como Average Precision escalonado (Davis & Goadrich 2006).
+- Poda coste-complejidad de Breiman (1984): secuencia de α con empates
+  simultáneos (todos los nodos del mínimo, convención Breiman); el
+  `prune(alpha)` siempre parte del modelo original (idempotencia).
+- Re-indexado BFS tras poda: TreeModel válido, hojas nuevas con
+  `leaf_reason="podado"`.
+- Módulo autocontenido: `validation.py` no depende de engines, solo de
+  TreeModel.
+
+**Identidades verificadas**:
+- Gini = 1 con separación perfecta; Gini = 0 con modelo nulo.
+- PSI: fórmula correcta, verificada contra cálculo a mano.
+- Poda con α manual produjo secuencia de pasos exacta (α₁, α₂...) y
+  re-indexado correcto.
+- `prune(α)` no apila podas sobre podas previas (idempotencia).
+
+**Tests**: 20 nuevos. Suite total: 107/107.
+
+---
+
 ### 22/09/2026 — stability.py + extensiones de session_state (Fase 1.3)
 
 **Estado**: Aprobado tras 2 fixes
