@@ -62,6 +62,7 @@
 | `Ctrl+P` no funciona en VS Code (interceptado) | Usar Windows Terminal para menús de OpenCode |
 | Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano |
 | Al pegar en nano, el contenido se duplica | Usar Python para escribir archivos, o VS Code directo |
+| `git push` falla desde terminal WSL (sin credenciales) | Hacer el push desde VS Code: `Ctrl+Shift+P` → `Git: Push` |
 
 ## Cómo retomar el trabajo
 
