@@ -57,7 +57,7 @@
 
 | Problema | Solución |
 |---|---|
-| OpenCode arranca con variant `max` (muy lento) | Al inicio de cada sesión: `/variants` → seleccionar `high` |
+| **Variant de OpenCode** | Default = `max` (para diseño y auditoría). Para implementación/edición: `/variants` → `high`. Para tareas triviales: `/variants` → `low`. No persiste en `opencode.jsonc` (verificado). |
 | Langfuse plugin sin credenciales | Descartado (no aporta valor sin cuenta externa) |
 | `Ctrl+P` no funciona en VS Code (interceptado) | Usar Windows Terminal para menús de OpenCode |
 | Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano |
