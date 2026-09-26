@@ -41,4 +41,6 @@ data/*
 archive/legacy_docs/*.pyc
 
 # Frontend legacy (Antigravity, no forma parte de TreeGov)
-archive/legacy_ui_sprint3/
+archive/legacy_ui_sprint3/.opencode/
+.opencode/
+archive/

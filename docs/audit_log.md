@@ -410,3 +410,27 @@ explícita de None + test_grow_full_max_depth_none.
 - treegov.py backend -> exit 0, sin regresión.
 - Suite: 148/148 PASSED (128 previos + 6 session + 4 builder + 9 wizard
   + 1 grow_full).
+
+  ---
+
+  ### 25/09/2026 — Cierre Fase 2.2: Visor interactivo de árbol
+
+**Estado**: Aprobado tras 1 hallazgo de implementación
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/tree_view.py, frontend_v3/main_window.py,
+frontend_v3/i18n.py, tests/test_tree_view.py
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Media | tree_view.py (TreeScene.select_node) | Selección múltiple accidental: al seleccionar un nodo nuevo, el anterior permanecía seleccionado (Qt permite multiselección por defecto). `selected_node_id()` devolvía el nodo equivocado y el HUD mostraba información desactualizada. Detectado por `test_e2e_mainwindow`. | Añadido `self.clearSelection()` al inicio de `select_node()`. La selección es ahora exclusiva y determinista. |
+
+**Identidades verificadas**:
+- `test_tree_view.py` 10/10 PASSED en WSL (Python 3.14.4, pytest 9.1.1).
+- `test_e2e_mainwindow`: selección nodo 1 → nodo 0 → HUD muestra Predictor (antes fallaba).
+- `scipy 1.18.1` importa sin errores en WSL (bloqueo de DLLs en Windows resuelto).
+- `treegov_gui.py` offscreen con auto-quit → exit 0.
+- `treegov.py` backend headless → 4/4 splits, exit 0.
+
+**Tests**: 10 nuevos. Suite total: 158/158.

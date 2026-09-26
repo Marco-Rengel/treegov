@@ -352,6 +352,7 @@ class TreeScene(QGraphicsScene):
     # -- selection -------------------------------------------------------------
 
     def select_node(self, node_id: int) -> None:
+        self.clearSelection()
         item = self._items.get(node_id)
         if item is not None:
             item.setSelected(True)
