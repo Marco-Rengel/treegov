@@ -40,9 +40,31 @@
 
 ### 🟡 Phase 2.3 — OOS/OOT metrics panel
 **Priority: HIGH**
-- Gini, KS, HL, Brier, ROC + AUC, PR-AUC.
-- PSI, CSI, Gini Drop with Basel/EBA traffic lights.
-- Evaluate keyboard mnemonics ("&") for menus (out of scope in 2.0).
+
+**Métricas requeridas:**
+- Gini, KS, HL, Brier, ROC + AUC, PR-AUC (`backend_v3/validation.py`)
+- PSI, CSI, Gini Drop con semáforos Basel/EBA (`backend_v3/stability.py`)
+- Mnemonics de teclado ("&") para menús
+
+**Metodología de trabajo (definida 26/09/2026):**
+
+Un prompt único con `max reasoning` que exige leer 8+ archivos grandes provoca timeouts silenciosos en OpenCode/WSL. La TUI deja de actualizarse tras ~5 min aunque el proceso siga vivo. Para evitar esto, la Fase 2.3 se divide en sub-pasos:
+
+| Sub-paso | Variant | Alcance |
+|---|---|---|
+| 2.3.a Diseño estructural | `max` | Dónde encaja el panel; archivos a crear/modificar |
+| 2.3.b Claves i18n | `max` | Lista EN/ES con paridad estricta |
+| 2.3.c Esqueleto del panel | `high` | Clase widget vacía + tests de construcción |
+| 2.3.d Consumo de métricas | `max` | Integración con OOSMetrics, PSIReport, CSIReport |
+| 2.3.e Semáforos y visualización | `high` | Uso de traffic_light() / gini_drop_alert() + QSS |
+| 2.3.f Tests E2E + cierre | `max` | Suite completa + audit_log + roadmap + estado |
+
+**Regla de variant:**
+- `max` → diseño, arquitectura, decisiones críticas.
+- `high` → implementación de código, edición de archivos.
+- `low` → tareas triviales (leer logs, listar archivos).
+
+Cada sub-paso se audita antes de pasar al siguiente.
 
 ### 🟡 Phase 2.4 — Reports + integration
 **Priority: MEDIUM**
