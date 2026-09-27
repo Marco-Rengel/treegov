@@ -530,55 +530,58 @@ Orquestador backend que expone el DTO plain-Python de métricas OOS/OOT para el 
 
 ---
 
-### 27/09/2026 — Diagnóstico: causa raíz del 429 y bugs de OpenCode
+### 27/09/2026 — Diagnóstico final: incompatibilidad OpenCode + NVIDIA NIM + Kimi K3
 
-**Estado**: Resuelto. Diagnóstico confirmado empíricamente.
+**Estado**: Cerrado operativamente. Causa exacta pendiente de atribución interna.
 **Modelo**: N/A (diagnóstico de infraestructura)
 **Revisor**: Marco Rengel
+**Colaboración externa**: Gemini Pro y Copilot (razonamiento profundo) validaron el análisis.
 
 **Motivación**:
-Tras varios días con bugs intermitentes en OpenCode (congelamientos silenciosos, 429, reportes falsos de éxito), se ejecutó un diagnóstico estructurado con ayuda de dos IAs externas (Gemini, Copilot) y pruebas controladas paso a paso.
+Tras dos semanas con bugs intermitentes (congelamientos, 429, ausencia de mensaje final tras tool calls), se ejecutó un diagnóstico estructurado con reinstalación limpia, pruebas controladas y comparación de proveedores.
 
-**Metodología aplicada**:
-1. Backup de configuración global y local (.opencode/).
-2. Deshabilitado de plugins.
-3. Eliminada la duplicación de AGENTS.md en `instructions`.
-4. Pruebas de curl directo a la API de NVIDIA.
-5. Pruebas controladas con prompts cortos y largos.
-6. Comparación de dos modelos: Kimi K3 (NVIDIA NIM) vs Nemotron 3 Ultra (OpenCode Zen).
-
-**Hipótesis evaluadas y resultado**:
+**Hipótesis descartadas empíricamente**:
 | # | Hipótesis | Resultado |
 |---|---|---|
-| 1 | `opencode-auto-resume` interfiere con streaming | ❌ Descartada (bug persiste sin plugins). |
-| 2 | Duplicación de AGENTS.md agrava latencia | ❌ Descartada (bug persiste sin duplicación). |
-| 3 | Cuota diaria NVIDIA agotada | ❌ Descartada (curl responde OK). |
-| 4 | Fallo de integridad de plugins | ❌ Descartada (bug persiste sin plugins). |
-| 5 | Incompatibilidad 1.18.31/1.18.32 | ❌ Descartada (bug en ambas versiones). |
-| 6 | Dos API keys NVIDIA activas | ❌ Descartada (OpenCode usa una sola). |
-| 7 | **Kimi K3 + NVIDIA NIM free tier + OpenCode** | ✅ **CONFIRMADA** |
+| 1 | Plugins interfiriendo | ❌ Bug persiste sin plugins. |
+| 2 | Duplicación de AGENTS.md | ❌ Bug persiste sin duplicación. |
+| 3 | Cuota diaria NVIDIA agotada | ❌ curl directo responde OK. |
+| 4 | Instalación corrupta de OpenCode | ❌ Reinstalación limpia reproduce el bug. |
+| 5 | Problema del proyecto TreeGov | ❌ Bug no aparece en sandbox vacío. |
+| 6 | Incompatibilidad 1.18.31/1.18.32 | ❌ Bug en ambas versiones. |
+| 7 | Dos API keys NVIDIA activas | ❌ OpenCode usa una sola. |
 
-**Causa raíz confirmada**:
-- Kimi K3 vía NVIDIA NIM free tier presenta **TTFT (Time-To-First-Token) alto** (~28-45s en prompts medianos).
-- OpenCode genera **múltiples requests encadenadas** por prompt (15-25: carga de instrucciones, análisis, generación, verificación de tool calls, snapshots de git, reintentos automáticos).
-- El límite gratuito de NVIDIA (40 RPM) se supera en 2-3 prompts consecutivos → HTTP 429.
-- Los reintentos automáticos agravan el consumo.
-- El TTFT alto también activa timeouts silenciosos en la TUI/GUI.
+**Evidencia empírica decisiva (misma sesión, mismo proyecto, mismo prompt)**:
+| Proveedor · Modelo | Tool calls | Mensaje final | Tiempo |
+|---|---|---|---|
+| NVIDIA NIM · Kimi K3 | ✅ Ejecutados | ❌ Ausente | ~70 s |
+| Google AI Studio · Gemini 3.8 Flash | ✅ Ejecutados | ✅ Completo y estructurado | ~14 s |
 
-**Prueba de contraste (misma herramienta, distinto modelo)**:
-- Kimi K3 (NVIDIA NIM): prompt de escritura → 429 + silencio + sin mensaje final.
-- Nemotron 3 Ultra (OpenCode Zen): mismo prompt → sin 429 + mensaje final estructurado con ruta, tamaño y contenido.
+**Formulación rigurosa del hallazgo (adoptada tras revisión externa)**:
+> La causa está localizada en la compatibilidad del ciclo de herramientas entre OpenCode 1.18.32 y Kimi K3 servido por NVIDIA NIM. La evidencia disponible no permite distinguir entre (a) el formato de respuesta de NIM, (b) la continuidad conversacional requerida por Kimi K3, o (c) el procesamiento de esa respuesta por OpenCode.
 
-**Conclusión**:
-- **OpenCode no está roto.** Su arquitectura requiere múltiples requests por tarea, lo que es incompatible con el free tier de NVIDIA cuando se combina con un modelo de TTFT alto.
-- **Nemotron 3 Ultra vía OpenCode Zen es viable hoy** para avanzar en Fase 2.3.
-- **Kimi K3 vía NVIDIA NIM requiere**: o bien esperar cuota fresca + usar prompts únicos espaciados, o bien migrar a otro proveedor (OpenRouter, Moonshot oficial, ZenMux de pago).
+**Respaldos en issues de OpenCode/GitHub (verificados por Copilot)**:
+- "Add graceful fallback for missing response.id from NVIDIA NIM"
+- "NVIDIA NIM kimik2.5 returns numeric tool call IDs causing 'expected id to be a string' error"
+- "GLM-5 via NVIDIA NIM emits malformed MCP tool JSON"
+- "Bug: NVIDIA API models hang indefinitely during generation"
+- "Nvidia NIM API hangs for DeepSeek v4 reasoning models without chat_template_kwargs"
 
-**Decisión pendiente (sesión futura)**:
-- Evaluar Aider como alternativa (1-3 requests por tarea vs 15-25 de OpenCode).
-- O adoptar estrategia dual: Nemotron para tareas mecánicas, Kimi K3 para diseño puntual.
+Los issues confirman que la compatibilidad de tool calling entre OpenCode y NVIDIA NIM ha tenido problemas reales, dependientes del modelo, en identificadores, estructura de respuestas, parámetros específicos y streaming.
 
-**Aprendizajes documentados**:
-- La TUI es mala para diagnosticar (no muestra errores explícitos). La GUI sí.
-- Verificación manual obligatoria (`Get-Item`, `Select-String`, `pytest`) tras cada tarea.
-- Los plugins no eran la causa, pero se mantienen deshabilitados durante el diagnóstico y se restauran.
+**Estrategia adoptada**:
+- **Gemini 3.8 Flash (Google AI Studio)**: proveedor principal para desarrollo diario (crear/editar código, ejecutar tests, refactorizar, documentación).
+- **Kimi K3 (NVIDIA NIM)**: segunda opinión para revisión conceptual, **preferentemente sin tool calls**. Prompts del tipo "no modifiques archivos, revisa esta propuesta y devuelve riesgos/supuestos/casos límite".
+
+**Alerta de privacidad (crítica)**:
+- El nivel gratuito de Google AI Studio puede usar el contenido para mejorar sus productos.
+- Los NVIDIA API Trial Terms definen el servicio como prueba, no apto para producción.
+- **Regla para TreeGov**: nunca enviar datos bancarios reales, credenciales, contratos, ni información interna a ninguna capa gratuita. Solo datasets públicos (German Credit, UCI) o sintéticos. El proyecto es open source y no maneja datos reales, por lo que la estrategia es viable.
+
+**Verificación obligatoria**:
+- No confiar en la notificación "Respuesta lista" de OpenCode.
+- Verificar siempre con `Get-Item`, `Select-String`, `git status` o `pytest` tras cada tarea.
+
+**Pendiente (no bloqueante)**:
+- Atribución exacta de la causa (requeriría leer el código de OpenCode y NIM).
+- Issue reproducible puede reportarse en el repo de OpenCode con la evidencia recogida (opcional, contribución a la comunidad).
