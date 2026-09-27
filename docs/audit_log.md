@@ -508,3 +508,46 @@ El proyecto fue diseñado y documentado para Python 3.11 (`pyproject.toml`: `req
 - `reporting.py` creado con 21 líneas.
 - `Session.get_oos_oot_report()` insertado en `session_state.py` (línea 169).
 - Suite de tests: 161/161 PASSED (sin regresiones).
+
+
+---
+
+### 27/09/2026 — Fase 2.3.d (parcial): reporting backend implementado
+
+**Estado**: Aprobado parcialmente. Tests pendientes por bugs de OpenCode.
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: `backend_v3/reporting.py` (nuevo), `backend_v3/session_state.py` (modificado)
+
+**Motivación**:
+Orquestador backend que expone el DTO plain-Python de métricas OOS/OOT para el panel GUI.
+
+**Decisiones arquitectónicas**:
+- `reporting.py` usa `asdict()` para aplanar OOSMetrics/OOTReport sin importar validation/stability en runtime.
+- `TYPE_CHECKING` guard evita ciclo session_state ↔ reporting.
+- `build_oos_oot_report(st: SessionState)` recibe el dataclass, no Session.
+- `Session.get_oos_oot_report()` es pass-through (línea 169).
+- DTO con claves "oos"/"oot", sin dataclasses propias.
+
+**Identidades verificadas**:
+- reporting.py: 21 líneas.
+- Session.get_oos_oot_report(): línea 169 de session_state.py.
+- Suite: 161/161 PASSED.
+
+**Hallazgos (bugs OpenCode, severidad creciente)**:
+| # | Sev | Descripción |
+|---|---|---|
+| 1 | Media | GUI no genera mensaje final tras tool calls exitosas. |
+| 2 | Alta | Múltiples tool calls (Grep/Read) agotan cuota NVIDIA → 429 con prompts medianos. |
+| 3 | **Crítica** | Notificación "Respuesta lista" sin haber ejecutado la tarea (test_reporting.py no se creó). |
+
+**Mitigación adoptada**:
+- Verificación obligatoria con `Select-String`/`Get-Item`/`pytest` tras cada tarea de OpenCode.
+- Prompts quirúrgicos con referencias exactas al código; evitar que el agente haga Grep.
+- **A largo plazo**: evaluar alternativa (Aider, Cline) en sesión dedicada.
+
+**Pendiente**:
+- tests/test_reporting.py (bloqueado por bug #3).
+- Integración de metrics_panel.py con Session.get_oos_oot_report().
+
+**Referencias**: OpenCode issues #32400, #42605.
