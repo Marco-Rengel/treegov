@@ -39,6 +39,7 @@ from .log_config import get_logger
 from .profiling import _infer_column, infer_spec  # _infer_column: reuso interno backend
 from .pruning import Pruner
 from .quest_engine import QuestEngine
+from .reporting import build_oos_oot_report
 from .splitting import stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
@@ -164,6 +165,10 @@ class Session:
         tipos = {str(c): _infer_column(self._df[c]).name for c in self._df.columns}
         self._log.info("[session] describe_dataset: %d columnas", len(cols))
         return cols, tipos
+
+    def get_oos_oot_report(self) -> dict | None:
+        """DTO plain-Python del estado OOS/OOT (None si no hay modelo)."""
+        return build_oos_oot_report(self._state)
 
     def reset_to_data_loaded(self) -> SessionState:
         """Vuelve a DATA_LOADED conservando el DataFrame en cache.

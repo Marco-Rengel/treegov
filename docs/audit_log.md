@@ -486,3 +486,25 @@ El proyecto fue diseñado y documentado para Python 3.11 (`pyproject.toml`: `req
 - **Compatibilidad declarada**: 3.11+ (ver `pyproject.toml`).
 
 **Tests**: 161/161. Sin regresiones.
+
+### 27/09/2026 — Fase 2.3.d: Implementación de reporting y gestión de bugs de OpenCode
+
+**Estado**: Aprobado tras verificación manual
+**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
+**Revisor**: Marco Rengel
+**Artefactos**: `backend_v3/reporting.py` (nuevo), `backend_v3/session_state.py` (modificado), `tests/test_reporting.py` (pendiente)
+
+**Hallazgos (auditoría post-implementación)**:
+| # | Sev | Ubicación | Descripción | Resolución |
+|---|---|---|---|---|
+| 1 | Media | `session_state.py` | OpenCode no genera mensaje de texto de confirmación tras ejecutar tool calls, pero los cambios sí se aplican. | Verificación manual con `Select-String` y `git diff`. Documentado como limitación conocida de la GUI. |
+| 2 | Media | N/A | La GUI de OpenCode no siempre refleja el estado de finalización de la tarea (a veces silencio, a veces sonido). | Se prioriza la verificación directa en el código fuente sobre la retroalimentación de la UI. |
+
+**Decisiones**:
+- El flujo de trabajo con OpenCode se adapta: para tareas de edición de código, la verificación se realiza directamente en los archivos y con `git diff`, no confiando únicamente en la respuesta de la UI.
+- Se documentan los issues de GitHub (#32400, #42605) que describen este comportamiento.
+
+**Identidades verificadas**:
+- `reporting.py` creado con 21 líneas.
+- `Session.get_oos_oot_report()` insertado en `session_state.py` (línea 169).
+- Suite de tests: 161/161 PASSED (sin regresiones).
