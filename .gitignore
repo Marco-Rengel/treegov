@@ -43,3 +43,8 @@ data/*
 
 # Carpeta histórica (documentos pre-TreeGov)
 archive/
+
+# Backups temporales (generados durante diagnóstico)
+.opencode-backup-*/
+.opencode.disabled/
+.venv_3.14_backup/

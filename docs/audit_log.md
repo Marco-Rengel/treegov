@@ -411,9 +411,9 @@ explícita de None + test_grow_full_max_depth_none.
 - Suite: 148/148 PASSED (128 previos + 6 session + 4 builder + 9 wizard
   + 1 grow_full).
 
-  ---
+---
 
-  ### 25/09/2026 — Cierre Fase 2.2: Visor interactivo de árbol
+### 25/09/2026 — Cierre Fase 2.2: Visor interactivo de árbol
 
 **Estado**: Aprobado tras 1 hallazgo de implementación
 **Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
@@ -453,7 +453,6 @@ frontend_v3/i18n.py, tests/test_tree_view.py
 
 **Tests**: 3 nuevos + 2 existentes ajustados (assert de 2→3 pestañas en test_layout_structure y test_e2e_mainwindow). Suite total: 161/161.
 
-
 ---
 
 ### 27/09/2026 — Migración a Python 3.11 y consolidación de entorno Windows
@@ -486,29 +485,6 @@ El proyecto fue diseñado y documentado para Python 3.11 (`pyproject.toml`: `req
 - **Compatibilidad declarada**: 3.11+ (ver `pyproject.toml`).
 
 **Tests**: 161/161. Sin regresiones.
-
-### 27/09/2026 — Fase 2.3.d: Implementación de reporting y gestión de bugs de OpenCode
-
-**Estado**: Aprobado tras verificación manual
-**Modelo**: Kimi K3 vía NVIDIA NIM (max reasoning)
-**Revisor**: Marco Rengel
-**Artefactos**: `backend_v3/reporting.py` (nuevo), `backend_v3/session_state.py` (modificado), `tests/test_reporting.py` (pendiente)
-
-**Hallazgos (auditoría post-implementación)**:
-| # | Sev | Ubicación | Descripción | Resolución |
-|---|---|---|---|---|
-| 1 | Media | `session_state.py` | OpenCode no genera mensaje de texto de confirmación tras ejecutar tool calls, pero los cambios sí se aplican. | Verificación manual con `Select-String` y `git diff`. Documentado como limitación conocida de la GUI. |
-| 2 | Media | N/A | La GUI de OpenCode no siempre refleja el estado de finalización de la tarea (a veces silencio, a veces sonido). | Se prioriza la verificación directa en el código fuente sobre la retroalimentación de la UI. |
-
-**Decisiones**:
-- El flujo de trabajo con OpenCode se adapta: para tareas de edición de código, la verificación se realiza directamente en los archivos y con `git diff`, no confiando únicamente en la respuesta de la UI.
-- Se documentan los issues de GitHub (#32400, #42605) que describen este comportamiento.
-
-**Identidades verificadas**:
-- `reporting.py` creado con 21 líneas.
-- `Session.get_oos_oot_report()` insertado en `session_state.py` (línea 169).
-- Suite de tests: 161/161 PASSED (sin regresiones).
-
 
 ---
 
@@ -551,3 +527,58 @@ Orquestador backend que expone el DTO plain-Python de métricas OOS/OOT para el 
 - Integración de metrics_panel.py con Session.get_oos_oot_report().
 
 **Referencias**: OpenCode issues #32400, #42605.
+
+---
+
+### 27/09/2026 — Diagnóstico: causa raíz del 429 y bugs de OpenCode
+
+**Estado**: Resuelto. Diagnóstico confirmado empíricamente.
+**Modelo**: N/A (diagnóstico de infraestructura)
+**Revisor**: Marco Rengel
+
+**Motivación**:
+Tras varios días con bugs intermitentes en OpenCode (congelamientos silenciosos, 429, reportes falsos de éxito), se ejecutó un diagnóstico estructurado con ayuda de dos IAs externas (Gemini, Copilot) y pruebas controladas paso a paso.
+
+**Metodología aplicada**:
+1. Backup de configuración global y local (.opencode/).
+2. Deshabilitado de plugins.
+3. Eliminada la duplicación de AGENTS.md en `instructions`.
+4. Pruebas de curl directo a la API de NVIDIA.
+5. Pruebas controladas con prompts cortos y largos.
+6. Comparación de dos modelos: Kimi K3 (NVIDIA NIM) vs Nemotron 3 Ultra (OpenCode Zen).
+
+**Hipótesis evaluadas y resultado**:
+| # | Hipótesis | Resultado |
+|---|---|---|
+| 1 | `opencode-auto-resume` interfiere con streaming | ❌ Descartada (bug persiste sin plugins). |
+| 2 | Duplicación de AGENTS.md agrava latencia | ❌ Descartada (bug persiste sin duplicación). |
+| 3 | Cuota diaria NVIDIA agotada | ❌ Descartada (curl responde OK). |
+| 4 | Fallo de integridad de plugins | ❌ Descartada (bug persiste sin plugins). |
+| 5 | Incompatibilidad 1.18.31/1.18.32 | ❌ Descartada (bug en ambas versiones). |
+| 6 | Dos API keys NVIDIA activas | ❌ Descartada (OpenCode usa una sola). |
+| 7 | **Kimi K3 + NVIDIA NIM free tier + OpenCode** | ✅ **CONFIRMADA** |
+
+**Causa raíz confirmada**:
+- Kimi K3 vía NVIDIA NIM free tier presenta **TTFT (Time-To-First-Token) alto** (~28-45s en prompts medianos).
+- OpenCode genera **múltiples requests encadenadas** por prompt (15-25: carga de instrucciones, análisis, generación, verificación de tool calls, snapshots de git, reintentos automáticos).
+- El límite gratuito de NVIDIA (40 RPM) se supera en 2-3 prompts consecutivos → HTTP 429.
+- Los reintentos automáticos agravan el consumo.
+- El TTFT alto también activa timeouts silenciosos en la TUI/GUI.
+
+**Prueba de contraste (misma herramienta, distinto modelo)**:
+- Kimi K3 (NVIDIA NIM): prompt de escritura → 429 + silencio + sin mensaje final.
+- Nemotron 3 Ultra (OpenCode Zen): mismo prompt → sin 429 + mensaje final estructurado con ruta, tamaño y contenido.
+
+**Conclusión**:
+- **OpenCode no está roto.** Su arquitectura requiere múltiples requests por tarea, lo que es incompatible con el free tier de NVIDIA cuando se combina con un modelo de TTFT alto.
+- **Nemotron 3 Ultra vía OpenCode Zen es viable hoy** para avanzar en Fase 2.3.
+- **Kimi K3 vía NVIDIA NIM requiere**: o bien esperar cuota fresca + usar prompts únicos espaciados, o bien migrar a otro proveedor (OpenRouter, Moonshot oficial, ZenMux de pago).
+
+**Decisión pendiente (sesión futura)**:
+- Evaluar Aider como alternativa (1-3 requests por tarea vs 15-25 de OpenCode).
+- O adoptar estrategia dual: Nemotron para tareas mecánicas, Kimi K3 para diseño puntual.
+
+**Aprendizajes documentados**:
+- La TUI es mala para diagnosticar (no muestra errores explícitos). La GUI sí.
+- Verificación manual obligatoria (`Get-Item`, `Select-String`, `pytest`) tras cada tarea.
+- Los plugins no eran la causa, pero se mantienen deshabilitados durante el diagnóstico y se restauran.
