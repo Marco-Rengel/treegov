@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 26/09/2026
+**Fecha de última actualización:** 27/09/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -10,7 +10,7 @@
 3. `docs/estado_proyecto.md` — Dossier completo del proyecto
 4. `docs/methodology.md` — Metodología matemática con citas
 5. `docs/audit_log.md` — Bitácora cronológica (leer últimas 3 entradas)
-6. `docs/roadmap.md` — Plan de fases
+6. `docs/roadmap.md` — Plan de fases con sub-plan de 2.3
 
 ## Estado actual del proyecto
 
@@ -22,86 +22,108 @@
 | 1.3 | Validación OOT + monitoreo PSI/CSI | ✅ |
 | 2.0 | GUI PySide6 (esqueleto) | ✅ |
 | 2.1 | Wizard transaccional + Governance Mode | ✅ |
-| 2.2 | Visor interactivo de árbol | ✅ Cerrada 25/09/2026 |
-| 2.3 | Panel de métricas OOS/OOT | ⏳ Próxima |
-| 2.4 | Reportes + integración | ⏳ Pendiente |
-| 3+ | MCP, batch scoring, IFRS 9 | ⏳ Planificadas |
+| 2.2 | Visor interactivo de árbol | ✅ |
+| 2.3.a | Diseño estructural panel OOS/OOT | ✅ |
+| 2.3.b | 23 claves i18n (paridad EN/ES) | ✅ |
+| 2.3.c | Esqueleto del panel + 3 tests | ✅ |
+| 2.3.d | Consumo de métricas (Kimi K3) | ⏳ Próxima |
+| 2.3.e | Semáforos y visualización | ⏳ |
+| 2.3.f | Tests E2E + cierre | ⏳ |
+| 2.4 | Reportes + integración | ⏳ |
+| 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
 
-**Suite de tests:** 158/158 PASSED
+**Suite de tests:** 161/161 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- WSL2 (Ubuntu) con Python 3.14.4
-- Windows nativo NO se usa para el proyecto (bloquea DLLs de scipy por Control de Aplicaciones)
-- Entorno virtual: `.venv_linux/` (NO confundir con `.venv/`, que es de Windows)
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 27/09/2026: 161/161 tests.
+- **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
+- **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
+- **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
+
+### Comandos por plataforma
+
+Windows (PowerShell):
+
+    .\.venv\Scripts\activate
+    python -m pytest tests -q
+    python treegov.py
+
+WSL (bash):
+
+    cd "/mnt/c/Riesgos - copia/DecisionTree_Modeler"
+    source .venv_linux/bin/activate
+    python -m pytest tests -q
 
 ### Herramientas
 
-- VS Code conectado a WSL (extensión oficial de Microsoft)
-- Windows Terminal con Ubuntu por defecto
-- OpenCode 1.18.32 instalado en WSL con Kimi K3 vía NVIDIA NIM
+- VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
+- Windows Terminal con Ubuntu por defecto.
+- OpenCode 1.18.31 en Windows y 1.18.32 en WSL. Modelo principal: `nvidia/moonshotai/kimi-k3` (Kimi K3 vía NVIDIA NIM). Alternativa gratuita: `Nemotron 3 Ultra Free` (OpenCode Zen).
 
 ### Configuración de OpenCode
 
-- `~/.config/opencode/opencode.jsonc` (global):
-  - `instructions`: AGENTS.md + .treegovrules
-  - `model`: nvidia/moonshotai/kimi-k3
-  - `permission`: git push/commit = ask, rm -rf = deny
-- `.opencode/opencode.json` (local del proyecto):
-  - `plugin`: opencode-supermemory + opencode-auto-resume
-- `.opencode/` está en `.gitignore`
+Windows: `C:\Users\maren\.config\opencode\opencode.jsonc` y `C:\Users\maren\.local\share\opencode\auth.json`.
+
+WSL: `~/.config/opencode/opencode.jsonc` y `~/.local/share/opencode/auth.json`.
+
+Contenido común:
+
+- `instructions`: AGENTS.md + .treegovrules
+- `model`: nvidia/moonshotai/kimi-k3
+- `permission`: git push/commit = ask, rm -rf = deny
+- Plugin local del proyecto: opencode-supermemory + opencode-auto-resume (en `.opencode/opencode.json`)
 
 ## Problemas conocidos y soluciones
 
 | Problema | Solución |
 |---|---|
-| **Variant de OpenCode** | Default = `max` (para diseño y auditoría). Para implementación/edición: `/variants` → `high`. Para tareas triviales: `/variants` → `low`. No persiste en `opencode.jsonc` (verificado). |
-| Langfuse plugin sin credenciales | Descartado (no aporta valor sin cuenta externa) |
-| `Ctrl+P` no funciona en VS Code (interceptado) | Usar Windows Terminal para menús de OpenCode |
-| Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano |
-| Al pegar en nano, el contenido se duplica | Usar Python para escribir archivos, o VS Code directo |
-| `git push` falla desde terminal WSL (sin credenciales) | Hacer el push desde VS Code: `Ctrl+Shift+P` → `Git: Push` |
+| **Variant de OpenCode** | Default = `max` (diseño/auditoría). Para implementación: `/variants` → `high`. Para tareas triviales: `/variants` → `low`. No persiste en `opencode.jsonc`. |
+| **Cuota NVIDIA NIM agotada (429)** | Se renueva cada 24h. Alternativa gratuita: OpenCode Zen (`Nemotron 3 Ultra Free`). |
+| **Modelos descontinuados** | DeepSeek V4 Pro fue retirado (14/09/2026). Verificar vigencia antes de seleccionar. |
+| `Ctrl+P` no funciona en VS Code | Usar Windows Terminal para menús de OpenCode. |
+| Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano. |
+| Al pegar en nano, el contenido se duplica | Usar Python para escribir archivos, o VS Code directo. |
+| `git push` falla desde terminal WSL | Hacer push desde VS Code: `Ctrl+Shift+P` → `Git: Push`. |
 
 ## Cómo retomar el trabajo
 
-### Abrir el entorno
+### Windows (principal)
+
+    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    .\.venv\Scripts\activate
+    python -m pytest tests -q
+    opencode
+
+### WSL (respaldo)
 
     cd "/mnt/c/Riesgos - copia/DecisionTree_Modeler"
     source .venv_linux/bin/activate
-
-### Ejecutar tests
-
     python -m pytest tests -q
 
-### Abrir OpenCode
+## Próximos pasos (Fase 2.3.d)
 
-    opencode
+**Objetivo:** Integrar el panel OOS/OOT con las métricas del backend.
 
-Al inicio de OpenCode: presionar `/variants` → `high` (si no está en high).
+**Requisitos:**
 
-### Abrir VS Code en WSL
+- Consumir `OOSMetrics` (backend_v3/validation.py) — AUC, Gini, KS, Brier, BSS, HL, PR-AUC, ROC.
+- Consumir `PSIReport`, `CSIReport`, `GiniDropReport` (backend_v3/stability.py) con semáforos.
+- Sin importar numpy/pandas/scipy en frontend_v3 (sala limpia).
+- Los semáforos (`traffic_light`, `gini_drop_alert`) se evalúan en backend.
+- DTO plain-Python que cruce la frontera (dicts/tuplas de tipos nativos).
 
-    code .
+**Regla de variant:** `max` para este sub-paso (diseño + integración).
 
-## Próximos pasos (Fase 2.3)
+**Pendientes posteriores:** 2.3.e (semáforos visuales + QSS), 2.3.f (tests E2E + cierre).
 
-**Objetivo:** Panel visual de métricas OOS/OOT.
+**Ideas del experto (evaluar en 2.4 o 3):**
 
-**Funcionalidades:**
-
-- Gini, KS, HL, Brier, ROC + AUC, PR-AUC (backend en `backend_v3/validation.py`)
-- PSI, CSI, Gini Drop con semáforos Basilea/EBA (backend en `backend_v3/stability.py`)
-- Mnemonics de teclado ("&") para menús
-
-**Ideas del experto a evaluar (Fase 2.3 o 2.4):**
-
-- Restricciones de monotonía para variables continuas/ordinales
-- Exportación de reglas en formato legible (Markdown/JSON)
-- Documentación automática del modelo (ficha técnica)
-
-**Metodología:** Diseñar → Auditar diseño → Implementar → Testear → Documentar en audit_log.md.
+- Restricciones de monotonía.
+- Exportación de reglas legibles (Markdown/JSON).
+- Documentación automática del modelo.
 
 ## Documentos históricos
 
@@ -114,3 +136,4 @@ La carpeta `archive/` contiene documentos del proyecto anterior (DecisionTree_Mo
 - **Cada cambio de código:** actualizar `docs/audit_log.md`.
 - **Cada fase cerrada:** actualizar `docs/roadmap.md` y `docs/estado_proyecto.md`.
 - **Cero referencias a software privativo** (SPSS, Answer Tree, Stata, SAS) en docs activos.
+- **i18n:** paridad estricta EN/ES, claves en snake_case.

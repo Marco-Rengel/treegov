@@ -452,3 +452,37 @@ frontend_v3/i18n.py, tests/test_tree_view.py
 - MainWindow tiene 3 pestañas (Welcome | Tree | OOS/OOT).
 
 **Tests**: 3 nuevos + 2 existentes ajustados (assert de 2→3 pestañas en test_layout_structure y test_e2e_mainwindow). Suite total: 161/161.
+
+
+---
+
+### 27/09/2026 — Migración a Python 3.11 y consolidación de entorno Windows
+
+**Estado**: Aprobado sin hallazgos de código
+**Modelo**: N/A (cambio de infraestructura)
+**Revisor**: Marco Rengel
+**Artefactos**: `.gitignore`, `AGENTS.md`, `docs/contexto_para_nueva_sesion.md`, `.venv/` (recreado), `.venv_3.14_backup/` (respaldo)
+
+**Motivación**:
+El proyecto fue diseñado y documentado para Python 3.11 (`pyproject.toml`: `requires-python = ">=3.11"`), pero los entornos de desarrollo terminaron en Python 3.14 (versión por defecto del sistema operativo). Aunque la suite pasaba en 3.14, existía un riesgo latente de incompatibilidad futura con librerías del stack científico (numpy, scipy, pandas, PySide6) y una discrepancia entre documentación y realidad — inaceptable bajo la filosofía MRM del proyecto.
+
+**Acciones ejecutadas**:
+- Instalación de Python 3.11.9 vía `winget` en Windows.
+- `.venv/` (Windows) renombrado a `.venv_3.14_backup/` (respaldo reversible).
+- Nuevo `.venv/` creado con Python 3.11.9.
+- Dependencias reinstaladas: numpy 2.4.6, pandas 3.0.6, scipy 1.17.1, PySide6 6.11.2, pyarrow 25.0.1, openpyxl 3.1.5, pytest 9.1.1.
+- `.gitignore` refinado: `.venv_linux/` y `.venv_3.14_backup/` ahora ignorados explícitamente (antes dependían de reglas internas de cada venv, frágil ante copias/ediciones).
+- `AGENTS.md` actualizado: sección "Entorno" alineada con la realidad; comandos Windows (PowerShell) y WSL (bash) separados.
+- `docs/contexto_para_nueva_sesion.md` actualizado: fecha, conteo de tests (161/161), rutas OpenCode para Windows y WSL, tabla de problemas ampliada (variant, cuota NVIDIA 429, modelos descontinuados, git push desde WSL).
+
+**Identidades verificadas**:
+- Suite completa en Windows + Python 3.11.9: **161/161 PASSED** (primera corrida 15.90s, cachés fríos).
+- `git check-ignore -v` confirma que los 3 venvs (`.venv/`, `.venv_linux/`, `.venv_3.14_backup/`) están ignorados por reglas explícitas del `.gitignore` del proyecto.
+- WSL permanece operativo con Python 3.14.4 y `.venv_linux/` como respaldo.
+
+**Decisión arquitectónica**:
+- **Windows nativo + Python 3.11.9** = plataforma principal.
+- **WSL + Python 3.14.4** = respaldo (por si Windows vuelve a bloquear scipy vía WDAC/Smart App Control).
+- **Compatibilidad declarada**: 3.11+ (ver `pyproject.toml`).
+
+**Tests**: 161/161. Sin regresiones.

@@ -9,8 +9,10 @@ dist/
 *.egg-info/
 .eggs/
 
-# Virtual environments
+# Entornos virtuales (todos ignorados explícitamente)
 .venv/
+.venv_linux/
+.venv_3.14_backup/
 venv/
 env/
 
@@ -20,7 +22,6 @@ env/
 htmlcov/
 
 # Logs
-logs/*.log
 *.log
 
 # IDE
@@ -37,10 +38,8 @@ Thumbs.db
 data/*
 !data/.gitkeep
 
-# Archivo histórico
-archive/legacy_docs/*.pyc
-
-# Frontend legacy (Antigravity, no forma parte de TreeGov)
-archive/legacy_ui_sprint3/.opencode/
+# Configuración local de OpenCode (por analista)
 .opencode/
+
+# Carpeta histórica (documentos pre-TreeGov)
 archive/

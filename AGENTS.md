@@ -2,13 +2,22 @@
 
 Instrucciones para agentes de IA que trabajen en este repositorio.
 
-## Comandos esenciales
+## Comandos esenciales (Windows PowerShell)
 
-    source .venv_linux/bin/activate
+    .\.venv\Scripts\activate
     python -m pytest tests -q
     python -m pytest tests/test_tree_view.py -v
     python treegov.py
-    QT_QPA_PLATFORM=offscreen TREEGOV_GUI_AUTOQUIT_MS=2000 python treegov_gui.py
+
+    # GUI con auto-quit (headless/CI)
+    $env:QT_QPA_PLATFORM="offscreen"; $env:TREEGOV_GUI_AUTOQUIT_MS="2000"; python treegov_gui.py
+
+## Comandos esenciales (WSL bash)
+
+    cd "/mnt/c/Riesgos - copia/DecisionTree_Modeler"
+    source .venv_linux/bin/activate
+    python -m pytest tests -q
+    python treegov.py
 
 ## Arquitectura: sala limpia
 
@@ -27,8 +36,11 @@ Actualizar docs/audit_log.md al modificar código (formato: fecha, estado, artef
 
 ## Entorno
 
-WSL2 (Ubuntu) con Python 3.14.4. Windows nativo NO se usa (bloquea DLLs de scipy).
-Entorno virtual: .venv_linux/ (NO .venv/).
+- **Plataforma principal:** Windows nativo.
+- **Python de desarrollo y tests:** 3.11.9 (verificado 27/09/2026: 161/161 tests).
+- **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
+- **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
+- **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
 
 ## Gobernanza
 
