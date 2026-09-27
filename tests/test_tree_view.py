@@ -355,7 +355,7 @@ def test_e2e_mainwindow():
         w._on_wizard_finished(cfg)
         model = w._session.state.tree
         assert model is not None
-        assert w._tabs.count() == 2
+        assert w._tabs.count() == 3
         assert w._tabs.currentWidget() is w._tree_panel
         items = [i for i in w._tree_panel._scene.items()
                  if isinstance(i, NodeItem)]

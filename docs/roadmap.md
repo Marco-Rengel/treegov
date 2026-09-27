@@ -54,7 +54,7 @@ Un prompt único con `max reasoning` que exige leer 8+ archivos grandes provoca 
 |---|---|---|
 | 2.3.a Diseño estructural | `max` | Dónde encaja el panel; archivos a crear/modificar |
 | 2.3.b Claves i18n | `max` | Lista EN/ES con paridad estricta |
-| 2.3.c Esqueleto del panel | `high` | Clase widget vacía + tests de construcción |
+| 2.3.c Esqueleto del panel | `high` | ✅ Clase widget vacía + tests de construcción |
 | 2.3.d Consumo de métricas | `max` | Integración con OOSMetrics, PSIReport, CSIReport |
 | 2.3.e Semáforos y visualización | `high` | Uso de traffic_light() / gini_drop_alert() + QSS |
 | 2.3.f Tests E2E + cierre | `max` | Suite completa + audit_log + roadmap + estado |

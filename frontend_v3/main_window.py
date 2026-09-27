@@ -53,6 +53,7 @@ from frontend_v3.tree_view import (
     model_summary_lines,
     node_detail_lines,
 )
+from frontend_v3.metrics_panel import MetricsPanel
 from frontend_v3.wizard import ModelWizard
 
 _TT_PHASE23 = "Available in Phase 2.3"
@@ -131,6 +132,7 @@ class MainWindow(QMainWindow):
         self._hud_title.setText(tr("panel_right_title"))
         self._tabs.setTabText(0, tr("tab_welcome_title"))
         self._tabs.setTabText(1, tr("tab_tree_title"))
+        self._tabs.setTabText(2, tr("tab_oos_oot_title"))
 
         self._refresh_session_indicator()
         self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
@@ -302,6 +304,11 @@ class MainWindow(QMainWindow):
         self._tabs.addTab(self._tree_panel, "")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)
         self._tree_panel.selection_cleared.connect(self._hud_reset)
+
+        # Phase 2.3: OOS/OOT metrics panel
+        self._metrics_panel = MetricsPanel()
+        self._metrics_panel.setObjectName("metricsPanel")
+        self._tabs.addTab(self._metrics_panel, "")
 
         splitter.addWidget(self._left_panel)
         splitter.addWidget(self._tabs)

@@ -434,3 +434,21 @@ frontend_v3/i18n.py, tests/test_tree_view.py
 - `treegov.py` backend headless → 4/4 splits, exit 0.
 
 **Tests**: 10 nuevos. Suite total: 158/158.
+
+---
+
+### 26/09/2026 — Fase 2.3.c: esqueleto del panel OOS/OOT
+
+**Estado**: Aprobado sin hallazgos
+**Modelo**: Nemotron 3 Ultra 550B A55B (high, vía NVIDIA NIM)
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/metrics_panel.py (nuevo), frontend_v3/main_window.py, tests/test_metrics_panel.py (nuevo), tests/test_gui_smoke.py, tests/test_tree_view.py, docs/audit_log.md, docs/roadmap.md
+
+**Hallazgos**: Ninguno bloqueante. Se corrigió un SyntaxWarning ("\S" inválido) en test_metrics_panel.py mediante escape correcto.
+
+**Identidades verificadas**:
+- MetricsPanel se construye sin errores (offscreen).
+- retranslate_ui funciona al cambiar idioma vía language_bus.
+- MainWindow tiene 3 pestañas (Welcome | Tree | OOS/OOT).
+
+**Tests**: 3 nuevos + 2 existentes ajustados (assert de 2→3 pestañas en test_layout_structure y test_e2e_mainwindow). Suite total: 161/161.
