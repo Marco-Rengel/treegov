@@ -14,7 +14,7 @@
 - Diseñar y auditar TreeGov (mi proyecto personal open source).
 - Traducir mis decisiones de negocio a código.
 
-**No esperes que yo sepa jerga técnica por defecto.** Explica conceptos cuando aparezcan. Cuando yo diga "hazlo", "guiame", "paso a paso", quiero comandos exactos y capturas o textos para pegar, no teoría.
+**No esperes que yo sepa jerga técnica por defecto.** Explica conceptos cuando aparezcan. Cuando yo diga "hazlo", "guíame", "paso a paso", quiero comandos exactos y capturas o textos para pegar, no teoría.
 
 ---
 
@@ -22,12 +22,13 @@
 
 **TreeGov** es una estación de trabajo analítica para **segmentación de riesgo de crédito** con **gobernanza MRM (Model Risk Management)** e **IFRS 9** nativas.
 
-- **Inspiración:** Answer Tree 3.0 (SPSS), descontinuado. Recupera la capacidad del analista de **intervenir manualmente** los cortes del árbol por razones de negocio, no solo estadísticas.
+- **Inspiración:** software estadístico clásico de árboles de decisión (descontinuado), del cual se recupera la capacidad del analista de **intervenir manualmente** los cortes del árbol por razones de negocio, no solo estadísticas.
 - **Diferenciador:** la gobernanza no es un añadido; es el punto de partida (evidencia auditable, caja blanca matemática, trazabilidad regulatoria).
 - **Stack:** Python 3.11, PySide6 (GUI), numpy/pandas/scipy (solo backend).
 - **Prohibiciones duras:** `sklearn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`. Bloqueados a nivel de intérprete.
 - **Licencia:** Apache 2.0.
 - **GitHub:** github.com/Marco-Rengel/treegov (privado actualmente).
+- **Datos:** NO se manejan datos bancarios reales. Solo datasets públicos (German Credit, UCI) o sintéticos.
 
 **No confundir con:** el proyecto legacy `DecisionTree_Modeler` (archivado en `archive/`, preservado como referencia histórica, no modificar).
 
@@ -50,12 +51,13 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 - **Yo decido, tú guías.** No asumas el cierre de una sesión ni tomes decisiones por mí. Si consideras que es buen momento para parar, sugiérelo, pero espera mi confirmación.
 - **Paso a paso, comandos exactos.** Especialmente en terminal. Yo pego, tú explicas qué esperar.
-- **Verificación antes de celebrar.** La herramienta `OpenCode` a veces reporta éxito sin haber ejecutado. Siempre verificamos con `git status`, `Get-Item`, `Select-String` o tests antes de cantar victoria.
+- **Verificación antes de celebrar.** La herramienta `OpenCode` a veces reporta éxito sin haber ejecutado (bug conocido). Siempre verificamos con `git status`, `Get-Item`, `Select-String` o tests antes de cantar victoria.
 - **Crítica honesta.** Si un diseño tiene problemas, dilo claro. No valides por complacer.
 - **Análisis antes de actuar.** Cuando algo falla, primero diagnosticar. No dar soluciones a ciegas.
 - **Documentación obligatoria.** Cada decisión arquitectónica, hallazgo o cambio va al `audit_log.md` con formato (fecha, estado, artefactos, hallazgos, tests).
 - **Nada fuera de la herramienta elegida.** Si decidimos trabajar con OpenCode, no proponer "hazlo tú manualmente" salvo excepciones explícitamente aprobadas.
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
+- **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
 
 ---
 
@@ -66,11 +68,11 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - 2.3.a Diseño: ✅
   - 2.3.b i18n: ✅
   - 2.3.c Esqueleto del panel: ✅
-  - **2.3.d Backend del panel (DTO, reporting.py): ✅ parcial** (falta `tests/test_reporting.py`).
-  - 2.3.e Semáforos visuales: ⏳
+  - **2.3.d Backend (DTO, reporting.py, Session.get_oos_oot_report): ✅ parcial** (falta `tests/test_reporting.py`).
+  - 2.3.e Semáforos visuales: ⏳ Próxima.
   - 2.3.f Tests E2E + cierre: ⏳
 - **Suite de tests:** 161/161 PASSED.
-- **Próximo paso:** evaluar alternativa a OpenCode antes de continuar (ver sección 6).
+- **Próximo paso:** retomar 2.3.e con Gemini 3.8 Flash como proveedor principal.
 
 ---
 
@@ -81,19 +83,18 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### OpenCode (agente de código) — 3 bugs documentados
-1. **Media:** la GUI no genera mensaje de texto final tras tool calls exitosas.
-2. **Alta:** múltiples tool calls (Grep/Read) agotan la cuota gratuita de NVIDIA NIM → HTTP 429.
-3. **CRÍTICA:** notificación "Respuesta lista" **sin haber ejecutado la tarea**. Confirmado 27/09/2026 (test_reporting.py no se creó).
+### Proveedores de IA (actualizado 27/09/2026)
+- **Gemini 3.8 Flash (Google AI Studio):** proveedor **principal**. Gratuito, rápido (~14s), emite mensajes finales completos, ejecuta tool calls sin problemas. 15 RPM / 1M TPM. Cumple con la política de privacidad porque el proyecto no maneja datos reales.
+- **Kimi K3 (NVIDIA NIM):** segunda opinión para **revisión conceptual sin tool calls**. Tiene un bug conocido (ver abajo) que impide usar tool calls de forma fiable. Free tier de 40 RPM se agota rápido con tool calls.
 
-### Cuota NVIDIA NIM (free tier)
-- Se agota rápido con tool calls (cada uno reenvía ~12k tokens).
-- Se renueva cada 24h.
-- Alternativa gratuita temporal: modelos `Nemotron` de OpenCode Zen (menos potente).
+### Bug crítico documentado (OpenCode + NVIDIA NIM + Kimi K3)
+- **Descripción:** tras ejecutar tool calls (Write, Read, Shell), Kimi K3 no emite mensaje final de texto. Solo se ven las acciones y el contador de tiempo. En ocasiones, la notificación "Respuesta lista" aparece SIN que el archivo se haya creado realmente.
+- **Mitigación:** no usar Kimi K3 con tool calls. Usar Gemini para eso.
+- **Diagnóstico:** confirmado empíricamente el 27/09/2026. Documentado en `docs/audit_log.md` con 5 issues relacionados de GitHub.
 
-### Decisión pendiente
-- **Evaluar alternativa a OpenCode** (Aider, Cline, Continue.dev) antes de seguir con la Fase 2.3.d.
-- Criterios: open source, logs auditables, compatible con Kimi K3 vía NVIDIA NIM, sin el bug #3.
+### Estrategia dual adoptada
+- **Gemini:** desarrollo diario (código, tests, documentación).
+- **Kimi K3:** revisión de arquitectura y detección de riesgos. Prompts sin tool calls ("no modifiques archivos; revisa esta propuesta y devuelve riesgos/supuestos/casos límite").
 
 ---
 
@@ -125,7 +126,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado actual: Fase 2.3.d parcial. Próximo paso: evaluar alternativa a OpenCode antes de continuar. ¿Qué necesitas para darme contexto inicial?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado actual: Fase 2.3.d parcial (backend listo, faltan tests). Próximo paso: 2.3.e con Gemini 3.8 Flash. ¿Qué necesitas para darme contexto inicial?"
 
 ---
 

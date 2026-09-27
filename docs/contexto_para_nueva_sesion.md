@@ -11,6 +11,7 @@
 4. `docs/methodology.md` — Metodología matemática con citas
 5. `docs/audit_log.md` — Bitácora cronológica (leer últimas 3 entradas)
 6. `docs/roadmap.md` — Plan de fases con sub-plan de 2.3
+7. `docs/prompt_para_asistente.md` — Brief para asistentes IA nuevos
 
 ## Estado actual del proyecto
 
@@ -26,8 +27,8 @@
 | 2.3.a | Diseño estructural panel OOS/OOT | ✅ |
 | 2.3.b | 23 claves i18n (paridad EN/ES) | ✅ |
 | 2.3.c | Esqueleto del panel + 3 tests | ✅ |
-| 2.3.d | Consumo de métricas (Kimi K3) | ⏳ Próxima |
-| 2.3.e | Semáforos y visualización | ⏳ |
+| 2.3.d | Backend de reporting (reporting.py + Session) | 🟡 Parcial (faltan tests) |
+| 2.3.e | Semáforos y visualización | ⏳ Próxima |
 | 2.3.f | Tests E2E + cierre | ⏳ |
 | 2.4 | Reportes + integración | ⏳ |
 | 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
@@ -61,7 +62,9 @@ WSL (bash):
 
 - VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
 - Windows Terminal con Ubuntu por defecto.
-- OpenCode 1.18.31 en Windows y 1.18.32 en WSL. Modelo principal: `nvidia/moonshotai/kimi-k3` (Kimi K3 vía NVIDIA NIM). Alternativa gratuita: `Nemotron 3 Ultra Free` (OpenCode Zen).
+- OpenCode 1.18.32 en Windows y WSL.
+- **Proveedor principal de IA:** Gemini 3.8 Flash (Google AI Studio).
+- **Segunda opinión (diseño/auditoría):** Kimi K3 (NVIDIA NIM), **sin tool calls**.
 
 ### Configuración de OpenCode
 
@@ -69,10 +72,9 @@ Windows: `C:\Users\maren\.config\opencode\opencode.jsonc` y `C:\Users\maren\.loc
 
 WSL: `~/.config/opencode/opencode.jsonc` y `~/.local/share/opencode/auth.json`.
 
-Contenido común:
+Contenido común (Windows):
 
-- `instructions`: AGENTS.md + .treegovrules
-- `model`: nvidia/moonshotai/kimi-k3
+- `instructions`: [".treegovrules"] (AGENTS.md se autodescubre desde la raíz del proyecto)
 - `permission`: git push/commit = ask, rm -rf = deny
 - Plugin local del proyecto: opencode-supermemory + opencode-auto-resume (en `.opencode/opencode.json`)
 
@@ -80,9 +82,11 @@ Contenido común:
 
 | Problema | Solución |
 |---|---|
-| **Variant de OpenCode** | Default = `max` (diseño/auditoría). Para implementación: `/variants` → `high`. Para tareas triviales: `/variants` → `low`. No persiste en `opencode.jsonc`. |
-| **Cuota NVIDIA NIM agotada (429)** | Se renueva cada 24h. Alternativa gratuita: OpenCode Zen (`Nemotron 3 Ultra Free`). |
+| **Bug Kimi K3 + NVIDIA NIM** | Tras tool calls, no emite mensaje final y a veces reporta "Respuesta lista" sin ejecutar. **Usar Gemini 3.8 Flash para tool calls.** Ver `docs/audit_log.md` (27/09/2026). |
+| **Cuota NVIDIA NIM agotada (429)** | Se agota rápido con tool calls. Gemini 3.8 Flash (Google AI Studio) es la alternativa sin este problema. |
+| **Variant de OpenCode** | No persiste en `opencode.jsonc`. Ajustar con `/variants` al inicio de cada sesión. `high` por defecto; `max` solo si el proveedor lo soporta bien. |
 | **Modelos descontinuados** | DeepSeek V4 Pro fue retirado (14/09/2026). Verificar vigencia antes de seleccionar. |
+| **Privacidad** | No enviar a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. El proyecto es open source y no maneja datos reales. |
 | `Ctrl+P` no funciona en VS Code | Usar Windows Terminal para menús de OpenCode. |
 | Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano. |
 | Al pegar en nano, el contenido se duplica | Usar Python para escribir archivos, o VS Code directo. |
@@ -103,21 +107,22 @@ Contenido común:
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.d)
+## Próximos pasos (Fase 2.3.e)
 
-**Objetivo:** Integrar el panel OOS/OOT con las métricas del backend.
+**Objetivo:** Semáforos y visualización de métricas OOS/OOT en el panel.
 
 **Requisitos:**
 
-- Consumir `OOSMetrics` (backend_v3/validation.py) — AUC, Gini, KS, Brier, BSS, HL, PR-AUC, ROC.
-- Consumir `PSIReport`, `CSIReport`, `GiniDropReport` (backend_v3/stability.py) con semáforos.
+- Consumir `traffic_light()` y `gini_drop_alert()` del backend
+  (`backend_v3/stability.py`).
+- Renderizar badges visuales (verde/ámbar/rojo) en `metrics_panel.py`.
 - Sin importar numpy/pandas/scipy en frontend_v3 (sala limpia).
-- Los semáforos (`traffic_light`, `gini_drop_alert`) se evalúan en backend.
-- DTO plain-Python que cruce la frontera (dicts/tuplas de tipos nativos).
+- Usar QSS del tema activo (colores semánticos).
 
-**Regla de variant:** `max` para este sub-paso (diseño + integración).
+**Proveedor recomendado:** Gemini 3.8 Flash (proveedor principal).
 
-**Pendientes posteriores:** 2.3.e (semáforos visuales + QSS), 2.3.f (tests E2E + cierre).
+**Pendientes posteriores:** 2.3.d (tests de `reporting.py`),
+2.3.f (tests E2E + cierre), 2.4 (reportes).
 
 **Ideas del experto (evaluar en 2.4 o 3):**
 
@@ -137,3 +142,4 @@ La carpeta `archive/` contiene documentos del proyecto anterior (DecisionTree_Mo
 - **Cada fase cerrada:** actualizar `docs/roadmap.md` y `docs/estado_proyecto.md`.
 - **Cero referencias a software privativo** (SPSS, Answer Tree, Stata, SAS) en docs activos.
 - **i18n:** paridad estricta EN/ES, claves en snake_case.
+- **Verificación manual obligatoria** tras cada tarea de OpenCode: `Get-Item`, `Select-String`, `pytest`, `git status`.

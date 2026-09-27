@@ -25,6 +25,10 @@
   fix_spec(predictors=...) / train(engine by name) /
   reset_to_data_loaded().
   - Test suite: 148/148.
+- ✅ **Phase 2.2** (interactive tree viewer): QGraphicsView render with
+  deterministic Reingold-Tilford layout, idempotent zoom (Ctrl + +/-),
+  exclusive node selection, live retranslation, theme recolor.
+  - Test suite: 158/158.
 
 ## Upcoming phases
 
@@ -34,10 +38,6 @@
 - Runtime backend-import guardrail in the GUI process (deferred from
   Phase 2.0; the AST smoke check only covers numpy/pandas/scipy).
 
-### 🟡 Phase 2.2 — Interactive tree viewer
-**Priority: HIGH**
-- QGraphicsView tree render, zoom (Ctrl + +/-), node selection.
-
 ### 🟡 Phase 2.3 — OOS/OOT metrics panel
 **Priority: HIGH**
 
@@ -46,25 +46,33 @@
 - PSI, CSI, Gini Drop con semáforos Basel/EBA (`backend_v3/stability.py`)
 - Mnemonics de teclado ("&") para menús
 
-**Metodología de trabajo (definida 26/09/2026):**
+**Metodología de trabajo (actualizada 27/09/2026):**
 
-Un prompt único con `max reasoning` que exige leer 8+ archivos grandes provoca timeouts silenciosos en OpenCode/WSL. La TUI deja de actualizarse tras ~5 min aunque el proceso siga vivo. Para evitar esto, la Fase 2.3 se divide en sub-pasos:
+La Fase 2.3 se divide en sub-pasos cortos. Los sub-pasos de implementación
+se ejecutan con **Gemini 3.8 Flash** (Google AI Studio) como proveedor
+principal. Los sub-pasos de diseño/auditoría pueden usar Kimi K3 (NVIDIA NIM)
+**sin tool calls** (ver `docs/audit_log.md`, entrada 27/09/2026).
 
-| Sub-paso | Variant | Alcance |
+| Sub-paso | Estado | Alcance |
 |---|---|---|
-| 2.3.a Diseño estructural | `max` | Dónde encaja el panel; archivos a crear/modificar |
-| 2.3.b Claves i18n | `max` | Lista EN/ES con paridad estricta |
-| 2.3.c Esqueleto del panel | `high` | ✅ Clase widget vacía + tests de construcción |
-| 2.3.d Consumo de métricas | `max` | Integración con OOSMetrics, PSIReport, CSIReport |
-| 2.3.e Semáforos y visualización | `high` | Uso de traffic_light() / gini_drop_alert() + QSS |
-| 2.3.f Tests E2E + cierre | `max` | Suite completa + audit_log + roadmap + estado |
+| 2.3.a Diseño estructural | ✅ | Dónde encaja el panel; archivos a crear/modificar |
+| 2.3.b Claves i18n | ✅ | 23 claves EN/ES con paridad estricta |
+| 2.3.c Esqueleto del panel | ✅ | Clase widget + 3 tests de construcción |
+| 2.3.d Backend de reporting | 🟡 Parcial | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` implementados. Faltan `tests/test_reporting.py`. |
+| 2.3.e Semáforos y visualización | ⏳ Próxima | Uso de `traffic_light()` / `gini_drop_alert()` + QSS en `metrics_panel.py` |
+| 2.3.f Tests E2E + cierre | ⏳ | Suite completa + audit_log + roadmap + estado |
 
-**Regla de variant:**
-- `max` → diseño, arquitectura, decisiones críticas.
-- `high` → implementación de código, edición de archivos.
-- `low` → tareas triviales (leer logs, listar archivos).
+**Regla de variant y proveedor:**
+- **Gemini 3.8 Flash** (Google AI Studio): implementación, edición de archivos,
+  tests, refactor, documentación. Proveedor principal.
+- **Kimi K3** (NVIDIA NIM): revisión conceptual y arquitectura **sin tool calls**
+  (tiene un bug conocido que impide tool calls fiables; ver audit_log).
+- **Variant de OpenCode**: `high` por defecto; `max` solo si el proveedor
+  activo lo soporta bien.
 
-Cada sub-paso se audita antes de pasar al siguiente.
+Cada sub-paso se audita antes de pasar al siguiente. Verificación manual
+obligatoria (`Get-Item`, `Select-String`, `pytest`, `git status`) tras cada
+tarea de OpenCode.
 
 ### 🟡 Phase 2.4 — Reports + integration
 **Priority: MEDIUM**

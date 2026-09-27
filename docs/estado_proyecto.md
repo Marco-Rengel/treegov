@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 24/09/2026
+**Fecha de última actualización:** 27/09/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA usado en desarrollo | Kimi K3 vía NVIDIA NIM (max reasoning) |
+| Modelo de IA en desarrollo | Gemini 3.8 Flash (Google AI Studio, principal) + Kimi K3 (NVIDIA NIM, revisión conceptual) |
 
 ---
 
@@ -98,11 +98,27 @@ Módulos:
   fix_spec(predictors=...), train(engine por nombre, apply_jeffreys, pd_floor)
 - `backend_v3/profiling.py` — helper interno _infer_column (reuso sin duplicar)
 
+### Fase 2.2 — Visor interactivo de árbol ✅ Cerrada 25/09/2026
+
+Módulos:
+- `frontend_v3/tree_view.py` — NodeItem, TreeScene, TreeView, TreePanel
+  (zoom idempotente, layout determinista Reingold-Tilford, retraducción en
+  caliente, recoloreo por tema).
+- Extensión de `main_window.py`: pestaña Tree con HUD de propiedades del nodo.
+
+### Fase 2.3 — Panel de métricas OOS/OOT 🟡 En curso
+
+Sub-fases:
+- 2.3.a Diseño estructural ✅
+- 2.3.b 23 claves i18n ✅
+- 2.3.c Esqueleto del panel + 3 tests ✅
+- 2.3.d Backend de reporting (`reporting.py` + `Session.get_oos_oot_report()`) 🟡 Parcial (faltan tests)
+- 2.3.e Semáforos visuales ⏳
+- 2.3.f Tests E2E + cierre ⏳
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 2.2** — Visor interactivo de árbol
-- **Fase 2.3** — Panel de métricas OOS/OOT
 - **Fase 2.4** — Reportes + integración (tabla de ganancias, exportación HTML, tests e2e GUI)
 - **Fase 3** — Capa MCP + exportación SQL/Python
 - **Fase 4** — Scoring batch y champion-challenger
@@ -121,20 +137,23 @@ Módulos:
 
 TreeGov/
 ├── backend_v3/ # Capa analítica pura
-├── frontend_v3/ # Capa de presentación PySide6 (app, main_window, wizard, theme, i18n)
-├── tests/ # Suite de tests (148 tests)
+├── frontend_v3/ # Capa de presentación PySide6 (app, main_window, wizard, tree_view, metrics_panel, theme, i18n)
+├── tests/ # Suite de tests (161 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md # Metodología matemática (inglés)
 │ ├── api.md # API pública congelada (inglés)
 │ ├── roadmap.md # Plan de fases (inglés)
 │ ├── philosophy.md # Filosofía (inglés)
 │ ├── philosophy.es.md # Filosofía (español)
+│ ├── contexto_para_nueva_sesion.md # Bootstrap entre sesiones (español)
+│ ├── prompt_para_asistente.md # Brief para asistentes IA (español)
 │ └── audit_log.md # Bitácora de auditoría (español)
 ├── archive/ # Documentos y código históricos
 ├── data/ # Datasets (solo lectura, excluido de Git)
 ├── logs/ # Logs por corrida (excluido de Git)
 ├── treegov.py # Orquestador headless
 ├── pyproject.toml # Empaquetado
+├── AGENTS.md # Instrucciones para agentes IA
 ├── README.md # README principal (inglés)
 ├── README.es.md # README en español
 └── .treegovrules # Reglas de gobernanza para agentes IA
@@ -171,6 +190,15 @@ TreeGov/
 - **FIX Media:** `gini_drop_alert(NaN) → "INDETERMINADO"` (evita reportar degradación indefinida como "sin alerta").
 - **5 observaciones menores** aplicadas (tipado, numpy puro, RuntimeError, spec_order, oot_source).
 
+### Fase 2.2
+- **Bug detectado:** selección múltiple accidental en `TreeScene.select_node`. El nodo anterior permanecía seleccionado y `selected_node_id()` devolvía información errónea. Corregido con `self.clearSelection()` al inicio del método.
+
+### Fase 2.3.d — bugs OpenCode documentados
+- GUI no genera mensaje final tras tool calls exitosas (con Kimi K3 vía NVIDIA).
+- Múltiples tool calls agotan cuota NVIDIA → 429.
+- Notificación "Respuesta lista" sin haber ejecutado la tarea.
+- **Diagnóstico completo en `docs/audit_log.md` (entrada 27/09/2026).**
+
 Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numérica.
 
 ---
@@ -193,9 +221,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | stability.py | 9 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 9 |
-| **Total** | **148** |
+| tree_view (frontend) | 10 |
+| metrics_panel (frontend) | 3 |
+| **Total** | **161** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 148/148 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 161/161 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -237,12 +267,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ### Pendientes técnicos
 
-- [ ] **Fase 2.2** — Visor interactivo de árbol (QGraphicsView, zoom,
-      selección de nodo).
+- [ ] **Fase 2.3.d** — `tests/test_reporting.py` (backend de reporting).
+- [ ] **Fase 2.3.e** — Semáforos visuales en `metrics_panel.py`.
+- [ ] **Fase 2.3.f** — Tests E2E + cierre de Fase 2.3.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [ ] Publicar `treegov 1.0.0a1` en PyPI (al cierre de Fase 2).
-- [ ] Añadir `pyproject.toml` en la raíz del repo (antes del cierre de
-      Fase 2).
 - [ ] Datasets públicos (German Credit, UCI health/social) para
       validación multi-dominio (Fase 3).
 
@@ -299,9 +328,9 @@ opencode -c
 
 
 3. Primer mensaje sugerido al agente:
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1 cerradas.
-> Suite 148/148. Decidir siguiente fase: [Fase 2.2 visor de árbol /
-> cierre documental / Fase 3]."
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2 cerradas.
+> Fase 2.3 en curso (2.3.a/b/c ✅, 2.3.d parcial). Suite 161/161.
+> Próximo paso: 2.3.e con Gemini 3.8 Flash."
 
 ---
 
@@ -318,5 +347,3 @@ opencode -c
 
 *Documento mantenido tras cada fase cerrada. Fuente de verdad: el
 repositorio en GitHub.*
-
-
