@@ -585,3 +585,49 @@ Los issues confirman que la compatibilidad de tool calling entre OpenCode y NVID
 **Pendiente (no bloqueante)**:
 - Atribución exacta de la causa (requeriría leer el código de OpenCode y NIM).
 - Issue reproducible puede reportarse en el repo de OpenCode con la evidencia recogida (opcional, contribución a la comunidad).
+
+### 27/09/2026 — Fase 2.3.e.1 abortada; diagnóstico OpenCode + Gemini
+
+**Estado**: Abortada sin cambios en el repo.
+**Modelo**: Gemini 3.8 Flash (Google AI Studio, intento fallido).
+**Revisor**: Marco Rengel
+
+**Motivación**:
+Intento de normalizar los strings de semáforo en `stability.py`
+(`INDETERMINADO` → `UNDETERMINED`, `critico/preventivo/none` →
+`CRITICAL/WARNING/NONE`) como primer paso de la Fase 2.3.e.
+
+**Cronología del fallo**:
+1. Gemini ejecutó correctamente las fases de exploración (solo lectura):
+   Read stability.py, Grep "INDETERMINADO" en session_state.py (4 matches),
+   Read session_state.py (offset 490, limit 30), Read test_stability.py,
+   Grep "gini_drop_alert" (22 matches), "traffic_light" (16 matches).
+2. Antes de emitir cualquier Write/Edit, OpenCode abortó con:
+   `Requests ending with a model turn are not supported.`
+3. Reintento manual ("continue") → bucle `gemini is way too hot right now`,
+   sin progreso durante minutos.
+4. Interrupción con Ctrl+C. Ningún archivo fue modificado.
+
+**Verificación post-fallo**:
+- `git status` → working tree clean.
+- `python -m pytest tests -q` → 161/161 PASSED.
+- Sin cambios en backend, frontend ni docs.
+
+**Hallazgo**:
+Error de protocolo en OpenCode 1.18.32, no del proveedor. Gemini completa
+la exploración (tool calls de solo lectura funcionan) pero la transición a
+escritura queda bloqueada. Esto es **distinto** al bug documentado de
+Kimi K3 + NVIDIA NIM (entrada 27/09/2026, misma fecha). Ambos afectan al
+ciclo de tool calls; el de Kimi impedía el mensaje final, el de Gemini
+impide la escritura tras exploración.
+
+**Decisión**:
+Migrar de OpenCode a **Aider** con NVIDIA NIM. Motivos:
+- Aider no comparte el mismo código de orquestación de tool calls.
+- Aider hace commits automáticos (desactivables con `--no-auto-commits`),
+  coherente con la disciplina MRM del proyecto.
+- Aider falla de forma visible: si no escribe, no lo dice.
+
+**Suite**: 161/161 (sin regresión, sin cambios).
+
+**Referencias**: observación local, sin issues externas asociadas.
