@@ -34,13 +34,41 @@ Bloqueadas por backend_v3/import_guard.py. Toda fórmula con cita bibliográfica
 
 Actualizar docs/audit_log.md al modificar código (formato: fecha, estado, artefactos, hallazgos, tests).
 
+Verificación obligatoria tras cada tarea de agente: `python -m pytest tests -q`
+y `git status`. No confiar en la notificación de éxito del agente sin esa
+doble verificación.
+
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 27/09/2026: 161/161 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 27/09/2026: 167/167 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
+
+## Herramienta de desarrollo: Aider
+
+- **Versión:** 0.86.2
+- **Modelo:** `nvidia_nim/moonshotai/kimi-k3` (NVIDIA NIM)
+- **Configuración local:** `.aider.conf.yml` (no versionado; ver `.gitignore`).
+- **Metadata de modelos:** `~/.aider.model.metadata.json` registra
+  `max_input_tokens: 1048576` y `max_output_tokens: 131072`.
+
+**Arranque (Windows PowerShell):**
+
+    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    .\.venv\Scripts\activate
+    $env:NVIDIA_NIM_API_KEY = "nvapi-..."   # rotar si se expone
+    aider <archivo1> <archivo2>
+
+**Reglas para Aider en este proyecto:**
+
+- `auto-commits: false` — cada commit es decisión humana.
+- Prompts quirúrgicos con referencias exactas (función, string). Evitar Grep.
+- Un cambio atómico por prompt; revisar el diff antes de aplicarlo.
+- Verificación obligatoria tras cada tarea: `python -m pytest tests -q` y
+  `git status`.
+- Migrado desde OpenCode 1.18.32 el 27/09/2026 (ver `docs/audit_log.md`).
 
 ## Gobernanza
 
