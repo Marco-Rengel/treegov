@@ -499,7 +499,7 @@ class Session:
 
         def _drop(g):
             # None, NaN o Gini_train == 0 -> indefinido (NUNCA se reporta
-            # silenciosamente como 'sin alerta': gini_drop_alert -> INDETERMINADO)
+            # silenciosamente como 'sin alerta': gini_drop_alert -> UNDETERMINED)
             if (gini_train is None or gini_train != gini_train
                     or gini_train == 0 or g is None):
                 self._log.warning(
