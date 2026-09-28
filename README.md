@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 148/148 passing
+**Test suite**: 167/167 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -98,7 +98,9 @@ TreeGov/
 │   ├── philosophy.md        # Project philosophy (EN)
 │   ├── philosophy.es.md     # Philosophy (ES)
 │   ├── estado_proyecto.md   # Project state dossier (ES)
-│   └── audit_log.md         # Audit trail (ES)
+│   ├── audit_log.md         # Audit trail (ES)
+│   ├── contexto_para_nueva_sesion.md  # Session bootstrap (ES)
+│   └── prompt_para_asistente.md       # Assistant brief (ES)
 ├── archive/                 # Historical documents (read-only)
 ├── data/                    # Datasets (read-only, Git-ignored)
 ├── logs/                    # Per-run execution logs (Git-ignored)
@@ -107,7 +109,9 @@ TreeGov/
 ├── pyproject.toml           # Packaging
 ├── README.md                # This file (EN)
 ├── README.es.md             # Spanish translation
+├── AGENTS.md                # Operating instructions for AI agents
 ├── LICENSE                  # Apache 2.0
+├── .gitignore               # Git exclusions
 └── .treegovrules            # Governance rules for AI agents
 ```
 
@@ -149,12 +153,14 @@ TreeGov/
 | **1** | Transactional flow: splitting, profiling, tree_builder, session_state | Completed |
 | **1.2** | OOS evaluation + cost-complexity pruning | Completed |
 | **1.3** | OOT validation + PSI/CSI stability monitoring | Completed |
-| **2.0-2.4** | GUI with PySide6 (skeleton, wizard, tree viewer, metrics, reports) | In progress |
+| **2.0-2.2** | GUI with PySide6: skeleton, transactional wizard, tree viewer | Completed |
+| **2.3** | OOS/OOT metrics panel | In progress |
+| **2.4** | Reports + integration | Planned |
 | **3** | Analytical reports + MCP layer for LLM agents | Planned |
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 148/148 passing.**
+**Test suite: 167/167 passing.**
 
 ---
 

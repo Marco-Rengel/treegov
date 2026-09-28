@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 148/148 passing
+**Suite de tests**: 167/167 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -98,7 +98,9 @@ TreeGov/
 │   ├── philosophy.md        # Filosofía (EN)
 │   ├── philosophy.es.md     # Filosofía (ES)
 │   ├── estado_proyecto.md   # Dossier de estado del proyecto (ES)
-│   └── audit_log.md         # Bitácora de auditoría (ES)
+│   ├── audit_log.md         # Bitácora de auditoría (ES)
+│   ├── contexto_para_nueva_sesion.md  # Bootstrap entre sesiones (ES)
+│   └── prompt_para_asistente.md       # Brief para asistentes IA (ES)
 ├── archive/                 # Documentos históricos (solo lectura)
 ├── data/                    # Datasets (solo lectura, Git-ignored)
 ├── logs/                    # Logs por corrida (Git-ignored)
@@ -107,7 +109,9 @@ TreeGov/
 ├── pyproject.toml           # Empaquetado
 ├── README.md                # README principal (EN)
 ├── README.es.md             # Este archivo (ES)
+├── AGENTS.md                # Instrucciones operativas para agentes IA
 ├── LICENSE                  # Apache 2.0
+├── .gitignore               # Exclusiones de Git
 └── .treegovrules            # Reglas de gobernanza para agentes IA
 ```
 
@@ -149,12 +153,14 @@ TreeGov/
 | **1** | Flujo transaccional: splitting, profiling, tree_builder, session_state | Completada |
 | **1.2** | Evaluación OOS + poda coste-complejidad | Completada |
 | **1.3** | Validación OOT + monitoreo PSI/CSI | Completada |
-| **2.0-2.4** | GUI con PySide6 (esqueleto, wizard, visor de árbol, métricas, reportes) | En progreso |
+| **2.0-2.2** | GUI con PySide6: esqueleto, wizard transaccional, visor de árbol | Completada |
+| **2.3** | Panel de métricas OOS/OOT | En progreso |
+| **2.4** | Reportes + integración | Planificada |
 | **3** | Reportes analíticos + capa MCP para agentes LLM | Planificada |
 | **4** | Scoring batch + champion-challenger | Planificada |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planificada |
 
-**Suite de tests: 148/148 passing.**
+**Suite de tests: 167/167 passing.**
 
 ---
 
