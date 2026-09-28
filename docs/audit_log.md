@@ -675,3 +675,61 @@ conviene revisar si PySide6 pertenece a `dependencies` o a
 `optional-dependencies`. Decidir en la fase de publicación.
 
 **Tests**: 167/167. Sin regresión.
+
+### 27/09/2026 — Fase 2.3.e.1: normalización del alfabeto de semáforos
+
+**Estado**: Aprobado con verificación empírica.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: backend_v3/stability.py, backend_v3/session_state.py,
+tests/test_stability.py, docs/methodology.md, .gitignore
+
+**Motivación**:
+Los semáforos de `traffic_light()` y `gini_drop_alert()` mezclaban
+idioma y caso: `INDETERMINADO` (español, mayúsculas), `critico`/`preventivo`/
+`none` (español, minúsculas), `STABLE`/`MODERATE`/`UNSTABLE` (inglés,
+mayúsculas). La Fase 2.3.e requiere que el frontend consuma estos strings
+sin mapa ad-hoc para i18n.
+
+**Cambios aplicados**:
+- `traffic_light`: `INDETERMINADO` → `UNDETERMINED` (docstring actualizado).
+- `gini_drop_alert`: `INDETERMINADO` → `UNDETERMINED`, `critico` →
+  `CRITICAL`, `preventivo` → `WARNING`, `none` → `NONE` (docstring ampliado
+  con los umbrales).
+- Docstring de `GiniDropReport` normalizado.
+- Comentario en `Session._drop` (session_state.py) actualizado.
+- `tests/test_stability.py` (cabecera + `test_gini_drop_alert_manual`)
+  actualizado con los nuevos strings.
+
+**Migración de herramienta (OpenCode → Aider)**:
+Documentada en entrada previa (27/09/2026, Fase 2.3.e.1 abortada).
+
+**Observaciones operativas de Aider (no bloqueantes)**:
+1. Warning "Unknown context window size" para `nvidia_nim/moonshotai/kimi-k3`:
+   Aider asume 8K tokens cuando Kimi K3 tiene 1M. Provoca:
+   - `summarizer unexpectedly failed for all models` en una sesión.
+   - Un intento fallido de reescritura completa del archivo (descartado por
+     Aider antes de aplicar).
+   Mitigación pendiente: añadir entrada a `~/.aider.model.settings.yml`
+   con `context_window: 1000000`.
+
+2. **Atribución actualizada del bug de tool calls**: Aider 0.86.2 + Kimi K3
+   + NVIDIA NIM completa ciclos de tool calls sin pérdida de mensaje final.
+   Evidencia empírica de que el componente dominante del fallo previo era
+   **OpenCode 1.18.32** (no NIM ni Kimi K3). La formulación previa ("no
+   atribuible a una sola capa") se estrecha: el cliente era el factor
+   principal. Los bugs de OpenCode se manifestaban más frecuentemente a
+   medida que crecía el tamaño del contexto (Fase 2.3.d: 50-100K tokens
+   por tool call vs. Fase 0: 5-10K).
+
+**Identidades verificadas**:
+- `traffic_light(float("nan"))` → `"UNDETERMINED"`.
+- `gini_drop_alert(None)` y `gini_drop_alert(float("nan"))` → `"UNDETERMINED"`.
+- Umbrales preservados: `0.40` → `WARNING` (no `CRITICAL`, sigue el `>` estricto),
+  `0.20` → `NONE` (sigue el `>` estricto).
+- Cero cambios en lógica; solo strings y docstrings.
+
+**Tests**: 167/167 PASSED.
+
+**Referencias**: entrada previa "Fase 2.3.e.1 abortada; diagnóstico OpenCode
++ Gemini" (misma fecha).

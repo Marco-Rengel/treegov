@@ -343,11 +343,12 @@ Regulatory traffic lights (Basel / EBA):
 - 0.10 ≤ PSI/CSI < 0.25 → MODERATE.
 - PSI/CSI ≥ 0.25 → UNSTABLE.
 
-**Gini Drop** (relative degradation of discriminative power):
+**Gini Drop (relative degradation of discriminative power):**
 
 ```
 drop_X = (Gini_train − Gini_X) / Gini_train      (X in {OOS, OOT})
-alert: drop > 0.40 → critico;  drop > 0.20 → preventivo;  else none.
+alert: drop > 0.40 → CRITICAL;  drop > 0.20 → WARNING;  else NONE.
+NaN or undefined drop → UNDETERMINED.
 If Gini_train == 0 → drop = None (undefined; WARNING in the log).
 ```
 
