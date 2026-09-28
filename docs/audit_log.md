@@ -631,3 +631,47 @@ Migrar de OpenCode a **Aider** con NVIDIA NIM. Motivos:
 **Suite**: 161/161 (sin regresión, sin cambios).
 
 **Referencias**: observación local, sin issues externas asociadas.
+
+### 27/09/2026 — Incidencia y decisión: stack de librerías tras instalar Aider
+
+**Estado**: Aprobado con verificación empírica.
+**Modelo**: N/A (decisión de entorno).
+**Revisor**: Marco Rengel
+
+**Motivación**:
+`pip install aider-chat` en el `.venv` del proyecto degradó dependencias
+fijadas con `==` por Aider:
+- numpy  2.4.6  → 1.26.4
+- scipy  1.17.1 → 1.15.3
+- pygments 2.21.0 → 2.19.2
+- packaging 26.3 → 26.0
+
+**Decisión**:
+Mantener las versiones degradadas. Justificación:
+- Python permanece en 3.11.9 (intérprete intacto).
+- Congelar la rama mayor de numpy/scipy reduce el coste de mantenimiento
+  frente a actualizaciones futuras (los cambios entre ramas mayores son
+  los que rompen; dentro de una rama, la compatibilidad es fuerte).
+- El proyecto no corre en producción ni expone superficie sensible; el
+  coste de no actualizar es bajo.
+
+**Verificación empírica**:
+- `python -m pytest tests -q` → **167/167 PASSED** con numpy 1.26.4 +
+  scipy 1.15.3 + pandas 3.0.6 + PySide6 6.11.2.
+
+**pyproject.toml**:
+No requiere cambios. Los rangos `>=` declarados (numpy>=1.24,
+scipy>=1.10) admiten tanto las versiones nuevas como las degradadas.
+
+**Lección para el futuro**:
+Las herramientas CLI (Aider, linters, formatters) NO deben instalarse en
+el `.venv` del proyecto. Contaminan el stack verificado. Considerar venv
+separado (`~/.venv_aider/`) si surgen más herramientas.
+
+**Observación lateral (no bloqueante)**:
+`packages = ["backend_v3"]` empaqueta solo la capa analítica, pero las
+dependencias incluyen PySide6. Si el paquete PyPI no debe incluir la GUI,
+conviene revisar si PySide6 pertenece a `dependencies` o a
+`optional-dependencies`. Decidir en la fase de publicación.
+
+**Tests**: 167/167. Sin regresión.
