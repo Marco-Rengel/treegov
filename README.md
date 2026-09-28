@@ -13,7 +13,7 @@
 
 ## Executive summary
 
-TreeGov is an analytical workbench for **credit risk segmentation** with **native model governance (MRM)** and **IFRS 9** alignment. It implements the three classic decision-tree algorithms — CHAID, C&RT, QUEST — with **white-box mathematics**: every statistical formula is written explicitly in the source code and cited to its original publication.
+TreeGov is an analytical workbench for **credit risk segmentation** with **native model governance (MRM)** and **IFRS 9** alignment. It implements the three classic decision-tree algorithms — CHAID (with its Exhaustive variant), C&RT, QUEST — with **white-box mathematics**: every statistical formula is written explicitly in the source code and cited to its original publication.
 
 Unlike general-purpose libraries (scikit-learn, statsmodels, R packages) that require programming, TreeGov provides a **graphical environment** where the analyst focuses on analysis rather than code. Unlike discontinued GUI tools, it is open source, actively maintained, and built from the ground up with regulatory traceability (SR 11-7, Basel, IFRS 9) as a first-class design principle.
 

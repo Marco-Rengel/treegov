@@ -13,7 +13,7 @@
 
 ## Resumen ejecutivo
 
-TreeGov es una estación de trabajo analítica para **segmentación de riesgo de crédito** con **gobernanza de modelos (MRM)** e **IFRS 9** nativas. Implementa los tres algoritmos clásicos de árboles de decisión — CHAID, C&RT y QUEST — con **matemática de caja blanca**: cada fórmula estadística está escrita explícitamente en el código y citada a su publicación original.
+TreeGov es una estación de trabajo analítica para **segmentación de riesgo de crédito** con **gobernanza de modelos (MRM)** e **IFRS 9** nativas. Implementa los tres algoritmos clásicos de árboles de decisión — CHAID (con su variante Exhaustive), C&RT y QUEST — con **matemática de caja blanca**: cada fórmula estadística está escrita explícitamente en el código y citada a su publicación original.
 
 A diferencia de las librerías de propósito general (scikit-learn, statsmodels, paquetes de R) que exigen programar, TreeGov ofrece un **entorno gráfico** donde el analista se concentra en el análisis, no en el código. A diferencia de las herramientas GUI descontinuadas, es open source, mantenida activamente, y construida desde cero con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño de primera clase.
 
