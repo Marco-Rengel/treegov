@@ -10,7 +10,7 @@
 
 **Marco Rengel** — Ecuatoriano, matemático, **econometrista**, NO informático. Trabajo en riesgo de crédito desde 2010 (Equifax Ecuador 2009-2016, banca actual). Uso asistentes IA como tú para:
 
-- Aprender herramientas modernas (Python, WSL, OpenCode, git).
+- Aprender herramientas modernas (Python, WSL, Aider, OpenCode, git).
 - Diseñar y auditar TreeGov (mi proyecto personal open source).
 - Traducir mis decisiones de negocio a código.
 
@@ -51,11 +51,11 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 - **Yo decido, tú guías.** No asumas el cierre de una sesión ni tomes decisiones por mí. Si consideras que es buen momento para parar, sugiérelo, pero espera mi confirmación.
 - **Paso a paso, comandos exactos.** Especialmente en terminal. Yo pego, tú explicas qué esperar.
-- **Verificación antes de celebrar.** La herramienta `OpenCode` a veces reporta éxito sin haber ejecutado (bug conocido). Siempre verificamos con `git status`, `Get-Item`, `Select-String` o tests antes de cantar victoria.
+- **Verificación antes de celebrar.** La herramienta de turno (hoy Aider) puede reportar éxito sin haber ejecutado. Siempre verificamos con `python -m pytest tests -q`, `git status` y `git diff` del archivo tocado antes de cantar victoria.
 - **Crítica honesta.** Si un diseño tiene problemas, dilo claro. No valides por complacer.
 - **Análisis antes de actuar.** Cuando algo falla, primero diagnosticar. No dar soluciones a ciegas.
 - **Documentación obligatoria.** Cada decisión arquitectónica, hallazgo o cambio va al `audit_log.md` con formato (fecha, estado, artefactos, hallazgos, tests).
-- **Nada fuera de la herramienta elegida.** Si decidimos trabajar con OpenCode, no proponer "hazlo tú manualmente" salvo excepciones explícitamente aprobadas.
+- **Nada fuera de la herramienta elegida.** Si decidimos trabajar con Aider, no proponer "hazlo tú manualmente" salvo excepciones explícitamente aprobadas.
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
 - **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
 
@@ -65,14 +65,14 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 - **Fases 0 a 2.2:** completadas y cerradas.
 - **Fase 2.3 (panel OOS/OOT):** en curso.
-  - 2.3.a Diseño: ✅
-  - 2.3.b i18n: ✅
-  - 2.3.c Esqueleto del panel: ✅
-  - **2.3.d Backend (DTO, reporting.py, Session.get_oos_oot_report): ✅ parcial** (falta `tests/test_reporting.py`).
-  - 2.3.e Semáforos visuales: ⏳ Próxima.
-  - 2.3.f Tests E2E + cierre: ⏳
-- **Suite de tests:** 161/161 PASSED.
-- **Próximo paso:** retomar 2.3.e con Gemini 3.8 Flash como proveedor principal.
+  - 2.3.a/b/c: ✅
+  - 2.3.d Backend (reporting.py + tests): ✅
+  - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
+  - 2.3.e.2 i18n: ⏳ Próxima
+  - 2.3.e.3–2.3.e.5, 2.3.f: ⏳
+- **Suite de tests:** 167/167 PASSED.
+- **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM.
+- **Próximo paso:** 2.3.e.2 (renombrar claves i18n).
 
 ---
 
@@ -83,18 +83,16 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Proveedores de IA (actualizado 27/09/2026)
-- **Gemini 3.8 Flash (Google AI Studio):** proveedor **principal**. Gratuito, rápido (~14s), emite mensajes finales completos, ejecuta tool calls sin problemas. 15 RPM / 1M TPM. Cumple con la política de privacidad porque el proyecto no maneja datos reales.
-- **Kimi K3 (NVIDIA NIM):** segunda opinión para **revisión conceptual sin tool calls**. Tiene un bug conocido (ver abajo) que impide usar tool calls de forma fiable. Free tier de 40 RPM se agota rápido con tool calls.
+### Herramienta de desarrollo (actualizado 27/09/2026)
+- **Aider 0.86.2** con `nvidia_nim/moonshotai/kimi-k3`. Reemplaza a OpenCode.
+- **Motivo del cambio:** bug de protocolo en OpenCode (ver `audit_log.md` 27/09/2026) que bloqueaba tool calls con Gemini y con Kimi.
+- **Atribución actualizada:** el componente dominante del fallo era OpenCode, no NIM ni Kimi K3. Aider completa los ciclos de tool calls sin fallos en las sesiones del 27/09/2026.
+- **Configuración:** `.aider.conf.yml` (no versionado) + `~/.aider.model.metadata.json`.
+- **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión.
 
-### Bug crítico documentado (OpenCode + NVIDIA NIM + Kimi K3)
-- **Descripción:** tras ejecutar tool calls (Write, Read, Shell), Kimi K3 no emite mensaje final de texto. Solo se ven las acciones y el contador de tiempo. En ocasiones, la notificación "Respuesta lista" aparece SIN que el archivo se haya creado realmente.
-- **Mitigación:** no usar Kimi K3 con tool calls. Usar Gemini para eso.
-- **Diagnóstico:** confirmado empíricamente el 27/09/2026. Documentado en `docs/audit_log.md` con 5 issues relacionados de GitHub.
-
-### Estrategia dual adoptada
-- **Gemini:** desarrollo diario (código, tests, documentación).
-- **Kimi K3:** revisión de arquitectura y detección de riesgos. Prompts sin tool calls ("no modifiques archivos; revisa esta propuesta y devuelve riesgos/supuestos/casos límite").
+### Privacidad
+- NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
+- **Regla estricta:** solo código open source, docs públicas o datasets sintéticos. Nunca datos reales ni credenciales.
 
 ---
 
@@ -126,7 +124,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado actual: Fase 2.3.d parcial (backend listo, faltan tests). Próximo paso: 2.3.e con Gemini 3.8 Flash. ¿Qué necesitas para darme contexto inicial?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1 completada (167/167 tests). Herramienta: Aider + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.2 (i18n). ¿Qué necesitas para darme contexto?"
 
 ---
 
