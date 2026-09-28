@@ -48,3 +48,6 @@ archive/
 .opencode-backup-*/
 .opencode.disabled/
 .venv_3.14_backup/
+
+# Aider (herramienta local, no parte del proyecto)
+.aider*
