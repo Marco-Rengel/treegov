@@ -27,19 +27,24 @@
 | 2.3.a | Diseño estructural panel OOS/OOT | ✅ |
 | 2.3.b | 23 claves i18n (paridad EN/ES) | ✅ |
 | 2.3.c | Esqueleto del panel + 3 tests | ✅ |
-| 2.3.d | Backend de reporting (reporting.py + Session) | 🟡 Parcial (faltan tests) |
-| 2.3.e | Semáforos y visualización | ⏳ Próxima |
+| 2.3.d | Backend de reporting (reporting.py + Session + tests) | ✅ |
+| 2.3.e.1 | Normalización de semáforos (alfabeto en inglés) | ✅ |
+| 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ⏳ Próxima |
+| 2.3.e.3 | Tokens QSS semánticos | ⏳ |
+| 2.3.e.4 | MetricsPanel funcional | ⏳ |
+| 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ |
 | 2.3.f | Tests E2E + cierre | ⏳ |
 | 2.4 | Reportes + integración | ⏳ |
 | 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
 
-**Suite de tests:** 161/161 PASSED
+**Suite de tests:** 167/167 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 27/09/2026: 161/161 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 27/09/2026: 167/167 tests.
+- **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
@@ -62,35 +67,30 @@ WSL (bash):
 
 - VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
 - Windows Terminal con Ubuntu por defecto.
-- OpenCode 1.18.32 en Windows y WSL.
-- **Proveedor principal de IA:** Gemini 3.8 Flash (Google AI Studio).
-- **Segunda opinión (diseño/auditoría):** Kimi K3 (NVIDIA NIM), **sin tool calls**.
+- **Aider 0.86.2** (reemplaza a OpenCode desde el 27/09/2026).
+- **Modelo:** `nvidia_nim/moonshotai/kimi-k3` (NVIDIA NIM).
+- **Configuración local:** `.aider.conf.yml` (no versionado).
+- **Metadata de modelos:** `~/.aider.model.metadata.json`.
 
-### Configuración de OpenCode
+### Configuración de Aider
 
-Windows: `C:\Users\maren\.config\opencode\opencode.jsonc` y `C:\Users\maren\.local\share\opencode\auth.json`.
-
-WSL: `~/.config/opencode/opencode.jsonc` y `~/.local/share/opencode/auth.json`.
-
-Contenido común (Windows):
-
-- `instructions`: [".treegovrules"] (AGENTS.md se autodescubre desde la raíz del proyecto)
-- `permission`: git push/commit = ask, rm -rf = deny
-- Plugin local del proyecto: opencode-supermemory + opencode-auto-resume (en `.opencode/opencode.json`)
+- **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión (PowerShell).
+- **Metadata de Kimi K3:** `C:\Users\maren\.aider.model.metadata.json`.
+- **Configuración de proyecto:** `.aider.conf.yml` (ignorado por git).
+- **Flags clave:** `auto-commits: false`, `auto-lint: false`, `auto-test: false`.
 
 ## Problemas conocidos y soluciones
 
 | Problema | Solución |
 |---|---|
-| **Bug Kimi K3 + NVIDIA NIM** | Tras tool calls, no emite mensaje final y a veces reporta "Respuesta lista" sin ejecutar. **Usar Gemini 3.8 Flash para tool calls.** Ver `docs/audit_log.md` (27/09/2026). |
-| **Cuota NVIDIA NIM agotada (429)** | Se agota rápido con tool calls. Gemini 3.8 Flash (Google AI Studio) es la alternativa sin este problema. |
-| **Variant de OpenCode** | No persiste en `opencode.jsonc`. Ajustar con `/variants` al inicio de cada sesión. `high` por defecto; `max` solo si el proveedor lo soporta bien. |
-| **Modelos descontinuados** | DeepSeek V4 Pro fue retirado (14/09/2026). Verificar vigencia antes de seleccionar. |
-| **Privacidad** | No enviar a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. El proyecto es open source y no maneja datos reales. |
-| `Ctrl+P` no funciona en VS Code | Usar Windows Terminal para menús de OpenCode. |
-| Al pegar en terminal, a veces se cuela `~` | Escribir comandos cortos a mano. |
-| Al pegar en nano, el contenido se duplica | Usar Python para escribir archivos, o VS Code directo. |
-| `git push` falla desde terminal WSL | Hacer push desde VS Code: `Ctrl+Shift+P` → `Git: Push`. |
+| **Bug OpenCode + Gemini** | `Requests ending with a model turn are not supported` bloquea escritura tras exploración. **Migrado a Aider.** Ver `audit_log.md`. |
+| **Context window de Kimi K3** | Aider no conoce el modelo; requiere `~/.aider.model.metadata.json`. Ver `audit_log.md` 27/09/2026. |
+| **API key con prefijo duplicado** | Verificar `$env:NVIDIA_NIM_API_KEY.Substring(0, 20)` empieza con `nvapi-` (una sola vez). |
+| **BOM en archivos JSON creados con PowerShell** | Usar `[System.IO.File]::WriteAllText(..., [System.Text.UTF8Encoding]::new($false))`. |
+| **Modelos descontinuados** | DeepSeek V4 Pro retirado (14/09/2026). |
+| **Privacidad** | No enviar datos bancarios reales ni credenciales a APIs gratuitas. |
+| **Pegado en terminal** | A veces duplica contenido o deja caracteres colgando. Escribir comandos cortos a mano. |
+| `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
 
 ## Cómo retomar el trabajo
 
@@ -99,7 +99,8 @@ Contenido común (Windows):
     cd "C:\Riesgos - copia\DecisionTree_Modeler"
     .\.venv\Scripts\activate
     python -m pytest tests -q
-    opencode
+    $env:NVIDIA_NIM_API_KEY = "nvapi-..."
+    aider
 
 ### WSL (respaldo)
 
@@ -107,22 +108,33 @@ Contenido común (Windows):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.e)
+## Próximos pasos (Fase 2.3.e.2)
 
-**Objetivo:** Semáforos y visualización de métricas OOS/OOT en el panel.
+**Objetivo:** renombrar claves i18n por estado (no por color) y añadir
+claves para los nuevos valores del alfabeto.
 
 **Requisitos:**
 
-- Consumir `traffic_light()` y `gini_drop_alert()` del backend
-  (`backend_v3/stability.py`).
-- Renderizar badges visuales (verde/ámbar/rojo) en `metrics_panel.py`.
-- Sin importar numpy/pandas/scipy en frontend_v3 (sala limpia).
-- Usar QSS del tema activo (colores semánticos).
+- Renombrar en `frontend_v3/i18n.py`:
+  - `status_green` → `status_stable`
+  - `status_yellow` → `status_moderate`
+  - `status_red` → `status_unstable`
+- Añadir claves nuevas (EN/ES):
+  - `status_undetermined`
+  - `status_critical`
+  - `status_warning`
+  - `status_none`
+- Actualizar tests que referencien las claves viejas.
+- Actualizar `docs/audit_log.md` al cierre.
 
-**Proveedor recomendado:** Gemini 3.8 Flash (proveedor principal).
+**Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
 
-**Pendientes posteriores:** 2.3.d (tests de `reporting.py`),
-2.3.f (tests E2E + cierre), 2.4 (reportes).
+**Sub-pasos posteriores:**
+- 2.3.e.3 Tokens QSS semánticos
+- 2.3.e.4 MetricsPanel funcional
+- 2.3.e.5 Cableado MainWindow ↔ MetricsPanel
+- 2.3.f Tests E2E + cierre
+- 2.4 Reportes + integración
 
 **Ideas del experto (evaluar en 2.4 o 3):**
 
@@ -142,4 +154,4 @@ La carpeta `archive/` contiene documentos del proyecto anterior (DecisionTree_Mo
 - **Cada fase cerrada:** actualizar `docs/roadmap.md` y `docs/estado_proyecto.md`.
 - **Cero referencias a software privativo** (SPSS, Answer Tree, Stata, SAS) en docs activos.
 - **i18n:** paridad estricta EN/ES, claves en snake_case.
-- **Verificación manual obligatoria** tras cada tarea de OpenCode: `Get-Item`, `Select-String`, `pytest`, `git status`.
+- **Verificación manual obligatoria** tras cada tarea de Aider: `python -m pytest tests -q`, `git status`, `git diff` del archivo tocado.
