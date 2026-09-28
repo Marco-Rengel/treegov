@@ -8,7 +8,7 @@ Valores verificados a mano:
     = 0.8788898 -> UNSTABLE.
   - PSI bin vacio (clip eps=1e-4): (1e-4 - 1) * ln(1e-4) = 0.9999 * 9.2103404
     = 9.20972.
-  - Gini alertas: 0.5 critico, 0.25 preventivo, 0.1 none, None none.
+  - Gini alertas: 0.5 CRITICAL, 0.25 WARNING, 0.1 NONE, None UNDETERMINED.
 """
 
 import math
@@ -92,7 +92,7 @@ def test_semaforos_exactos():
     assert traffic_light(0.099999) == "STABLE"
     assert traffic_light(0.10) == "MODERATE"
     assert traffic_light(0.25) == "UNSTABLE"
-    assert traffic_light(float("nan")) == "INDETERMINADO"
+    assert traffic_light(float("nan")) == "UNDETERMINED"
     _assert_raises(ValueError, psi_index, np.array([0.5, 0.5]), np.array([1.0]))
 
 
@@ -102,15 +102,15 @@ def test_semaforos_exactos():
 
 
 def test_gini_drop_alert_manual():
-    assert gini_drop_alert(0.5) == "critico"
-    assert gini_drop_alert(0.4000001) == "critico"
-    assert gini_drop_alert(0.40) == "preventivo"
-    assert gini_drop_alert(0.25) == "preventivo"
-    assert gini_drop_alert(0.20) == "none"
-    assert gini_drop_alert(0.19) == "none"
-    # FIX 2: indefinido (None o NaN) no es "sin alerta": es INDETERMINADO
-    assert gini_drop_alert(None) == "INDETERMINADO"
-    assert gini_drop_alert(float("nan")) == "INDETERMINADO"
+    assert gini_drop_alert(0.5) == "CRITICAL"
+    assert gini_drop_alert(0.4000001) == "CRITICAL"
+    assert gini_drop_alert(0.40) == "WARNING"
+    assert gini_drop_alert(0.25) == "WARNING"
+    assert gini_drop_alert(0.20) == "NONE"
+    assert gini_drop_alert(0.19) == "NONE"
+    # FIX 2: indefinido (None o NaN) no es "sin alerta": es UNDETERMINED
+    assert gini_drop_alert(None) == "UNDETERMINED"
+    assert gini_drop_alert(float("nan")) == "UNDETERMINED"
 
 
 # ---------------------------------------------------------------------------

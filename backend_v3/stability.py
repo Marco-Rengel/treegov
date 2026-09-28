@@ -63,9 +63,10 @@ _EPS_DEFAULT: float = 1e-4
 
 
 def traffic_light(value: float) -> str:
-    """Semaforo Basel/EBA: <0.10 STABLE; <0.25 MODERATE; >=0.25 UNSTABLE."""
+    """Semaforo Basel/EBA: <0.10 STABLE; <0.25 MODERATE; >=0.25 UNSTABLE.
+    NaN -> "UNDETERMINED" (no se clasifica)."""
     if not value == value:  # NaN -> no se clasifica
-        return "INDETERMINADO"
+        return "UNDETERMINED"
     if value < 0.10:
         return "STABLE"
     if value < 0.25:
@@ -74,16 +75,20 @@ def traffic_light(value: float) -> str:
 
 
 def gini_drop_alert(drop: float | None) -> str:
-    """Semaforo del Gini Drop. None o NaN -> "INDETERMINADO" (jamás se
-    reporta como 'none': una degradacion indefinida no es ausencia de
-    alerta, es ausencia de confianza)."""
+    """Semaforo del Gini Drop. None o NaN -> "UNDETERMINED" (jamás se
+    reporta como 'NONE': una degradacion indefinida no es ausencia de
+    alerta, es ausencia de confianza).
+
+    Umbrales: drop > 0.40 -> "CRITICAL"; drop > 0.20 -> "WARNING";
+    en caso contrario -> "NONE".
+    """
     if drop is None or drop != drop:  # None o NaN
-        return "INDETERMINADO"
+        return "UNDETERMINED"
     if drop > 0.40:
-        return "critico"
+        return "CRITICAL"
     if drop > 0.20:
-        return "preventivo"
-    return "none"
+        return "WARNING"
+    return "NONE"
 
 
 def psi_index(
@@ -125,7 +130,7 @@ class GiniDropReport:
     """Gini Drop OOS/OOT.
 
     Si compute_oos_metrics() en la cohorte X devuelve Gini=None (cohorte
-    monoclase), drop_X queda None y el semaforo es "none".
+    monoclase), drop_X queda None y el semaforo es "NONE".
     Si gini_train == 0 (modelo sin poder discriminante), ambos drops quedan
     None (division por cero evitada; se loggea WARNING).
     """
