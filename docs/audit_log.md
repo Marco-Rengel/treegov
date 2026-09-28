@@ -710,8 +710,10 @@ Documentada en entrada previa (27/09/2026, Fase 2.3.e.1 abortada).
    - `summarizer unexpectedly failed for all models` en una sesión.
    - Un intento fallido de reescritura completa del archivo (descartado por
      Aider antes de aplicar).
-   Mitigación pendiente: añadir entrada a `~/.aider.model.settings.yml`
-   con `context_window: 1000000`.
+      Mitigación aplicada: entrada en `~/.aider.model.metadata.json`
+      con `max_input_tokens: 1048576` y `max_output_tokens: 131072`.
+      Verificado: Aider arranca sin warning; repo-map subió de 1024 a 4096
+      tokens (mejor contexto de proyecto).
 
 2. **Atribución actualizada del bug de tool calls**: Aider 0.86.2 + Kimi K3
    + NVIDIA NIM completa ciclos de tool calls sin pérdida de mensaje final.
