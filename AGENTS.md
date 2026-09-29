@@ -53,6 +53,7 @@ doble verificación.
 - **Configuración local:** `.aider.conf.yml` (no versionado; ver `.gitignore`).
 - **Metadata de modelos:** `~/.aider.model.metadata.json` registra
   `max_input_tokens: 1048576` y `max_output_tokens: 131072`.
+- **Instalación:** global vía `pipx` (Python 3.11), fuera del `.venv/` del proyecto.
 
 **Arranque (Windows PowerShell):**
 

@@ -735,3 +735,41 @@ Documentada en entrada previa (27/09/2026, Fase 2.3.e.1 abortada).
 
 **Referencias**: entrada previa "Fase 2.3.e.1 abortada; diagnóstico OpenCode
 + Gemini" (misma fecha).
+
+### 28/09/2026 — Migración de Aider a pipx
+
+**Estado**: Aprobado.
+**Modelo**: N/A (infraestructura).
+**Revisor**: Marco Rengel
+**Artefactos**: AGENTS.md, `.aider.conf.example.yml` (nuevo), .gitignore
+
+**Motivación**:
+Aider vivía en el `.venv/` del proyecto, lo que degradó numpy (2.4.6 → 1.26.4)
+y scipy (1.17.1 → 1.15.3) el 27/09. Aunque la suite verificó 167/167 con las
+versiones degradadas, contaminar el entorno verificado del proyecto es deuda
+técnica.
+
+**Acciones**:
+- Instalado `pipx` (Python 3.14 del sistema).
+- Instalado Aider con `pipx install --python 3.11 aider-chat` (Python 3.11.9
+  del sistema, no el del proyecto).
+- Creado `.aider.conf.example.yml` (versionado) con plantilla de configuración.
+- Añadida excepción `!.aider.conf.example.yml` en `.gitignore`.
+
+**Incidente durante la migración**:
+El primer intento con Python 3.14 falló: scipy 1.15.3 no tiene wheel prearmada
+para esa versión y el build local requiere compilador Fortran (no instalado).
+Solución: forzar Python 3.11 en pipx.
+
+**Estado del `.venv/` del proyecto**:
+No fue modificado por la migración. Conserva numpy 1.26.4 + scipy 1.15.3
+(degradadas), con verificación 167/167. La decisión del 27/09 de mantenerlas
+se mantiene vigente; se evaluará actualización en una sesión futura si surge
+motivo.
+
+**Beneficios**:
+- `aider.exe` disponible globalmente (sin activar `.venv`).
+- Contaminación del entorno del proyecto prevenida a futuro.
+- Plantilla `.aider.conf.example.yml` versionada para colaboradores.
+
+**Tests**: 167/167 (verificado tras la migración).
