@@ -51,3 +51,5 @@ archive/
 
 # Aider (herramienta local, no parte del proyecto)
 .aider*
+
+!.aider.conf.example.yml

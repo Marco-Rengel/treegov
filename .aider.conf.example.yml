@@ -1,0 +1,21 @@
+# Configuración recomendada de Aider para TreeGov.
+#
+# Copiar como `.aider.conf.yml` en la raíz del proyecto:
+#     cp .aider.conf.example.yml .aider.conf.yml
+#
+# El archivo `.aider.conf.yml` NO se versiona (ver .gitignore).
+# Solo se versiona esta plantilla, sin secretos ni rutas personales.
+#
+# Requisitos previos (ver AGENTS.md, sección "Herramienta de desarrollo: Aider"):
+#   - Aider 0.86.2 instalado.
+#   - API key exportada: $env:NVIDIA_NIM_API_KEY
+#   - Metadata de modelos: ~/.aider.model.metadata.json
+#     (registra context window de Kimi K3: max_input_tokens=1048576)
+
+model: nvidia_nim/moonshotai/kimi-k3
+auto-commits: false
+auto-lint: false
+auto-test: false
+suggest-shell-commands: false
+stream: false
+chat-language: es
