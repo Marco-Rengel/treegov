@@ -852,3 +852,47 @@ ya existen en ambas paletas, por lo que la validación fail-fast seguirá
 pasando" — auditoría correcta sin haber sido solicitada.
 
 **Tests**: 167/167 PASSED.
+
+### 29/09/2026 — Fase 2.3.e.4: MetricsPanel funcional
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/metrics_panel.py, tests/test_metrics_panel.py
+
+**Motivación**:
+El esqueleto de 2.3.c era un placeholder sin lógica. Tras 2.3.e.1
+(alfabeto backend), 2.3.e.2 (claves i18n por estado) y 2.3.e.3 (tokens
+QSS semánticos), ya están disponibles todos los insumos para que el panel
+consuma el DTO de `Session.get_oos_oot_report()` y renderice las métricas
+con badges de estado.
+
+**Cambios aplicados**:
+- `metrics_panel.py`: reescrito como consumidor del DTO.
+  - Constantes `_STATUS_TO_QSS` y `_STATUS_TO_I18N` mapeando los 7 códigos
+    del alfabeto backend a propiedades QSS (`ok`/`warn`/`crit`/`unknown`)
+    y a claves i18n.
+  - Helper `_fmt(value)`: "—" si None, `%.4g` si float, `str` si no.
+  - `set_report(dto)` como API pública; `refresh()` reconstruye contenido.
+  - Secciones OOS (n_test, gini, ks, brier, brier_skill, hl_p) y OOT
+    (PSI flag, Gini Drop alert_oot, peor CSI por valor).
+  - Badges con `setProperty("status", qss_status)` — el QSS de 2.3.e.3 los
+    colorea automáticamente sin hardcodear colores.
+  - Fallthrough seguro: código desconocido → `status_undetermined` + QSS
+    `unknown`.
+- `tests/test_metrics_panel.py`: 6 tests nuevos.
+  - `set_report(None)` y DTO vacío → placeholder.
+  - OOS solo, OOT solo (verifica 3 badges con `statuses == ["crit","crit","warn"]`).
+  - Fallthrough de código desconocido.
+  - Cobertura completa del alfabeto en ambos mapas.
+
+**Verificación de sala limpia**:
+`metrics_panel.py` solo importa `PySide6.QtCore`, `PySide6.QtWidgets` y
+`frontend_v3.i18n`. Cero numpy/pandas/scipy.
+
+**Comportamiento de Aider**:
+Propuso correctamente NO tocar tests en el Prompt 1 (los rompía el cambio
+de `_label`), esperando autorización. En el Prompt 2 ejecutó exactamente
+el spec de tests sin añadir ni quitar.
+
+**Tests**: 173/173 PASSED (167 previos + 6 nuevos).

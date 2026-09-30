@@ -70,11 +70,12 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
   - **2.3.e.2 Claves i18n por estado:** ✅ (29/09/2026)
   - **2.3.e.3 Tokens QSS semánticos:** ✅ (29/09/2026)
-  - 2.3.e.4 MetricsPanel funcional: ⏳ Próxima
-  - 2.3.e.5, 2.3.f: ⏳
-- **Suite de tests:** 167/167 PASSED.
+  - **2.3.e.4 MetricsPanel funcional:** ✅ (29/09/2026)
+  - 2.3.e.5 Cableado MainWindow ↔ MetricsPanel: ⏳ Próxima
+  - 2.3.f: ⏳
+- **Suite de tests:** 173/173 PASSED.
 - **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
-- **Próximo paso:** 2.3.e.4 (MetricsPanel funcional).
+- **Próximo paso:** 2.3.e.5 (cableado MainWindow ↔ MetricsPanel).
 
 ---
 
@@ -129,7 +130,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1, e.2 y e.3 completadas (167/167 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.4 (MetricsPanel funcional). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1 a e.4 completadas (173/173 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.5 (cableado MainWindow ↔ MetricsPanel). ¿Qué necesitas para darme contexto?"
 
 ---
 

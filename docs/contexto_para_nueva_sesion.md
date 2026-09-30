@@ -31,19 +31,19 @@
 | 2.3.e.1 | Normalización de semáforos (alfabeto en inglés) | ✅ |
 | 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ✅ |
 | 2.3.e.3 | Tokens QSS semánticos | ✅ |
-| 2.3.e.4 | MetricsPanel funcional | ⏳ Próxima |
-| 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ |
+| 2.3.e.4 | MetricsPanel funcional | ✅ |
+| 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ Próxima |
 | 2.3.f | Tests E2E + cierre | ⏳ |
 | 2.4 | Reportes + integración | ⏳ |
 | 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
 
-**Suite de tests:** 167/167 PASSED
+**Suite de tests:** 173/173 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 27/09/2026: 167/167 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 29/09/2026: 173/173 tests.
 - **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
@@ -100,7 +100,9 @@ WSL (bash):
     cd "C:\Riesgos - copia\DecisionTree_Modeler"
     .\.venv\Scripts\activate
     python -m pytest tests -q
-    $env:NVIDIA_NIM_API_KEY = "nvapi-..."
+    $key = Read-Host "Pega tu API key" -AsSecureString
+    $env:NVIDIA_NIM_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
+    Remove-Variable key
     aider
 
 ### WSL (respaldo)
@@ -109,34 +111,28 @@ WSL (bash):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.e.4)
+## Próximos pasos (Fase 2.3.e.5)
 
-**Objetivo:** que `MetricsPanel` consuma el DTO de `Session.get_oos_oot_report()`
-y renderice las métricas OOS/OOT con badges de estado.
+**Objetivo:** cablear MainWindow ↔ MetricsPanel para que el panel se
+refresque cuando el estado del `Session` cambia.
 
 **Requisitos:**
 
-- `MetricsPanel.set_report(dto: dict | None) -> None` que reciba el DTO y
-  lo guarde.
-- Construir la UI del panel: secciones OOS y OOT con etiquetas y valores.
-- Renderizar badges de estado usando `QLabel` con `setProperty("status", ...)`
-  y los selectores QSS de `styles.qss` (`ok`, `warn`, `crit`, `unknown`).
-- Mapear los strings del alfabeto backend a la propiedad `status`:
-  - `"STABLE"` → `ok`
-  - `"MODERATE"` → `warn`
-  - `"UNSTABLE"` → `crit`
-  - `"CRITICAL"` → `crit`
-  - `"WARNING"` → `warn`
-  - `"NONE"` → `ok`
-  - `"UNDETERMINED"` → `unknown`
-- Consumir las claves i18n de estado (`tr(f"status_{...}")`) para el texto
-  visible.
-- Sin importar numpy/pandas/scipy (sala limpia).
+- `MainWindow._on_wizard_finished`: tras entrenar, llamar
+  `self._metrics_panel.set_report(self._session.get_oos_oot_report())`.
+- Habilitar `_act_evaluate_oos` cuando el estado del Session sea TRAINED.
+  Handler: llama a `self._session.evaluate_oos()` + refresco del panel.
+- Habilitar `_act_load_oot` cuando el estado sea TRAINED.
+  Handler: pide archivo CSV al usuario, llama a `self._session.load_oot(path)`,
+  luego `evaluate_oot()`, luego refresco del panel.
+- Al `reset_to_data_loaded` (cambio de modelo): llamar
+  `self._metrics_panel.set_report(None)`.
+- Verificar que los tooltips `_TT_PHASE23` se retiran de los menús ya
+  habilitados.
 
 **Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
 
 **Sub-pasos posteriores:**
-- 2.3.e.5 Cableado MainWindow ↔ MetricsPanel
 - 2.3.f Tests E2E + cierre
 - 2.4 Reportes + integración
 
