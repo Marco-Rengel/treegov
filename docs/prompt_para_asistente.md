@@ -64,18 +64,18 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 ## 5. Estado actual del proyecto
 
 - **Fases 0 a 2.2:** completadas y cerradas.
-- **Fase 2.3 (panel OOS/OOT):** en curso.
+- **Fase 2.3 (panel OOS/OOT):** **completa y cerrada** (29/09/2026).
   - 2.3.a/b/c: ✅
   - 2.3.d Backend (reporting.py + tests): ✅
   - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
   - **2.3.e.2 Claves i18n por estado:** ✅ (29/09/2026)
   - **2.3.e.3 Tokens QSS semánticos:** ✅ (29/09/2026)
   - **2.3.e.4 MetricsPanel funcional:** ✅ (29/09/2026)
-  - 2.3.e.5 Cableado MainWindow ↔ MetricsPanel: ⏳ Próxima
-  - 2.3.f: ⏳
-- **Suite de tests:** 173/173 PASSED.
+  - **2.3.e.5 Cableado MainWindow ↔ MetricsPanel:** ✅ (29/09/2026)
+  - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
+- **Suite de tests:** 178/178 PASSED.
 - **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
-- **Próximo paso:** 2.3.e.5 (cableado MainWindow ↔ MetricsPanel).
+- **Próximo paso:** 2.4 (Reportes + integración).
 
 ---
 
@@ -95,6 +95,8 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Plantilla versionada:** `.aider.conf.example.yml`.
 - **Metadata de modelos:** `~/.aider.model.metadata.json` (context window Kimi K3: 1M tokens).
 - **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión. Si se pega el placeholder `nvapi-...` por error, Aider devuelve 403; la longitud real de la key es ~70 caracteres.
+- **Prompts a Aider**: máximo ~100 líneas de contenido por insert. Bloques mayores se trocean en 2-3 prompts consecutivos para evitar timeout 504 de NVIDIA NIM. Los prompts quirúrgicos con referencias exactas a bloques/líneas funcionan bien incluso a 90 líneas; los que insertan contenido textual largo son más frágiles.
+- **504 timeout**: si aparece durante una ejecución de Aider, esperar 2-5 min y reintentar. Es saturación del servidor NVIDIA, no fallo del prompt ni del proyecto.
 
 ### Privacidad
 - NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
@@ -130,7 +132,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1 a e.4 completadas (173/173 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.5 (cableado MainWindow ↔ MetricsPanel). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, Fase 2.3 completa (178/178 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.4 (Reportes + integración). ¿Qué necesitas para darme contexto?"
 
 ---
 
