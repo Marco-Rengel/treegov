@@ -92,6 +92,7 @@ WSL (bash):
 | **Pegado en terminal** | A veces duplica contenido o deja caracteres colgando. Escribir comandos cortos a mano. |
 | `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
 | **Placeholder de API key** | Si pegas `$env:NVIDIA_NIM_API_KEY = "nvapi-..."` literal, Aider devuelve 403. Verificar con `.Length` (~70 caracteres) y `.Substring(0, 10)` sin duplicar `nvapi-`. |
+| **504 timeout en Aider+Kimi** | Prompts con contenido a insertar >100 líneas pueden saturar NIM. Trocear en 2-3 inserts consecutivos. Si aparece, esperar 2-5 min y reintentar. |
 
 ## Cómo retomar el trabajo
 

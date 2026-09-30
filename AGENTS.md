@@ -70,6 +70,14 @@ doble verificación.
 - Verificación obligatoria tras cada tarea: `python -m pytest tests -q` y
   `git status`.
 - Migrado desde OpenCode 1.18.32 el 27/09/2026 (ver `docs/audit_log.md`).
+- **Prompts**: máximo ~100 líneas de contenido por insert. Bloques mayores
+  se trocean en 2-3 prompts consecutivos para evitar timeout 504 de NVIDIA
+  NIM. Prompts quirúrgicos con referencias exactas a bloques/líneas
+  funcionan bien incluso a 90 líneas; los que insertan contenido textual
+  largo son más frágiles.
+- **504 timeout**: si aparece durante una ejecución de Aider, esperar 2-5
+  min y reintentar. Es saturación del servidor NVIDIA, no fallo del prompt
+  ni del proyecto.
 
 ## Gobernanza
 
