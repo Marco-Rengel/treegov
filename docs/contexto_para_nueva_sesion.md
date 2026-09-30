@@ -32,18 +32,18 @@
 | 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ✅ |
 | 2.3.e.3 | Tokens QSS semánticos | ✅ |
 | 2.3.e.4 | MetricsPanel funcional | ✅ |
-| 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ Próxima |
-| 2.3.f | Tests E2E + cierre | ⏳ |
+| 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ✅ |
+| 2.3.f | Tests E2E + cierre (Fase 2.3 completa) | ✅ |
 | 2.4 | Reportes + integración | ⏳ |
 | 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
 
-**Suite de tests:** 173/173 PASSED
+**Suite de tests:** 178/178 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 29/09/2026: 173/173 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 29/09/2026: 178/178 tests.
 - **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
@@ -111,30 +111,30 @@ WSL (bash):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.e.5)
+## Próximos pasos (Fase 2.4)
 
-**Objetivo:** cablear MainWindow ↔ MetricsPanel para que el panel se
-refresque cuando el estado del `Session` cambia.
+**Objetivo:** Reportes + integración. La Fase 2.3 (panel OOS/OOT) está
+completa; 2.4 añade salidas analíticas sobre el modelo ya entrenado.
 
-**Requisitos:**
+**Requisitos tentativos (afinar antes de arrancar):**
 
-- `MainWindow._on_wizard_finished`: tras entrenar, llamar
-  `self._metrics_panel.set_report(self._session.get_oos_oot_report())`.
-- Habilitar `_act_evaluate_oos` cuando el estado del Session sea TRAINED.
-  Handler: llama a `self._session.evaluate_oos()` + refresco del panel.
-- Habilitar `_act_load_oot` cuando el estado sea TRAINED.
-  Handler: pide archivo CSV al usuario, llama a `self._session.load_oot(path)`,
-  luego `evaluate_oot()`, luego refresco del panel.
-- Al `reset_to_data_loaded` (cambio de modelo): llamar
-  `self._metrics_panel.set_report(None)`.
-- Verificar que los tooltips `_TT_PHASE23` se retiran de los menús ya
-  habilitados.
+- Tabla de ganancias (gains table) y matriz de clasificación.
+- Exportación HTML del reporte vía `QTextBrowser`.
+- Tests E2E adicionales para los flujos de exportación.
+- Screenshots para el README.
+
+**Sub-pasos previstos (por definir en la próxima sesión):**
+- 2.4.a Diseño estructural del módulo de reportes
+- 2.4.b Backend de agregación (si hace falta)
+- 2.4.c UI de exportación
+- 2.4.d Tests + cierre
 
 **Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
 
-**Sub-pasos posteriores:**
-- 2.3.f Tests E2E + cierre
-- 2.4 Reportes + integración
+**Deuda de infraestructura agendada:**
+- `.aider.conf.example.yml` ya está versionado. No hay pendientes.
+- Vigilar el warning "summarizer unexpectedly failed" si reaparece con
+  archivos grandes; mitigado con `~/.aider.model.metadata.json`.
 
 **Ideas del experto (evaluar en 2.4 o 3):**
 
