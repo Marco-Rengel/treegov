@@ -896,3 +896,104 @@ de `_label`), esperando autorización. En el Prompt 2 ejecutó exactamente
 el spec de tests sin añadir ni quitar.
 
 **Tests**: 173/173 PASSED (167 previos + 6 nuevos).
+
+### 29/09/2026 — Fase 2.3.e.5: cableado MainWindow ↔ MetricsPanel
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/main_window.py
+
+**Motivación**:
+El MetricsPanel ya era funcional (2.3.e.4), pero MainWindow no lo
+conectaba: los menús Model > Evaluate OOS y Load OOT Cohort seguían
+deshabilitados con tooltip "Available in Phase 2.3", y el panel nunca se
+poblaba automáticamente tras entrenar. Esta fase cablea el ciclo
+completo.
+
+**Cambios aplicados (7 puntos en main_window.py)**:
+1. Eliminada la constante `_TT_PHASE23`.
+2. Actions `_act_evaluate_oos` y `_act_load_oot`: sin tooltip, conectados
+   a sus handlers `_on_evaluate_oos` / `_on_load_oot`.
+3. `_refresh_session_indicator()`: habilita ambos actions solo si el
+   Session está en estado TRAINED.
+4. `_on_new_wizard()`: añade `self._metrics_panel.set_report(None)` al
+   resetear la sesión.
+5. `_on_wizard_finished()`: tras entrenar, llama
+   `self._metrics_panel.set_report(self._session.get_oos_oot_report())`.
+6. Nuevo handler `_on_evaluate_oos()`: llama `Session.evaluate_oos()`,
+   refresca el panel, cambia a la pestaña OOS/OOT.
+7. Nuevos `_on_load_oot()` + `_load_oot_pipeline()`: pide CSV al usuario,
+   carga, evalúa, refresca el panel.
+
+**Comportamiento de Aider**:
+Prompt con 7 cambios referenciados por bloque y línea exacta. Aider los
+aplicó en una sola pasada sin consultas adicionales. Sin falsos positivos
+en el diff.
+
+**Tests**: 173/173 PASSED (los tests anteriores no ejercitaban los
+handlers nuevos; eso quedó cubierto en 2.3.f).
+
+---
+
+### 29/09/2026 — Fase 2.3.f: tests E2E + cierre de Fase 2.3
+
+**Estado**: Aprobado.
+**Modelo**: N/A (autoría manual por el asistente estratégico; ver
+lección operativa al final).
+**Revisor**: Marco Rengel
+**Artefactos**: tests/test_e2e_mainwindow.py (nuevo)
+
+**Motivación**:
+Los 173 tests previos no ejercitaban el flujo end-to-end entre
+MainWindow, Session y MetricsPanel. En particular, los handlers nuevos
+de 2.3.e.5 (`_on_evaluate_oos`, `_on_load_oot`) no tenían cobertura.
+
+**Cambios aplicados**:
+- Nuevo archivo `tests/test_e2e_mainwindow.py` con 5 tests E2E:
+  1. `test_e2e_load_csv_enables_actions`: cargar CSV habilita wizard y
+     train; los actions OOS/OOT siguen deshabilitados hasta entrenar.
+  2. `test_e2e_train_enables_oos_oot_actions`: tras entrenar, evaluate_oos
+     y load_oot pasan a enabled.
+  3. `test_e2e_evaluate_oos_refreshes_panel`: disparar
+     `_on_evaluate_oos` puebla la sección OOS del panel y cambia la
+     pestaña activa.
+  4. `test_e2e_load_oot_via_mocked_dialog`: con `QFileDialog.getOpenFileName`
+     mockeado, cargar cohorte OOT produce badges en el panel (PSI +
+     Gini Drop).
+  5. `test_e2e_new_wizard_resets_panel`: reabrir el wizard limpia el
+     panel (`set_report(None)`).
+
+**Identidades verificadas**:
+- 5/5 tests E2E en verde.
+- Suite completa: 178/178 PASSED (173 previos + 5 nuevos).
+- CSV sintético determinista (seed=42), target `default = 1_{edad>=40}`.
+- Mock de QFileDialog confirma que el handler no abre diálogo real en
+  entorno offscreen.
+
+**Cierre de Fase 2.3**:
+Con 2.3.f se cierra la fase completa (2.3.a a 2.3.f). El panel OOS/OOT
+está operativo end-to-end: carga datos, entrena, evalúa OOS, carga OOT,
+evalúa, y renderiza badges con colores semánticos del tema activo.
+
+**Lección operativa (docs editing)**:
+Durante 2.3.e.2 a 2.3.e.5 parte de la documentación (audit_log, roadmap,
+contexto_para_nueva_sesion, prompt_para_asistente) se editó manualmente
+en VS Code en lugar de pasar por Aider. Esto generó 3 incidentes menores:
+triplicación del `.gitignore`, indentación rota en `audit_log`, línea
+duplicada en `contexto_para_nueva_sesion`. Además creó asimetría con el
+resto de la bitácora (que atribuye los cambios a Aider).
+
+**Regla adoptada**:
+La edición de docs pasa por Aider+Kimi con prompts del tipo "inserta
+exactamente este bloque al final de X, no modifiques nada más". Las
+excepciones son:
+- Creación inicial de documentos de bootstrap largos (>200 líneas): se
+  redacta como borrador y se pega a mano en VS Code, verificando con
+  `git diff` que el archivo quedó íntegro.
+- Cambios triviales de 1 línea que requieran verificación manual
+  inmediata.
+- Indisponibilidad del servidor NIM (errores 504/timeout), como ocurrió
+  al cierre de esta sesión. Documentar la excepción en la propia entrada.
+
+**Tests**: 178/178 PASSED.
