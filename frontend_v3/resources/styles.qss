@@ -78,3 +78,23 @@ QLabel#treeLargeWarning {
 QLabel#hudBody {
     padding: 4px;
 }
+
+QLabel[status="ok"] {
+    color: $STATUS_OK;
+    font-weight: bold;
+}
+
+QLabel[status="warn"] {
+    color: $STATUS_WARN;
+    font-weight: bold;
+}
+
+QLabel[status="crit"] {
+    color: $STATUS_CRIT;
+    font-weight: bold;
+}
+
+QLabel[status="unknown"] {
+    color: $STATUS_UNKNOWN;
+    font-weight: bold;
+}

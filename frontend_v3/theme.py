@@ -28,6 +28,10 @@ PALETTES: dict[str, dict[str, str]] = {
         "ACCENT": "#1F6FEB",
         "ACCENT_FG": "#FFFFFF",
         "DISABLED": "#9A9A9A",
+        "STATUS_OK": "#2E7D32",
+        "STATUS_WARN": "#ED6C02",
+        "STATUS_CRIT": "#D32F2F",
+        "STATUS_UNKNOWN": "#757575",
     },
     "dark": {
         "BG": "#1E1E1E",
@@ -37,6 +41,10 @@ PALETTES: dict[str, dict[str, str]] = {
         "ACCENT": "#4C9AFF",
         "ACCENT_FG": "#101010",
         "DISABLED": "#6E6E6E",
+        "STATUS_OK": "#66BB6A",
+        "STATUS_WARN": "#FFA726",
+        "STATUS_CRIT": "#EF5350",
+        "STATUS_UNKNOWN": "#9E9E9E",
     },
 }
 
