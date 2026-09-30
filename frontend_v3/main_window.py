@@ -56,8 +56,6 @@ from frontend_v3.tree_view import (
 from frontend_v3.metrics_panel import MetricsPanel
 from frontend_v3.wizard import ModelWizard
 
-_TT_PHASE23 = "Available in Phase 2.3"
-
 
 class MainWindow(QMainWindow):
     """TreeGov main window: menu bar, 3-panel splitter, status bar."""
@@ -194,11 +192,13 @@ class MainWindow(QMainWindow):
         self._act_train = self._new_action("act_train", enabled=False)
         self._act_train.triggered.connect(self._on_new_wizard)
         self._act_evaluate_oos = self._new_action(
-            "act_evaluate_oos", enabled=False, tooltip=_TT_PHASE23
+            "act_evaluate_oos", enabled=False
         )
+        self._act_evaluate_oos.triggered.connect(self._on_evaluate_oos)
         self._act_load_oot = self._new_action(
-            "act_load_oot", enabled=False, tooltip=_TT_PHASE23
+            "act_load_oot", enabled=False
         )
+        self._act_load_oot.triggered.connect(self._on_load_oot)
         self._menu_model.addAction(self._act_train)
         self._menu_model.addAction(self._act_evaluate_oos)
         self._menu_model.addAction(self._act_load_oot)
@@ -403,6 +403,7 @@ class MainWindow(QMainWindow):
             # transactional consistency: the session no longer holds a
             # tree, so the viewer must not keep displaying the old one
             self._tree_panel.clear_model()
+            self._metrics_panel.set_report(None)
             self._hud_reset()
         columns, types = self._dataset_info
         wiz = ModelWizard(columns, types, parent=self)
@@ -462,6 +463,8 @@ class MainWindow(QMainWindow):
                 ),
                 8000,
             )
+        # Phase 2.3.e.5: refresh OOS/OOT panel with current report
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
 
     def _train_pipeline(self, cfg: dict) -> None:
         self._session.fix_spec(cfg["target"], predictors=cfg["predictors"])
@@ -508,6 +511,13 @@ class MainWindow(QMainWindow):
             else "—"
         )
         self._lbl_session.setText(f"{tr('status_session')}: {name}")
+        # Phase 2.3.e.5: OOS/OOT actions depend on Session state.
+        trained = (
+            self._session is not None
+            and self._session.state.state is FlowState.TRAINED
+        )
+        self._act_evaluate_oos.setEnabled(trained)
+        self._act_load_oot.setEnabled(trained)
 
     # ------------------------------------------------------------------
     # Slots (Phase 2.2: tree viewer -> properties panel)
@@ -544,6 +554,50 @@ class MainWindow(QMainWindow):
             )
         else:
             self._hud_body.setText(tr("tree_prop_empty"))
+
+    def _on_evaluate_oos(self) -> None:
+        """Model > Evaluate OOS: runs evaluate_oos() on the trained model."""
+        if self._session is None:
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ok = self._run_guarded(self._session.evaluate_oos)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if not ok:
+            return
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._tabs.setCurrentWidget(self._metrics_panel)
+        self._refresh_session_indicator()
+        if self._logger is not None:
+            self._logger.info("[gui] OOS evaluation done")
+
+    def _on_load_oot(self) -> None:
+        """Model > Load OOT Cohort: pick a CSV, load, then evaluate."""
+        if self._session is None:
+            return
+        path, _filt = QFileDialog.getOpenFileName(
+            self, tr("dlg_open_dataset_title"), "",
+            tr("dlg_open_dataset_filter"),
+        )
+        if not path:
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ok = self._run_guarded(self._load_oot_pipeline, path)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if not ok:
+            return
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._tabs.setCurrentWidget(self._metrics_panel)
+        self._refresh_session_indicator()
+        if self._logger is not None:
+            self._logger.info("[gui] OOT loaded and evaluated: %s", path)
+
+    def _load_oot_pipeline(self, path: str) -> None:
+        self._session.load_oot(path)
+        self._session.evaluate_oot()
 
     def _switch_language(self, lang: str) -> None:
         set_language(lang)
