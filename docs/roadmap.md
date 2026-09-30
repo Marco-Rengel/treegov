@@ -60,8 +60,8 @@ OpenCode el 27/09/2026; ver `docs/audit_log.md`).
 | 2.3.d Backend de reporting | ✅ | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` + 6 tests |
 | 2.3.e.1 Normalización de semáforos | ✅ | Alfabeto backend en inglés (`STABLE`/`MODERATE`/`UNSTABLE`/`UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE`) |
 | 2.3.e.2 Claves i18n por estado | ✅ | Renombrado `status_green/yellow/red` → `status_stable/moderate/unstable` + 4 claves nuevas |
-| 2.3.e.3 Tokens QSS semánticos | ⏳ Próxima | Colores semánticos en `theme.py` + `styles.qss` |
-| 2.3.e.4 MetricsPanel funcional | ⏳ | UI del panel con badges de estado |
+| 2.3.e.3 Tokens QSS semánticos | ✅ | 4 tokens (`STATUS_OK/WARN/CRIT/UNKNOWN`) en ambas paletas + 4 selectores QSS |
+| 2.3.e.4 MetricsPanel funcional | ⏳ Próxima | UI del panel con badges de estado consumiendo el DTO del backend |
 | 2.3.e.5 Cableado MainWindow ↔ MetricsPanel | ⏳ | Handlers de menú + refresco del panel |
 | 2.3.f Tests E2E + cierre | ⏳ | Suite completa + audit_log + roadmap + estado |
 

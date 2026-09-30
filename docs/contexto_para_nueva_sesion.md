@@ -30,8 +30,8 @@
 | 2.3.d | Backend de reporting (reporting.py + Session + tests) | ✅ |
 | 2.3.e.1 | Normalización de semáforos (alfabeto en inglés) | ✅ |
 | 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ✅ |
-| 2.3.e.3 | Tokens QSS semánticos | ⏳ Próxima |
-| 2.3.e.4 | MetricsPanel funcional | ⏳ |
+| 2.3.e.3 | Tokens QSS semánticos | ✅ |
+| 2.3.e.4 | MetricsPanel funcional | ⏳ Próxima |
 | 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ |
 | 2.3.f | Tests E2E + cierre | ⏳ |
 | 2.4 | Reportes + integración | ⏳ |
@@ -109,27 +109,33 @@ WSL (bash):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.e.3)
+## Próximos pasos (Fase 2.3.e.4)
 
-**Objetivo:** tokens QSS semánticos de color en `theme.py` + `styles.qss`
-para que el panel OOS/OOT pueda mostrar badges de estado.
+**Objetivo:** que `MetricsPanel` consuma el DTO de `Session.get_oos_oot_report()`
+y renderice las métricas OOS/OOT con badges de estado.
 
 **Requisitos:**
 
-- Añadir 4 tokens semánticos a `PALETTES` (light y dark) en `frontend_v3/theme.py`:
-  - `STATUS_OK` (verde accesible)
-  - `STATUS_WARN` (ámbar accesible)
-  - `STATUS_CRIT` (rojo accesible)
-  - `STATUS_UNKNOWN` (gris neutro)
-- Añadir los selectores QSS correspondientes en `frontend_v3/resources/styles.qss`:
-  `QLabel[status="ok"]`, `QLabel[status="warn"]`, `QLabel[status="crit"]`,
-  `QLabel[status="unknown"]`.
-- Verificar que `render_stylesheet()` no falla (fail-fast por tokens faltantes).
+- `MetricsPanel.set_report(dto: dict | None) -> None` que reciba el DTO y
+  lo guarde.
+- Construir la UI del panel: secciones OOS y OOT con etiquetas y valores.
+- Renderizar badges de estado usando `QLabel` con `setProperty("status", ...)`
+  y los selectores QSS de `styles.qss` (`ok`, `warn`, `crit`, `unknown`).
+- Mapear los strings del alfabeto backend a la propiedad `status`:
+  - `"STABLE"` → `ok`
+  - `"MODERATE"` → `warn`
+  - `"UNSTABLE"` → `crit`
+  - `"CRITICAL"` → `crit`
+  - `"WARNING"` → `warn`
+  - `"NONE"` → `ok`
+  - `"UNDETERMINED"` → `unknown`
+- Consumir las claves i18n de estado (`tr(f"status_{...}")`) para el texto
+  visible.
+- Sin importar numpy/pandas/scipy (sala limpia).
 
 **Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
 
 **Sub-pasos posteriores:**
-- 2.3.e.4 MetricsPanel funcional
 - 2.3.e.5 Cableado MainWindow ↔ MetricsPanel
 - 2.3.f Tests E2E + cierre
 - 2.4 Reportes + integración

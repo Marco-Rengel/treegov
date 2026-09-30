@@ -814,3 +814,41 @@ claves viejas. Se rechazó con `n` — verificado previamente que no las usa.
 Comportamiento del agente: correcto (auditoría proactiva).
 
 **Tests**: 167/167 PASSED.
+
+### 29/09/2026 — Fase 2.3.e.3: tokens QSS semánticos de estado
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/theme.py, frontend_v3/resources/styles.qss
+
+**Motivación**:
+Tras 2.3.e.1 (alfabeto de semáforos) y 2.3.e.2 (claves i18n por estado),
+el panel OOS/OOT necesita poder pintar badges visuales de estado
+(verde/ámbar/rojo/gris) sin hardcodear colores en `metrics_panel.py`.
+Los tokens semánticos permiten que los colores cambien con el tema
+(light/dark) sin tocar el código del panel.
+
+**Cambios aplicados**:
+- `theme.py`: 4 tokens nuevos en cada paleta (`STATUS_OK`, `STATUS_WARN`,
+  `STATUS_CRIT`, `STATUS_UNKNOWN`). Valores Material Design 700 en light,
+  400 en dark — contraste AA garantizado.
+- `styles.qss`: 4 selectores nuevos al final
+  (`QLabel[status="ok"|"warn"|"crit"|"unknown"]`) con `color: $STATUS_*`
+  y `font-weight: bold`.
+
+**Verificación de fail-fast**:
+`render_stylesheet('light')` y `render_stylesheet('dark')` ejecutados
+manualmente sin ValueError. Ambos retornan QSS completo (1477 caracteres).
+La validación de `theme.py` (tokens del template ausentes en la paleta)
+no se activó, confirmando que ambos bloques quedaron consistentes.
+
+**Verificación de no-regresión**:
+Suite completa 167/167 PASSED.
+
+**Comportamiento de Aider**:
+El agente detectó y comunicó proactivamente que "los tokens $STATUS_*
+ya existen en ambas paletas, por lo que la validación fail-fast seguirá
+pasando" — auditoría correcta sin haber sido solicitada.
+
+**Tests**: 167/167 PASSED.
