@@ -46,33 +46,33 @@
 - PSI, CSI, Gini Drop con semáforos Basel/EBA (`backend_v3/stability.py`)
 - Mnemonics de teclado ("&") para menús
 
-**Metodología de trabajo (actualizada 27/09/2026):**
+**Metodología de trabajo (actualizada 29/09/2026):**
 
-La Fase 2.3 se divide en sub-pasos cortos. Los sub-pasos de implementación
-se ejecutan con **Gemini 3.8 Flash** (Google AI Studio) como proveedor
-principal. Los sub-pasos de diseño/auditoría pueden usar Kimi K3 (NVIDIA NIM)
-**sin tool calls** (ver `docs/audit_log.md`, entrada 27/09/2026).
+La Fase 2.3 se divide en sub-pasos cortos. Todas las sub-fases se ejecutan
+con **Aider 0.86.2 + Kimi K3 (NVIDIA NIM)** con tool calls (migrado desde
+OpenCode el 27/09/2026; ver `docs/audit_log.md`).
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
 | 2.3.a Diseño estructural | ✅ | Dónde encaja el panel; archivos a crear/modificar |
 | 2.3.b Claves i18n | ✅ | 23 claves EN/ES con paridad estricta |
 | 2.3.c Esqueleto del panel | ✅ | Clase widget + 3 tests de construcción |
-| 2.3.d Backend de reporting | 🟡 Parcial | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` implementados. Faltan `tests/test_reporting.py`. |
-| 2.3.e Semáforos y visualización | ⏳ Próxima | Uso de `traffic_light()` / `gini_drop_alert()` + QSS en `metrics_panel.py` |
+| 2.3.d Backend de reporting | ✅ | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` + 6 tests |
+| 2.3.e.1 Normalización de semáforos | ✅ | Alfabeto backend en inglés (`STABLE`/`MODERATE`/`UNSTABLE`/`UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE`) |
+| 2.3.e.2 Claves i18n por estado | ✅ | Renombrado `status_green/yellow/red` → `status_stable/moderate/unstable` + 4 claves nuevas |
+| 2.3.e.3 Tokens QSS semánticos | ⏳ Próxima | Colores semánticos en `theme.py` + `styles.qss` |
+| 2.3.e.4 MetricsPanel funcional | ⏳ | UI del panel con badges de estado |
+| 2.3.e.5 Cableado MainWindow ↔ MetricsPanel | ⏳ | Handlers de menú + refresco del panel |
 | 2.3.f Tests E2E + cierre | ⏳ | Suite completa + audit_log + roadmap + estado |
 
-**Regla de variant y proveedor:**
-- **Gemini 3.8 Flash** (Google AI Studio): implementación, edición de archivos,
-  tests, refactor, documentación. Proveedor principal.
-- **Kimi K3** (NVIDIA NIM): revisión conceptual y arquitectura **sin tool calls**
-  (tiene un bug conocido que impide tool calls fiables; ver audit_log).
-- **Variant de OpenCode**: `high` por defecto; `max` solo si el proveedor
-  activo lo soporta bien.
+**Regla de proveedor:**
+- **Aider 0.86.2 + Kimi K3 (NVIDIA NIM)**: implementación, edición de archivos,
+  tests, refactor, documentación.
+- **Instalación:** global vía `pipx` con Python 3.11.9 (fuera del `.venv/`).
 
 Cada sub-paso se audita antes de pasar al siguiente. Verificación manual
-obligatoria (`Get-Item`, `Select-String`, `pytest`, `git status`) tras cada
-tarea de OpenCode.
+obligatoria (`python -m pytest tests -q`, `git status`, `git diff` del
+archivo tocado) tras cada tarea de Aider.
 
 ### 🟡 Phase 2.4 — Reports + integration
 **Priority: MEDIUM**

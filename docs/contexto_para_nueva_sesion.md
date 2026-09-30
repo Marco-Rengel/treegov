@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 27/09/2026
+**Fecha de última actualización:** 29/09/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -29,8 +29,8 @@
 | 2.3.c | Esqueleto del panel + 3 tests | ✅ |
 | 2.3.d | Backend de reporting (reporting.py + Session + tests) | ✅ |
 | 2.3.e.1 | Normalización de semáforos (alfabeto en inglés) | ✅ |
-| 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ⏳ Próxima |
-| 2.3.e.3 | Tokens QSS semánticos | ⏳ |
+| 2.3.e.2 | i18n: renombrar claves y añadir nuevas | ✅ |
+| 2.3.e.3 | Tokens QSS semánticos | ⏳ Próxima |
 | 2.3.e.4 | MetricsPanel funcional | ⏳ |
 | 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ⏳ |
 | 2.3.f | Tests E2E + cierre | ⏳ |
@@ -91,6 +91,7 @@ WSL (bash):
 | **Privacidad** | No enviar datos bancarios reales ni credenciales a APIs gratuitas. |
 | **Pegado en terminal** | A veces duplica contenido o deja caracteres colgando. Escribir comandos cortos a mano. |
 | `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
+| **Placeholder de API key** | Si pegas `$env:NVIDIA_NIM_API_KEY = "nvapi-..."` literal, Aider devuelve 403. Verificar con `.Length` (~70 caracteres) y `.Substring(0, 10)` sin duplicar `nvapi-`. |
 
 ## Cómo retomar el trabajo
 
@@ -108,29 +109,26 @@ WSL (bash):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.3.e.2)
+## Próximos pasos (Fase 2.3.e.3)
 
-**Objetivo:** renombrar claves i18n por estado (no por color) y añadir
-claves para los nuevos valores del alfabeto.
+**Objetivo:** tokens QSS semánticos de color en `theme.py` + `styles.qss`
+para que el panel OOS/OOT pueda mostrar badges de estado.
 
 **Requisitos:**
 
-- Renombrar en `frontend_v3/i18n.py`:
-  - `status_green` → `status_stable`
-  - `status_yellow` → `status_moderate`
-  - `status_red` → `status_unstable`
-- Añadir claves nuevas (EN/ES):
-  - `status_undetermined`
-  - `status_critical`
-  - `status_warning`
-  - `status_none`
-- Actualizar tests que referencien las claves viejas.
-- Actualizar `docs/audit_log.md` al cierre.
+- Añadir 4 tokens semánticos a `PALETTES` (light y dark) en `frontend_v3/theme.py`:
+  - `STATUS_OK` (verde accesible)
+  - `STATUS_WARN` (ámbar accesible)
+  - `STATUS_CRIT` (rojo accesible)
+  - `STATUS_UNKNOWN` (gris neutro)
+- Añadir los selectores QSS correspondientes en `frontend_v3/resources/styles.qss`:
+  `QLabel[status="ok"]`, `QLabel[status="warn"]`, `QLabel[status="crit"]`,
+  `QLabel[status="unknown"]`.
+- Verificar que `render_stylesheet()` no falla (fail-fast por tokens faltantes).
 
 **Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
 
 **Sub-pasos posteriores:**
-- 2.3.e.3 Tokens QSS semánticos
 - 2.3.e.4 MetricsPanel funcional
 - 2.3.e.5 Cableado MainWindow ↔ MetricsPanel
 - 2.3.f Tests E2E + cierre

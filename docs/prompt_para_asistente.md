@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 27/09/2026
+**Última actualización:** 29/09/2026
 
 ---
 
@@ -68,11 +68,12 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - 2.3.a/b/c: ✅
   - 2.3.d Backend (reporting.py + tests): ✅
   - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
-  - 2.3.e.2 i18n: ⏳ Próxima
-  - 2.3.e.3–2.3.e.5, 2.3.f: ⏳
+  - **2.3.e.2 Claves i18n por estado:** ✅ (29/09/2026)
+  - 2.3.e.3 Tokens QSS semánticos: ⏳ Próxima
+  - 2.3.e.4–2.3.e.5, 2.3.f: ⏳
 - **Suite de tests:** 167/167 PASSED.
-- **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM.
-- **Próximo paso:** 2.3.e.2 (renombrar claves i18n).
+- **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
+- **Próximo paso:** 2.3.e.3 (tokens QSS semánticos en `theme.py` + `styles.qss`).
 
 ---
 
@@ -83,12 +84,15 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta de desarrollo (actualizado 27/09/2026)
+### Herramienta de desarrollo (actualizado 29/09/2026)
 - **Aider 0.86.2** con `nvidia_nim/moonshotai/kimi-k3`. Reemplaza a OpenCode.
 - **Motivo del cambio:** bug de protocolo en OpenCode (ver `audit_log.md` 27/09/2026) que bloqueaba tool calls con Gemini y con Kimi.
-- **Atribución actualizada:** el componente dominante del fallo era OpenCode, no NIM ni Kimi K3. Aider completa los ciclos de tool calls sin fallos en las sesiones del 27/09/2026.
-- **Configuración:** `.aider.conf.yml` (no versionado) + `~/.aider.model.metadata.json`.
-- **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión.
+- **Atribución actualizada:** el componente dominante del fallo era OpenCode, no NIM ni Kimi K3. Aider completa los ciclos de tool calls sin fallos.
+- **Instalación:** global vía `pipx` con Python 3.11.9 (fuera del `.venv/` del proyecto; migrado el 28/09/2026).
+- **Configuración personal:** `.aider.conf.yml` (no versionado).
+- **Plantilla versionada:** `.aider.conf.example.yml`.
+- **Metadata de modelos:** `~/.aider.model.metadata.json` (context window Kimi K3: 1M tokens).
+- **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión. Si se pega el placeholder `nvapi-...` por error, Aider devuelve 403; la longitud real de la key es ~70 caracteres.
 
 ### Privacidad
 - NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
@@ -124,7 +128,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1 completada (167/167 tests). Herramienta: Aider + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.2 (i18n). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, 2.3.e.1 y 2.3.e.2 completadas (167/167 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.3.e.3 (tokens QSS semánticos). ¿Qué necesitas para darme contexto?"
 
 ---
 

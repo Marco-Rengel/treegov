@@ -773,3 +773,44 @@ motivo.
 - Plantilla `.aider.conf.example.yml` versionada para colaboradores.
 
 **Tests**: 167/167 (verificado tras la migración).
+
+### 29/09/2026 — Fase 2.3.e.2: claves i18n por estado
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/i18n.py
+
+**Motivación**:
+La Fase 2.3.e.1 normalizó el alfabeto de semáforos del backend
+(`STABLE`/`MODERATE`/`UNSTABLE`/`UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE`),
+pero las claves i18n del frontend seguían nombradas por color
+(`status_green`/`status_yellow`/`status_red`). Un nombre por color
+envejece mal si se cambia la paleta. La Fase 2.3.e.2 renombra las claves
+por estado y añade las 4 que faltaban para cubrir el alfabeto completo.
+
+**Cambios aplicados** (en cada bloque "en" y "es"):
+- Renombradas: `status_green` → `status_stable`,
+  `status_yellow` → `status_moderate`, `status_red` → `status_unstable`.
+- Añadidas: `status_undetermined`, `status_critical`, `status_warning`,
+  `status_none`.
+- Valores de texto preservados: `STABLE`/`MODERATE`/`UNSTABLE` (EN);
+  `ESTABLE`/`MODERADO`/`INESTABLE` (ES). Nuevos:
+  `UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE` (EN);
+  `INDETERMINADO`/`CRÍTICO`/`PREVENTIVO`/`SIN ALERTA` (ES).
+
+**Verificación previa**:
+`Get-ChildItem` sobre `backend_v3/` y `frontend_v3/` confirmó que las
+claves viejas solo existían en `i18n.py`. Ninguna otra parte del código
+las referenciaba, por lo que el renombrado no rompe contratos.
+
+**Paridad EN/ES**:
+Ambos bloques contienen las mismas 7 claves de estado. Convención del
+proyecto respetada.
+
+**Aviso de Aider (no aplicado)**:
+Aider sugirió añadir `metrics_panel.py` al chat por si referenciaba las
+claves viejas. Se rechazó con `n` — verificado previamente que no las usa.
+Comportamiento del agente: correcto (auditoría proactiva).
+
+**Tests**: 167/167 PASSED.
