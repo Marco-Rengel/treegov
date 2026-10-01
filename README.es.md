@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 167/167 passing
+**Suite de tests**: 178/178 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -110,8 +110,10 @@ TreeGov/
 ├── README.md                # README principal (EN)
 ├── README.es.md             # Este archivo (ES)
 ├── AGENTS.md                # Instrucciones operativas para agentes IA
+├── CONVENTIONS.md           # Convenciones operativas para Aider
 ├── LICENSE                  # Apache 2.0
 ├── .gitignore               # Exclusiones de Git
+├── .aiderignore             # Exclusiones del repo-map de Aider
 └── .treegovrules            # Reglas de gobernanza para agentes IA
 ```
 
@@ -154,13 +156,13 @@ TreeGov/
 | **1.2** | Evaluación OOS + poda coste-complejidad | Completada |
 | **1.3** | Validación OOT + monitoreo PSI/CSI | Completada |
 | **2.0-2.2** | GUI con PySide6: esqueleto, wizard transaccional, visor de árbol | Completada |
-| **2.3** | Panel de métricas OOS/OOT | En progreso |
-| **2.4** | Reportes + integración | Planificada |
+| **2.3** | Panel de métricas OOS/OOT | Completada |
+| **2.4** | Reportes + integración | En progreso |
 | **3** | Reportes analíticos + capa MCP para agentes LLM | Planificada |
 | **4** | Scoring batch + champion-challenger | Planificada |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planificada |
 
-**Suite de tests: 167/167 passing.**
+**Suite de tests: 178/178 passing.**
 
 ---
 
