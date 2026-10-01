@@ -114,28 +114,41 @@ WSL (bash):
 
 ## Próximos pasos (Fase 2.4)
 
-**Objetivo:** Reportes + integración. La Fase 2.3 (panel OOS/OOT) está
-completa; 2.4 añade salidas analíticas sobre el modelo ya entrenado.
+**Objetivo:** panel de reportes analíticos con gains table, matriz de
+clasificación y exportación HTML autocontenido.
 
-**Requisitos tentativos (afinar antes de arrancar):**
+**Sub-pasos:**
 
-- Tabla de ganancias (gains table) y matriz de clasificación.
-- Exportación HTML del reporte vía `QTextBrowser`.
-- Tests E2E adicionales para los flujos de exportación.
-- Screenshots para el README.
+| Sub-paso | Estado | Alcance |
+|---|---|---|
+| 2.4.a Diseño estructural | ⏳ Próxima | Pestaña nueva; archivos a crear; claves i18n |
+| 2.4.b Backend de reportes | ⏳ | `GainsTable` + `ClassificationMatrix` + tests |
+| 2.4.c UI de reportes | ⏳ | `reports_panel.py`: tabla Qt + matriz + export HTML |
+| 2.4.d Tests E2E + cierre | ⏳ | Tests E2E + screenshot + docs |
 
-**Sub-pasos previstos (por definir en la próxima sesión):**
-- 2.4.a Diseño estructural del módulo de reportes
-- 2.4.b Backend de agregación (si hace falta)
-- 2.4.c UI de exportación
-- 2.4.d Tests + cierre
+**Diseño detallado:** ver `docs/roadmap.md` sección Fase 2.4.
 
-**Herramienta:** Aider + Kimi K3 vía NVIDIA NIM.
+**Decisiones clave acordadas (30/09/2026):**
+- `GainsTable` default `by="leaf"` (una fila por hoja), ordenadas por PD
+  ascendente (mejor primero, convención de burós).
+- Vista alternativa `by="bucket"` parametrizable (deciles/veintiles/N).
+- Tie-breaking default `preserve` (determinista). `random` disponible con
+  semilla, nunca default.
+- `ClassificationMatrix` con `threshold=0.5` por defecto, parametrizable.
+- HTML autocontenido (sin assets externos) vía `QTextBrowser`.
+- Tabla con `setSortingEnabled(True)`: usuario puede reordenar visualmente
+  sin afectar los cálculos Cum/Decum.
+- Sala limpia: cero numpy/pandas/scipy en frontend.
 
-**Deuda de infraestructura agendada:**
-- `.aider.conf.example.yml` ya está versionado. No hay pendientes.
-- Vigilar el warning "summarizer unexpectedly failed" si reaparece con
-  archivos grandes; mitigado con `~/.aider.model.metadata.json`.
+**Deudas documentadas para fases futuras:**
+- Fase 3.x — Soporte multiclase en el flujo del árbol (motores ya lo
+  soportan; `TreeBuilder`/`TreeNode` están binarios).
+- Fase 3.x — Ponderación por muestra (flujo de buró).
+- Fase 3.x — Categorías adicionales (Indet/Insufficient/No Perf).
+
+**Herramienta:** Aider + Kimi K3. **Nota:** NVIDIA NIM ha mostrado
+inestabilidad recurrente (504). Se está evaluando migrar a la API de pago
+de Moonshot AI (creadores de Kimi K3) para eliminar esta dependencia.
 
 **Ideas del experto (evaluar en 2.4 o 3):**
 
