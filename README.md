@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 167/167 passing
+**Test suite**: 178/178 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -110,8 +110,10 @@ TreeGov/
 ├── README.md                # This file (EN)
 ├── README.es.md             # Spanish translation
 ├── AGENTS.md                # Operating instructions for AI agents
+├── CONVENTIONS.md           # Operational conventions for Aider
 ├── LICENSE                  # Apache 2.0
 ├── .gitignore               # Git exclusions
+├── .aiderignore             # Aider repo-map exclusions
 └── .treegovrules            # Governance rules for AI agents
 ```
 
@@ -154,13 +156,13 @@ TreeGov/
 | **1.2** | OOS evaluation + cost-complexity pruning | Completed |
 | **1.3** | OOT validation + PSI/CSI stability monitoring | Completed |
 | **2.0-2.2** | GUI with PySide6: skeleton, transactional wizard, tree viewer | Completed |
-| **2.3** | OOS/OOT metrics panel | In progress |
-| **2.4** | Reports + integration | Planned |
+| **2.3** | OOS/OOT metrics panel | Completed |
+| **2.4** | Reports + integration | In progress |
 | **3** | Analytical reports + MCP layer for LLM agents | Planned |
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 167/167 passing.**
+**Test suite: 178/178 passing.**
 
 ---
 
