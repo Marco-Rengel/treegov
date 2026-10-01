@@ -75,7 +75,9 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
 - **Suite de tests:** 178/178 PASSED.
 - **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
-- **Próximo paso:** 2.4 (Reportes + integración).
+- **Próximo paso:** 2.4 (Reportes + integración). Diseño acordado (30/09):
+  gains table por hoja (default) + buckets parametrizables, matriz de
+  clasificación, HTML autocontenido. Detalles en `docs/roadmap.md`.
 
 ---
 
@@ -96,7 +98,11 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Metadata de modelos:** `~/.aider.model.metadata.json` (context window Kimi K3: 1M tokens).
 - **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión. Si se pega el placeholder `nvapi-...` por error, Aider devuelve 403; la longitud real de la key es ~70 caracteres.
 - **Prompts a Aider**: máximo ~100 líneas de contenido por insert. Bloques mayores se trocean en 2-3 prompts consecutivos para evitar timeout 504 de NVIDIA NIM. Los prompts quirúrgicos con referencias exactas a bloques/líneas funcionan bien incluso a 90 líneas; los que insertan contenido textual largo son más frágiles.
-- **504 timeout**: si aparece durante una ejecución de Aider, esperar 2-5 min y reintentar. Es saturación del servidor NVIDIA, no fallo del prompt ni del proyecto.
+- **Inestabilidad de NVIDIA NIM**: 504 recurrentes (30/09/2026) confirman
+  que el free tier no es fiable para uso sostenido. **En evaluación migrar
+  a la API de pago de Moonshot AI** (creadores de Kimi K3, $3/$15 por
+  millón de tokens, ~$0.50 por sesión con cache-hit). Alternativa:
+  OpenRouter u otro proveedor. Pendiente de decisión 01/10/2026.
 
 ### Privacidad
 - NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
