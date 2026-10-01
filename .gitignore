@@ -53,3 +53,4 @@ archive/
 .aider*
 
 !.aider.conf.example.yml
+!.aider.conf.example.yml
