@@ -1,0 +1,13 @@
+# Aider ignore — carpetas que no necesitan indexarse en el repo-map.
+archive/
+logs/
+data/
+.venv/
+.venv_linux/
+.venv_3.14_backup/
+.opencode/
+.opencode-backup-*/
+.pytest_cache/
+__pycache__/
+.aider.tags.cache.v4/
+*.log
