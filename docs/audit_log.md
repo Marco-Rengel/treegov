@@ -997,3 +997,65 @@ excepciones son:
   al cierre de esta sesión. Documentar la excepción en la propia entrada.
 
 **Tests**: 178/178 PASSED.
+
+---
+
+### 30/09/2026 — Optimización del flujo de trabajo con Aider
+
+**Estado**: Aprobado.
+**Modelo**: N/A (configuración de infraestructura).
+**Revisor**: Marco Rengel
+**Artefactos**: CONVENTIONS.md (nuevo), .aiderignore (nuevo),
+.aider.conf.yml (local, no versionado)
+
+**Motivación**:
+Tras la sesión del 29/09, se identificaron tres mejoras que reducen la
+fricción con Aider sin cambiar el flujo de trabajo:
+1. Repetir reglas del proyecto en cada prompt es propenso a omisiones y
+   alarga los prompts (mayor riesgo de 504).
+2. Aider indexa carpetas que no se tocan (`archive/`, `logs/`, `data/`,
+   venvs), gastando tokens de repo-map.
+3. No existía un documento compacto de convenciones operativas (el
+   `.treegovrules` es más amplio y conceptual).
+
+**Cambios aplicados**:
+- `CONVENTIONS.md` (nuevo, ~56 líneas): reglas operativas que Aider lee
+  automáticamente. Incluye sala limpia, verificación obligatoria,
+  convenciones de comentarios, caja blanca, límite de prompts, y flujo
+  de trabajo.
+- `.aiderignore` (nuevo): excluye del repo-map las carpetas `archive/`,
+  `logs/`, `data/`, `.venv*/`, `.opencode*/`, `.pytest_cache/`,
+  `__pycache__/`, `.aider.tags.cache.v4/`, `*.log`.
+- `.aider.conf.yml` (local): añadida línea `read: CONVENTIONS.md` para
+  que Aider cargue las convenciones como contexto de solo lectura.
+
+**Verificación**:
+- Aider arranca con `Readonly: CONVENTIONS.md` en el encabezado.
+- El conteo de archivos del repo pasó de 69 a 64 (los excluidos por
+  `.aiderignore` ya no aparecen).
+- Sin warnings de context window ni de env vars.
+
+**Incidentes menores durante la sesión**:
+1. El commit `71978c5` decía "add .aiderignore with gitignore exception"
+   pero solo commiteó `.gitignore` (el archivo `.aiderignore` seguía
+   ignorado por el patrón `.aider*`). El commit `da09676` corrigió la
+   parte factual, pero el mensaje del `71978c5` queda desactualizado en
+   el historial.
+2. La API key se pegó accidentalmente en un prompt de Aider (por confundir
+   el prompt `>` con PowerShell). La key quedó visible en el historial
+   local de Aider. Recomendación: regenerar la key en NVIDIA.
+
+**Lección operativa**:
+Los mensajes de commit deben reflejar el contenido REAL del commit. Si
+al hacer `git add` Git advierte que un archivo está ignorado, el commit
+NO debe hacerse hasta resolver la excepción — el mensaje no puede
+anticipar lo que se "iba a" añadir.
+
+**Excepción al flujo de docs por Aider**:
+Esta entrada se redactó manualmente en VS Code (no vía Aider) por
+indisponibilidad del servidor NVIDIA NIM: dos intentos consecutivos con
+Aider devolvieron 504 timeout, seguidos de una respuesta corrupta
+(`!!!!!` en lugar del diff). La regla adoptada el 29/09 contempla
+explícitamente esta excepción.
+
+**Tests**: 178/178 PASSED (sin cambios en código).
