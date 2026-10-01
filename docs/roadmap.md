@@ -77,9 +77,67 @@ archivo tocado) tras cada tarea de Aider.
 
 ### 🟡 Phase 2.4 — Reports + integration
 **Priority: MEDIUM**
-- Gains table, classification matrix.
-- HTML export via QTextBrowser.
-- End-to-end GUI tests + screenshots for README.
+
+**Objetivo:** panel de reportes analíticos con gains table, matriz de
+clasificación y exportación HTML autocontenido.
+
+**Sub-pasos:**
+
+| Sub-paso | Estado | Alcance |
+|---|---|---|
+| 2.4.a Diseño estructural | ⏳ Próxima | Ubicación pestaña nueva en QTabWidget; archivos a crear/modificar; claves i18n |
+| 2.4.b Backend de reportes | ⏳ | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; tests con valores verificados a mano |
+| 2.4.c UI de reportes | ⏳ | `frontend_v3/reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
+| 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
+
+**Diseño acordado (30/09/2026):**
+
+**`GainsTable`** — salida resumen del modelo:
+- `by="leaf"` (default): una fila por hoja, ordenadas por PD ascendente
+  (mejor primero).
+- `by="bucket", n_buckets=10`: agrupa filas en N buckets ordenados por PD.
+  Parametrizable (deciles, veintiles, o N mayor para bases grandes).
+- `tie="preserve"` (default, determinista): empates de PD van juntos al
+  mismo bucket. `tie="random"` con `seed` disponible como opción explícita
+  — nunca default, porque viola el principio de determinismo.
+- Orden default: PD ascendente (mejor primero, coherente con convención
+  de burós).
+- Columnas: score/leaf, total (Int/Cum/Decum), good (Int/Cum/Decum),
+  bad (Int/Cum/Decum), bad_rate (Int/Cum/Decum), lift acumulado.
+- Totales calculados: KS, ROC (AUC), Gini = 2·AUC−1.
+- Nota al pie: `n_excluded` (filas sin PD asignado por `unseen_policy`).
+
+**`ClassificationMatrix`** — matriz 2×2:
+- `threshold=0.5` por defecto.
+- Parametrizable en la UI (input numérico).
+- Extensible a umbral óptimo por costo (IFRS 9, §8.6 de methodology).
+- Métricas: TP, TN, FP, FN, precisión, recall, F1, tasa de malos
+  capturada.
+
+**UI (`reports_panel.py`):**
+- Pestaña nueva después de "OOS/OOT".
+- Toggle: partición (OOS / train / OOT).
+- Toggle: vista (por hoja / por bucket con N configurable).
+- Tabla Qt con `setSortingEnabled(True)`: headers clicables permiten
+  reordenar visualmente sin afectar los cálculos Cum/Decum (que se
+  computan en backend con el orden natural).
+- Botón "Export HTML": QTextBrowser renderiza HTML autocontenido (sin
+  assets externos). Portable por email y archivable.
+- Sala limpia: cero numpy/pandas/scipy.
+
+**Deudas documentadas para fases futuras:**
+
+- **Fase 3.x — Soporte multiclase en el flujo del árbol.** Los motores
+  (CHAID, CRT) ya lo soportan; `TreeBuilder`, `TreeNode.pd_final` y
+  `Session.fix_spec` están restringidos a binario. Requeriría cambiar
+  el tipo de `pd_final` a vector de K clases. Aplicable a salud,
+  ciencias sociales (referente: SPSS).
+- **Fase 3.x — Ponderación por muestra.** Para replicar flujo de buró
+  (Equifax, Experian) donde la muestra está sesgada y se reajusta por
+  pesos. No aplica a TreeGov hoy (datasets completos).
+- **Fase 3.x — Categorías adicionales.** `Indet`, `Insufficient`,
+  `No Perf` como metadatos de población (no entran al modelo). Relevante
+  cuando se integre con sistemas de buró.
 
 ### ⏳ Phase 3 — Analytical reports + MCP layer
 **Priority: MEDIUM**
