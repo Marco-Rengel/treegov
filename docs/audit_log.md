@@ -1059,3 +1059,33 @@ Aider devolvieron 504 timeout, seguidos de una respuesta corrupta
 explícitamente esta excepción.
 
 **Tests**: 178/178 PASSED (sin cambios en código).
+
+---
+
+### 30/09/2026 — Sincronización de READMEs tras cierre de Fase 2.3
+
+**Estado**: Aprobado.
+**Modelo**: N/A (edición manual en VS Code).
+**Revisor**: Marco Rengel
+**Artefactos**: README.md, README.es.md
+
+**Motivación**:
+Los READMEs quedaron desactualizados tras el cierre de Fase 2.3
+(29/09/2026). Mantenían el conteo de tests en 167/167 y la tabla de fases
+con 2.3 "In progress" y 2.4 "Planned". Además, la estructura del
+repositorio no reflejaba los archivos nuevos `CONVENTIONS.md` y
+`.aiderignore` añadidos ese mismo día.
+
+**Cambios aplicados** (en ambos idiomas):
+- Conteo de tests: 167/167 → 178/178 (header y cierre).
+- Tabla de fases: Fase 2.3 "In progress" → "Completed"; Fase 2.4
+  "Planned" → "In progress".
+- Estructura del repositorio: añadidas entradas para `CONVENTIONS.md` y
+  `.aiderignore`.
+
+**Excepción al flujo de docs por Aider**:
+Edición manual en VS Code por indisponibilidad del servidor NVIDIA NIM
+(504 recurrentes durante la sesión). Misma excepción documentada en la
+entrada "Optimización del flujo de trabajo con Aider" del 30/09/2026.
+
+**Tests**: 178/178 PASSED (sin cambios en código).
