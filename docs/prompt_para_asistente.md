@@ -73,9 +73,10 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - **2.3.e.4 MetricsPanel funcional:** ✅ (29/09/2026)
   - **2.3.e.5 Cableado MainWindow ↔ MetricsPanel:** ✅ (29/09/2026)
   - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
+  - **Fase 2.4 (Reportes + integración):** en curso. 2.4.a completa (01/10/2026).
 - **Suite de tests:** 178/178 PASSED.
 - **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
-- **Próximo paso:** 2.4 (Reportes + integración). Diseño acordado (30/09):
+- **Próximo paso:** 2.4.b (Backend de reportes: `GainsTable` + `ClassificationMatrix`). Diseño acordado (30/09):
   gains table por hoja (default) + buckets parametrizables, matriz de
   clasificación, HTML autocontenido. Detalles en `docs/roadmap.md`.
 
@@ -88,7 +89,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta de desarrollo (actualizado 29/09/2026)
+### Herramienta de desarrollo (actualizado 01/10/2026)
 - **Aider 0.86.2** con `nvidia_nim/moonshotai/kimi-k3`. Reemplaza a OpenCode.
 - **Motivo del cambio:** bug de protocolo en OpenCode (ver `audit_log.md` 27/09/2026) que bloqueaba tool calls con Gemini y con Kimi.
 - **Atribución actualizada:** el componente dominante del fallo era OpenCode, no NIM ni Kimi K3. Aider completa los ciclos de tool calls sin fallos.
@@ -103,6 +104,13 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   a la API de pago de Moonshot AI** (creadores de Kimi K3, $3/$15 por
   millón de tokens, ~$0.50 por sesión con cache-hit). Alternativa:
   OpenRouter u otro proveedor. Pendiente de decisión 01/10/2026.
+- **Patrones de fallo confirmados (01/10/2026)**: prompts con código
+  literal grande o con múltiples archivos fallan con 504. Reglas nuevas:
+  (1) describir en prosa, no pegar código; (2) un prompt = un archivo.
+  Ver `docs/audit_log.md` entrada 01/10/2026.
+- **`Create new file?` vs `Add file to the chat?`**: la primera debe
+  responderse `y` (aplica el cambio); la segunda `n` (no añadir al
+  contexto salvo que aporte información nueva).
 
 ### Privacidad
 - NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
