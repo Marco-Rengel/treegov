@@ -177,6 +177,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "oos_oot_no_model": "Train a model to compute OOS/OOT metrics.",
         "oos_oot_no_oos": "No OOS sample (partition is not enabled).",
         "oos_oot_no_oot": "No OOT cohort loaded.",
+        "tab_reports_title": "Reports",
+        "reports_no_model": "Train a model to view reports.",
     },
     "es": {
         "window_title": "TreeGov — Risk Segmentation Workbench",
@@ -338,6 +340,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "oos_oot_no_model": "Entrene un modelo para calcular las métricas OOS/OOT.",
         "oos_oot_no_oos": "Sin muestra OOS (partición no habilitada).",
         "oos_oot_no_oot": "Sin cohorte OOT cargada.",
+        "tab_reports_title": "Reportes",
+        "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }
 
