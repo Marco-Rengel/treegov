@@ -121,10 +121,10 @@ clasificación y exportación HTML autocontenido.
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
-| 2.4.a Diseño estructural | ⏳ Próxima | Pestaña nueva; archivos a crear; claves i18n |
-| 2.4.b Backend de reportes | ⏳ | `GainsTable` + `ClassificationMatrix` + tests |
-| 2.4.c UI de reportes | ⏳ | `reports_panel.py`: tabla Qt + matriz + export HTML |
-| 2.4.d Tests E2E + cierre | ⏳ | Tests E2E + screenshot + docs |
+| 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
+| 2.4.b Backend de reportes | ⏳ Próxima | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; tests con valores verificados a mano |
+| 2.4.c UI de reportes | ⏳ | `reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
+| 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
 
 **Diseño detallado:** ver `docs/roadmap.md` sección Fase 2.4.
 
@@ -146,9 +146,11 @@ clasificación y exportación HTML autocontenido.
 - Fase 3.x — Ponderación por muestra (flujo de buró).
 - Fase 3.x — Categorías adicionales (Indet/Insufficient/No Perf).
 
-**Herramienta:** Aider + Kimi K3. **Nota:** NVIDIA NIM ha mostrado
-inestabilidad recurrente (504). Se está evaluando migrar a la API de pago
-de Moonshot AI (creadores de Kimi K3) para eliminar esta dependencia.
+**Herramienta:** Aider + Kimi K3 (NVIDIA NIM). **Nota operativa
+actualizada 01/10/2026:** prompts a Aider con código literal grande o
+múltiples archivos fallan con 504. Reglas nuevas: (1) describir en prosa,
+no pegar código; (2) un prompt = un archivo. Ver `docs/audit_log.md`
+entrada 01/10/2026.
 
 **Ideas del experto (evaluar en 2.4 o 3):**
 
