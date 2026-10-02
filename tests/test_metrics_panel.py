@@ -94,13 +94,14 @@ def test_metrics_panel_retranslate():
     panel.deleteLater()
 
 
-def test_mainwindow_has_three_tabs():
+def test_mainwindow_has_four_tabs():
     _get_app()
     w = MainWindow()
     tabs = w._tabs
     assert tabs is not None
-    assert tabs.count() == 3, f"expected 3 tabs, got {tabs.count()}"
-    # Tab indices: 0=Welcome, 1=Model tree, 2=OOS/OOT
+    assert tabs.count() == 4, f"expected 4 tabs, got {tabs.count()}"
+    assert tabs.tabText(3) == tr("tab_reports_title")
+    # Tab indices: 0=Welcome, 1=Model tree, 2=OOS/OOT, 3=Reports
     assert tabs.tabText(0) == tr("tab_welcome_title")
     assert tabs.tabText(1) == tr("tab_tree_title")
     assert tabs.tabText(2) == tr("tab_oos_oot_title")

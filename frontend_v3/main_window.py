@@ -54,6 +54,7 @@ from frontend_v3.tree_view import (
     node_detail_lines,
 )
 from frontend_v3.metrics_panel import MetricsPanel
+from frontend_v3.reports_panel import ReportsPanel
 from frontend_v3.wizard import ModelWizard
 
 
@@ -131,6 +132,7 @@ class MainWindow(QMainWindow):
         self._tabs.setTabText(0, tr("tab_welcome_title"))
         self._tabs.setTabText(1, tr("tab_tree_title"))
         self._tabs.setTabText(2, tr("tab_oos_oot_title"))
+        self._tabs.setTabText(3, tr("tab_reports_title"))
 
         self._refresh_session_indicator()
         self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
@@ -309,6 +311,10 @@ class MainWindow(QMainWindow):
         self._metrics_panel = MetricsPanel()
         self._metrics_panel.setObjectName("metricsPanel")
         self._tabs.addTab(self._metrics_panel, "")
+
+        self._reports_panel = ReportsPanel()
+        self._reports_panel.setObjectName("reportsPanel")
+        self._tabs.addTab(self._reports_panel, "")
 
         splitter.addWidget(self._left_panel)
         splitter.addWidget(self._tabs)

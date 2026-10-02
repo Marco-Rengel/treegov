@@ -87,8 +87,8 @@ def test_layout_structure():
     assert splitter.widget(0) is w.findChild(QFrame, "leftPanel")
     assert splitter.widget(2) is w.findChild(QFrame, "hudPanel")
     tabs = w.findChild(QTabWidget, "centralTabs")
-    # 3 tabs desde Fase 2.3: Welcome (0) + visor de arbol (1) + OOS/OOT (2)
-    assert tabs is not None and tabs.count() == 3
+    # 4 tabs desde Fase 2.4.a: Welcome (0) + Tree (1) + OOS/OOT (2) + Reports (3)
+    assert tabs is not None and tabs.count() == 4
     w.close()
     w.deleteLater()
 
