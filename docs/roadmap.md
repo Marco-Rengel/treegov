@@ -85,9 +85,9 @@ clasificación y exportación HTML autocontenido.
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
-| 2.4.a Diseño estructural | ⏳ Próxima | Ubicación pestaña nueva en QTabWidget; archivos a crear/modificar; claves i18n |
-| 2.4.b Backend de reportes | ⏳ | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; tests con valores verificados a mano |
-| 2.4.c UI de reportes | ⏳ | `frontend_v3/reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
+| 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
+| 2.4.b Backend de reportes | ⏳ Próxima | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; tests con valores verificados a mano |
+| 2.4.c UI de reportes | ⏳ | `reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
 | 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
 
 **Diseño acordado (30/09/2026):**
