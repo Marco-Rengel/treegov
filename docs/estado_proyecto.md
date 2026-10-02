@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 27/09/2026
+**Fecha de última actualización:** 01/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | Gemini 3.8 Flash (Google AI Studio, principal) + Kimi K3 (NVIDIA NIM, revisión conceptual) |
+| Modelo de IA en desarrollo | Aider 0.86.2 + Kimi K3 vía NVIDIA NIM. Instalado vía pipx con Python 3.11.9. **Pendiente 01/10/2026:** evaluar migración a Moonshot AI (Kimi K3 directo) por inestabilidad recurrente de NIM (504) |
 
 ---
 
@@ -106,21 +106,38 @@ Módulos:
   caliente, recoloreo por tema).
 - Extensión de `main_window.py`: pestaña Tree con HUD de propiedades del nodo.
 
-### Fase 2.3 — Panel de métricas OOS/OOT 🟡 En curso
+### Fase 2.3 — Panel de métricas OOS/OOT ✅ Cerrada 29/09/2026
 
-Sub-fases:
+Sub-fases completas:
 - 2.3.a Diseño estructural ✅
 - 2.3.b 23 claves i18n ✅
 - 2.3.c Esqueleto del panel + 3 tests ✅
-- 2.3.d Backend de reporting (`reporting.py` + `Session.get_oos_oot_report()`) 🟡 Parcial (faltan tests)
-- 2.3.e Semáforos visuales ⏳
-- 2.3.f Tests E2E + cierre ⏳
+- 2.3.d Backend de reporting (`reporting.py` + `Session.get_oos_oot_report()`) + 6 tests ✅
+- 2.3.e.1 Normalización de semáforos (alfabeto backend en inglés) ✅
+- 2.3.e.2 Claves i18n por estado ✅
+- 2.3.e.3 Tokens QSS semánticos ✅
+- 2.3.e.4 MetricsPanel funcional ✅
+- 2.3.e.5 Cableado MainWindow ↔ MetricsPanel ✅
+- 2.3.f Tests E2E + cierre ✅
+
+El panel OOS/OOT está operativo end-to-end: carga datos, entrena,
+evalúa OOS, carga OOT, evalúa, y renderiza badges con colores semánticos
+del tema activo.
+
+### Fase 2.4 — Reportes + integración 🟡 En curso (diseño cerrado 30/09/2026)
+
+Sub-pasos:
+- 2.4.a Diseño estructural ⏳ Próxima
+- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ⏳
+- 2.4.c UI de reportes (`reports_panel.py` + export HTML) ⏳
+- 2.4.d Tests E2E + cierre ⏳
+
+Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
 
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 2.4** — Reportes + integración (tabla de ganancias, exportación HTML, tests e2e GUI)
-- **Fase 3** — Capa MCP + exportación SQL/Python
+- **Fase 3** — Capa MCP + exportación SQL/Python + soporte multiclase en el flujo del árbol + ponderación por muestra + categorías Indet/Insufficient/No Perf
 - **Fase 4** — Scoring batch y champion-challenger
 - **Fase 5** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
 
@@ -135,29 +152,36 @@ Sub-fases:
 
 ### Estructura de directorios
 
+```
 TreeGov/
 ├── backend_v3/ # Capa analítica pura
-├── frontend_v3/ # Capa de presentación PySide6 (app, main_window, wizard, tree_view, metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (161 tests)
+├── frontend_v3/ # Capa de presentación PySide6
+│ # (app, main_window, wizard, tree_view,
+│ # metrics_panel, theme, i18n)
+├── tests/ # Suite de tests (178 tests)
 ├── docs/ # Documentación bilingüe
-│ ├── methodology.md # Metodología matemática (inglés)
-│ ├── api.md # API pública congelada (inglés)
-│ ├── roadmap.md # Plan de fases (inglés)
-│ ├── philosophy.md # Filosofía (inglés)
-│ ├── philosophy.es.md # Filosofía (español)
-│ ├── contexto_para_nueva_sesion.md # Bootstrap entre sesiones (español)
-│ ├── prompt_para_asistente.md # Brief para asistentes IA (español)
-│ └── audit_log.md # Bitácora de auditoría (español)
+│ ├── methodology.md
+│ ├── api.md
+│ ├── roadmap.md
+│ ├── philosophy.md
+│ ├── philosophy.es.md
+│ ├── estado_proyecto.md
+│ ├── contexto_para_nueva_sesion.md
+│ ├── prompt_para_asistente.md
+│ └── audit_log.md
 ├── archive/ # Documentos y código históricos
 ├── data/ # Datasets (solo lectura, excluido de Git)
 ├── logs/ # Logs por corrida (excluido de Git)
 ├── treegov.py # Orquestador headless
 ├── pyproject.toml # Empaquetado
+├── CONVENTIONS.md # Convenciones operativas para Aider
 ├── AGENTS.md # Instrucciones para agentes IA
 ├── README.md # README principal (inglés)
 ├── README.es.md # README en español
+├── .gitignore # Exclusiones de Git
+├── .aiderignore # Exclusiones del repo-map de Aider
 └── .treegovrules # Reglas de gobernanza para agentes IA
-
+```
 
 ---
 
@@ -173,6 +197,8 @@ TreeGov/
 | **Anti-leakage** | TrainOnlyImputer exclusivo sobre fold de entrenamiento |
 | **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
 | **GovernanceMode opcional (Fase 2.1)** | BANKING por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el fingerprint del modelo etiqueta el modo efectivo (BANKING/RESEARCH/CUSTOM) |
+| **Herramienta CLI fuera del .venv** | Aider instalado vía pipx con Python 3.11.9 independiente. Lección del 27/09: instalar herramientas CLI dentro del .venv del proyecto degradó numpy/scipy |
+| **Sala limpia de i18n** | Claves nombradas por estado (no por color). Tokens QSS semánticos en `theme.py` |
 
 ---
 
@@ -193,11 +219,18 @@ TreeGov/
 ### Fase 2.2
 - **Bug detectado:** selección múltiple accidental en `TreeScene.select_node`. El nodo anterior permanecía seleccionado y `selected_node_id()` devolvía información errónea. Corregido con `self.clearSelection()` al inicio del método.
 
-### Fase 2.3.d — bugs OpenCode documentados
-- GUI no genera mensaje final tras tool calls exitosas (con Kimi K3 vía NVIDIA).
+### Fase 2.3.d — bugs OpenCode documentados (histórico)
+- GUI no genera mensaje final tras tool calls exitosas.
 - Múltiples tool calls agotan cuota NVIDIA → 429.
 - Notificación "Respuesta lista" sin haber ejecutado la tarea.
 - **Diagnóstico completo en `docs/audit_log.md` (entrada 27/09/2026).**
+- **Mitigación:** migración de OpenCode a Aider 0.86.2 el 27/09/2026.
+
+### Fase 2.3.e.1 a 2.3.f
+- **Incidente:** API key de NVIDIA pegada como placeholder literal en Aider → 403.
+- **Incidente:** prompt de ~170 líneas a Aider → 504 timeout (2 intentos).
+- **Lección:** prompts con bloques >100 líneas se trocean; excepción documentada para edición manual de docs.
+- **Commit con mensaje engañoso** (`71978c5`): decía "add .aiderignore" pero solo commiteó `.gitignore`. Lección: los mensajes de commit deben reflejar contenido real.
 
 Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numérica.
 
@@ -219,13 +252,15 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | validation.py | 8 |
 | pruning.py | 6 |
 | stability.py | 9 |
+| reporting.py | 6 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 9 |
 | tree_view (frontend) | 10 |
-| metrics_panel (frontend) | 3 |
-| **Total** | **161** |
+| metrics_panel (frontend) | 9 |
+| e2e_mainwindow (frontend) | 5 |
+| **Total** | **178** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 161/161 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 178/178 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -257,42 +292,36 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
-- [x] ~~Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en
-      `docs/audit_log.md`~~ — **Resuelto el 24/09/2026**.
-- [x] ~~Enlace Filosofía → `docs/philosophy.md` en ambos READMEs~~ — **Resuelto el 24/09/2026**.
-- [x] ~~Columna "Regulatory anchor" en la tabla de capacidades analíticas~~ — **Resuelto el 24/09/2026**.
-- [x] ~~Aviso regulatorio reforzado con bloque visual (⚠️)~~ — **Resuelto el 24/09/2026**.
-- [x] ~~Estado del proyecto visual con emojis/checklist en `roadmap.md`~~ — **Resuelto el 24/09/2026**.
-- [x] ~~Bloque "Cómo se refleja esto en el diseño" en `philosophy.md`~~ — **Resuelto el 24/09/2026**.
+- [x] Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en `docs/audit_log.md` — **Resuelto el 24/09/2026**.
+- [x] Enlace Filosofía → `docs/philosophy.md` en ambos READMEs — **Resuelto el 24/09/2026**.
+- [x] Columna "Regulatory anchor" en la tabla de capacidades analíticas — **Resuelto el 24/09/2026**.
+- [x] Aviso regulatorio reforzado con bloque visual (⚠️) — **Resuelto el 24/09/2026**.
+- [x] Estado del proyecto visual con emojis/checklist en `roadmap.md` — **Resuelto el 24/09/2026**.
+- [x] Bloque "Cómo se refleja esto en el diseño" en `philosophy.md` — **Resuelto el 24/09/2026**.
 
 ### Pendientes técnicos
 
-- [ ] **Fase 2.3.d** — `tests/test_reporting.py` (backend de reporting).
-- [ ] **Fase 2.3.e** — Semáforos visuales en `metrics_panel.py`.
-- [ ] **Fase 2.3.f** — Tests E2E + cierre de Fase 2.3.
+- [ ] **Decisión de proveedor de IA** — evaluar migración a Moonshot AI (Kimi K3 directo, ~$0.50/sesión con cache-hit).
+- [ ] **Fase 2.4** — Reportes + integración. Diseño cerrado 30/09/2026.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [ ] Publicar `treegov 1.0.0a1` en PyPI (al cierre de Fase 2).
-- [ ] Datasets públicos (German Credit, UCI health/social) para
-      validación multi-dominio (Fase 3).
+- [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
+- [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
 
 ### Pendientes de CV y carrera profesional
 
-- [ ] **Solicitar contrato a RRHH (Banco de Loja)** — acción personal,
-      fuera del proyecto.
+- [ ] **Solicitar contrato a RRHH (Banco de Loja)** — acción personal, fuera del proyecto.
 - [ ] Revisar cláusula de propiedad intelectual del contrato.
 - [ ] Regenerar PDF del CV (encoding UTF-8 roto en encabezado).
 - [ ] Mover sección "Idiomas" a la parte superior del CV.
 - [ ] Añadir "IA agéntica" a Habilidades del CV.
-- [ ] Agregar TreeGov al CV (formulación personal/open source) —
-      depende de la cláusula IP.
-- [ ] Actualizar LinkedIn con mención genérica de TreeGov (sin enlace al
-      repo) — decisión estratégica.
+- [ ] Agregar TreeGov al CV (formulación personal/open source) — depende de la cláusula IP.
+- [ ] Actualizar LinkedIn con mención genérica de TreeGov (sin enlace al repo) — decisión estratégica.
 
 ### Pendientes diferidos / estructurales
 
 - [ ] `CONTRIBUTING.md` en el repo (bloqueado por contrato).
-- [ ] `docs/i18n/` para centralizar traducciones (cuando haya 5+ docs
-      bilingües).
+- [ ] `docs/i18n/` para centralizar traducciones (cuando haya 5+ docs bilingües).
 - [ ] Mnemonics `&` en menús GUI (Fase 2.3).
 - [ ] QSettings persistencia de parámetros de gobernanza (Fase 2.1.b).
 - [ ] QThread para entrenamiento largo (Fase 2.3+).
@@ -302,11 +331,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ### Decisiones de largo plazo
 
 - [ ] **Distribución:** método de empaquetado, firma digital, canal.
-- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato
-      laboral antes de hacerlo público.
+- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato laboral antes de hacerlo público.
 
 ---
-
 ## 11. Cómo reconstruir el contexto en una nueva sesión
 
 Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
@@ -314,23 +341,32 @@ Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
 1. Leer en orden:
    - `README.md` (inglés) o `README.es.md` (español)
    - `.treegovrules` (reglas de gobernanza)
+   - `CONVENTIONS.md` (convenciones para Aider)
    - `docs/methodology.md` (metodología matemática)
    - `docs/api.md` (API pública)
    - `docs/roadmap.md` (plan de fases)
    - `docs/audit_log.md` (histórico de decisiones)
+   - `docs/contexto_para_nueva_sesion.md` (bootstrap)
 
 2. Comando para retomar el desarrollo:
 
+```
 cd "C:\Riesgos - copia\DecisionTree_Modeler"
-git pull
-opencode -c
+.\.venv\Scripts\activate
+git status
+python -m pytest tests -q
 
-
+$key = Read-Host "Pega tu API key" -AsSecureString
+$env:NVIDIA_NIM_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
+Remove-Variable key
+aider
+```
 
 3. Primer mensaje sugerido al agente:
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2 cerradas.
-> Fase 2.3 en curso (2.3.a/b/c ✅, 2.3.d parcial). Suite 161/161.
-> Próximo paso: 2.3.e con Gemini 3.8 Flash."
+
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3 cerradas.
+> Fase 2.4 en curso (diseño cerrado, falta implementar).
+> Suite 178/178. Próximo paso: 2.4.a con Aider 0.86.2 + Kimi K3."
 
 ---
 
