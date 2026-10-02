@@ -124,11 +124,12 @@ El panel OOS/OOT está operativo end-to-end: carga datos, entrena,
 evalúa OOS, carga OOT, evalúa, y renderiza badges con colores semánticos
 del tema activo.
 
-### Fase 2.4 — Reportes + integración 🟡 En curso (diseño cerrado 30/09/2026)
+### Fase 2.4 — Reportes + integración 🟡 En curso
 
 Sub-pasos:
-- 2.4.a Diseño estructural ⏳ Próxima
-- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ⏳
+- 2.4.a Diseño estructural ✅ (01/10/2026) — Pestaña Reports +
+  `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados.
+- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ⏳ Próxima
 - 2.4.c UI de reportes (`reports_panel.py` + export HTML) ⏳
 - 2.4.d Tests E2E + cierre ⏳
 
