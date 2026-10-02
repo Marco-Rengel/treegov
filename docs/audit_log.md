@@ -1089,3 +1089,63 @@ Edición manual en VS Code por indisponibilidad del servidor NVIDIA NIM
 entrada "Optimización del flujo de trabajo con Aider" del 30/09/2026.
 
 **Tests**: 178/178 PASSED (sin cambios en código).
+
+---
+
+### 01/10/2026 — Fase 2.4.a: esqueleto estructural del panel de reportes
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía NVIDIA NIM (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: frontend_v3/i18n.py, frontend_v3/reports_panel.py
+(nuevo), frontend_v3/main_window.py, tests/test_gui_smoke.py,
+tests/test_metrics_panel.py, tests/test_tree_view.py
+
+**Motivación**:
+Primera sub-fase de Fase 2.4 (Reportes + integración). Se crea el
+andamio estructural: pestaña nueva "Reports", panel placeholder, claves
+i18n y ajuste de tests. La lógica real de gains table y matriz de
+clasificación va en 2.4.b y 2.4.c.
+
+**Cambios aplicados**:
+1. `i18n.py`: 2 claves nuevas por idioma (`tab_reports_title`,
+   `reports_no_model`). Paridad EN/ES estricta.
+2. `reports_panel.py` (nuevo): clase `ReportsPanel(QWidget)` con
+   estructura espejo de `MetricsPanel` — QLabel centrada, retraducción
+   en caliente vía `language_bus`, `refresh()` como placeholder.
+3. `main_window.py`: import de `ReportsPanel`, instancia como cuarta
+   pestaña, `setTabText(3, tr("tab_reports_title"))` en `retranslate_ui`.
+4. Tests: `count() == 3` → `count() == 4` en `test_gui_smoke.py` y
+   `test_tree_view.py`. Renombrado `test_mainwindow_has_three_tabs` a
+   `test_mainwindow_has_four_tabs` con assert nuevo de `tab_reports_title`.
+
+**Lecciones operativas sobre Aider + NVIDIA NIM (críticas)**:
+
+Durante esta sesión se identificaron dos patrones de fallo concretos:
+
+1. **Prompts con código literal grande fallan.** Enviar un prompt con
+   ~40 líneas de código Python literal para "crear archivo nuevo" produjo
+   3 fallos consecutivos (respuestas basura `!!!!!` o 504). El mismo
+   prompt reescrito **en prosa sin código literal** funcionó a la
+   primera. Regla nueva: prompts a Aider describen estructura en prosa,
+   no pegan código.
+
+2. **Prompts con múltiples archivos + múltiples cambios fallan.**
+   Un prompt de 3 cambios en 3 archivos distintos falló con 504. El
+   mismo trabajo dividido en **3 sesiones separadas de 1 archivo cada
+   una** funcionó cada vez, respondiendo en menos de 1 minuto. Regla
+   nueva: un prompt = un archivo (excepto cuando el cambio es
+   intrínsecamente multi-archivo y pequeño).
+
+3. **`Create new file?` vs `Add file to the chat?`.** Confusión del
+   revisor: responder `n` a `Create new file?` cancela la creación del
+   archivo (no la pregunta "¿añadir al contexto?"). La pregunta
+   `Create new file?` debe responderse `y`.
+
+**Comportamiento correcto del agente**:
+Aider detectó correctamente que no necesitaba cargar `i18n.py` ni
+`metrics_panel.py` como contexto en varias sesiones (el prompt ya
+describía la estructura), reduciendo tokens innecesarios.
+
+**Tests**: 178/178 PASSED (los 3 tests que fallaban por conteo de
+pestañas se corrigieron a 4).
