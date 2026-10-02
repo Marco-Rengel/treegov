@@ -41,8 +41,32 @@ Toda fórmula estadística con cita bibliográfica explícita.
 
 ## Prompts grandes
 
-Si la tarea implica insertar >100 líneas de contenido textual (no código
-referenciado), trocear en 2-3 prompts. Aider+Kimi vía NIM puede dar 504.
+**Reglas confirmadas empíricamente (01/10/2026):**
+
+1. **Sin código literal.** No pegar bloques de código en el prompt. Describir
+   la estructura en prosa y dejar que Kimi escriba el código. Prompts con
+   código literal grande fallan con 504 o devuelven basura (`!!!!!`).
+
+2. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
+   hacer N sesiones separadas de Aider. Prompts multi-archivo fallan.
+
+3. **Tamaño máximo orientativo:** si el prompt supera ~30 líneas, trocear.
+
+4. **Si el cambio es buscar-y-reemplazar trivial (<10 líneas):** evaluar
+   hacerlo manualmente en VS Code en lugar de invocar Aider. Aider rinde
+   cuando hay síntesis o análisis; el reemplazo mecánico es más rápido a mano.
+
+5. **Sin archivos innecesarios en contexto.** Al arrancar `aider archivo.py`,
+   no aceptar "Add file to the chat?" salvo que el archivo aporte contexto
+   esencial. Cada archivo extra suma tokens y aumenta el riesgo de 504.
+
+## Preguntas interactivas de Aider
+
+- `Add file to the chat? (Y)es/(N)o`: normalmente `n` — el prompt ya describe
+  lo necesario. Aceptar solo si el archivo aporta información no descrita.
+- `Create new file? (Y)es/(N)o`: normalmente `y` — es la confirmación para
+  aplicar el cambio que crea un archivo nuevo.
+- `Apply this edit?`: revisar el diff antes de responder `y`.
 
 ## Antes de editar
 
