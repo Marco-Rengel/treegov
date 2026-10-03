@@ -41,16 +41,20 @@ Toda fórmula estadística con cita bibliográfica explícita.
 
 ## Prompts grandes
 
-**Reglas confirmadas empíricamente (01/10/2026):**
+**Reglas actualizadas tras migración a Moonshot AI (03/10/2026):**
 
-1. **Sin código literal.** No pegar bloques de código en el prompt. Describir
-   la estructura en prosa y dejar que Kimi escriba el código. Prompts con
-   código literal grande fallan con 504 o devuelven basura (`!!!!!`).
+1. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
+   hacer N sesiones separadas de Aider. Se mantiene por claridad de diffs y
+   auditoría, no por limitación técnica.
 
-2. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
-   hacer N sesiones separadas de Aider. Prompts multi-archivo fallan.
+2. **Prosa sin código literal (recomendado, no obligatorio).** Describir la
+   estructura en prosa y dejar que Kimi escriba el código. Aunque Moonshot
+   no falla con código literal, los prompts en prosa son más fáciles de
+   auditar y revisar.
 
-3. **Tamaño máximo orientativo:** si el prompt supera ~30 líneas, trocear.
+3. **Tamaño máximo orientativo:** hasta ~150 líneas de prosa por prompt
+   (antes ~30-100 con NVIDIA NIM). Cambios multi-bloque dentro del mismo
+   archivo: permitidos.
 
 4. **Si el cambio es buscar-y-reemplazar trivial (<10 líneas):** evaluar
    hacerlo manualmente en VS Code en lugar de invocar Aider. Aider rinde
@@ -58,7 +62,7 @@ Toda fórmula estadística con cita bibliográfica explícita.
 
 5. **Sin archivos innecesarios en contexto.** Al arrancar `aider archivo.py`,
    no aceptar "Add file to the chat?" salvo que el archivo aporte contexto
-   esencial. Cada archivo extra suma tokens y aumenta el riesgo de 504.
+   esencial. Cada archivo extra suma tokens.
 
 ## Preguntas interactivas de Aider
 
@@ -78,3 +82,16 @@ el archivo (whole edit format).
 
 Diseñar → Auditar diseño → Implementar → Testear → Documentar.
 Cada cambio de código va acompañado de una entrada en `docs/audit_log.md`.
+
+## Proveedor de IA: Moonshot AI directo (desde 03/10/2026)
+
+- **Modelo:** `moonshot/kimi-k3`.
+- **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).
+- **Variable de entorno:** `$env:MOONSHOT_API_KEY` (pedir con
+  `Read-Host -AsSecureString`).
+- **Metadata:** `~/.aider.model.metadata.json` (contexto y costes) +
+  `~/.aider.model.settings.yml` (Kimi K3 exige `use_temperature: false`).
+- **Ventaja frente a NVIDIA NIM:** sin 504, sin necesidad de trocear prompts
+  por tiempo de servidor, contexto 1M completo.
+- **Verificación obligatoria sigue aplicando:** `git diff` + `pytest` antes
+  de aceptar cualquier cambio.
