@@ -7,12 +7,16 @@
 # Solo se versiona esta plantilla, sin secretos ni rutas personales.
 #
 # Requisitos previos (ver AGENTS.md, sección "Herramienta de desarrollo: Aider"):
-#   - Aider 0.86.2 instalado.
-#   - API key exportada: $env:NVIDIA_NIM_API_KEY
-#   - Metadata de modelos: ~/.aider.model.metadata.json
-#     (registra context window de Kimi K3: max_input_tokens=1048576)
+#   - Aider 0.86.2 instalado (global vía pipx, Python 3.11).
+#   - API key exportada: $env:MOONSHOT_API_KEY
+#   - Metadata de modelos:
+#       ~/.aider.model.metadata.json   (contexto y costes)
+#       ~/.aider.model.settings.yml    (comportamiento: temperature, edit format)
 
-model: nvidia_nim/moonshotai/kimi-k3
+model: moonshot/kimi-k3
+# Endpoint internacional de Moonshot AI (facturación NOVASCENT/Singapur).
+# LiteLLM lo conoce por defecto, se incluye aquí solo como documentación.
+# openai-api-base: https://api.moonshot.ai/v1
 auto-commits: false
 auto-lint: false
 auto-test: false
