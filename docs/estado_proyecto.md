@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 01/10/2026
+**Fecha de última actualización:** 03/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | Aider 0.86.2 + Kimi K3 vía NVIDIA NIM. Instalado vía pipx con Python 3.11.9. **Pendiente 01/10/2026:** evaluar migración a Moonshot AI (Kimi K3 directo) por inestabilidad recurrente de NIM (504) |
+| Modelo de IA en desarrollo | Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (plataforma internacional). Instalado vía pipx con Python 3.11.9. Migración de NVIDIA NIM el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
 
 ---
 
@@ -199,6 +199,8 @@ TreeGov/
 | **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
 | **GovernanceMode opcional (Fase 2.1)** | BANKING por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el fingerprint del modelo etiqueta el modo efectivo (BANKING/RESEARCH/CUSTOM) |
 | **Herramienta CLI fuera del .venv** | Aider instalado vía pipx con Python 3.11.9 independiente. Lección del 27/09: instalar herramientas CLI dentro del .venv del proyecto degradó numpy/scipy |
+| **Proveedor de IA: Moonshot AI directo** | Migrado de NVIDIA NIM el 03/10/2026 por 504 recurrentes. Endpoint `https://api.moonshot.ai/v1`, costes $3/$15 por millón de tokens. Requiere `~/.aider.model.settings.yml` con `use_temperature: false` (Kimi K3 exige temperature=1). Cliente sigue siendo Aider (no OpenCode, no Kimi Code Desktop) |
+| **`.gitattributes` con `-text`** | Previene mezcla de line endings (CRLF/LF) que genera diffs ruidosos (1218/1151 en lugar de 68 líneas reales). `-text` le dice a git "no normalices este archivo". Ver commit `7040046` |
 | **Sala limpia de i18n** | Claves nombradas por estado (no por color). Tokens QSS semánticos en `theme.py` |
 
 ---
@@ -232,6 +234,18 @@ TreeGov/
 - **Incidente:** prompt de ~170 líneas a Aider → 504 timeout (2 intentos).
 - **Lección:** prompts con bloques >100 líneas se trocean; excepción documentada para edición manual de docs.
 - **Commit con mensaje engañoso** (`71978c5`): decía "add .aiderignore" pero solo commiteó `.gitignore`. Lección: los mensajes de commit deben reflejar contenido real.
+
+### 03/10/2026 — Migración a Moonshot AI y normalización de line endings
+- **Migración de proveedor de IA**: NVIDIA NIM → Moonshot AI directo por
+  504 recurrentes. 3 iteraciones de configuración (401 de endpoint, 400 de
+  temperature, éxito con `use_temperature: false`). Ver `audit_log.md`
+  03/10/2026.
+- **Line endings**: primer commit de la entrada de migración generó un diff
+  de 1218/1151 líneas cuando solo había 68 reales. Causa: mezcla CRLF/LF al
+  pegar en VS Code. Solución: `.gitattributes` con `* text=auto eol=lf` y
+  excepción `docs/audit_log.md -text`. Ver `audit_log.md` 03/10/2026.
+- **Configuración git global**: `core.autocrlf false` y `core.pager ""`
+  (evita que la terminal se bloquee mostrando diffs largos).
 
 Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numérica.
 
@@ -302,7 +316,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ### Pendientes técnicos
 
-- [ ] **Decisión de proveedor de IA** — evaluar migración a Moonshot AI (Kimi K3 directo, ~$0.50/sesión con cache-hit).
+- [x] **Decisión de proveedor de IA** — migrado a Moonshot AI directo el 03/10/2026. Ver `audit_log.md`.
 - [ ] **Fase 2.4** — Reportes + integración. Diseño cerrado 30/09/2026.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [ ] Publicar `treegov 1.0.0a1` en PyPI (al cierre de Fase 2).
@@ -357,8 +371,8 @@ cd "C:\Riesgos - copia\DecisionTree_Modeler"
 git status
 python -m pytest tests -q
 
-$key = Read-Host "Pega tu API key" -AsSecureString
-$env:NVIDIA_NIM_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
+$key = Read-Host "Pega tu Moonshot API key" -AsSecureString
+$env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
 Remove-Variable key
 aider
 ```
@@ -366,8 +380,9 @@ aider
 3. Primer mensaje sugerido al agente:
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3 cerradas.
-> Fase 2.4 en curso (diseño cerrado, falta implementar).
-> Suite 178/178. Próximo paso: 2.4.a con Aider 0.86.2 + Kimi K3."
+> Fase 2.4 en curso (2.4.a completa, 2.4.b próxima).
+> Suite 178/178. Próximo paso: 2.4.b con Aider 0.86.2 + Kimi K3 vía
+> Moonshot AI directo."
 
 ---
 
