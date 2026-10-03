@@ -1284,3 +1284,92 @@ Crear `.gitattributes` en la raíz del repo con dos reglas:
    antes de commitear.
 
 **Tests**: 178/178 PASSED (sin cambios en código).
+
+---
+
+### 03/10/2026 — Fase 2.4.b: backend de reportes (GainsTable + ClassificationMatrix)
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: `backend_v3/reporting.py` (ampliado, commit `aa3b8fb`),
+`tests/test_reporting.py` (5 tests nuevos, commit `511dbce`).
+
+**Motivación**:
+Segunda sub-fase de Fase 2.4 (Reportes + integración). Proveer al
+frontend (2.4.c) de un DTO de reportes que cubra:
+- Gains table por hoja (`by="leaf"`, default) o por bucket
+  (`by="bucket"`, `n_buckets` parametrizable).
+- Matriz de clasificación con threshold parametrizable.
+Ambos operan sobre `leaf_assignment` (int, -1 = fila excluida),
+`y` (0/1), y el `TreeModel` ya entrenado.
+
+**Arquitectura decidida**:
+- Cálculo on-demand desde `Session` (Opción B descartada A/C por
+  contaminar `SessionState` con datos por fila). El frontend consumirá
+  `Session.get_gains_table()` / `Session.get_classification_matrix()`
+  cuando 2.4.c lo implemente.
+- `reporting.py` recibe `leaf_assignment` + `y` + `model` como argumentos
+  (no `X` ni DataFrame). La asignación la hace `validation.predict_leaf_assignment`
+  una sola vez, aguas arriba. `reporting.py` no reimplementa routing.
+- Sin pandas: solo numpy + stdlib. Sala limpia respetada.
+- `TreeModel` bajo `TYPE_CHECKING`: cero imports runtime de `tree_builder`
+  desde `reporting.py`.
+
+**Cambios aplicados**:
+
+`backend_v3/reporting.py` (367 inserciones, 4 borrados):
+- 3 dataclasses frozen: `GainsRow`, `GainsTableResult`,
+  `ClassificationMatrix`.
+- Helper privado `_validated_routed`: valida y filtra filas enrutables
+  (`leaf_assignment >= 0`); devuelve `(routed_mask, leaf_ids, y_routed)`.
+- Helper privado `_discrimination_metrics`: reimplementación mínima de
+  KS/AUC/Gini sobre PD por fila, con las mismas fórmulas que
+  `validation.compute_oos_metrics` (KS por bloques de empate con
+  acumulación al final; AUC por Wilcoxon-Mann-Whitney con mid-ranks;
+  Gini = 2·AUC − 1). Devuelve `None, None, None` si falta una clase.
+- `build_gains_table(model, leaf_assignment, y, *, by="leaf",
+  n_buckets=10, tie="preserve", seed=None)`: agrupa filas por hoja o
+  bucket, calcula Cum/Decum, `bad_rate`, `lift_cum`, y devuelve
+  `GainsTableResult` con KS/AUC/Gini recomputados.
+- `build_classification_matrix(leaf_assignment, y, pd_per_leaf, *,
+  threshold=0.5)`: matriz 2×2 con precision, recall, F1 y
+  `bad_capture_rate` (alias explícito de recall, nomenclatura de buró).
+
+`tests/test_reporting.py` (205 inserciones, 2 borrados):
+- Fixture de 3 hojas (PDs 0.1/0.3/0.6, 250 filas, 95 bads).
+- 5 tests: gains por hoja con Cum/Decum verificados a mano, gains por
+  bucket con tie="preserve" (frontera snap), gains por bucket con
+  tie="random" (reproducibilidad con seed), classification matrix a dos
+  thresholds, exclusión de filas con `assign == -1`.
+
+**Identidades verificadas a mano**:
+- Fixture: n_total=250, n_bad=95, n_good=155, bad_rate_global=0.38.
+- KS = 60/95 − 40/155 = 220/589 ≈ 0.373514.
+- AUC = 10612.5/14725 ≈ 0.720713.
+- Gini = 2·AUC − 1 ≈ 0.441426.
+- Bucket preserve: frontera b=125 se desplaza a 150 (fin del bloque
+  de empates PD=0.3) → B01 con 150 filas, B02 con 100.
+- ClassificationMatrix threshold=0.5: tp=60, tn=115, fp=40, fn=35,
+  precision=0.6, recall=60/95, f1=72/117≈0.615385.
+- ClassificationMatrix threshold=0.2: tp=90, tn=45, fp=110, fn=5,
+  precision=0.45, recall=90/95, f1≈0.610169.
+
+**Hallazgos durante la implementación**:
+- El asistente corrigió dos valores `f1` del diseño original
+  (0.61514 → 0.615385 y 0.61016 → 0.610169). Eran typos del revisor
+  humano; la fórmula estándar 2PR/(P+R) da los valores corregidos.
+- El asistente detectó que la firma real de `build_classification_matrix`
+  es `(leaf_assignment, y, pd_per_leaf, *, threshold)` — orden distinto
+  al asumido en el prompt inicial. Corregido tras añadir `reporting.py`
+  al contexto de Aider. Lección: cuando el diseño de tests depende de
+  firmas exactas, el archivo bajo prueba debe estar en el contexto del
+  agente.
+- Los tests usan `pytest.approx` para comparaciones float; el archivo
+  original no importaba pytest (usaba `==` sobre valores enteros).
+  Añadido.
+
+**Tests**: 183/183 PASSED (178 previos + 5 nuevos).
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4),
+`docs/estado_proyecto.md` (sección 3).
