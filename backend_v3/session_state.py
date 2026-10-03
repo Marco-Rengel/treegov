@@ -26,8 +26,9 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from enum import Enum, auto
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -39,7 +40,11 @@ from .log_config import get_logger
 from .profiling import _infer_column, infer_spec  # _infer_column: reuso interno backend
 from .pruning import Pruner
 from .quest_engine import QuestEngine
-from .reporting import build_oos_oot_report
+from .reporting import (
+    build_classification_matrix,
+    build_gains_table,
+    build_oos_oot_report,
+)
 from .splitting import stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
@@ -166,9 +171,98 @@ class Session:
         self._log.info("[session] describe_dataset: %d columnas", len(cols))
         return cols, tipos
 
+    def _routed_partition(self, partition: str) -> tuple[Any, Any, str]:
+        """Resolve a partition name to its cached (X, y) and unseen policy.
+
+        Routing contract: "train" uses the strict "error" unseen policy
+        (every row must route), while "oos"/"oot" use "exclude" (unroutable
+        rows are reported, never silently dropped). Raises ValueError if no
+        model is trained or the partition name is unknown; RuntimeError if
+        the chosen partition cache has not been populated yet.
+        """
+        if self._state.tree is None:
+            raise ValueError("[session] partition requiere un modelo entrenado")
+        if partition == "train":
+            X, y, unseen_policy = self._X_train, self._y_train, "error"
+        elif partition == "oos":
+            X, y, unseen_policy = self._X_test, self._y_test, "exclude"
+        elif partition == "oot":
+            X, y, unseen_policy = self._X_oot, self._y_oot, "exclude"
+        else:
+            raise ValueError(
+                f"[session] partition invalida: {partition!r} "
+                f"(validas: ['train', 'oos', 'oot'])"
+            )
+        if X is None or y is None:
+            raise RuntimeError(
+                f"[session] partition={partition!r} sin datos en cache"
+            )
+        return X, y, unseen_policy
+
     def get_oos_oot_report(self) -> dict | None:
         """DTO plain-Python del estado OOS/OOT (None si no hay modelo)."""
         return build_oos_oot_report(self._state)
+
+    def get_gains_table(
+        self,
+        *,
+        partition: str = "oos",
+        by: str = "leaf",
+        n_buckets: int = 10,
+        tie: str = "preserve",
+        seed: int | None = None,
+    ) -> dict[str, Any] | None:
+        """Gains table DTO for a routed partition (None if no model trained).
+
+        Read-only consumer of reporting.build_gains_table: routes the rows
+        of the requested partition through the trained tree and returns the
+        result as a plain-Python dict (asdict), so GUI/MCP never touch
+        backend dataclasses.
+        """
+        if self._state.tree is None:
+            return None
+        X, y, unseen_policy = self._routed_partition(partition)
+        leaf_assignment = predict_leaf_assignment(
+            self._state.tree, X, unseen_policy=unseen_policy
+        )
+        result = build_gains_table(
+            self._state.tree, leaf_assignment, y,
+            by=by, n_buckets=n_buckets, tie=tie, seed=seed,
+        )
+        self._log.info(
+            "[session] get_gains_table: partition=%s by=%s n=%d",
+            partition, by, result.n_total,
+        )
+        return asdict(result)
+
+    def get_classification_matrix(
+        self, *, partition: str = "oos", threshold: float = 0.5
+    ) -> dict[str, Any] | None:
+        """Classification matrix DTO for a routed partition (None if no model).
+
+        Read-only consumer of reporting.build_classification_matrix: leaf
+        PDs are taken from the trained tree (pd_final per leaf node) and
+        the result travels as a plain-Python dict (asdict), so GUI/MCP
+        never touch backend dataclasses.
+        """
+        if self._state.tree is None:
+            return None
+        X, y, unseen_policy = self._routed_partition(partition)
+        leaf_assignment = predict_leaf_assignment(
+            self._state.tree, X, unseen_policy=unseen_policy
+        )
+        pd_per_leaf = {
+            nd.node_id: nd.pd_final
+            for nd in self._state.tree.nodes if nd.is_leaf
+        }
+        result = build_classification_matrix(
+            leaf_assignment, y, pd_per_leaf, threshold=threshold
+        )
+        self._log.info(
+            "[session] get_classification_matrix: partition=%s threshold=%.4g",
+            partition, threshold,
+        )
+        return asdict(result)
 
     def reset_to_data_loaded(self) -> SessionState:
         """Vuelve a DATA_LOADED conservando el DataFrame en cache.
