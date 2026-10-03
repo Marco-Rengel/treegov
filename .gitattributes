@@ -1,0 +1,10 @@
+# Instrucciones para git sobre saltos de línea.
+# Ver: https://git-scm.com/docs/gitattributes
+
+# Por defecto: todos los archivos usan LF (forma moderna).
+* text=auto eol=lf
+
+# Excepción: audit_log.md conserva CRLF (forma vieja) porque su
+# historial previo está en CRLF. La opción -text le dice a git que
+# no normalice este archivo, evitando un commit de 1151 líneas.
+docs/audit_log.md -text
