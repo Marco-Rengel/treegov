@@ -1373,3 +1373,75 @@ Ambos operan sobre `leaf_assignment` (int, -1 = fila excluida),
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4),
 `docs/estado_proyecto.md` (sección 3).
+
+---
+
+### 03/10/2026 — Fase 2.4.c.1: métodos de reporte en Session
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2, whole edit format).
+**Revisor**: Marco Rengel
+**Artefactos**: `backend_v3/session_state.py` (commit `795f163`),
+`tests/test_session_state.py` (commit `9586bf3`).
+
+**Motivación**:
+Primera sub-fase de 2.4.c. Exponer `GainsTable` y `ClassificationMatrix`
+al frontend sin violar la sala limpia (`frontend_v3/` no puede importar
+numpy ni `reporting.py`). Se sigue el patrón ya establecido por
+`get_oos_oot_report`: métodos en `Session` devuelven dict plano vía
+`asdict` (o `None` si no hay modelo).
+
+**Arquitectura decidida**:
+- Sin caché de `leaf_assignment` en 2.4.c.1: se recalcula on-demand
+  desde la caché interna de `Session` (`_X_train` / `_X_test` / `_X_oot`).
+  Si el rendimiento lo exige en el futuro, se añade caché explícita.
+- `unseen_policy` por partición: `"error"` para train (todas las filas
+  deben enrutar; si no, es un bug), `"exclude"` para oos/oot (categorías
+  nuevas son legítimas y deben contarse en `n_excluded`).
+- Helper privado `_routed_partition(partition)`: valida tree presente,
+  partición válida, y caché poblada. Devuelve `(X, y, unseen_policy)`.
+- `SessionState` no se toca: sigue frozen, sin datos por fila.
+
+**Cambios aplicados**:
+
+`backend_v3/session_state.py` (96 inserciones, 2 borrados):
+- Import de `reporting` ampliado (`build_classification_matrix`,
+  `build_gains_table`).
+- Import de `dataclasses` ampliado (`asdict`).
+- Import nuevo `from typing import Any`.
+- Helper `_routed_partition` justo antes de `get_oos_oot_report`.
+- Método `get_gains_table(*, partition, by, n_buckets, tie, seed)`.
+- Método `get_classification_matrix(*, partition, threshold)`.
+
+`tests/test_session_state.py` (78 inserciones, 0 borrados):
+- 5 tests nuevos al final, antes del runner manual `__main__`.
+- Reutilizan helpers existentes `_csv`, `_quiet_logger`, `_assert_raises`.
+- Cero imports de pytest (estilo del archivo: `math.isclose` y helper
+  custom para excepciones).
+
+**Identidades verificadas a mano**:
+- Fixture `_csv` (120 filas, `y = 1_{edad>=40}`): tras partition 70/30
+  estratificado, test = 36 filas, 18 bads, 18 goods.
+- Modelo CRT sobre ese fixture separa perfectamente: gains table OOS
+  con `n_total=36`, `n_good=18`, `n_bad=18`, `n_excluded=0`,
+  `KS = AUC = Gini = 1.0`.
+- `threshold=0.3` en classification matrix: conteos TP+TN+FP+FN suman
+  36.
+- `partition="oot"` sin OOT cargado → `RuntimeError`.
+- `partition="foo"` → `ValueError`.
+
+**Hallazgos durante la implementación**:
+- El asistente eligió extraer un helper privado (`_routed_partition`)
+  aunque el prompt lo describía como opcional. Decisión correcta:
+  evita duplicación y centraliza la validación de las tres particiones.
+- Primer intento con prompt largo en prosa: Aider "conversó" en lugar
+  de aplicar el edit. Segundo intento con prompt directo (empieza con
+  "TAREA:... Aplica los cambios AHORA") + un solo archivo apuntado por
+  invocación → aplicación inmediata. Lección operativa: incluir una
+  orden explícita de edición al inicio del prompt, no solo la
+  descripción del cambio.
+
+**Tests**: 188/188 PASSED (183 previos + 5 nuevos).
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4),
+`docs/estado_proyecto.md` (sección 3).
