@@ -37,6 +37,8 @@ Actualizar docs/audit_log.md al modificar código (formato: fecha, estado, artef
 Verificación obligatoria tras cada tarea de agente: `python -m pytest tests -q`
 y `git status`. No confiar en la notificación de éxito del agente sin esa
 doble verificación.
+Los line endings del repo están normalizados vía `.gitattributes`
+(ver commit 7040046). No tocar esa configuración sin motivo documentado.
 
 ## Entorno
 
@@ -48,36 +50,41 @@ doble verificación.
 
 ## Herramienta de desarrollo: Aider
 
-- **Versión:** 0.86.2
-- **Modelo:** `nvidia_nim/moonshotai/kimi-k3` (NVIDIA NIM)
+- **Versión:** 0.86.2 (global vía `pipx`, Python 3.11.9).
+- **Modelo:** `moonshot/kimi-k3` (Moonshot AI directo, plataforma
+  internacional).
+- **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).
 - **Configuración local:** `.aider.conf.yml` (no versionado; ver `.gitignore`).
-- **Metadata de modelos:** `~/.aider.model.metadata.json` registra
-  `max_input_tokens: 1048576` y `max_output_tokens: 131072`.
-- **Instalación:** global vía `pipx` (Python 3.11), fuera del `.venv/` del proyecto.
+- **Plantilla versionada:** `.aider.conf.example.yml`.
+- **Metadata de modelos (en el home del usuario):**
+  - `~/.aider.model.metadata.json` — contexto (1M tokens) y costes reales
+    ($3/M input, $15/M output).
+  - `~/.aider.model.settings.yml` — comportamiento por modelo
+    (`use_temperature: false` y `edit_format: whole` para Kimi K3).
+- **Variable de entorno:** `$env:MOONSHOT_API_KEY`.
 
 **Arranque (Windows PowerShell):**
 
     cd "C:\Riesgos - copia\DecisionTree_Modeler"
     .\.venv\Scripts\activate
-    $env:NVIDIA_NIM_API_KEY = "nvapi-..."   # rotar si se expone
+    $key = Read-Host "Pega tu Moonshot API key" -AsSecureString
+    $env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
+    Remove-Variable key
     aider <archivo1> <archivo2>
 
 **Reglas para Aider en este proyecto:**
 
 - `auto-commits: false` — cada commit es decisión humana.
-- Prompts quirúrgicos con referencias exactas (función, string). Evitar Grep.
 - Un cambio atómico por prompt; revisar el diff antes de aplicarlo.
-- Verificación obligatoria tras cada tarea: `python -m pytest tests -q` y
-  `git status`.
-- Migrado desde OpenCode 1.18.32 el 27/09/2026 (ver `docs/audit_log.md`).
-- **Prompts**: máximo ~100 líneas de contenido por insert. Bloques mayores
-  se trocean en 2-3 prompts consecutivos para evitar timeout 504 de NVIDIA
-  NIM. Prompts quirúrgicos con referencias exactas a bloques/líneas
-  funcionan bien incluso a 90 líneas; los que insertan contenido textual
-  largo son más frágiles.
-- **504 timeout**: si aparece durante una ejecución de Aider, esperar 2-5
-  min y reintentar. Es saturación del servidor NVIDIA, no fallo del prompt
-  ni del proyecto.
+- Verificación obligatoria tras cada tarea: `python -m pytest tests -q`,
+  `git status` y `git diff` del archivo tocado.
+- Migrado de OpenCode 1.18.32 el 27/09/2026 y de NVIDIA NIM el 03/10/2026
+  (ver `docs/audit_log.md`).
+- **Reglas de prompts (suavizadas respecto a NIM):**
+  - Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
+  - Prosa sin código literal (recomendado, no obligatorio).
+  - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
+  - Cambios multi-bloque dentro del mismo archivo: permitido.
 
 ## Gobernanza
 
