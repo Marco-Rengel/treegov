@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 29/09/2026
+**Última actualización:** 03/10/2026
 
 ---
 
@@ -75,7 +75,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
   - **Fase 2.4 (Reportes + integración):** en curso. 2.4.a completa (01/10/2026).
 - **Suite de tests:** 178/178 PASSED.
-- **Herramienta:** Aider 0.86.2 + Kimi K3 vía NVIDIA NIM (instalado vía pipx).
+- **Herramienta:** Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (pipx).
 - **Próximo paso:** 2.4.b (Backend de reportes: `GainsTable` + `ClassificationMatrix`). Diseño acordado (30/09):
   gains table por hoja (default) + buckets parametrizables, matriz de
   clasificación, HTML autocontenido. Detalles en `docs/roadmap.md`.
@@ -89,32 +89,39 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta de desarrollo (actualizado 01/10/2026)
-- **Aider 0.86.2** con `nvidia_nim/moonshotai/kimi-k3`. Reemplaza a OpenCode.
-- **Motivo del cambio:** bug de protocolo en OpenCode (ver `audit_log.md` 27/09/2026) que bloqueaba tool calls con Gemini y con Kimi.
-- **Atribución actualizada:** el componente dominante del fallo era OpenCode, no NIM ni Kimi K3. Aider completa los ciclos de tool calls sin fallos.
-- **Instalación:** global vía `pipx` con Python 3.11.9 (fuera del `.venv/` del proyecto; migrado el 28/09/2026).
-- **Configuración personal:** `.aider.conf.yml` (no versionado).
+### Herramienta de desarrollo (actualizado 03/10/2026)
+- **Aider 0.86.2** con `moonshot/kimi-k3`. Migrado de NVIDIA NIM el
+  03/10/2026 por inestabilidad (504 recurrentes).
+- **Cliente:** Aider 0.86.2 (no OpenCode, no Kimi Code Desktop).
+- **Instalación:** global vía `pipx` con Python 3.11.9.
+- **Configuración local:** `.aider.conf.yml` (no versionado).
 - **Plantilla versionada:** `.aider.conf.example.yml`.
-- **Metadata de modelos:** `~/.aider.model.metadata.json` (context window Kimi K3: 1M tokens).
-- **API key:** `$env:NVIDIA_NIM_API_KEY` exportada por sesión. Si se pega el placeholder `nvapi-...` por error, Aider devuelve 403; la longitud real de la key es ~70 caracteres.
-- **Prompts a Aider**: máximo ~100 líneas de contenido por insert. Bloques mayores se trocean en 2-3 prompts consecutivos para evitar timeout 504 de NVIDIA NIM. Los prompts quirúrgicos con referencias exactas a bloques/líneas funcionan bien incluso a 90 líneas; los que insertan contenido textual largo son más frágiles.
-- **Inestabilidad de NVIDIA NIM**: 504 recurrentes (30/09/2026) confirman
-  que el free tier no es fiable para uso sostenido. **En evaluación migrar
-  a la API de pago de Moonshot AI** (creadores de Kimi K3, $3/$15 por
-  millón de tokens, ~$0.50 por sesión con cache-hit). Alternativa:
-  OpenRouter u otro proveedor. Pendiente de decisión 01/10/2026.
-- **Patrones de fallo confirmados (01/10/2026)**: prompts con código
-  literal grande o con múltiples archivos fallan con 504. Reglas nuevas:
-  (1) describir en prosa, no pegar código; (2) un prompt = un archivo.
-  Ver `docs/audit_log.md` entrada 01/10/2026.
-- **`Create new file?` vs `Add file to the chat?`**: la primera debe
-  responderse `y` (aplica el cambio); la segunda `n` (no añadir al
-  contexto salvo que aporte información nueva).
+- **Metadata de modelos:**
+  - `~/.aider.model.metadata.json` — contexto y costes.
+  - `~/.aider.model.settings.yml` — comportamiento (temperature, edit format).
+- **Modelo:** `kimi-k3` servido por Moonshot AI directo
+  (`https://api.moonshot.ai/v1`).
+- **API key:** `$env:MOONSHOT_API_KEY` exportada por sesión (PowerShell).
+  Longitud real ~51 caracteres, prefijo `sk-`. Se pide de forma segura con
+  `Read-Host -AsSecureString`.
+- **Costes:** $3/M tokens de entrada, $15/M de salida. Sesión de prueba
+  inicial: ~$0.02.
+- **Ventajas frente a NIM:** sin 504, contexto 1M completo, cache-hit
+  nativo, tool calling estable.
+- **Reglas de prompts (suavizadas respecto a NIM):**
+  - Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
+  - Prosa sin código literal (recomendado, no obligatorio).
+  - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
+  - Cambios multi-bloque dentro del mismo archivo: permitido.
+- **Verificación obligatoria:** `git diff` + `pytest` antes de aceptar
+  cualquier cambio. La disciplina MRM no cambia por tener mejor proveedor.
 
 ### Privacidad
-- NVIDIA NIM Trial Terms: servicio de prueba, no apto para producción.
-- **Regla estricta:** solo código open source, docs públicas o datasets sintéticos. Nunca datos reales ni credenciales.
+- Moonshot AI es servicio de pago (NOVASCENT/Singapur), pero sigue siendo
+  una API en la nube de terceros.
+- **Regla estricta:** solo código open source, docs públicas o datasets
+  sintéticos. Nunca datos bancarios reales, credenciales, contratos ni
+  información interna — ni siquiera a APIs de pago.
 
 ---
 
@@ -146,7 +153,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.2 cerradas, Fase 2.3 completa (178/178 tests). Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía NVIDIA NIM. Próximo paso: 2.4 (Reportes + integración). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.3 cerradas, Fase 2.4 en curso (2.4.a completa, 2.4.b próxima). Suite 178/178. Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía Moonshot AI directo. Próximo paso: 2.4.b (GainsTable + ClassificationMatrix). ¿Qué necesitas para darme contexto?"
 
 ---
 
