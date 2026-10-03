@@ -130,7 +130,8 @@ Sub-pasos:
 - 2.4.a Diseño estructural ✅ (01/10/2026) — Pestaña Reports +
   `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados.
 - 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ✅ (03/10/2026)
-- 2.4.c UI de reportes (`reports_panel.py` + export HTML) ⏳
+- 2.4.c.1 Backend de Session (`get_gains_table` + `get_classification_matrix`) ✅ (03/10/2026)
+- 2.4.c.2 UI de reportes (`reports_panel.py` + export HTML) ⏳
 - 2.4.d Tests E2E + cierre ⏳
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
@@ -263,7 +264,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 4 |
 | profiling.py | 3 |
 | tree_builder.py | 16 |
-| session_state.py | 19 |
+| session_state.py | 24 |
 | validation.py | 8 |
 | pruning.py | 6 |
 | stability.py | 9 |
@@ -273,7 +274,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 9 |
 | e2e_mainwindow (frontend) | 5 |
-| **Total** | **183** |
+| **Total** | **188** |
 
 **Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 178/178 PASSED
 
