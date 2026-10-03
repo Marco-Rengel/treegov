@@ -129,7 +129,7 @@ del tema activo.
 Sub-pasos:
 - 2.4.a Diseño estructural ✅ (01/10/2026) — Pestaña Reports +
   `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados.
-- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ⏳ Próxima
+- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ✅ (03/10/2026)
 - 2.4.c UI de reportes (`reports_panel.py` + export HTML) ⏳
 - 2.4.d Tests E2E + cierre ⏳
 
@@ -267,13 +267,13 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | validation.py | 8 |
 | pruning.py | 6 |
 | stability.py | 9 |
-| reporting.py | 6 |
+| reporting.py | 11 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 9 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 9 |
 | e2e_mainwindow (frontend) | 5 |
-| **Total** | **178** |
+| **Total** | **183** |
 
 **Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 178/178 PASSED
 
