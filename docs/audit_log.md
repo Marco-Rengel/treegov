@@ -1445,3 +1445,76 @@ numpy ni `reporting.py`). Se sigue el patrón ya establecido por
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4),
 `docs/estado_proyecto.md` (sección 3).
+
+---
+
+### 03/10/2026 — Fase 2.4.c.2.a: panel de reportes funcional
+
+**Estado**: Aprobado tras 4 iteraciones de fix.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `frontend_v3/i18n.py`, `frontend_v3/reports_panel.py`
+(commit final `58f2cd6`).
+
+**Motivación**:
+Segunda sub-fase de 2.4.c. Convertir el placeholder `ReportsPanel`
+(una sola label centrada) en un panel funcional que consuma los DTOs
+del backend (`Session.get_gains_table` / `Session.get_classification_matrix`)
+y los renderice como tabla Qt y matriz de clasificación. Sin Export HTML
+(eso es 2.4.c.2.c) ni cableado con MainWindow (2.4.c.2.b).
+
+**Arquitectura del panel**:
+- Señales Qt expuestas: `partition_changed(str)`, `view_changed(str, int)`,
+  `threshold_changed(float)`, `refresh_requested()`.
+- API pública: `set_session_available(*, train, oos, oot)`,
+  `set_gains_table(dto)`, `set_classification_matrix(dto)`, getters
+  `current_partition/view/threshold/n_buckets`, `refresh()`,
+  `retranslate_ui()`.
+- Layout: controles arriba (partición, vista, buckets, threshold,
+  refresh), `QSplitter` vertical con tabla de gains (13 columnas) y
+  bloque inferior con summary + matriz de clasificación 3×3.
+- Sala limpia respetada: solo PySide6 + `frontend_v3.i18n`.
+- 65 claves i18n nuevas (paridad EN/ES estricta).
+
+**Cambios aplicados**:
+
+`frontend_v3/i18n.py` (132 inserciones netas, 0 borrados).
+`frontend_v3/reports_panel.py` (369 inserciones, 18 borrados).
+
+**Incidentes y lecciones (crítico para futuras sesiones)**:
+
+1. **El prompt de i18n fue escrito ANTES de tener el código final del
+   panel.** Varios nombres de claves no coincidieron con los que el
+   panel usa realmente, y faltaron claves dinámicas
+   (`reports_partition_{code}`, `reports_matrix_{key}`). Iteraciones
+   de fix: 4. **Regla adoptada**: cuando hay dependencia cruzada,
+   primero se implementa el consumidor (panel), se extraen las claves
+   de su uso real con un script (re sobre tr(...)), y **después** se
+   actualiza i18n.
+
+2. **Aider falló 3 veces seguidas sobre `frontend_v3/i18n.py`**:
+   en lugar de aplicar la edición, el modelo "conversaba" sobre el
+   estado del contexto. Patrón reproducible cuando el prompt incluye
+   reemplazos estructurales sobre archivos con diccionarios largos.
+   Los prompts con "TAREA: aplica ahora" mitigaron parcialmente.
+
+3. **Excepción al flujo Aider (regla del 29/09)**: la última clave
+   faltante (`reports_matrix_bad_capture_rate`) se añadió manualmente
+   en VS Code. Motivo: tres intentos fallidos seguidos con el mismo
+   archivo; seguir intentando quemaba tiempo sin mejorar la fiabilidad.
+
+4. **Duplicación cosmética pendiente**: quedaron en `i18n.py` ~18 claves
+   sin uso (`reports_col_good`, `reports_summary_*`, `reports_export_*`,
+   `reports_no_gains`, `reports_no_matrix`, `reports_error_compute`) que
+   se limpiarán en 2.4.c.2.c junto con la implementación del Export HTML.
+
+**Identidades verificadas**:
+- `set(_STRINGS["en"]) == set(_STRINGS["es"])`: paridad perfecta.
+- Total claves: 198 EN / 198 ES (antes de la fase: 133).
+- Suite: 188/188 PASSED.
+- `ReportsPanel()` se instancia sin error en `MainWindow.__init__`.
+
+**Tests**: 188/188 PASSED.
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4),
+`docs/estado_proyecto.md` (sección 3).
