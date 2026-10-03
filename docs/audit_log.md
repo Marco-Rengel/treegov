@@ -1216,3 +1216,71 @@ Prompts de hasta ~150 líneas de prosa son viables. La disciplina de
 verificación (`git diff` + `pytest`) no cambia.
 
 **Tests**: 178/178 PASSED (sin cambios en código).
+
+---
+
+### 03/10/2026 — Normalización de line endings y `.gitattributes`
+
+**Estado**: Aprobado.
+**Modelo**: N/A (decisión de infraestructura git).
+**Revisor**: Marco Rengel
+**Artefactos**: `.gitattributes` (nuevo, versionado),
+`docs/audit_log.md` (reescrito limpio).
+
+**Motivación**:
+Al añadir la entrada anterior ("Migración de NVIDIA NIM a Moonshot AI
+directo") mediante VS Code, git reportó un diff de 1218 inserciones y
+1151 borrados cuando en realidad solo se añadieron ~68 líneas. Causa:
+mezcla de terminadores de línea (CRLF heredado del historial del archivo
+vs. LF introducido por VS Code con la opción `files.eol: "\n"`).
+
+**Cómo detectarlo** (referencia para futuras sesiones):
+Síntoma: un commit cuyo `--stat` muestra cientos o miles de líneas
+borradas y añadidas en un archivo que solo recibió un bloque pequeño.
+Diagnóstico rápido: `git diff -w --stat <archivo>` — el flag `-w` ignora
+cambios de whitespace (incluyendo line endings). Si con `-w` el diff se
+reduce a un número pequeño (~N líneas reales), el ruido es de line endings.
+Segundo diagnóstico: `git ls-files --eol <archivo>` muestra el line ending
+del índice (`i/`), del working tree (`w/`) y los atributos aplicados
+(`attr/`).
+
+**Solución adoptada**:
+Crear `.gitattributes` en la raíz del repo con dos reglas:
+1. `* text=auto eol=lf` — por defecto, todos los archivos se guardan en el
+   repo con LF (estándar moderno, evita futuras mezclas).
+2. `docs/audit_log.md -text` — excepción para este archivo: `-text` le dice
+   a git "no normalices los saltos de línea al hacer add/commit". Esto
+   evita que un archivo con historial CRLF se reescriba entero al primer
+   commit, generando un diff ruidoso de transición.
+
+**Iteraciones**:
+1. Intento inicial con `docs/audit_log.md text eol=crlf` → mismo diff
+   ruidoso (1218/1151). La opción `eol=crlf` normaliza al vuelo y detecta
+   el archivo entero como cambiado si el índice estaba en estado distinto.
+2. `git config --global core.autocrlf false` → necesario pero no
+   suficiente por sí solo.
+3. `.gitattributes` con `-text` para el archivo específico → diff limpio
+   (68 inserciones, 1 borrado) en el commit final.
+
+**Configuración de entorno aplicada** (referencia):
+- `git config --global core.autocrlf false` — evita que git convierta
+  line endings automáticamente según la plataforma.
+- `git config --global core.pager ""` — desactiva el pager (less) al
+  ejecutar `git diff`. Sin esto, la terminal se queda "trabada" mostrando
+  el diff en modo lectura hasta pulsar `q`.
+
+**Lecciones operativas para futuras sesiones**:
+1. Antes de un `git commit`, verificar qué hay en staging con
+   `git status`. Si hay archivos adicionales de un `git add` previo, hacer
+   `git reset HEAD <archivo>` para no mezclar cambios no relacionados en
+   el mismo commit.
+2. Al introducir `.gitattributes` en un repositorio con historial previo,
+   preferir `-text` (no normalizar) para archivos con terminadores
+   distintos al estándar nuevo, en lugar de `eol=crlf` o `eol=lf`.
+3. No asumir que un comando sugerido por un asistente IA en un chat se ha
+   ejecutado sin verificarlo con `git config --get` o similar.
+4. Cualquier diff anómalamente grande (~1000+ líneas) en un archivo de
+   texto plano debe tratarse como sospecha de problema de line endings
+   antes de commitear.
+
+**Tests**: 178/178 PASSED (sin cambios en código).
