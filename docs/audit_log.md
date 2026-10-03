@@ -1149,3 +1149,70 @@ describía la estructura), reduciendo tokens innecesarios.
 
 **Tests**: 178/178 PASSED (los 3 tests que fallaban por conteo de
 pestañas se corrigieron a 4).
+
+---
+
+### 03/10/2026 — Migración de NVIDIA NIM a Moonshot AI directo
+
+**Estado**: Aprobado tras 3 iteraciones de configuración.
+**Modelo**: Kimi K3 vía Moonshot AI (plataforma internacional, NOVASCENT/Singapur).
+**Revisor**: Marco Rengel
+**Artefactos**: `.aider.conf.yml` (local, no versionado),
+`~/.aider.model.metadata.json`, `~/.aider.model.settings.yml` (nuevo),
+variable de entorno `MOONSHOT_API_KEY`.
+
+**Motivación**:
+NVIDIA NIM (free tier) presentó 504 recurrentes durante las sesiones del
+30/09 y 01/10/2026, confirmando que el servicio de prueba no es fiable
+para uso sostenido. Se evaluó la migración a la API de pago de Moonshot AI
+(creadores de Kimi K3) y se cargaron $20 el 04/10/2026 (factura 2846-0745,
+NOVASCENT PRIVATE LIMITED, Singapur).
+
+**Decisión de cliente**:
+Se mantiene Aider 0.86.2 como cliente (no se vuelve a OpenCode ni se
+migra a Kimi Code Desktop). Motivos:
+- El bug del 27/09/2026 era de OpenCode 1.18.32, no del proveedor.
+  Cambiar de API no arregla el cliente.
+- Kimi Code Desktop es un agente de propósito general con GUI; no ofrece
+  el control granular de prompts que exige la gobernanza MRM de TreeGov.
+- Aider tiene `auto-commits: false`, historial auditable y
+  `CONVENTIONS.md` cargado como contexto readonly.
+
+**Cambios aplicados**:
+- `.aider.conf.yml`: `model` cambiado de `nvidia_nim/moonshotai/kimi-k3`
+  a `moonshot/kimi-k3`. Eliminada la línea `openai-api-base` (LiteLLM
+  conoce el endpoint de Moonshot por defecto). Resto del archivo sin
+  cambios.
+- `~/.aider.model.metadata.json`: añadida entrada `openai/kimi-k3` con
+  costes reales ($3/M input, $15/M output) y contexto 1M. La entrada
+  previa de NIM se preservó como respaldo.
+- `~/.aider.model.settings.yml` (nuevo): entrada `moonshot/kimi-k3` con
+  `use_temperature: false` y `edit_format: whole`. Motivo: Kimi K3
+  (modelo de razonamiento) rechaza cualquier temperatura distinta de 1.
+- Variable de entorno: `$env:MOONSHOT_API_KEY` en lugar de
+  `NVIDIA_NIM_API_KEY`.
+
+**Iteraciones de diagnóstico**:
+1. `openai/kimi-k3` + `openai-api-base`: error 401. LiteLLM enrutaba a
+   api.openai.com en lugar de Moonshot.
+2. `moonshot/kimi-k3` sin settings: error 400
+   `invalid temperature: only 1 is allowed for this model`.
+3. `moonshot/kimi-k3` + `use_temperature: false`: éxito.
+
+**Identidades verificadas**:
+- `curl https://api.moonshot.ai/v1/models` devolvió 4 modelos
+  (`kimi-k3`, `kimi-k2.7-code`, `kimi-k2.6`, `kimi-k2.7-code-highspeed`).
+  Kimi K3 con 1M de contexto y `think_efforts` en low/high/max.
+- YAML de settings validado con `yaml.safe_load`.
+- JSON de metadata validado con `ConvertFrom-Json`.
+- Aider arranca sin warning de context window. Prueba de humo respondida
+  sin error 401 ni 400. Coste de la prueba: $0.02.
+
+**Consecuencia operativa**:
+La regla de "un prompt = un archivo" del 01/10/2026 (motivada por los
+504 de NIM) se mantiene por claridad de diffs, pero se suaviza la
+restricción de tamaño: al eliminar la capa NIM, los 504 desaparecen.
+Prompts de hasta ~150 líneas de prosa son viables. La disciplina de
+verificación (`git diff` + `pytest`) no cambia.
+
+**Tests**: 178/178 PASSED (sin cambios en código).
