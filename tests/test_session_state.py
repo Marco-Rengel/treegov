@@ -504,6 +504,84 @@ def test_reset_to_data_loaded():
         assert dict(s.state.spec) == {"seg": PredictorType.NOMINAL}
 
 
+# ---------------------------------------------------------------------------
+# Fase 2.4.c.1: get_gains_table / get_classification_matrix
+# ---------------------------------------------------------------------------
+
+
+def test_get_gains_table_returns_dict():
+    """Gains table OOS sobre fixture que separa perfecto: 36 filas, KS=AUC=Gini=1."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        gt = s.get_gains_table(partition="oos")
+        assert gt is not None
+        assert gt["by"] == "leaf"
+        assert gt["n_total"] == 36
+        assert gt["n_good"] == 18
+        assert gt["n_bad"] == 18
+        assert gt["n_excluded"] == 0
+        assert len(gt["rows"]) >= 1
+        assert sum(r["n"] for r in gt["rows"]) == 36
+        assert gt["ks"] is not None and math.isclose(gt["ks"], 1.0, rel_tol=1e-9)
+        assert math.isclose(gt["auc"], 1.0, rel_tol=1e-9)
+        assert math.isclose(gt["gini"], 1.0, rel_tol=1e-9)
+
+
+def test_get_gains_table_returns_none_without_tree():
+    """Sin modelo entrenado ambos getters devuelven None (patrón get_oos_oot_report)."""
+    s = Session(logger=_quiet_logger())
+    assert s.get_gains_table() is None
+    assert s.get_classification_matrix() is None
+
+
+def test_get_gains_table_partition_oot_without_oot():
+    """Partition 'oot' sin cohorte cargada: RuntimeError (caché no poblada)."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        _assert_raises(RuntimeError, s.get_gains_table, partition="oot")
+        _assert_raises(RuntimeError, s.get_classification_matrix, partition="oot")
+
+
+def test_get_classification_matrix_custom_threshold():
+    """ClassificationMatrix con threshold=0.3: conteos suman n_total."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        cm = s.get_classification_matrix(partition="oos", threshold=0.3)
+        assert cm is not None
+        assert math.isclose(cm["threshold"], 0.3, rel_tol=1e-12)
+        assert cm["n_total"] == 36
+        assert cm["tp"] + cm["tn"] + cm["fp"] + cm["fn"] == 36
+        assert cm["n_excluded"] == 0
+
+
+def test_get_gains_table_invalid_partition():
+    """Partition desconocida: ValueError con lista de válidas."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        _assert_raises(ValueError, s.get_gains_table, partition="foo")
+        _assert_raises(ValueError, s.get_classification_matrix, partition="foo")
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())
