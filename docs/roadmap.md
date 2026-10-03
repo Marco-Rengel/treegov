@@ -32,25 +32,21 @@
 
 ## Upcoming phases
 
-### 🟡 Phase 2.1.b — Hardening extras
-**Priority: MEDIUM**
-- Cross-validation scheme (Step 3 combo placeholder already in place).
-- Runtime backend-import guardrail in the GUI process (deferred from
-  Phase 2.0; the AST smoke check only covers numpy/pandas/scipy).
 
-### 🟡 Phase 2.3 — OOS/OOT metrics panel
-**Priority: HIGH**
+### ✅ Phase 2.3 — OOS/OOT metrics panel
+**Priority: HIGH** · **Cerrada el 29/09/2026**
 
 **Métricas requeridas:**
 - Gini, KS, HL, Brier, ROC + AUC, PR-AUC (`backend_v3/validation.py`)
 - PSI, CSI, Gini Drop con semáforos Basel/EBA (`backend_v3/stability.py`)
 - Mnemonics de teclado ("&") para menús
 
-**Metodología de trabajo (actualizada 29/09/2026):**
+**Metodología de trabajo (actualizada 03/10/2026):**
 
-La Fase 2.3 se divide en sub-pasos cortos. Todas las sub-fases se ejecutan
-con **Aider 0.86.2 + Kimi K3 (NVIDIA NIM)** con tool calls (migrado desde
-OpenCode el 27/09/2026; ver `docs/audit_log.md`).
+La Fase 2.3 se dividió en sub-pasos cortos. Todas las sub-fases se
+ejecutaron con **Aider 0.86.2 + Kimi K3 con tool calls** (migrado desde
+OpenCode el 27/09/2026 y a Moonshot AI directo el 03/10/2026; ver
+`docs/audit_log.md`).
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
@@ -67,9 +63,12 @@ OpenCode el 27/09/2026; ver `docs/audit_log.md`).
 | 2.3 ✅ | OOS/OOT metrics panel — **cerrada** | La Fase 2.3 completa (a-f) está operativa end-to-end |
 
 **Regla de proveedor:**
-- **Aider 0.86.2 + Kimi K3 (NVIDIA NIM)**: implementación, edición de archivos,
-  tests, refactor, documentación.
+- **Aider 0.86.2 + Kimi K3 vía Moonshot AI directo**: implementación,
+  edición de archivos, tests, refactor, documentación.
 - **Instalación:** global vía `pipx` con Python 3.11.9 (fuera del `.venv/`).
+- **Histórico:** hasta el 03/10/2026 se usó NVIDIA NIM (free tier); se
+  migró a Moonshot AI directo por inestabilidad de NIM (504 recurrentes).
+  Ver `docs/audit_log.md` entradas del 03/10/2026.
 
 Cada sub-paso se audita antes de pasar al siguiente. Verificación manual
 obligatoria (`python -m pytest tests -q`, `git status`, `git diff` del
@@ -160,6 +159,20 @@ clasificación y exportación HTML autocontenido.
 - Staging (Stage 1/2/3).
 - ECL computation: PD × LGD × EAD.
 
+## Deferred (no blocking current work)
+
+### ⏳ Phase 2.1.b — Hardening extras
+**Priority: LOW (deferred)**
+
+- Cross-validation scheme (Step 3 combo placeholder already in place).
+- Runtime backend-import guardrail in the GUI process (deferred from
+  Phase 2.0; the AST smoke check only covers numpy/pandas/scipy).
+
+**Motivo del aplazamiento:** ninguna de estas dos mejoras es bloqueante
+para las fases 2.4, 3, 4 o 5. Se retomarán si aparece una necesidad
+concreta (por ejemplo, auditoría externa que requiera CV formal, o
+incidente que exponga la ausencia del guardrail runtime).
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality
@@ -168,6 +181,9 @@ clasificación y exportación HTML autocontenido.
 - **White box**: sklearn/statsmodels/xgboost/lightgbm/catboost are forbidden.
 - **Gini**: convention 2·AUC − 1 (credit scoring).
 - **License**: Apache 2.0.
+- **AI provider (dev-time only)**: Moonshot AI directo (Kimi K3) desde
+  el 03/10/2026. No afecta al producto ni al runtime; es exclusivamente
+  la herramienta de asistencia durante el desarrollo. Ver `AGENTS.md`.
 
 ## Pending decisions
 
