@@ -2068,3 +2068,116 @@ stability).
 **Referencias**:
 - `docs/design_decisions.md` §11 (tabla de los 4 parámetros).
 - `docs/design_decisions.md` §4.1, §4.2, §4.3, §7.4.
+
+---
+
+### 04/10/2026 — Fase 3.1.a: diseño estructural multiclase
+
+**Estado**: Aprobado. Pendiente de implementación.
+**Modelo**: N/A (autoría manual por el asistente estratégico).
+**Revisor**: Marco Rengel
+**Artefactos**: `docs/3.1_design_multiclass.md` (nuevo, ~40 KB,
+~1000 líneas, 13 secciones).
+
+**Motivación**:
+Antes de empezar la implementación de multiclase (Fase 3.1), se
+redactó el diseño estructural completo. Motivo: multiclase toca la
+capa más profunda del modelo (`TreeNode`, `TreeModel`, `TreeBuilder`)
+y cada consumidor binario (`validation`, `reporting`, `stability`,
+GUI) debe ser verificado. Un diseño auditado antes del código
+previene refactorizaciones y zonas grises.
+
+**Decisiones clave del diseño**:
+
+1. **`TreeNode.pd_final` y `pd_jeffreys` pasan a `tuple[float, ...]`.**
+   `n_events` pasa a `tuple[int, ...]`. Único tipo, invariante
+   `sum == 1` verificable.
+
+2. **Nuevo campo `TreeNode.class_labels: tuple[str, ...]`.**
+   Trazabilidad: cualquier consumidor que lea `pd_final[c]` puede leer
+   `class_labels[c]` para saber qué clase representa.
+
+3. **`TreeModel` gana `class_labels`, `target_class`,
+   `target_class_index`.**
+   Fingerprint los refleja.
+
+4. **Jeffreys multivariante:**
+   `pd_jeffreys[c] = (k_c + 0.5) / (n + K * 0.5)`.
+   Reducción exacta al binario para K=2. Prior: media posterior de
+   `Dirichlet(0.5, ..., 0.5)`. Cita: Jeffreys (1946).
+
+5. **`pd_floor` en multiclase:** se aplica componente a componente y
+   se renormaliza. Preserva el invariante `sum == 1`. Soft floor en
+   lugar de floor estricto por componente.
+
+6. **§1bis — `target_class` y `class_labels` OBLIGATORIOS.**
+   Sin defaults. `Session.fix_spec` los exige. `TypeError` si se
+   omiten. `ValueError` si el valor no está en las clases observadas.
+
+   **Motivo:** evitar el problema clásico de "clase de interés
+   invertida" que en SPSS/R/sklearn se resuelve con `pos_label=1` y
+   que muchos analistas olvidan. Resultado del olvido: métricas
+   invertidas silenciosamente (Gini negativo, cum decreciente,
+   recall bajo). Cero defaults para forzar la decisión.
+
+7. **§1ter — Validaciones pre-entrenamiento (wizard):**
+   - **Check A:** combo solo ofrece clases observadas (no texto libre).
+   - **Check B:** cada opción muestra el conteo de su clase.
+   - **Check C:** warning amarillo visible si se elige la clase
+     mayoritaria. No bloqueante pero registrado en log.
+   - Los 3 checks son complementarios, activos a la vez.
+
+8. **§1quater — Alertas post-entrenamiento:**
+   - **Gini negativo** → badge rojo con mensaje "verifique si
+     `target_class` está invertido".
+   - **`event_rate_cum` decreciente** en gains table → mismo badge.
+   - **Botón de reversión** con un clic: invierte la clase, reusa
+     todos los parámetros, reentrena.
+
+9. **Reordenamiento canónico interno:** la clase de interés siempre
+   ocupa el índice 0 del vector PD. Consumidores leen `pd_final[0]`
+   para la clase de interés, independientemente del valor numérico
+   original en los datos.
+
+10. **CHAID es el único motor multiclase en 3.1.** C&RT y QUEST
+    bloquean K > 2 con mensaje que apunta a Fase 3.4.
+
+11. **Métricas y reportes siguen bloqueando K > 2 en 3.1.** Se abren
+    en Fase 3.5. Bloqueo con mensaje claro que apunta a la fase
+    futura.
+
+12. **`predict_pd` pasa a devolver `np.ndarray` 2D** `(n_rows, K)`.
+    Consumidores binarios leen `pd_2d[:, 0]`.
+
+13. **Fingerprint incluye `target_class`, `class_labels`, `n_classes`.**
+    Dos árboles con distinta clase de interés nunca comparten
+    fingerprint. Esto invalida fingerprints previos a 3.1
+    (documentado; alpha sin producción).
+
+**Sub-fases de implementación** (6 sesiones estimadas):
+
+| Sub-fase | Alcance |
+|---|---|
+| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` |
+| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento |
+| 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST |
+| 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability |
+| 3.1.e | Wizard: selección obligatoria + counts + warning minoritaria |
+| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión |
+
+**Tests planificados:**
+
+- ~25-30 tests nuevos.
+- ~30-40 tests adaptados (escalar → tuple).
+- 0 tests retirados.
+
+**Invariante no negociable:**
+Para K=2 con `target_class=1` y labels estándar, el modelo producido
+es **numéricamente idéntico** al pre-3.1. Verificado por
+`test_multiclass_binary_parity`.
+
+**Tests**: 206/206 PASSED (sin cambios en código; solo documento nuevo).
+
+**Referencias**:
+- `docs/3.1_design_multiclass.md` (documento nuevo).
+- `docs/design_decisions.md` §5.2, §6.4, §0.4.
