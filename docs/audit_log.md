@@ -1653,3 +1653,68 @@ verificando que cada clave aparecía exactamente 2 veces (EN + ES).
 **Tests**: 188/188 PASSED (los E2E específicos del panel van en 2.4.c.2.c.3).
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4).
+
+---
+
+### 03/10/2026 — Fase 2.4.c.2.c.3 + cierre de 2.4.c.2
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `tests/test_reports_panel.py` (commit `75d1a5a`).
+
+**Motivación**:
+Cerrar 2.4.c.2 con los tests del `ReportsPanel` (7 tests unitarios,
+archivo nuevo). Con esto la UI de reportes queda completa y verificada
+para pasar a 2.4.d (tests E2E + cierre de Fase 2.4).
+
+**Cambios aplicados**:
+
+`tests/test_reports_panel.py` (nuevo, 215 líneas):
+- 7 tests unitarios, estilo dual (pytest / python directo), siguiendo
+  el patrón de `test_metrics_panel.py` (offscreen, `_get_app`,
+  runner `__main__`).
+- Cobertura:
+  1. `test_panel_constructs` — instancia sin error.
+  2. `test_retranslate` — EN ↔ ES sin excepción, verifica `_partition_label`.
+  3. `test_set_session_available` — habilitación de opciones del combo.
+  4. `test_set_gains_table_populates` — 13 columnas, `rowCount=1`, label "L0".
+  5. `test_signals_emitted` — 3 señales (partition, view, threshold).
+  6. `test_build_report_html_contains_data` — HTML con label y matrices.
+  7. `test_export_empty_does_not_crash` — `QMessageBox` mockeado.
+
+**Hallazgos durante la implementación**:
+
+1. **`test_signals_emitted` falló en primer intento**: el combo de
+   partición arranca en "oos" (default del panel), y
+   `setCurrentIndex("oos")` no dispara `currentIndexChanged` si el
+   índice no cambia. Fix: forzar primero el estado a "train"/"leaf"
+   antes de conectar las señales y luego moverse a "oos"/"bucket".
+   **Lección operativa**: cuando se testean señales de Qt, verificar
+   que el cambio de estado sea *efectivo* (índice distinto al actual).
+
+2. **`test_build_report_html_contains_data` falló en primer intento**:
+   el test asumía que el HTML contenía las cadenas literales "TP" y
+   "TN", pero `_build_report_html` usa las claves i18n
+   `reports_matrix_pred_good/bad` y `reports_matrix_actual_good/bad`
+   para las cabeceras de la matriz (no incluye literales "TP"/"TN").
+   Fix: verificar `tr("reports_matrix_pred_good")` y
+   `tr("reports_matrix_pred_bad")` en su lugar.
+   **Lección operativa**: al escribir tests de HTML generado, verificar
+   los identificadores reales del generador, no supuestos del revisor.
+
+**Cierre de 2.4.c.2**:
+Los 3 sub-pasos (a: panel + i18n, b: cableado MainWindow, c: Export HTML
++ limpieza i18n + tests) están completos. La UI de reportes está
+operativa end-to-end: el usuario entrena, evalúa OOS/OOT, y la pestaña
+"Reports" muestra tabla de gains + matriz, con export HTML funcional.
+
+**Identidades verificadas**:
+- Suite: 195/195 PASSED (188 previos + 7 nuevos).
+- `test_reports_panel.py` pasa con pytest y con python directo.
+- Sin warnings en toda la suite.
+
+**Tests**: 195/195 PASSED.
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4),
+`docs/estado_proyecto.md` (sección 3).
