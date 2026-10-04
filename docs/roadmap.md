@@ -91,7 +91,7 @@ clasificación y exportación HTML autocontenido.
 | 2.4.c.2.b Cableado MainWindow | ✅ (03/10/2026) | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
 | 2.4.c.2.c.1 Export HTML | ✅ (03/10/2026) | QDialog + QTextBrowser + save-as |
 | 2.4.c.2.c.2 Limpieza i18n | ✅ (03/10/2026) | 14 claves huérfanas eliminadas |
-| 2.4.c.2.c.3 Tests E2E | ⏳ | Tests del panel de reportes |
+| 2.4.c.2.c.3 Tests del panel | ✅ (03/10/2026) | 7 tests unitarios en `tests/test_reports_panel.py` |
 | 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
 
 **Diseño acordado (30/09/2026):**
