@@ -174,6 +174,44 @@ def test_csi_continuo_estable():
     assert len(rep.per_bin) == 10
 
 
+# ---------------------------------------------------------------------------
+# Fase 3.0.g: parámetro renormalize (psi_index / StabilityMonitor)
+# ---------------------------------------------------------------------------
+
+
+def test_psi_index_renormalize_changes_with_empty_bin():
+    """renormalize=True cambia el resultado del PSI cuando hay bins vacíos:
+    la renormalización tras el clip altera los pesos relativos."""
+    expected = np.array([0.9, 0.1, 0.0])
+    actual = np.array([0.7, 0.3, 0.0])
+    # Clip eps=1e-4: ambos quedan [x, y, 1e-4] con suma 1.0001. Al
+    # renormalizar, ambos se dividen por el mismo factor -> ratios a/e
+    # intactos pero diferencias (a - e) escaladas -> PSI distinto.
+    psi_sin, _ = psi_index(expected, actual)
+    psi_con, _ = psi_index(expected, actual, renormalize=True)
+    assert psi_sin != psi_con
+    assert psi_sin > 0.0
+    assert psi_con > 0.0
+
+
+def test_psi_index_renormalize_no_op_when_already_normalized():
+    """Con distribuciones normalizadas y sin bins vacíos, renormalize=True
+    es un no-op."""
+    expected = np.array([0.6, 0.4])
+    actual = np.array([0.5, 0.5])
+    psi_sin, _ = psi_index(expected, actual)
+    psi_con, _ = psi_index(expected, actual, renormalize=True)
+    assert math.isclose(psi_sin, psi_con, rel_tol=1e-12)
+
+
+def test_stability_monitor_renormalize_invalid():
+    """renormalize debe ser bool: int y str lanzan ValueError."""
+    _assert_raises(ValueError, StabilityMonitor, renormalize="yes")
+    _assert_raises(ValueError, StabilityMonitor, renormalize=1)
+    assert StabilityMonitor().renormalize is False
+    assert StabilityMonitor(renormalize=True).renormalize is True
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

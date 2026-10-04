@@ -92,9 +92,23 @@ def gini_drop_alert(drop: float | None) -> str:
 
 
 def psi_index(
-    expected: np.ndarray, actual: np.ndarray
+    expected: np.ndarray, actual: np.ndarray, *, renormalize: bool = False
 ) -> tuple[float, np.ndarray]:
-    """PSI con clip epsilon=SIN renormalizar (decision MRM deliberada)."""
+    """PSI with eps clip; optional canonical renormalization.
+
+    Two modes (see design_decisions.md section 7.4):
+
+      - renormalize=False (default): clip to eps WITHOUT renormalizing.
+        Deliberate MRM decision: it preserves the signal of empty OOT
+        bins; the scale error is negligible against the 0.10/0.25
+        thresholds when bins are non-empty.
+      - renormalize=True: after the eps clip, both vectors are
+        renormalized to sum 1 (expected /= expected.sum();
+        actual /= actual.sum()) BEFORE computing the product
+        (act - exp) * log(act / exp). Canonical textbook behavior.
+
+    Returns (psi, per_bin_contributions).
+    """
     exp = np.asarray(expected, dtype=float)
     act = np.asarray(actual, dtype=float)
     if exp.shape != act.shape:
@@ -106,6 +120,11 @@ def psi_index(
     # los umbrales 0.10/0.25 cuando los bins no estan vacios.
     exp = np.clip(exp, _EPS_DEFAULT, None)
     act = np.clip(act, _EPS_DEFAULT, None)
+    if renormalize:
+        # Canonical opt-in mode: rescale both vectors to sum 1 right after
+        # the eps clip, BEFORE the contributions (design_decisions.md 7.4).
+        exp = exp / exp.sum()
+        act = act / act.sum()
     contrib = (act - exp) * np.log(act / exp)
     return float(contrib.sum()), contrib
 
@@ -163,12 +182,32 @@ class OOTReport:
 
 
 class StabilityMonitor:
-    """Calcula PSI de hojas y CSI por covariable (train como referencia)."""
+    """Compute leaf PSI and per-covariate CSI (train as reference).
+
+    Parameters:
+        eps: epsilon floor applied to probabilities before the log.
+        renormalize: forwarded to psi_index on every internal call. If True,
+            both probability vectors are renormalized to sum 1 after the
+            eps clip (canonical mode); if False (default), the clip is
+            applied without renormalization (deliberate MRM decision, see
+            design_decisions.md section 7.4). The default preserves the
+            legacy numeric behavior exactly.
+        logger: optional logger; defaults to the "stability" logger.
+    """
 
     def __init__(
-        self, *, eps: float = _EPS_DEFAULT, logger: logging.Logger | None = None
+        self,
+        *,
+        eps: float = _EPS_DEFAULT,
+        renormalize: bool = False,
+        logger: logging.Logger | None = None,
     ) -> None:
+        if not isinstance(renormalize, bool):
+            raise ValueError(
+                f"renormalize debe ser bool (recibido {renormalize!r})"
+            )
         self.eps = float(eps)
+        self.renormalize = bool(renormalize)
         self._log = logger if logger is not None else get_logger("stability")
 
     # ------------------------------------------------------------------
@@ -208,7 +247,7 @@ class StabilityMonitor:
             counts = np.concatenate([counts, [float(n_excluidas)]])
         p_act = counts / max(n_oot_total, 1)
 
-        psi, contrib = psi_index(p_exp, p_act)
+        psi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
         per_bin = tuple(
             (etiquetas[i], float(p_exp[i]), float(p_act[i]), float(contrib[i]))
             for i in range(len(etiquetas))
@@ -285,7 +324,7 @@ class StabilityMonitor:
                 p_exp = np.concatenate([p_exp, [0.0]])
                 p_act = np.concatenate([p_act, [n_otros / n_ac]])
 
-        csi, contrib = psi_index(p_exp, p_act)
+        csi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
         per_bin = tuple(
             (etiquetas[i], float(p_exp[i]), float(p_act[i]), float(contrib[i]))
             for i in range(len(etiquetas))
