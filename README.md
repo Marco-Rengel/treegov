@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 206/206 passing
+**Test suite**: 210/210 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -163,6 +163,7 @@ TreeGov/
 | **2.3** | OOS/OOT metrics panel | Completed |
 | **2.4** | Reports + integration | Completed |
 | **3.0** | Documentation closure + configurable canonical parameters | Completed |
+| **3.1.a** | TreeNode/TreeModel tuples + TreeBuilder.target_class | Completed |
 | **3.1** | Multiclass support in the tree builder | In progress |
 | **3.2** | Sample weighting | Planned |
 | **3.3** | Indet / Insufficient / No Perf categories | Planned |
@@ -176,7 +177,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 206/206 passing.**
+**Test suite: 210/210 passing.**
 
 ---
 
