@@ -53,3 +53,6 @@ archive/
 .aider*
 !.aider.conf.example.yml
 !.aiderignore
+
+# Archivos temporales de sesión (borradores de diff, estado parcial)
+tmp_*
