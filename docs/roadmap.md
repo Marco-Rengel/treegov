@@ -89,7 +89,9 @@ clasificación y exportación HTML autocontenido.
 | 2.4.c.1 Backend de Session | ✅ (03/10/2026) | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
 | 2.4.c.2.a Panel funcional | ✅ (03/10/2026) | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
 | 2.4.c.2.b Cableado MainWindow | ✅ (03/10/2026) | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
-| 2.4.c.2.c Export HTML + tests | ⏳ | QTextBrowser + tests E2E |
+| 2.4.c.2.c.1 Export HTML | ✅ (03/10/2026) | QDialog + QTextBrowser + save-as |
+| 2.4.c.2.c.2 Limpieza i18n | ✅ (03/10/2026) | 14 claves huérfanas eliminadas |
+| 2.4.c.2.c.3 Tests E2E | ⏳ | Tests del panel de reportes |
 | 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
 
 **Diseño acordado (30/09/2026):**

@@ -133,7 +133,9 @@ Sub-pasos:
 - 2.4.c.1 Backend de Session (`get_gains_table` + `get_classification_matrix`) ✅ (03/10/2026)
 - 2.4.c.2.a Panel funcional (`reports_panel.py` + i18n) ✅ (03/10/2026)
 - 2.4.c.2.b Cableado MainWindow ✅ (03/10/2026)
-- 2.4.c.2.c Export HTML + tests E2E ⏳
+- 2.4.c.2.c.1 Export HTML ✅ (03/10/2026)
+- 2.4.c.2.c.2 Limpieza i18n ✅ (03/10/2026)
+- 2.4.c.2.c.3 Tests E2E ⏳
 - 2.4.d Tests E2E + cierre ⏳
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
