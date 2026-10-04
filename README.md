@@ -159,7 +159,7 @@ TreeGov/
 | **1.3** | OOT validation + PSI/CSI stability monitoring | Completed |
 | **2.0-2.2** | GUI with PySide6: skeleton, transactional wizard, tree viewer | Completed |
 | **2.3** | OOS/OOT metrics panel | Completed |
-| **2.4** | Reports + integration | In progress |
+| **2.4** | Reports + integration | Completed |
 | **3** | Analytical reports + MCP layer for LLM agents | Planned |
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |

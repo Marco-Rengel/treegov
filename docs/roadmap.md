@@ -74,8 +74,8 @@ Cada sub-paso se audita antes de pasar al siguiente. Verificación manual
 obligatoria (`python -m pytest tests -q`, `git status`, `git diff` del
 archivo tocado) tras cada tarea de Aider.
 
-### 🟡 Phase 2.4 — Reports + integration
-**Priority: MEDIUM**
+### ✅ Phase 2.4 — Reports + integration
+**Priority: MEDIUM** · **Cerrada el 03/10/2026**
 
 **Objetivo:** panel de reportes analíticos con gains table, matriz de
 clasificación y exportación HTML autocontenido.
@@ -92,7 +92,7 @@ clasificación y exportación HTML autocontenido.
 | 2.4.c.2.c.1 Export HTML | ✅ (03/10/2026) | QDialog + QTextBrowser + save-as |
 | 2.4.c.2.c.2 Limpieza i18n | ✅ (03/10/2026) | 14 claves huérfanas eliminadas |
 | 2.4.c.2.c.3 Tests del panel | ✅ (03/10/2026) | 7 tests unitarios en `tests/test_reports_panel.py` |
-| 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
+| 2.4.d Tests E2E + cierre | ✅ (03/10/2026) | 4 tests E2E en `test_e2e_reports.py`; screenshot diferido a 2.4.e |
 
 **Diseño acordado (30/09/2026):**
 

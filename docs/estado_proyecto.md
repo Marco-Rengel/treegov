@@ -124,7 +124,7 @@ El panel OOS/OOT está operativo end-to-end: carga datos, entrena,
 evalúa OOS, carga OOT, evalúa, y renderiza badges con colores semánticos
 del tema activo.
 
-### Fase 2.4 — Reportes + integración 🟡 En curso
+### Fase 2.4 — Reportes + integración ✅ Cerrada 03/10/2026
 
 Sub-pasos:
 - 2.4.a Diseño estructural ✅ (01/10/2026) — Pestaña Reports +
@@ -137,7 +137,8 @@ Sub-pasos:
 - 2.4.c.2.c.2 Limpieza i18n ✅ (03/10/2026)
 - 2.4.c.2.c.3 Tests del panel ✅ (03/10/2026)
 - **2.4.c.2 completa** ✅ (03/10/2026)
-- 2.4.d Tests E2E + cierre ⏳
+- 2.4.d Tests E2E + cierre ✅ (03/10/2026)
+- **Fase 2.4 completa** ✅ (03/10/2026)
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
 
@@ -165,7 +166,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (195 tests)
+├── tests/ # Suite de tests (199 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── api.md
@@ -287,9 +288,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | metrics_panel (frontend) | 9 |
 | e2e_mainwindow (frontend) | 5 |
 | reports_panel (frontend) | 7 |
-| **Total** | **195** |
+| e2e_reports (frontend) | 4 |
+| **Total** | **199** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 195/195 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 199/199 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -393,10 +395,9 @@ aider
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3 cerradas.
-> Fase 2.4 en curso (2.4.c.2 completa; 2.4.d próximamente).
-> Suite 195/195. Próximo paso: 2.4.d con Aider 0.86.2 + Kimi K3 vía
-> Moonshot AI directo."
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4 cerradas.
+> Suite 199/199. Próximo paso: Fase 3 (reportes analíticos + capa MCP)
+> con Aider 0.86.2 + Kimi K3 vía Moonshot AI directo."
 
 ---
 

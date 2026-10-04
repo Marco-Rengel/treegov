@@ -1718,3 +1718,49 @@ operativa end-to-end: el usuario entrena, evalúa OOS/OOT, y la pestaña
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4),
 `docs/estado_proyecto.md` (sección 3).
+
+---
+
+### 03/10/2026 — Fase 2.4.d: tests E2E + cierre de Fase 2.4
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `tests/test_e2e_reports.py` (commit `d838512`).
+
+**Motivación**:
+Último sub-paso de Fase 2.4. Cubrir el flujo end-to-end del panel de
+reportes: carga de CSV → entrenamiento → tabla de gains poblada →
+cambio de partición → export HTML → escritura a disco.
+
+**Cambios aplicados**:
+
+`tests/test_e2e_reports.py` (nuevo, 205 líneas):
+- 4 tests E2E, estilo dual (pytest / python directo), con helpers
+  reutilizados de `test_e2e_mainwindow.py`.
+- Cobertura: populate tras train, cambio de partición, click export
+  build HTML, save-as escribe archivo.
+
+**Hallazgos**:
+
+1. **Prompts endurecidos**: antes de escribir el prompt, se
+   identificaron 2 riesgos de fallo (asumir combo "train" habilitado
+   tras entrenar; asumir tabla poblada con el fixture). Se añadieron
+   pre-asserts explícitos. Los 4 tests pasaron a la primera.
+
+2. **Sin warnings**: la corrección `setTextAlignment` (2.4.c.2.b) sigue
+   vigente; la corrida completa es limpia.
+
+**Cierre de Fase 2.4**:
+Los 4 sub-pasos (a, b, c, d) están completos. El usuario puede: cargar
+datos, entrenar, evaluar OOS/OOT, y en la pestaña "Reports" ver la
+gains table + matriz de clasificación para cualquier partición
+disponible, con export HTML autocontenido.
+
+**Identidades verificadas**:
+- Suite: 199/199 PASSED (195 previos + 4 nuevos).
+- `test_e2e_reports.py` pasa con pytest y con python directo.
+
+**Tests**: 199/199 PASSED.
+
+**Referencias**: `docs/roadmap.md`, `docs/estado_proyecto.md`.
