@@ -145,9 +145,11 @@ Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3** — Capa MCP + exportación SQL/Python + soporte multiclase en el flujo del árbol + ponderación por muestra + categorías Indet/Insufficient/No Perf
-- **Fase 4** — Scoring batch y champion-challenger
-- **Fase 5** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
+- **Fase 3** — Analítica avanzada + cierre documental: 3.0 (design_decisions.md + 4 parámetros configurables), 3.1 (multiclase), 3.2 (ponderación), 3.3 (Indet/No Perf), 3.4 (CRT/QUEST multiclase), 3.5 (reportes adaptados), 3.6 (validación con datos públicos), 3.6.b (modo no-bancario), 3.7 (v1.0.0 estable)
+- **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
+- **Fase 5** — Capa MCP
+- **Fase 6** — Scoring batch y champion-challenger
+- **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
 
 ---
 
@@ -169,6 +171,7 @@ TreeGov/
 ├── tests/ # Suite de tests (199 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
+│ ├── design_decisions.md
 │ ├── api.md
 │ ├── roadmap.md
 │ ├── philosophy.md
@@ -374,6 +377,7 @@ Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
    - `.treegovrules` (reglas de gobernanza)
    - `CONVENTIONS.md` (convenciones para Aider)
    - `docs/methodology.md` (metodología matemática)
+   - `docs/design_decisions.md` (decisiones de implementación)
    - `docs/api.md` (API pública)
    - `docs/roadmap.md` (plan de fases)
    - `docs/audit_log.md` (histórico de decisiones)

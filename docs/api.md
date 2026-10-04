@@ -95,6 +95,21 @@ underscore) are internal and may change without notice.
 
 ---
 
+## Cross-reference — design decisions
+
+For the rationale behind the API's behaviour (defaults, invariants,
+governance modes, non-canonical choices), see
+[`docs/design_decisions.md`](design_decisions.md). That document
+explains, for each public symbol, the design choices it embodies.
+
+In particular:
+- `GovernanceMode.BANKING` vs `RESEARCH`: `design_decisions.md` §0.3.
+- `predict_pd(unseen_policy="error")` default: `design_decisions.md` §7.6.
+- `SplitConfig` invariants: `design_decisions.md` §1.3.
+- Fingerprint composition: `design_decisions.md` §10.1, §10.2.
+- QUEST Bonferroni family and other canonical deviations:
+  `design_decisions.md` §11.
+
 > **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be
 > documented here once they stabilize.

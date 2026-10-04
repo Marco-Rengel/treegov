@@ -143,21 +143,66 @@ clasificación y exportación HTML autocontenido.
   `No Perf` como metadatos de población (no entran al modelo). Relevante
   cuando se integre con sistemas de buró.
 
-### ⏳ Phase 3 — Analytical reports + MCP layer
+### ⏳ Phase 3 — Advanced analytics + documentation closure
+**Priority: HIGH**
+
+**Objetivo.** Cerrar la "zona gris" de decisiones implícitas acumuladas en
+Fases 0-2, y extender la analítica del motor para cubrir los casos de uso
+reales de crédito (muestras sesgadas, categorías Indet/No Perf, multiclase)
+y no-crédito (biología, ciencias sociales).
+
+**Sub-fases:**
+
+| Sub-fase | Alcance | Prioridad |
+|---|---|---|
+| 3.0 | Documentación + parámetros canónicos vs TreeGov (design_decisions.md, methodology.md, 4 parámetros configurables) | Alta |
+| 3.1 | Multiclase en el árbol (target + TreeNode + TreeBuilder) | Alta |
+| 3.2 | Ponderación por muestra (transversal al backend) | Alta |
+| 3.3 | Categorías Indet / Insufficient / No Perf | Alta |
+| 3.4 | CRT y QUEST multiclase | Media |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
+| 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
+| 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
+| 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
+
+**Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
+analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
+amplia: mezclaba analítica avanzada (necesaria para uso real en banca) con
+capa de interoperabilidad (MCP), con export a producción. La redefinición
+del 04/10/2026 separa esas familias:
+
+- **Fase 3 (esta):** analítica avanzada + documentación + validación.
+- **Fase 4:** reportes avanzados + export SQL/Python.
+- **Fase 5:** capa MCP.
+- **Fase 6:** batch scoring + champion-challenger.
+- **Fase 7:** IFRS 9 / ECL.
+
+**Deudas diferidas a fases futuras (documentadas):**
+- Fase 3.x — Screenshot automatizado de la GUI (requiere xvfb o runner
+  gráfico).
+- Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
+
+### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**
 
-- Gains table and classification matrix.
 - Dual export: nested SQL + pure Python.
-- MCP (Model Context Protocol) layer for consumption from LLM agents.
-  Headless backend as the base; MCP as an adapter (it does not replace the GUI).
+- Rule export (Markdown / JSON).
+- Automatic model documentation.
 
-### ⏳ Phase 4 — Batch scoring and production
+### ⏳ Phase 5 — MCP layer
+**Priority: MEDIUM**
+
+- MCP (Model Context Protocol) layer for consumption from LLM agents.
+  Headless backend as the base; MCP as an adapter (does not replace
+  the GUI).
+
+### ⏳ Phase 6 — Batch scoring and production
 **Priority: MEDIUM**
 
 - Apply the tree to the full portfolio.
 - Champion-challenger: compare engines and versions.
 
-### ⏳ Phase 5 — IFRS 9 / ECL
+### ⏳ Phase 7 — IFRS 9 / ECL
 **Priority: LOW (depends on integration with banking systems)**
 
 - PD per segment (tree leaf).
@@ -200,6 +245,27 @@ incidente que exponga la ausencia del guardrail runtime).
   - Suite de tests: 199/199 PASSED.
 - **v1.0.0a0** (fecha previa) — Placeholder reservado en PyPI. Solo
   metadatos, sin código funcional.
+
+## Documentation map
+
+The project's documentation is layered by purpose:
+
+| Document | Purpose | Audience |
+|---|---|---|
+| `docs/methodology.md` | Mathematical formulas with citations | Auditor / modeller |
+| `docs/design_decisions.md` | Implementation decisions (context, alternatives, rationale) | Auditor / maintainer |
+| `docs/api.md` | Public API surface | Integrator |
+| `docs/roadmap.md` | Phase plan and current status | Everyone |
+| `docs/audit_log.md` | Chronological log of changes | Auditor |
+| `docs/estado_proyecto.md` | Executive dossier of the project | New collaborator |
+| `docs/contexto_para_nueva_sesion.md` | Bootstrap for new sessions | AI assistant / collaborator |
+| `.treegovrules` | Governance rules | AI agent |
+| `CONVENTIONS.md` | Operational conventions for Aider | AI agent |
+
+**Rule.** A change that alters the numerical result, the API contract,
+or the architectural boundaries must update `design_decisions.md` in
+the same commit as the code. `methodology.md` gains a subsection only
+when a mathematical formula or convention changes.
 
 ## Pending decisions
 

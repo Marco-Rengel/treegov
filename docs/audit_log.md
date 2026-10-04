@@ -1829,3 +1829,144 @@ ese placeholder por el paquete real con `backend_v3` + `frontend_v3`.
 **Tests**: 199/199 PASSED (sin cambios en código).
 
 **Referencias**: `docs/roadmap.md`, `docs/estado_proyecto.md`.
+
+---
+
+### 04/10/2026 — Fase 3.0: cierre de la "zona gris" documental
+
+**Estado**: Aprobado.
+**Modelo**: N/A (auditoría documental + redacción manual).
+**Revisor**: Marco Rengel
+**Artefactos**: `docs/design_decisions.md` (nuevo, 47.784 bytes),
+`docs/methodology.md` (16 subsecciones nuevas),
+`docs/roadmap.md` (redistribución de fases 3-7),
+`docs/estado_proyecto.md` (referencias),
+`docs/api.md` (cross-reference).
+
+**Motivación**:
+Durante las sesiones previas se identificó una "zona gris": decisiones
+de implementación tomadas en Fases 0-2 que **no están documentadas en
+`methodology.md` ni en `audit_log.md`**. El código sí está bien
+documentado internamente (docstrings excelentes), pero un auditor que
+solo lee los documentos formales **no puede reconstruir el modelo real**
+sin abrir el código.
+
+Esta fase cierra esa zona gris antes de empezar la analítica avanzada
+(3.1 a 3.6), para que las decisiones futuras se tomen sobre una base
+documental sólida.
+
+**Inventario de decisiones implícitas detectadas**:
+
+Se auditaron los 14 módulos de `backend_v3/` y se identificaron 38
+decisiones no documentadas formalmente. Clasificación:
+
+| Categoría | Descripción | Nº |
+|---|---|---|
+| **A** | Trazabilidad pura (no alteran la matemática) | ~15 |
+| **B** | Alteran la matemática pero son elección explícita del usuario (BANKING/RESEARCH, parámetros con default) | ~10 |
+| **C** | Desviaciones respecto a la literatura canónica, documentadas pero potencialmente invisibles al usuario | 4 |
+| **D** | Decisión de política de API, no matemática | 9 |
+
+De las 38, **4 están en la categoría "C"** (canónico vs TreeGov) y se
+planifican como parámetros configurables en la sub-fase 3.0.g.
+
+**Cambios aplicados**:
+
+**1) `docs/design_decisions.md` (nuevo, 47.784 bytes)**:
+- Documento dedicado a decisiones de *implementación* (distinto de
+  `methodology.md`, que es matemática pura).
+- Estructura: §0 (dominio y perfiles de usuario) + §1 a §10
+  (decisiones por módulo/área) + §11 (parámetros a exponer).
+- Formato por decisión: Contexto / Alternativas / Elección /
+  Justificación / Consecuencias / Referencias cruzadas.
+- Incluye un análisis honesto de cobertura por perfil de usuario
+  (econometrista de crédito / biólogo o científico social) con gaps
+  explícitos.
+
+**2) `docs/methodology.md` (16 subsecciones nuevas)**:
+- Añadidas como subsecciones al final de cada sección existente, sin
+  renumerar ni reorganizar:
+  - §1.7 Cochran contado en c→r
+  - §1.8 p-valor del par en subtabla 2×K
+  - §1.9 Exhaustive CHAID incluye paso 0
+  - §2.7 `min_child_size` como piso absoluto
+  - §2.8 Cuadrantes de surrogates (identidad)
+  - §2.9 Agreement > majority_to_beat
+  - §3.3 Bonferroni `M=2J` (TreeGov) vs `J` (canónico)
+  - §3.4 Nominal K>10 por tasa (vs dummies+LDA)
+  - §3.5 Raíz QDA restringida al intervalo inter-medias
+  - §3.6 Priors empíricos en QDA
+  - §6.5 Modo RESEARCH sin floor
+  - §7.1 Poda coste-complejidad (Breiman)
+  - §8.7 PSI clip ε sin renormalizar
+  - §8.8 CSI deciles aprendidos en train
+  - §8.9 HL π_g clip a [1e-15, 1-1e-15]
+  - §8.10 PR-AUC step-wise
+- Cada subsección tiene 5-15 líneas con: fórmula, convención TreeGov,
+  diferencia con literatura, referencia cruzada a `design_decisions.md`.
+
+**3) `docs/roadmap.md` (redistribución de fases 3-7)**:
+- El roadmap original agrupaba en "Fase 3" tres familias distintas:
+  analítica avanzada + reportes/export + capa MCP.
+- Redistribución aprobada el 04/10/2026:
+  - **Fase 3**: analítica avanzada + documentación + validación
+    (3.0 doc, 3.1 multiclase, 3.2 ponderación, 3.3 Indet/No Perf,
+    3.4 CRT/QUEST multiclase, 3.5 reportes, 3.6 validación con datos
+    públicos, 3.6.b modo no-bancario, 3.7 v1.0.0).
+  - **Fase 4**: reportes avanzados + export (SQL, Python, reglas
+    MD/JSON, doc automática).
+  - **Fase 5**: capa MCP.
+  - **Fase 6**: batch scoring + champion-challenger.
+  - **Fase 7**: IFRS 9 / ECL.
+- Añadido un `## Documentation map` al final del roadmap listando
+  los 9 documentos con su propósito y audiencia.
+
+**4) `docs/estado_proyecto.md`**:
+- Actualizada la sección 3 ("Fases pendientes") con la redistribución.
+- Añadido `design_decisions.md` a la estructura de directorios.
+- Añadido `design_decisions.md` a la lista de lectura del apartado
+  "Cómo reconstruir el contexto en una nueva sesión".
+
+**5) `docs/api.md`**:
+- Añadida sección "Cross-reference — design decisions" al final,
+  con punteros a las decisiones relevantes para usuarios de la API.
+
+**Hallazgos y lecciones**:
+
+1. **El código está mejor documentado que los documentos formales.**
+   Los 14 módulos de `backend_v3/` tienen docstrings excelentes que
+   explican el "por qué" de cada decisión. Pero un auditor MRM no lee
+   código: lee documentos. `design_decisions.md` puentea ese gap.
+
+2. **Cuatro desviaciones canónicas identificadas** (QUEST Bonferroni
+   `M=2J`, QUEST nominal K>10 por tasa, QUEST raíz QDA restringida,
+   PSI sin renormalizar). Todas ya estaban documentadas en el código,
+   pero no en `methodology.md`. Ahora sí, con referencia cruzada a
+   `design_decisions.md`.
+
+3. **Análisis honesto de cobertura por perfil de usuario.** El nuevo
+   `design_decisions.md` §0 documenta explícitamente qué cubre TreeGov
+   hoy y qué no, para un econometrista de crédito y para un biólogo.
+   Esto es coherente con la política MRM del proyecto: nada oculto.
+
+4. **Redistribución de fases necesaria.** La "Fase 3" original
+   mezclaba tres familias de trabajo con dependencias distintas.
+   Separarlas en fases independientes mejora el foco y permite
+   trackear progreso con claridad.
+
+**Identidades verificadas**:
+- `design_decisions.md` creado con 12 secciones (§0 a §11) +
+  `## Maintenance`.
+- 44 subsecciones (`### X.Y`) en total.
+- `methodology.md` contiene las 16 subsecciones nuevas en las
+  posiciones correctas (verificado con `Select-String`).
+- `roadmap.md` tiene las 5 fases renumeradas + `## Documentation map`.
+- `estado_proyecto.md` referencia `design_decisions.md` en 3 sitios.
+- `api.md` contiene `## Cross-reference — design decisions`.
+
+**Tests**: 199/199 PASSED (sin cambios en código).
+
+**Referencias**:
+- `docs/design_decisions.md` (nuevo documento).
+- `docs/methodology.md` §1.7 a §8.10 (16 subsecciones nuevas).
+- `docs/roadmap.md` (redistribución de fases).
