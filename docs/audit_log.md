@@ -1970,3 +1970,101 @@ planifican como parámetros configurables en la sub-fase 3.0.g.
 - `docs/design_decisions.md` (nuevo documento).
 - `docs/methodology.md` §1.7 a §8.10 (16 subsecciones nuevas).
 - `docs/roadmap.md` (redistribución de fases).
+
+---
+
+### 04/10/2026 — Fase 3.0.g: parámetros canónicos vs TreeGov
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `backend_v3/quest_engine.py` (commit `4c7e55d`),
+`backend_v3/stability.py` (commit `62753b7`),
+`tests/test_quest_engine.py`, `tests/test_stability.py`.
+
+**Motivación**:
+Cerrar la exposición de las 4 decisiones de "Categoría C" identificadas
+en la auditoría 3.0 (§11 de `design_decisions.md`): desviaciones
+deliberadas de TreeGov respecto a la literatura canónica. Exponerlas
+como parámetros permite al usuario elegir el comportamiento canónico
+sin perder el default actual.
+
+**Los 4 parámetros expuestos**:
+
+1. **`bonferroni_family: int = 2`** (QUEST) — Multiplicador de la
+   familia de tests en la corrección de Bonferroni. TreeGov usa 2
+   (medias + varianzas); Loh & Shih canónico usa 1. Con `= 1`, el
+   umbral es `α/J` y `m = J` (canónico).
+2. **`nominal_high_card: str = "rate"`** (QUEST) — Estrategia para
+   nominales K>10. TreeGov usa `"rate"` (Breiman); canónico es
+   `"dummies_lda"` (Loh & Shih), reservado para Fase 3.4 (lanza
+   `NotImplementedError` si se pide).
+3. **`qda_root_restriction: bool = True`** (QUEST) — Restricción de
+   la raíz QDA al rango inter-medias. TreeGov `True`; canónico `False`
+   (acepta cualquier raíz real, con desempate por cercanía a la media
+   ponderada).
+4. **`renormalize: bool = False`** (StabilityMonitor/psi_index) —
+   Renormalización tras el clip ε en PSI/CSI. TreeGov `False`
+   (preserva señal de bins vacíos); canónico `True`.
+
+**Cambios aplicados**:
+
+**`backend_v3/quest_engine.py`** (113 inserciones, 18 borrados):
+- `__init__` ampliado con los 3 parámetros keyword-only, validaciones
+  y guardado como atributos públicos.
+- `nominal_high_card="dummies_lda"` → `NotImplementedError` inmediato.
+- `umbral` y `_mk_selection` usan `self.bonferroni_family` en lugar de
+  `2` hardcodeado.
+- Guard de defensa en profundidad en `_subset_cut`.
+- Bifurcación en `_qda_cutpoint` (restringida vs canónica).
+- Docstrings de clase e `__init__` en inglés.
+
+**`backend_v3/stability.py`** (45 inserciones, 6 borrados):
+- `psi_index` gana parámetro keyword-only `renormalize: bool = False`.
+- `StabilityMonitor.__init__` gana el mismo parámetro.
+- Las 2 llamadas internas propagan `renormalize=self.renormalize`.
+
+**`tests/test_quest_engine.py`** (60 inserciones):
+- 4 tests nuevos: bonferroni canónico, bonferroni inválido, QDA
+  canónico (raíz más cercana a x̄), nominal_high_card no implementado.
+
+**`tests/test_stability.py`** (38 inserciones):
+- 3 tests nuevos: renormalize cambia el resultado con bins vacíos,
+  renormalize es no-op con distribuciones ya normalizadas, validación
+  de tipo.
+
+**Identidades verificadas**:
+
+- Con defaults (`bonferroni_family=2`, `nominal_high_card="rate"`,
+  `qda_root_restriction=True`, `renormalize=False`): **cero cambio
+  numérico**. Los 199 tests previos siguen verdes sin modificar sus
+  valores esperados.
+- `bonferroni_family=1`: `m = J` (canónico). Test lo verifica con
+  fixture de 3 predictores: `m = 3`, no 6.
+- `qda_root_restriction=False`: acepta raíces fuera del rango
+  inter-medias. Test con fixture de dos raíces reales (1.6915 y
+  -1.7582, ambas fuera de [0, 0.5]): el modo canónico devuelve
+  1.6915 (la más cercana a x̄=0.25). El modo restringido (default)
+  devuelve el fallback 0.25.
+- `nominal_high_card="dummies_lda"`: `NotImplementedError` con
+  mensaje que apunta a Fase 3.4.
+- `renormalize=True` con bins vacíos: valor distinto al default.
+- `renormalize=True` con distribuciones ya normalizadas: idéntico al
+  default (no-op).
+
+**Incidentes durante la implementación**:
+
+1. **Error del revisor (typo)**: el prompt inicial usó
+   `math.isclose(..., abs=1e-3)` en lugar de `abs_tol=1e-3`.
+   Corregido manualmente en VS Code.
+2. **Error del revisor (cálculo)**: asumí que el modo QDA canónico
+   devolvería la raíz -1.7582 (más lejana a x̄=0.25), cuando el
+   criterio es "más cercana a x̄" — la raíz correcta es 1.6915. El
+   motor tenía razón; corregido el test.
+
+**Tests**: 206/206 PASSED (199 previos + 4 nuevos QUEST + 3 nuevos
+stability).
+
+**Referencias**:
+- `docs/design_decisions.md` §11 (tabla de los 4 parámetros).
+- `docs/design_decisions.md` §4.1, §4.2, §4.3, §7.4.

@@ -1068,7 +1068,7 @@ legitimately want the canonical behaviour. Phase 3.0.g will expose each
 as a parameter, keeping the current behaviour as the default so that
 existing models remain reproducible.
 
-| # | Decision | Current default (TreeGov) | Canonical alternative | Proposed parameter |
+| # | Decision | Current default (TreeGov) | Canonical alternative | Parameter (implemented) |
 |---|---|---|---|---|
 | 1 | QUEST Bonferroni family (§4.1) | `M = 2J` | `M = J` | `bonferroni_family: int = 2` |
 | 2 | QUEST nominal high-cardinality (§4.2) | rate-based heuristic | dummies + LDA | `nominal_high_card: str = "rate"` |
@@ -1097,6 +1097,11 @@ existing models remain reproducible.
 multiclass work in Phase 3.4 by removing the risk of silently
 diverging from canonical QUEST behaviour when that phase opens up the
 engine to more target types.
+
+**Status (04/10/2026).** All four parameters are implemented as of
+Phase 3.0.g. Defaults preserve the pre-3.0.g behaviour; canonical mode
+is one parameter away; fingerprints (for QUEST) reflect the choice.
+See `docs/audit_log.md` entry of 04/10/2026 for the implementation log.
 
 ---
 

@@ -155,7 +155,7 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Prioridad |
 |---|---|---|
-| 3.0 | Documentación + parámetros canónicos vs TreeGov (design_decisions.md, methodology.md, 4 parámetros configurables) | Alta |
+| 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada 04/10/2026 |
 | 3.1 | Multiclase en el árbol (target + TreeNode + TreeBuilder) | Alta |
 | 3.2 | Ponderación por muestra (transversal al backend) | Alta |
 | 3.3 | Categorías Indet / Insufficient / No Perf | Alta |
