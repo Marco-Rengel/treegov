@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 178/178 passing
+**Test suite**: 195/195 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -56,6 +56,7 @@ An analytical segmentation tool for credit risk with native MRM/IFRS 9 governanc
 | **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing |
 | **OOS / OOT validation** | — | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; out-of-time cohort support |
 | **Stability monitoring** | Siddiqi (2006) | Basel / EBA | PSI (leaves), CSI (covariates), Gini Drop with traffic lights |
+| **Gains table + classification matrix** | Siddiqi (2006) | SR 11-7 | Per-leaf / per-bucket view, cumulative / decumulative metrics, KS / AUC / Gini recomputed, HTML export |
 
 ---
 
@@ -88,6 +89,7 @@ TreeGov/
 │   ├── session_state.py     # Flow state machine (EMPTY to TRAINED to OOT)
 │   ├── validation.py        # OOS metrics + OOT evaluation
 │   ├── pruning.py           # Cost-complexity pruning (Breiman)
+│   ├── reporting.py         # Gains table + classification matrix DTOs
 │   └── stability.py         # PSI / CSI / Gini Drop
 ├── frontend_v3/             # Presentation layer (Phase 2)
 ├── tests/                   # Unit tests (dual: pytest / python direct)
@@ -162,7 +164,7 @@ TreeGov/
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 178/178 passing.**
+**Test suite: 195/195 passing.**
 
 ---
 
