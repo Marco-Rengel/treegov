@@ -132,7 +132,7 @@ Sub-pasos:
 - 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ✅ (03/10/2026)
 - 2.4.c.1 Backend de Session (`get_gains_table` + `get_classification_matrix`) ✅ (03/10/2026)
 - 2.4.c.2.a Panel funcional (`reports_panel.py` + i18n) ✅ (03/10/2026)
-- 2.4.c.2.b Cableado MainWindow ⏳
+- 2.4.c.2.b Cableado MainWindow ✅ (03/10/2026)
 - 2.4.c.2.c Export HTML + tests E2E ⏳
 - 2.4.d Tests E2E + cierre ⏳
 

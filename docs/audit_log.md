@@ -1518,3 +1518,62 @@ y los renderice como tabla Qt y matriz de clasificación. Sin Export HTML
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4),
 `docs/estado_proyecto.md` (sección 3).
+
+---
+
+### 03/10/2026 — Fase 2.4.c.2.b: cableado MainWindow ↔ ReportsPanel
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `frontend_v3/main_window.py` (commit `456a71c`),
+`frontend_v3/reports_panel.py` (fix Qt6).
+
+**Motivación**:
+Tercera sub-fase de 2.4.c. Cablear el `ReportsPanel` recién funcional con
+el ciclo de vida de `MainWindow` y con los DTOs que expone `Session`, sin
+introducir lógica analítica en el frontend (sala limpia).
+
+**Arquitectura del cableado**:
+- 4 conexiones Qt en `_build_central`:
+    partition_changed -> _on_reports_partition_changed
+    view_changed      -> _on_reports_view_changed
+    threshold_changed -> _on_reports_threshold_changed
+    refresh_requested -> _refresh_reports_panel
+- 3 triggers de refresco automático: `_on_wizard_finished`,
+  `_on_evaluate_oos`, `_on_load_oot` invocan `_refresh_reports_panel`
+  tras poblar el `MetricsPanel`.
+- Limpieza en `_on_new_wizard`: `set_gains_table(None)` +
+  `set_classification_matrix(None)` al resetear la sesión.
+- `_refresh_session_indicator` propaga el estado de `Session` al panel
+  vía `set_session_available(train=, oos=, oot=)`.
+- Nuevo helper `_refresh_reports_panel` que consulta al backend y
+  captura `RuntimeError`/`ValueError` (partición no disponible) para
+  mostrar estado vacío en lugar de fallar.
+
+**Cambios aplicados**:
+
+`frontend_v3/main_window.py` (81 inserciones, 0 borrados).
+`frontend_v3/reports_panel.py` (2 líneas: fix setTextAlignment en Qt6).
+
+**Hallazgos**:
+
+1. **Warnings Qt6 en `reports_panel.py`**: la versión inicial envolvía
+   `Qt.AlignmentFlag.AlignRight | AlignVCenter` en `int(...)`. Qt6
+   marcó `setTextAlignment(int)` como deprecado (960 warnings en una
+   corrida de 4s). Fix: pasar el flag directamente sin cast. Cero
+   warnings tras el fix.
+
+2. **Comportamiento silencioso ante partición no disponible**: si el
+   usuario selecciona una partición que el estado actual de `Session`
+   no ofrece, `_refresh_reports_panel` captura la excepción y muestra
+   estado vacío. Se registra WARNING en el log, sin diálogo.
+
+**Identidades verificadas**:
+- 188/188 tests sin warnings.
+- `MainWindow` se construye y destruye sin error en EN y ES.
+- El cableado no introduce imports nuevos de backend.
+
+**Tests**: 188/188 PASSED (los E2E específicos del panel van en 2.4.c.2.c).
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4).
