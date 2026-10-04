@@ -355,7 +355,7 @@ class ReportsPanel(QWidget):
         self._table.setRowCount(0)
         rows = (self._gains or {}).get("rows") or []
         self._table.setRowCount(len(rows))
-        numeric_alignment = int(
+        numeric_alignment = (
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
         for row_index, row in enumerate(rows):
