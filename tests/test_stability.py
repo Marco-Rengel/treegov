@@ -126,7 +126,8 @@ def _modelo_hojas():
                            np.arange(20, 40), np.arange(40, 60)])[:126]
     y = (edad >= 40).astype(int)
     X = pd.DataFrame({"edad": edad})
-    tb = TreeBuilder(CrtEngine(), target_type=_BIN, max_depth=4, min_child_size=5)
+    tb = TreeBuilder(CrtEngine(), target_type=_BIN, target_class=1,
+                     max_depth=4, min_child_size=5)
     return tb.build(X, pd.Series(y), {"edad": _CONT})
 
 

@@ -2184,10 +2184,9 @@ es **numéricamente idéntico** al pre-3.1. Verificado por
 
 ---
 
-### 04/10/2026 — Fase 3.1.a (WIP): multiclase en árbol — implementación parcial
+### 04/10/2026 — Fase 3.1.a: multiclase en árbol — implementación completa
 
-**Estado**: 🟡 EN PROGRESO. Código adaptado; 26 tests pendientes de
-adaptar. Commit de checkpoint (WIP) — no cierra la sub-fase.
+**Estado**: ✅ CERRADA. Código y tests adaptados. Suite en 210/210.
 
 **Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
 **Revisor**: Marco Rengel
@@ -2258,12 +2257,16 @@ tocar SessionState ni Session.fix_spec todavía — eso va en 3.1.c).
   - `test_tree_view.py` (9)
   - `test_validation.py` (1)
 
-**Pendiente para cerrar 3.1.a**:
-- Adaptar los 5 archivos de tests pendientes.
-- Añadir `test_multiclass_binary_parity` (invariante crítica: K=2 con
-  target_class=1 → resultado idéntico al pre-3.1).
-- Suite en 206/206.
-- Commit de cierre de 3.1.a (no este WIP).
+**Cierre de 3.1.a**:
+- Los 5 archivos de tests pendientes adaptados.
+- Añadidos 4 tests nuevos en `test_tree_builder.py`:
+  - `test_multiclass_binary_pd_values` — PDs exactas K=2 (mismo
+    resultado que el pre-3.1).
+  - `test_multiclass_binary_pd_sums_to_one` — invariante suma=1.
+  - `test_multiclass_target_class_inverted` — invertir target_class
+    invierte las PDs.
+  - `test_multiclass_k3_builds` — K=3 con CHAID construye.
+- Suite: 210/210 PASSED.
 
 **Lección operativa (importante para el próximo chat)**:
 Cuando una firma cambia en código que produce muchos fallos en tests,

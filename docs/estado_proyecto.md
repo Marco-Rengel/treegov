@@ -178,7 +178,7 @@ binarios hasta Fase 3.5.
   post-entrenamiento (badge de Gini negativo + botón de reversión).
 
 **Sub-fases planificadas** (6 sesiones):
-- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` 🟡 WIP (código adaptado, 5 archivos de tests pendientes)
+- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` ✅ (04/10/2026)
 - 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento ✅ (integrado en 3.1.a)
 - 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST
 - 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability
@@ -329,7 +329,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 4 |
 | profiling.py | 3 |
-| tree_builder.py | 16 |
+| tree_builder.py | 20 |
 | session_state.py | 24 |
 | validation.py | 8 |
 | pruning.py | 6 |
@@ -342,9 +342,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 5 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **206** |
+| **Total** | **210** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 206/206 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 210/210 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -451,11 +451,10 @@ aider
 3. Primer mensaje sugerido al agente:
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4, 3.0 cerradas.
-> Fase 3.1 (multiclase) en curso: diseño estructural completado
-> (`docs/3.1_design_multiclass.md`).
-> Suite 206/206. Próximo paso: implementación 3.1.a (adaptar
-> `TreeNode`/`TreeModel` a tuple fields + `TreeBuilder.target_class`)
-> con Aider 0.86.2 + Kimi K3 vía Moonshot AI directo."
+> Fase 3.1 (multiclase) en curso: 3.1.a completada (código multiclase
+> en `tree_builder.py` + tests adaptados).
+> Suite 210/210. Próximo paso: 3.1.c (Session.fix_spec + SessionState +
+> bloqueo C&RT/QUEST) con Aider 0.86.2 + Kimi K3 vía Moonshot AI directo."
 
 ---
 

@@ -35,14 +35,18 @@ def _tree_stub() -> TreeModel:
     """Modelo mínimo válido: raíz hoja única (para el guard `st.tree is None`)."""
     leaf = TreeNode(
         node_id=0, depth=0, parent_id=None,
-        n=100, n_events=10,
-        pd_jeffreys=0.104, pd_final=0.104,
+        n=100, n_events=(10, 90),
+        pd_jeffreys=(0.104, 0.896), pd_final=(0.104, 0.896),
+        class_labels=("Event", "Non-event"),
         is_leaf=True, split=None, child_ids=(),
         leaf_reason="sin_split",
     )
     return TreeModel(
         root_id=0, nodes=(leaf,), method="CRT",
         params_fingerprint="test0000000000",
+        class_labels=("Event", "Non-event"),
+        target_class=1,
+        target_class_index=0,
     )
 
 
@@ -72,23 +76,40 @@ def _oot_stub() -> OOTReport:
 
 
 def _leaf(node_id: int, pd: float, n_bad: int, n_good: int) -> TreeNode:
-    """Hoja aislada con PD y conteos bad/good fijados a mano."""
+    """Hoja aislada con PD y conteos bad/good fijados a mano.
+
+    Fase 3.1: n_events, pd_jeffreys y pd_final son tuples de K=2 en orden
+    canónico (index 0 = clase de interés). Por convención del fixture,
+    la clase de interés es la "bad" (n_bad), así que:
+      n_events = (n_bad, n_good)
+      pd_final = (pd, 1 - pd)
+    """
+    n = n_bad + n_good
     return TreeNode(
         node_id=node_id, depth=0, parent_id=None,
-        n=n_bad + n_good, n_events=n_bad,
-        pd_jeffreys=pd, pd_final=pd,
+        n=n, n_events=(n_bad, n_good),
+        pd_jeffreys=(pd, 1.0 - pd), pd_final=(pd, 1.0 - pd),
+        class_labels=("Bad", "Good"),
         is_leaf=True, split=None, child_ids=(),
         leaf_reason="sin_split",
     )
 
 
 def _model_3_leaves() -> SimpleNamespace:
-    """Modelo simulado de 3 hojas con PDs crecientes: 0.1, 0.3 y 0.6."""
-    return SimpleNamespace(nodes=(
-        _leaf(0, 0.1, n_bad=5, n_good=45),
-        _leaf(1, 0.3, n_bad=30, n_good=70),
-        _leaf(2, 0.6, n_bad=60, n_good=40),
-    ))
+    """Modelo simulado de 3 hojas con PDs crecientes: 0.1, 0.3 y 0.6.
+
+    Fase 3.1: el mock incluye class_labels con K=2 (Bad, Good) porque
+    build_gains_table comprueba len(model.class_labels) == 2 antes de
+    procesar.
+    """
+    return SimpleNamespace(
+        nodes=(
+            _leaf(0, 0.1, n_bad=5, n_good=45),
+            _leaf(1, 0.3, n_bad=30, n_good=70),
+            _leaf(2, 0.6, n_bad=60, n_good=40),
+        ),
+        class_labels=("Bad", "Good"),
+    )
 
 
 def _standard_assign() -> np.ndarray:

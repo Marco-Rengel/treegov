@@ -400,6 +400,82 @@ def test_grow_full_max_depth_none():
     assert m_full.nodes[-1].node_id == len(m_full.nodes) - 1  # BFS integro
 
 
+# ---------------------------------------------------------------------------
+# Fase 3.1: invariantes multiclase (K=2 y K=3)
+# ---------------------------------------------------------------------------
+
+
+def test_multiclass_binary_pd_values():
+    """K=2 with target_class=1 gives exactly the same PD values as the
+    pre-3.1 scalar PD."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+                     min_child_size=2, pd_floor=0.0003)
+    m = tb.build(X, y, {"x": _CONT})
+    raiz, izq, der = m.nodes
+    assert raiz.n_events == (5, 5)
+    assert math.isclose(raiz.pd_jeffreys[0], 5.5 / 11.0, rel_tol=1e-12)
+    assert math.isclose(raiz.pd_final[0], 0.5, rel_tol=1e-12)
+    assert izq.n_events == (0, 5)
+    assert math.isclose(izq.pd_jeffreys[0], 0.5 / 6.0, rel_tol=1e-12)
+    assert der.n_events == (5, 0)
+    assert math.isclose(der.pd_jeffreys[0], 5.5 / 6.0, rel_tol=1e-12)
+
+
+def test_multiclass_binary_pd_sums_to_one():
+    """sum(pd_final) == 1 for every node in a K=2 tree."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    m = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+                    min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
+    for nd in m.nodes:
+        assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+        assert abs(sum(nd.pd_jeffreys) - 1.0) <= 1e-12
+        assert len(nd.pd_final) == len(nd.n_events) == len(nd.class_labels) == 2
+
+
+def test_multiclass_target_class_inverted():
+    """target_class=0 inverts the class order: pd_final[0] of the inverted
+    tree equals pd_final[1] of the original tree."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    m1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+                     min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
+    m2 = TreeBuilder(_crt(), target_type=_BIN, target_class=0, max_depth=4,
+                     min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
+    assert m1.params_fingerprint != m2.params_fingerprint
+    assert math.isclose(m1.nodes[0].pd_final[0], m2.nodes[0].pd_final[1],
+                        rel_tol=1e-12)
+    assert math.isclose(m1.nodes[0].pd_final[1], m2.nodes[0].pd_final[0],
+                        rel_tol=1e-12)
+    # symmetric fixture: counts coincide; the inverted-PD asserts are the key
+    assert m1.nodes[0].n_events == (5, 5)
+    assert m2.nodes[0].n_events == (5, 5)
+
+
+def test_multiclass_k3_builds():
+    """K=3 target with CHAID builds a tree; every node has a 3-component PD
+    vector summing to 1."""
+    x = pd.Series(["a"] * 40 + ["b"] * 40 + ["c"] * 40)
+    y = pd.Series([0] * 40 + [1] * 40 + [2] * 40)
+    X = pd.DataFrame({"nivel": x})
+    m = TreeBuilder(_quiet_engine(ChaidEngine), target_type=_BIN,
+                    target_class=0, max_depth=3, min_child_size=10).build(
+        X, y, {"nivel": _NOM})
+    assert m.method == "CHAID"
+    assert len(m.class_labels) == 3
+    assert m.target_class == 0
+    assert m.target_class_index == 0
+    for nd in m.nodes:
+        assert len(nd.pd_final) == 3
+        assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+    assert m.nodes[0].n_events == (40, 40, 40)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

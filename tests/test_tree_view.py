@@ -81,7 +81,7 @@ def _crt_model() -> TreeModel:
     y = pd.Series((edad >= 40).astype(int))
     spec = {"edad": PredictorType.CONTINUOUS}
     return TreeBuilder(
-        CrtEngine(), target_type=TargetType.BINARY,
+        CrtEngine(), target_type=TargetType.BINARY, target_class=1,
         max_depth=4, min_child_size=5,
     ).build(df, y, spec)
 
@@ -102,7 +102,7 @@ def _chaid_model() -> TreeModel:
     y = pd.Series(ys)
     spec = {"seg": PredictorType.NOMINAL}
     return TreeBuilder(
-        ChaidEngine(), target_type=TargetType.BINARY,
+        ChaidEngine(), target_type=TargetType.BINARY, target_class=1,
         max_depth=4, min_child_size=10,
     ).build(df, y, spec)
 
@@ -119,20 +119,26 @@ def _big_model(n_leaves: int = LARGE_TREE_THRESHOLD + 50) -> TreeModel:
     )
     nodes = [TreeNode(
         node_id=0, depth=0, parent_id=None,
-        n=100 * n_leaves, n_events=50 * n_leaves,
-        pd_jeffreys=0.5, pd_final=0.5,
+        n=100 * n_leaves, n_events=(50 * n_leaves, 50 * n_leaves),
+        pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+        class_labels=("Event", "Non-event"),
         is_leaf=False, split=split,
         child_ids=tuple(range(1, n_leaves + 1)), leaf_reason=None,
     )]
     for i in range(1, n_leaves + 1):
         nodes.append(TreeNode(
             node_id=i, depth=1, parent_id=0,
-            n=100, n_events=50, pd_jeffreys=0.5, pd_final=0.5,
+            n=100, n_events=(50, 50),
+            pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+            class_labels=("Event", "Non-event"),
             is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
         ))
     return TreeModel(
         root_id=0, nodes=tuple(nodes), method="CHAID",
         params_fingerprint="ab12cd34ef56gh78",
+        class_labels=("Event", "Non-event"),
+        target_class=1,
+        target_class_index=0,
     )
 
 

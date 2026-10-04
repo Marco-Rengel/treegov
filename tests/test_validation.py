@@ -122,7 +122,8 @@ def test_predict_pd_y_fila_huerfana():
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
     m = TreeBuilder(
-        CrtEngine(), target_type=TargetType.BINARY, max_depth=4, min_child_size=2
+        CrtEngine(), target_type=TargetType.BINARY, target_class=1,
+        max_depth=4, min_child_size=2,
     ).build(X, y, {"x": PredictorType.CONTINUOUS})
     p = predict_pd(m, X)
     assert p.shape == (10,)

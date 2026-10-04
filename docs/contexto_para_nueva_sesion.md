@@ -51,13 +51,13 @@
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 206/206 PASSED
+**Suite de tests:** 210/210 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 04/10/2026: 206/206 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 04/10/2026: 210/210 tests.
 - **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
@@ -150,7 +150,7 @@ La implementación está dividida en 6 sub-fases:
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | 🟡 WIP — código adaptado (180/206 tests passing; 26 fallos mecánicos en 5 archivos de tests) |
+| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | ✅ (04/10/2026) |
 | 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ✅ (integrado en 3.1.a) |
 | 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ⏳ |
 | 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability | ⏳ |

@@ -47,7 +47,8 @@ def _modelo():
     x = pd.Series([float(i) for i in range(1, 13)])
     y = pd.Series([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1])
     X = pd.DataFrame({"x": x})
-    tb = TreeBuilder(CrtEngine(), target_type=_BIN, max_depth=4, min_child_size=1)
+    tb = TreeBuilder(CrtEngine(), target_type=_BIN, target_class=1,
+                     max_depth=4, min_child_size=1)
     return tb.build(X, y, {"x": _CONT})
 
 
@@ -96,7 +97,8 @@ def test_prune_determinista():
 def test_modelo_raiz_sola():
     x = pd.Series([1.0, 2.0, 3.0, 4.0])
     y = pd.Series([0, 0, 1, 1])
-    tb = TreeBuilder(CrtEngine(), target_type=_BIN, max_depth=4, min_child_size=10)
+    tb = TreeBuilder(CrtEngine(), target_type=_BIN, target_class=1,
+                     max_depth=4, min_child_size=10)
     m = tb.build(pd.DataFrame({"x": x}), y, {"x": _CONT})
     assert len(m.nodes) == 1
     assert Pruner().sequence(m) == ()
