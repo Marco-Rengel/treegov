@@ -9,16 +9,20 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QDialog,
     QDoubleSpinBox,
+    QFileDialog,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMessageBox,
     QPushButton,
     QSpinBox,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -159,6 +163,10 @@ class ReportsPanel(QWidget):
         self._refresh_button = QPushButton(self)
         self._refresh_button.setObjectName("reportsRefresh")
         top.addWidget(self._refresh_button)
+        self._export_button = QPushButton(self)
+        self._export_button.setObjectName("reportsExport")
+        self._export_button.clicked.connect(self._on_export_clicked)
+        top.addWidget(self._export_button)
         main_layout.addLayout(top)
 
         # Empty-state message (visible only when no payload has arrived).
@@ -322,6 +330,166 @@ class ReportsPanel(QWidget):
         self._empty_label.setText(tr("reports_no_model"))
         self._empty_label.setVisible(not has_data)
 
+    def _on_export_clicked(self) -> None:
+        """Export button: build HTML and open preview dialog (or warn if empty)."""
+        if self._gains is None and self._matrix is None:
+            QMessageBox.information(
+                self, tr("reports_export_title"), tr("reports_export_empty")
+            )
+            return
+        html = self._build_report_html()
+        self._open_export_dialog(html)
+
+    def _build_report_html(self) -> str:
+        """Self-contained HTML report: header + gains table + summary + matrix.
+
+        No external assets. Inline CSS in <style>. Values come from
+        self._gains / self._matrix (dicts from the backend DTOs).
+        """
+        gains = self._gains or {}
+        matrix = self._matrix or {}
+        partition = self.current_partition()
+        threshold = self.current_threshold()
+
+        def esc(value) -> str:
+            text = _fmt(value)
+            return (
+                text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+            )
+
+        parts: list[str] = []
+        parts.append("<!DOCTYPE html><html><head><meta charset='utf-8'>")
+        parts.append(f"<title>{esc(tr('reports_export_doc_title'))}</title>")
+        parts.append(
+            "<style>"
+            "body{font-family:sans-serif;margin:24px;color:#222;}"
+            "h1{font-size:18px;margin:0 0 8px 0;}"
+            "h2{font-size:14px;margin:20px 0 8px 0;}"
+            "p.meta{color:#666;margin:0 0 12px 0;font-size:12px;}"
+            "table{border-collapse:collapse;margin-bottom:16px;}"
+            "th,td{border:1px solid #ccc;padding:4px 8px;font-size:12px;text-align:right;}"
+            "th{background:#f0f0f0;font-weight:bold;text-align:center;}"
+            "td.label{text-align:left;font-weight:bold;}"
+            "</style></head><body>"
+        )
+        parts.append(f"<h1>{esc(tr('reports_export_doc_title'))}</h1>")
+        parts.append(
+            f"<p class='meta'>{esc(tr('reports_partition_label'))} "
+            f"<b>{esc(partition)}</b> &middot; "
+            f"{esc(tr('reports_threshold_label'))} <b>{esc(threshold)}</b></p>"
+        )
+
+        # Gains table
+        rows = gains.get("rows") or []
+        parts.append(f"<h2>{esc(tr('reports_summary_title'))}</h2>")
+        parts.append("<table><thead><tr>")
+        for key in self._HEADER_KEYS:
+            parts.append(f"<th>{esc(tr(key))}</th>")
+        parts.append("</tr></thead><tbody>")
+        for row in rows:
+            parts.append("<tr>")
+            for i, field in enumerate(self._ROW_FIELDS):
+                cell_class = " class='label'" if field == "label" else ""
+                parts.append(f"<td{cell_class}>{esc(row.get(field))}</td>")
+            parts.append("</tr>")
+        parts.append("</tbody></table>")
+
+        # Summary metrics
+        parts.append(f"<h2>{esc(tr('reports_summary_title'))}</h2>")
+        parts.append("<table><tbody>")
+        for key in self._SUMMARY_FIELDS:
+            parts.append(
+                f"<tr><td class='label'>{esc(tr('reports_sum_' + key))}</td>"
+                f"<td>{esc(gains.get(key))}</td></tr>"
+            )
+        parts.append("</tbody></table>")
+
+        # Classification matrix
+        parts.append(f"<h2>{esc(tr('reports_matrix_title'))}</h2>")
+        parts.append("<table><tbody>")
+        parts.append(
+            f"<tr><td class='label'></td>"
+            f"<td>{esc(tr('reports_matrix_pred_good'))}</td>"
+            f"<td>{esc(tr('reports_matrix_pred_bad'))}</td></tr>"
+        )
+        parts.append(
+            f"<tr><td class='label'>{esc(tr('reports_matrix_actual_good'))}</td>"
+            f"<td>{esc(matrix.get('tn'))}</td>"
+            f"<td>{esc(matrix.get('fp'))}</td></tr>"
+        )
+        parts.append(
+            f"<tr><td class='label'>{esc(tr('reports_matrix_actual_bad'))}</td>"
+            f"<td>{esc(matrix.get('fn'))}</td>"
+            f"<td>{esc(matrix.get('tp'))}</td></tr>"
+        )
+        parts.append("</tbody></table>")
+
+        parts.append("<table><tbody>")
+        for key in self._MATRIX_METRICS:
+            parts.append(
+                f"<tr><td class='label'>{esc(tr('reports_matrix_' + key))}</td>"
+                f"<td>{esc(matrix.get(key))}</td></tr>"
+            )
+        parts.append("</tbody></table>")
+
+        parts.append("</body></html>")
+        return "".join(parts)
+
+    def _open_export_dialog(self, html: str) -> None:
+        """Modal dialog with HTML preview and Save-as / Close buttons."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(tr("reports_export_title"))
+        dialog.resize(900, 650)
+        layout = QVBoxLayout(dialog)
+
+        hint = QLabel(tr("reports_export_hint"))
+        layout.addWidget(hint)
+
+        browser = QTextBrowser(dialog)
+        browser.setOpenExternalLinks(False)
+        browser.setHtml(html)
+        layout.addWidget(browser, 1)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        save_btn = QPushButton(tr("reports_export_save"), dialog)
+        close_btn = QPushButton(tr("reports_export_close"), dialog)
+        save_btn.clicked.connect(lambda: self._save_html_to_file(dialog, html))
+        close_btn.clicked.connect(dialog.accept)
+        buttons.addWidget(save_btn)
+        buttons.addWidget(close_btn)
+        layout.addLayout(buttons)
+
+        dialog.exec()
+
+    def _save_html_to_file(self, parent: QDialog, html: str) -> None:
+        """Ask for a path and write the HTML file. Errors -> QMessageBox."""
+        path, _filt = QFileDialog.getSaveFileName(
+            parent,
+            tr("reports_export_save"),
+            tr("reports_export_default_filename"),
+            tr("reports_export_file_filter"),
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(html)
+        except OSError as exc:
+            QMessageBox.warning(
+                parent,
+                tr("reports_export_error_title"),
+                tr("reports_export_error_body").format(error=exc),
+            )
+            return
+        QMessageBox.information(
+            parent,
+            tr("reports_export_saved_title"),
+            tr("reports_export_saved_body").format(path=path),
+        )
+
     def retranslate_ui(self) -> None:
         """Reassign every static text, then repaint (refresh uses tr())."""
         self._partition_label.setText(tr("reports_partition_label"))
@@ -329,6 +497,7 @@ class ReportsPanel(QWidget):
         self._buckets_label.setText(tr("reports_buckets_label"))
         self._threshold_label.setText(tr("reports_threshold_label"))
         self._refresh_button.setText(tr("reports_refresh"))
+        self._export_button.setText(tr("reports_export_html"))
         self._summary_title.setText(tr("reports_summary_title"))
         self._matrix_title.setText(tr("reports_matrix_title"))
         self._matrix_corner.setText(tr("reports_matrix_corner"))
