@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Versión**: 1.0.0a0
+**Versión**: 1.0.0a1
 **Autor**: Marco Rengel
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
@@ -25,7 +25,7 @@ A diferencia de las librerías de propósito general (scikit-learn, statsmodels,
 
 TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añade al final, sino un principio que se teje en cada componente. Mientras que las librerías estadísticas y los entornos de scripting ofrecen el motor analítico, TreeGov ofrece además el freno (controles MRM), el tablero (visualización gráfica), el cinturón de seguridad (auditabilidad) y el registro de mantenimiento (bitácora inmutable). Para un modelo que será auditado por un regulador, la elección no es técnica: es de gobernanza.
 
-*Lee la filosofía completa → [Español](docs/philosophy.es.md) · [English](docs/philosophy.md)*
+*Lee la filosofía completa → [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md) · [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md)*
 
 ---
 
@@ -190,7 +190,7 @@ TreeGov/
 
 ## Licencia
 
-Apache License 2.0 — ver [LICENSE](LICENSE).
+Apache License 2.0 — ver [LICENSE](https://github.com/Marco-Rengel/treegov/blob/main/LICENSE).
 
 ---
 

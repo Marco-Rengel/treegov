@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0a0
+**Version**: 1.0.0a1
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 195/195 passing
+**Test suite**: 199/199 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -25,7 +25,7 @@ Unlike general-purpose libraries (scikit-learn, statsmodels, R packages) that re
 
 TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and scripting environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
 
-*Read the full project philosophy → [English](docs/philosophy.md) · [Español](docs/philosophy.es.md)*
+*Read the full project philosophy → [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md) · [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md)*
 
 ---
 
@@ -164,7 +164,7 @@ TreeGov/
 | **4** | Batch scoring + champion-challenger | Planned |
 | **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 195/195 passing.**
+**Test suite: 199/199 passing.**
 
 ---
 
@@ -190,7 +190,7 @@ TreeGov/
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+Apache License 2.0 — see [LICENSE](https://github.com/Marco-Rengel/treegov/blob/main/LICENSE).
 
 ---
 
