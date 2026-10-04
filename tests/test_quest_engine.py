@@ -328,6 +328,66 @@ def test_humo_n200k():
 
 
 # ---------------------------------------------------------------------------
+# 11. Fase 3.0.g: parámetros configurables (bonferroni_family,
+#     nominal_high_card, qda_root_restriction)
+# ---------------------------------------------------------------------------
+
+
+def test_bonferroni_family_canonical():
+    """bonferroni_family=1: umbral canonico Loh & Shih alpha/J (multiplier J)."""
+    # mismo fixture que test_seleccion_anova_f54: F = 54 exacto
+    X = pd.DataFrame({
+        "fuerte": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0]),
+        "plano1": pd.Series([1.0, 2.0, 3.0, 1.0, 2.0, 3.0]),
+        "plano2": pd.Series([5.0, 5.0, 5.0, 5.0, 5.0, 5.0]),
+    })
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    cfg = _engine(bonferroni_family=1).evaluate(
+        X, y, {"fuerte": _CONTINUOUS, "plano1": _CONTINUOUS, "plano2": _CONTINUOUS}
+    )
+    assert cfg is not None
+    assert cfg.bonferroni_multiplier == 3              # J (no 2J)
+    assert cfg.p_value_adjusted == min(1.0, 3 * cfg.p_value)
+    # la seleccion no cambia respecto al default conservador
+    assert cfg.predictor == "fuerte"
+    assert cfg.statistic == 54.0
+
+
+def test_bonferroni_family_invalid():
+    """Guards de bonferroni_family: entero >= 1; bool rechazado."""
+    _assert_raises(ValueError, _engine, bonferroni_family=0)
+    _assert_raises(ValueError, _engine, bonferroni_family=-1)
+    _assert_raises(ValueError, _engine, bonferroni_family=True)
+
+
+def test_qda_root_restriction_canonical():
+    """qda_root_restriction=False: raiz mas cercana a x_bar, sin fallback."""
+    # mismo fixture que test_qda_fallback_unidad: raices reales 1.6915 y
+    # -1.7582, ambas fuera del rango inter-medias [0, 0.5]
+    xv = np.array([-1.0, 0.0, 1.0, -3.5, 0.5, 4.5])
+    yc = np.array([0, 0, 0, 1, 1, 1])
+    # modo restringido (default): fallback x_bar = 0.25
+    assert _engine()._qda_cutpoint(xv, yc, "restringido") == 0.25
+    # modo canonico: raiz mas cercana a x_bar=0.25 -> 1.6915 (no fallback)
+    eng_canonical = _engine(qda_root_restriction=False)
+    t_canonical = eng_canonical._qda_cutpoint(xv, yc, "canonical")
+    assert math.isclose(t_canonical, 1.6915, abs_tol=1e-3)
+    assert t_canonical != 0.25
+
+
+def test_nominal_high_card_dummies_lda_not_implemented():
+    """nominal_high_card: 'dummies_lda' reservado; defaults del engine."""
+    _assert_raises(NotImplementedError, _engine, nominal_high_card="dummies_lda")
+    _assert_raises(ValueError, _engine, nominal_high_card="invalido")
+    _assert_raises(ValueError, _engine, nominal_high_card=123)
+    # defaults que preservan el comportamiento Fase 0
+    eng = _engine()
+    assert eng.nominal_high_card == "rate"
+    assert eng.bonferroni_family == 2
+    assert eng.qda_root_restriction is True
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

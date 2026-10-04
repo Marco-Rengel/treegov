@@ -76,15 +76,60 @@ class QuestSelection:
 
 
 class QuestEngine:
-    """Motor QUEST binario: seleccion insesgada + corte QDA univariante."""
+    """Motor QUEST binario: seleccion insesgada + corte QDA univariante.
+
+    Configurable knobs (defaults preserve the legacy Fase 0 behavior with
+    zero numeric change; see design_decisions.md sections 4.1-4.3):
+
+      - bonferroni_family (int >= 1, default 2): family multiplier in the
+        Stage-1 Bonferroni threshold alpha / (bonferroni_family * J).
+        2 = documented conservative deviation controlling the FWER over
+        BOTH test families (means + variance); 1 = canonical Loh & Shih
+        (1997) single-family threshold alpha / J.
+      - nominal_high_card (str, default "rate"): strategy for nominal
+        predictors with cardinality > max_exhaustive_cardinality in
+        Stage 2. "rate" = supervised-rate ordering (Breiman/C&RT style).
+        "dummies_lda" (canonical Loh & Shih 1997) is reserved for
+        Fase 3.4 and raises NotImplementedError.
+      - qda_root_restriction (bool, default True): Stage-2 QDA root
+        selection. True = accept only roots inside the inter-means range
+        (documented Fase 0 restriction); False = canonical mode accepting
+        any real root, tie-broken by closeness to the weighted mean.
+    """
 
     def __init__(
         self,
         *,
         alpha: float = 0.05,
         max_exhaustive_cardinality: int = 10,
+        bonferroni_family: int = 2,
+        nominal_high_card: str = "rate",
+        qda_root_restriction: bool = True,
         logger: logging.Logger | None = None,
     ) -> None:
+        """Build the engine (all knobs keyword-only).
+
+        Parameters
+        ----------
+        alpha:
+            Family-wise significance level for Stage 1, in (0, 1).
+        max_exhaustive_cardinality:
+            Maximum cardinality for the exhaustive nominal subset search.
+        bonferroni_family:
+            Bonferroni family multiplier (integer >= 1); the Stage-1
+            threshold is alpha / (bonferroni_family * J). Default 2 (two
+            families: means + variance); 1 reproduces the canonical
+            Loh & Shih (1997) threshold.
+        nominal_high_card:
+            "rate" (default) orders high-cardinality nominal categories by
+            supervised rate; "dummies_lda" is reserved for Fase 3.4 and
+            raises NotImplementedError immediately.
+        qda_root_restriction:
+            True (default) restricts the QDA cutpoint to the inter-means
+            range; False accepts any real root (canonical mode).
+        logger:
+            Optional logger; defaults to the "quest" logger.
+        """
         if isinstance(alpha, bool) or not (0.0 < float(alpha) < 1.0):
             raise ValueError(f"alpha debe estar en (0, 1) (recibido {alpha!r})")
         from numbers import Integral
@@ -95,8 +140,34 @@ class QuestEngine:
                 "max_exhaustive_cardinality debe ser entero >= 2 "
                 f"(recibido {max_exhaustive_cardinality!r})"
             )
+        if (isinstance(bonferroni_family, bool)
+                or not isinstance(bonferroni_family, Integral)
+                or int(bonferroni_family) < 1):
+            raise ValueError(
+                "bonferroni_family debe ser entero >= 1 "
+                f"(recibido {bonferroni_family!r})"
+            )
+        if (not isinstance(nominal_high_card, str)
+                or nominal_high_card not in {"rate", "dummies_lda"}):
+            raise ValueError(
+                "nominal_high_card debe ser 'rate' o 'dummies_lda' "
+                f"(recibido {nominal_high_card!r})"
+            )
+        if nominal_high_card == "dummies_lda":
+            raise NotImplementedError(
+                "nominal_high_card='dummies_lda' reservado para Fase 3.4 "
+                "(requiere LDA + dummies; ver design_decisions.md §4.2)"
+            )
+        if not isinstance(qda_root_restriction, bool):
+            raise ValueError(
+                "qda_root_restriction debe ser bool "
+                f"(recibido {qda_root_restriction!r})"
+            )
         self.alpha = float(alpha)
         self.max_exhaustive_cardinality = int(max_exhaustive_cardinality)
+        self.bonferroni_family = int(bonferroni_family)
+        self.nominal_high_card = str(nominal_high_card)
+        self.qda_root_restriction = bool(qda_root_restriction)
         self._log = logger if logger is not None else get_logger("quest")
 
     # ------------------------------------------------------------------
@@ -156,7 +227,8 @@ class QuestEngine:
         y_full.loc[yd.index] = codes
 
         j_total = len(spec)
-        umbral = self.alpha / (2 * j_total)  # doble familia: medias + varianzas
+        # self.bonferroni_family (default 2 = doble familia; canonical Loh & Shih = 1)
+        umbral = self.alpha / (self.bonferroni_family * j_total)
         self._log.debug(
             "[QUEST] Etapa 1: J=%d, umbral Bonferroni=%.6g", j_total, umbral
         )
@@ -329,7 +401,7 @@ class QuestEngine:
     def _mk_selection(
         self, nombre: str, source: str, res: TestResult, j_total: int
     ) -> QuestSelection:
-        m = 2 * j_total
+        m = self.bonferroni_family * j_total
         return QuestSelection(
             predictor=nombre,
             source=source,
@@ -350,10 +422,16 @@ class QuestEngine:
             B = 2 (m1/s1^2 - m0/s0^2)
             C = m0^2/s0^2 - m1^2/s1^2 + 2 ln(pi1/pi0) - ln(s1^2/s0^2)
 
-        Restriccion documentada: solo se acepta raiz en el rango entre las
-        medias de clase [min(m0,m1), max(m0,m1)]; puede descartar raices
-        externas (decision Fase 0). Si no hay raiz valida -> fallback
-        al punto medio PONDERADO x̄ = (n0 m0 + n1 m1)/N.
+        Root-selection modes (self.qda_root_restriction):
+          - True (default, documented Fase 0 restriction): only roots inside
+            the inter-means range [min(m0, m1), max(m0, m1)] are accepted;
+            external roots are discarded and, if none qualifies, the
+            fallback is the WEIGHTED midpoint x_bar = (n0 m0 + n1 m1)/N.
+          - False (canonical): any real root is accepted; with two real
+            roots, the one closest to the weighted mean x_bar is returned
+            (operational determinism, same tie-break criterion as the
+            restricted path).
+
         Si s0^2 == s1^2: forma lineal (LDA con priors):
             t = (m0+m1)/2 - s^2 ln(pi1/pi0) / (m1 - m0)
         Varianza nula de alguna clase: fallback directo (operativo, no optimo).
@@ -403,17 +481,26 @@ class QuestEngine:
         sq = math.sqrt(disc)
         r1 = (-b_coef + sq) / (2.0 * a_coef)
         r2 = (-b_coef - sq) / (2.0 * a_coef)
-        lo, hi = (m0, m1) if m0 <= m1 else (m1, m0)
-        dentro = [r for r in (r1, r2) if lo <= r <= hi]
-        if not dentro:
-            self._log.info(
-                "[QUEST|%r] raices fuera del rango inter-medias: fallback a x_bar",
-                nombre,
-            )
-            return float(x_bar)
-        if len(dentro) == 2 and abs(dentro[1] - x_bar) < abs(dentro[0] - x_bar):
-            return float(dentro[1])  # la mas cercana a la media total ponderada
-        return float(dentro[0])
+        if self.qda_root_restriction:
+            # restricted mode (default): keep only roots inside the
+            # inter-means range [min(m0, m1), max(m0, m1)]
+            lo, hi = (m0, m1) if m0 <= m1 else (m1, m0)
+            dentro = [r for r in (r1, r2) if lo <= r <= hi]
+            if not dentro:
+                self._log.info(
+                    "[QUEST|%r] raices fuera del rango inter-medias: fallback a x_bar",
+                    nombre,
+                )
+                return float(x_bar)
+            if len(dentro) == 2 and abs(dentro[1] - x_bar) < abs(dentro[0] - x_bar):
+                return float(dentro[1])  # closest to the weighted total mean
+            return float(dentro[0])
+        # canonical mode: accept any real root; with two real roots pick the
+        # one closest to the weighted mean (operational determinism, same
+        # tie-break criterion as the restricted path)
+        if abs(r2 - x_bar) < abs(r1 - x_bar):
+            return float(r2)
+        return float(r1)
 
     def _numeric_cut(
         self, xd: pd.Series, yc: np.ndarray, info: dict, nombre: str
@@ -444,6 +531,14 @@ class QuestEngine:
         """Particion binaria por ganancia de Gini (K<=10 exhaustiva; K>10 por
         tasa supervisada). NOTA: la via K>10 es estilo Breiman/C&RT, no el
         trato de dummies+LDA de Loh & Shih 1997 (decision documentada)."""
+        # defense in depth: __init__ already rejects values != "rate", but
+        # the public attribute could be mutated at runtime
+        if self.nominal_high_card != "rate":
+            raise NotImplementedError(
+                f"[QUEST|{nombre!r}] nominal_high_card={self.nominal_high_card!r} "
+                "no implementado en Fase 0: reservado para Fase 3.4 "
+                "(LDA + dummies; ver design_decisions.md §4.2)"
+            )
         try:
             codes, uniques = pd.factorize(xd, sort=True)
         except TypeError as e:
