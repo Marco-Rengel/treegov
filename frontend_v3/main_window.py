@@ -315,6 +315,18 @@ class MainWindow(QMainWindow):
         self._reports_panel = ReportsPanel()
         self._reports_panel.setObjectName("reportsPanel")
         self._tabs.addTab(self._reports_panel, "")
+        self._reports_panel.partition_changed.connect(
+            self._on_reports_partition_changed
+        )
+        self._reports_panel.view_changed.connect(
+            self._on_reports_view_changed
+        )
+        self._reports_panel.threshold_changed.connect(
+            self._on_reports_threshold_changed
+        )
+        self._reports_panel.refresh_requested.connect(
+            self._refresh_reports_panel
+        )
 
         splitter.addWidget(self._left_panel)
         splitter.addWidget(self._tabs)
@@ -410,6 +422,8 @@ class MainWindow(QMainWindow):
             # tree, so the viewer must not keep displaying the old one
             self._tree_panel.clear_model()
             self._metrics_panel.set_report(None)
+            self._reports_panel.set_gains_table(None)
+            self._reports_panel.set_classification_matrix(None)
             self._hud_reset()
         columns, types = self._dataset_info
         wiz = ModelWizard(columns, types, parent=self)
@@ -471,6 +485,7 @@ class MainWindow(QMainWindow):
             )
         # Phase 2.3.e.5: refresh OOS/OOT panel with current report
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._refresh_reports_panel()
 
     def _train_pipeline(self, cfg: dict) -> None:
         self._session.fix_spec(cfg["target"], predictors=cfg["predictors"])
@@ -524,6 +539,21 @@ class MainWindow(QMainWindow):
         )
         self._act_evaluate_oos.setEnabled(trained)
         self._act_load_oot.setEnabled(trained)
+        state = (
+            self._session.state.state
+            if self._session is not None
+            else FlowState.EMPTY
+        )
+        train_ok = state in (
+            FlowState.TRAINED, FlowState.OOT_LOADED, FlowState.OOT_EVALUATED
+        )
+        oos_ok = train_ok
+        oot_ok = state in (
+            FlowState.OOT_LOADED, FlowState.OOT_EVALUATED
+        )
+        self._reports_panel.set_session_available(
+            train=train_ok, oos=oos_ok, oot=oot_ok
+        )
 
     # ------------------------------------------------------------------
     # Slots (Phase 2.2: tree viewer -> properties panel)
@@ -573,6 +603,7 @@ class MainWindow(QMainWindow):
         if not ok:
             return
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._refresh_reports_panel()
         self._tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
         if self._logger is not None:
@@ -596,6 +627,7 @@ class MainWindow(QMainWindow):
         if not ok:
             return
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._refresh_reports_panel()
         self._tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
         if self._logger is not None:
@@ -604,6 +636,55 @@ class MainWindow(QMainWindow):
     def _load_oot_pipeline(self, path: str) -> None:
         self._session.load_oot(path)
         self._session.evaluate_oot()
+
+    def _on_reports_partition_changed(self, _partition: str) -> None:
+        """Partition combo changed: recompute gains table and matrix."""
+        self._refresh_reports_panel()
+
+    def _on_reports_view_changed(self, _view: str, _n_buckets: int) -> None:
+        """View (leaf/bucket) or bucket count changed: recompute gains table."""
+        self._refresh_reports_panel()
+
+    def _on_reports_threshold_changed(self, _threshold: float) -> None:
+        """Threshold changed: recompute classification matrix."""
+        self._refresh_reports_panel()
+
+    def _refresh_reports_panel(self) -> None:
+        """Fetch gains table and classification matrix from Session and push
+        them into ReportsPanel. Silent on unavailable partitions (shows
+        empty state instead of failing)."""
+        if self._session is None:
+            self._reports_panel.set_gains_table(None)
+            self._reports_panel.set_classification_matrix(None)
+            return
+        state = self._session.state.state
+        if state not in (
+            FlowState.TRAINED, FlowState.OOT_LOADED, FlowState.OOT_EVALUATED
+        ):
+            self._reports_panel.set_gains_table(None)
+            self._reports_panel.set_classification_matrix(None)
+            return
+        partition = self._reports_panel.current_partition()
+        view = self._reports_panel.current_view()
+        n_buckets = self._reports_panel.current_n_buckets()
+        threshold = self._reports_panel.current_threshold()
+        try:
+            gains = self._session.get_gains_table(
+                partition=partition, by=view, n_buckets=n_buckets
+            )
+            matrix = self._session.get_classification_matrix(
+                partition=partition, threshold=threshold
+            )
+        except (RuntimeError, ValueError) as exc:
+            if self._logger is not None:
+                self._logger.warning(
+                    "[gui] reports panel refresh failed: %s", exc
+                )
+            self._reports_panel.set_gains_table(None)
+            self._reports_panel.set_classification_matrix(None)
+            return
+        self._reports_panel.set_gains_table(gains)
+        self._reports_panel.set_classification_matrix(matrix)
 
     def _switch_language(self, lang: str) -> None:
         set_language(lang)
