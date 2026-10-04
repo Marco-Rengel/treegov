@@ -2181,3 +2181,97 @@ es **numéricamente idéntico** al pre-3.1. Verificado por
 **Referencias**:
 - `docs/3.1_design_multiclass.md` (documento nuevo).
 - `docs/design_decisions.md` §5.2, §6.4, §0.4.
+
+---
+
+### 04/10/2026 — Fase 3.1.a (WIP): multiclase en árbol — implementación parcial
+
+**Estado**: 🟡 EN PROGRESO. Código adaptado; 26 tests pendientes de
+adaptar. Commit de checkpoint (WIP) — no cierra la sub-fase.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**:
+- `backend_v3/tree_builder.py` — adaptado (tuple + class_labels + target_class)
+- `backend_v3/pruning.py` — adaptado
+- `backend_v3/reporting.py` — adaptado
+- `backend_v3/validation.py` — adaptado
+- `backend_v3/session_state.py` — adaptado (target_class temporal)
+- `frontend_v3/tree_view.py` — adaptado
+- `tests/test_tree_builder.py` — adaptado (16/16 passed)
+
+**Motivación**:
+Primera implementación de multiclase. Se aplicó el diseño
+`docs/3.1_design_multiclass.md` §1 a §3 y §7 (parte de código, sin
+tocar SessionState ni Session.fix_spec todavía — eso va en 3.1.c).
+
+**Cambios aplicados**:
+
+`tree_builder.py` (178 inserciones, 55 borrados):
+- TreeNode: n_events/pd_jeffreys/pd_final pasan a tuple[..., K];
+  nuevo campo class_labels.
+- TreeModel: nuevos campos class_labels / target_class /
+  target_class_index; 3 invariantes nuevos (longitudes coherentes,
+  sum(pd_final)==1, n_events[c] <= n por clase).
+- TreeBuilder.__init__: nuevo parámetro obligatorio target_class.
+- TreeBuilder.build: reordenamiento canónico (target_class en índice 0),
+  Jeffreys multivariante, floor renormalizado.
+- TreeBuilder._fingerprint: firma ampliada + 4 entradas nuevas.
+
+`pruning.py` (13 inserciones, 8 borrados):
+- r(t) generalizado a `n - max(n_events)` (idéntico a `min(k, n-k)`
+  para K=2).
+- _rebuild propaga class_labels / target_class / target_class_index.
+
+`reporting.py` (15 inserciones, 1 borrado):
+- Check binario: K != 2 → ValueError (delegando la matriz a Session).
+- Lectura de pd_final[0].
+
+`validation.py` (4 inserciones, 1 borrado):
+- predict_pd: lectura de pd_final[0].
+
+`session_state.py` (17 inserciones, 5 borrados):
+- Atributo temporal `self._target_class = 1` (hasta 3.1.c).
+- Session.train gana `target_class` (parámetro temporal).
+- TreeBuilder(target_class=...) en train.
+- 4 lecturas de pd_final → pd_final[0].
+
+`tree_view.py` (11 inserciones, 6 borrados):
+- 6 lecturas de pd_final / pd_jeffreys / n_events → [0].
+- Docstring del módulo actualizado.
+
+`test_tree_builder.py` (adaptado completo, 16/16 passed):
+- Reemplazo global de `target_type=_BIN,` → añade `target_class=1`.
+- Adaptaciones específicas de tests con fixtures manuales de TreeNode.
+
+**Estado de la suite**:
+- Antes de empezar 3.1.a: 206/206.
+- Tras la implementación de `tree_builder.py` (sesión 1): 42 fallos
+  esperados (TreeNode/TreeBuilder firmas cambiadas).
+- Tras adaptar los 5 consumidores + `test_tree_builder.py`:
+  **180 passed / 26 failed**.
+- Los 26 fallos son todos mecánicos (mismo patrón que ya se resolvió
+  en `test_tree_builder.py`) y se concentran en:
+  - `test_pruning.py` (6)
+  - `test_reporting.py` (9)
+  - `test_stability.py` (1)
+  - `test_tree_view.py` (9)
+  - `test_validation.py` (1)
+
+**Pendiente para cerrar 3.1.a**:
+- Adaptar los 5 archivos de tests pendientes.
+- Añadir `test_multiclass_binary_parity` (invariante crítica: K=2 con
+  target_class=1 → resultado idéntico al pre-3.1).
+- Suite en 206/206.
+- Commit de cierre de 3.1.a (no este WIP).
+
+**Lección operativa (importante para el próximo chat)**:
+Cuando una firma cambia en código que produce muchos fallos en tests,
+el patrón "reemplazo global + casos especiales" es más efectivo que
+pedir a Aider que aplique 30 cambios en un archivo de tests. Aider
+rinde bien para cambios quirúrgicos; para bulk de tests, VS Code
+con Ctrl+H es más rápido y seguro.
+
+**Referencias**:
+- `docs/3.1_design_multiclass.md` (§1-§3, §7).
+- `docs/design_decisions.md` §5.2, §6.4.

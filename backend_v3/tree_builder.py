@@ -1,31 +1,41 @@
-"""Constructor recursivo de arboles de decision (TreeGov, backend_v3, Fase 1).
+"""Recursive decision-tree builder (TreeGov, backend_v3, Phase 1).
 
-Ensambla cualquiera de los 4 motores (ChaidEngine / ChaidEngine exhaustive /
-CrtEngine / QuestEngine) en un arbol completo, determinista y auditable.
+Assembles any of the 4 engines (ChaidEngine / ChaidEngine exhaustive /
+CrtEngine / QuestEngine) into a complete, deterministic, auditable tree.
 
-Reglas duras:
-  - Crecimiento BFS con cola FIFO: los ids 0, 1, 2, ... se asignan por nivel
-    y orden de expansion (determinista; nunca pila).
-  - Routing multi-rama: branches (K >= 2 grupos, orden natural del motor) o
-    threshold (izquierda: x <= t, derecha: x > t). CHAID puede producir
-    K > 2; C&RT y QUEST son estrictamente binarios.
-  - min_child_size es un PISO ABSOLUTO por rama: si ALGUNA rama del split
-    propuesto quedara con menos de min_child_size filas, el split entero se
-    rechaza (no hay fusion de respaldo; se documenta y el nodo queda hoja).
-  - Si el motor lanza una excepcion, TreeBuilder la PROPAGA (fail-fast):
-    nunca se traduce a hoja (el error no se disfraza de decision analitica).
-  - PD por nodo, segun GovernanceMode (Fase 2.1, types.GovernanceMode):
-      BANKING (defecto): Jeffreys (k + 0.5) / (n + 1.0) y
-          pd_final = max(pd_floor, pd_j)          [BCBS CRE 20.39]
-      RESEARCH: PD empirica cruda k/n y pd_final = pd_j (sin floor).
-    La PD OPERATIVA solo es la de las hojas (is_leaf=True); la de nodos
-    internos se expone solo con fines de trazabilidad.
-  - Determinismo estructural: dos build() con los mismos datos y parametros
-    producen TreeModel identicos (==). params_fingerprint es un sha256
-    estable (json con claves ordenadas; nada de direcciones de memoria).
-    El event_log NO vive en TreeModel: vive en SessionState (session_state).
+Hard rules:
+  - BFS growth with a FIFO queue: ids 0, 1, 2, ... are assigned by level
+    and expansion order (deterministic; never a stack).
+  - Multi-way routing: branches (K >= 2 groups, engine's natural order) or
+    threshold (left: x <= t, right: x > t). CHAID may produce K > 2;
+    C&RT and QUEST are strictly binary.
+  - min_child_size is an ABSOLUTE FLOOR per branch: if ANY branch of the
+    proposed split would end up with fewer than min_child_size rows, the
+    whole split is rejected (no fallback merge; it is documented and the
+    node stays a leaf).
+  - If the engine raises, TreeBuilder PROPAGATES the exception (fail-fast):
+    it is never translated into a leaf (an error is never disguised as an
+    analytical decision).
+  - Per-node PD vector, by GovernanceMode (Phase 2.1, types.GovernanceMode):
+      BANKING (default): multivariate Jeffreys (k_c + 0.5) / (n + K * 0.5)
+          per class c (Jeffreys 1946; symmetric Dirichlet(0.5, ...) prior),
+          then component-wise soft floor + renormalization [BCBS CRE 20.39];
+      RESEARCH: raw empirical proportions k_c / n, no floor.
+    For K = 2 the Jeffreys formula reduces exactly to the binary
+    (k + 0.5) / (n + 1.0). The OPERATIONAL PD lives on leaves
+    (is_leaf=True) only; internal-node PDs are exposed for traceability.
+  - Phase 3.1 (multiclass): the target may have K >= 2 classes. Classes
+    are reordered internally so that the class of interest (target_class)
+    is always index 0 of n_events / pd_jeffreys / pd_final / class_labels;
+    the remaining classes follow in ascending order. The invariant
+    sum(pd_final) == 1 holds for every node (enforced by TreeModel).
+  - Structural determinism: two build() calls with the same data and
+    parameters produce identical TreeModel objects (==). params_fingerprint
+    is a stable sha256 (json with sorted keys; no memory addresses).
+    The event_log does NOT live in TreeModel: it lives in SessionState
+    (session_state).
 
-Dependencias permitidas: numpy, pandas, stdlib + motores de backend_v3.
+Allowed dependencies: numpy, pandas, stdlib + backend_v3 engines.
 """
 
 from __future__ import annotations
@@ -48,17 +58,30 @@ __all__ = ["TreeNode", "TreeModel", "TreeBuilder"]
 
 @dataclass(frozen=True)
 class TreeNode:
-    """Nodo del arbol. Inmutable y hashable (salvo split, hashable el mismo)."""
+    """Tree node. Immutable and hashable (split is itself hashable).
+
+    Phase 3.1 (multiclass): n_events, pd_jeffreys and pd_final are
+    K-length tuples in canonical class order -- index 0 is always the
+    class of interest (target_class), the remaining classes follow in
+    ascending order -- and class_labels[c] is the human-readable label
+    of class c. sum(pd_final) == 1 for every node (TreeModel enforces
+    it with tolerance 1e-12). pd_final is operational only on leaves
+    (is_leaf=True); on internal nodes it is exposed for traceability.
+    """
 
     node_id: int
     depth: int
     parent_id: int | None
     n: int
-    n_events: int
-    # Jeffreys (k+0.5)/(n+1) en modo BANKING; k/n crudo en modo RESEARCH
-    pd_jeffreys: float
-    pd_final: float     # max(pd_floor, pd_j) si hay floor; si no, pd_j.
-                        # Operativa solo en hojas
+    n_events: tuple[int, ...]        # per-class counts, canonical order
+    # Multivariate Jeffreys (k_c + 0.5) / (n + K*0.5) in BANKING mode;
+    # raw k_c / n in RESEARCH mode
+    pd_jeffreys: tuple[float, ...]
+    pd_final: tuple[float, ...]      # component-wise soft floor +
+                                     # renormalization if pd_floor is set;
+                                     # pd_jeffreys otherwise.
+                                     # Operational on leaves only
+    class_labels: tuple[str, ...]    # label of class c, same canonical order
     is_leaf: bool
     split: SplitConfig | None
     child_ids: tuple[int, ...]
@@ -68,27 +91,60 @@ class TreeNode:
 
 @dataclass(frozen=True)
 class TreeModel:
-    """Arbol completo e inmutable. Determinista; sin timestamps."""
+    """Arbol completo e inmutable. Determinista; sin timestamps.
+
+    Phase 3.1: class_labels / target_class / target_class_index record the
+    analyst's explicit class-of-interest choice. Canonical-order invariant:
+    index 0 of every per-class vector is target_class, so target_class_index
+    is always 0 (verified in __post_init__).
+    """
 
     root_id: int
     nodes: tuple[TreeNode, ...]  # indexado por node_id (0..len-1)
     method: str
     params_fingerprint: str
+    class_labels: tuple[str, ...]  # canonical order: index 0 = target_class
+    target_class: int | str        # class of interest, as entered by analyst
+    target_class_index: int        # always 0 by construction (invariant)
 
     def __post_init__(self) -> None:
         if not self.nodes:
             raise ValueError("[TreeModel] sin nodos")
+        if self.target_class_index != 0:
+            raise ValueError(
+                f"[TreeModel] target_class_index debe ser 0 (invariante de "
+                f"orden canonico): {self.target_class_index!r}"
+            )
         ids = [nd.node_id for nd in self.nodes]
         if ids != list(range(len(ids))):
             raise ValueError("[TreeModel] node_id debe ser 0..n-1 en orden")
         raiz = self.nodes[self.root_id]
         if raiz.parent_id is not None:
             raise ValueError("[TreeModel] la raiz tiene parent_id")
+        K = len(self.class_labels)
         for nd in self.nodes:
-            if nd.n_events > nd.n:
+            # Phase 3.1 invariants: coherent per-class vector lengths and
+            # pd_final normalized to 1 (tolerance for float drift: 1e-12).
+            if not (len(nd.pd_final) == len(nd.pd_jeffreys)
+                    == len(nd.n_events) == len(nd.class_labels) == K):
                 raise ValueError(
-                    f"[TreeModel] nodo {nd.node_id}: n_events={nd.n_events} > n={nd.n}"
+                    f"[TreeModel] nodo {nd.node_id}: longitudes incoherentes "
+                    f"(pd_final={len(nd.pd_final)}, "
+                    f"pd_jeffreys={len(nd.pd_jeffreys)}, "
+                    f"n_events={len(nd.n_events)}, "
+                    f"class_labels={len(nd.class_labels)}, modelo={K})"
                 )
+            if abs(sum(nd.pd_final) - 1.0) > 1e-12:
+                raise ValueError(
+                    f"[TreeModel] nodo {nd.node_id}: sum(pd_final) = "
+                    f"{sum(nd.pd_final)} != 1.0"
+                )
+            for c, k_c in enumerate(nd.n_events):
+                if k_c > nd.n:
+                    raise ValueError(
+                        f"[TreeModel] nodo {nd.node_id}: "
+                        f"n_events[{c}]={k_c} > n={nd.n}"
+                    )
             if nd.is_leaf:
                 if nd.split is not None or nd.child_ids:
                     raise ValueError(
@@ -140,6 +196,7 @@ class TreeBuilder:
         engine,
         *,
         target_type: TargetType,
+        target_class: int | str,
         max_depth: int | None = 4,
         min_child_size: int = 50,
         pd_floor: float | None = 0.0003,
@@ -155,9 +212,17 @@ class TreeBuilder:
 
         pd_floor=None + apply_jeffreys=False -> modo RESEARCH (PD cruda
         k/n, sin floor); los defaults son el modo BANKING (BCBS CRE 20.39).
+
+        target_class (Phase 3.1): mandatory class of interest. It is not
+        used numerically by the engines; it fixes the canonical class
+        ordering (index 0 of every per-class vector) and is recorded in
+        the fingerprint. Mandatory by design (3.1 §1bis.1): no silent
+        default may decide the semantics of the PD vector.
         """
         if not hasattr(engine, "best_split"):
             raise TypeError("engine debe exponer best_split(X, y, spec, ...)")
+        if target_class is None:
+            raise ValueError("target_class no puede ser None")
         if max_depth is not None and (
             isinstance(max_depth, bool) or not isinstance(max_depth, Integral)
             or int(max_depth) < 1
@@ -179,6 +244,7 @@ class TreeBuilder:
             )
         self._engine = engine
         self._target_type = target_type
+        self._target_class = target_class
         # None -> modo grow_full (el docstring lo promete desde Fase 1.2;
         # antes int(None) lanzaba TypeError: bug corregido en Fase 2.1)
         self.max_depth = None if max_depth is None else int(max_depth)
@@ -196,23 +262,47 @@ class TreeBuilder:
         y: pd.Series,
         spec: dict[str, PredictorType],
     ) -> TreeModel:
-        """Construye el arbol completo. Las excepciones del motor se propagan."""
+        """Construye el arbol completo. Las excepciones del motor se propagan.
+
+        Phase 3.1 (multiclass): the target may have K >= 2 classes. The
+        canonical ordering places target_class at index 0 of every
+        per-class vector; the remaining classes follow in ascending order.
+        NaN targets, single-class targets and a target_class absent from
+        the data are rejected here, at a single validation point.
+        """
         if not spec:
             raise ValueError("[tree_builder] spec vacio")
         if len(X) != len(y) or len(X) == 0:
             raise ValueError("[tree_builder] X e y invalidos o de distinta longitud")
 
-        # Fase 1: target obligatoriamente 0/1 (la PD de hojas exige la clase
-        # de evento = 1; validado aqui en un solo punto)
+        # Phase 3.1: validate the target and fix the canonical class order
+        # (class of interest at index 0; remaining classes ascending).
         yv = pd.Series(y)
-        if set(pd.unique(yv)) != {0, 1}:
+        if yv.isna().any():
             raise ValueError(
-                "[tree_builder] target fuera de {0, 1}; en Fase 1 el arbol "
-                "exige variable binaria con evento = 1"
+                "[tree_builder] el target contiene NaN; imputar o excluir "
+                "las filas antes de construir el arbol"
             )
-        ycodes = yv.to_numpy(dtype=np.int64)
+        observed = tuple(sorted(pd.unique(yv)))
+        if self._target_class not in observed:
+            raise ValueError(
+                f"[tree_builder] target_class={self._target_class!r} no esta "
+                f"entre las clases observadas: {observed!r}"
+            )
+        other_classes = tuple(c for c in observed if c != self._target_class)
+        ordered_classes = (self._target_class,) + other_classes
+        K = len(ordered_classes)
+        if K < 2:
+            raise ValueError(
+                "[tree_builder] target constante (K=1 clase observada); un "
+                "arbol exige al menos 2 clases"
+            )
+        class_to_index = {c: i for i, c in enumerate(ordered_classes)}
+        # Per-row canonical codes (0 = class of interest).
+        ycodes = yv.map(class_to_index).to_numpy(dtype=np.int64)
+        class_labels_tuple = tuple(str(c) for c in ordered_classes)
 
-        fingerprint = self._fingerprint(spec)
+        fingerprint = self._fingerprint(spec, class_labels_tuple)
         nodos: list[TreeNode] = []
         cola: deque[tuple[int, int | None, int, np.ndarray]] = deque()
         cola.append((0, None, 0, np.arange(len(X))))
@@ -222,13 +312,30 @@ class TreeBuilder:
             node_id, parent_id, depth, idx = cola.popleft()  # FIFO BFS
             Yn = ycodes[idx]
             n = int(len(idx))
-            k_ev = int(Yn.sum())
+            # Per-class counts in canonical order (index 0 = target_class).
+            counts = np.bincount(Yn, minlength=K)
+            n_events_tuple = tuple(int(c) for c in counts)
             if self.apply_jeffreys:
-                pd_j = (k_ev + 0.5) / (n + 1.0)   # Jeffreys (BANKING)
+                # Multivariate Jeffreys: posterior mean under a symmetric
+                # Dirichlet(0.5, ..., 0.5) prior (Jeffreys 1946). For K = 2
+                # it reduces exactly to the binary (k + 0.5) / (n + 1.0).
+                denom = n + K * 0.5
+                pd_j_tuple = tuple(
+                    float((k_c + 0.5) / denom) for k_c in counts
+                )
             else:
-                pd_j = k_ev / n if n > 0 else 0.0  # PD cruda (RESEARCH)
-            pd_f = (max(self.pd_floor, pd_j) if self.pd_floor is not None
-                    else pd_j)
+                pd_j_tuple = tuple(
+                    float(k_c / n) if n > 0 else 0.0 for k_c in counts
+                )
+            if self.pd_floor is not None:
+                # Component-wise soft floor + renormalization (design 3.1
+                # section 3.3): preserves sum(pd_final) == 1 for any K.
+                temp = np.array(
+                    [max(self.pd_floor, p) for p in pd_j_tuple], dtype=float
+                )
+                pd_f_tuple = tuple(float(x) for x in (temp / temp.sum()))
+            else:
+                pd_f_tuple = pd_j_tuple
 
             razon: str | None = None
             cfg: SplitConfig | None = None
@@ -253,12 +360,13 @@ class TreeBuilder:
             if razon is not None:
                 nodos.append(TreeNode(
                     node_id=node_id, depth=depth, parent_id=parent_id,
-                    n=n, n_events=k_ev, pd_jeffreys=pd_j, pd_final=pd_f,
+                    n=n, n_events=n_events_tuple, pd_jeffreys=pd_j_tuple,
+                    pd_final=pd_f_tuple, class_labels=class_labels_tuple,
                     is_leaf=True, split=None, child_ids=(), leaf_reason=razon,
                 ))
                 self._log.debug(
-                    "[builder] nodo %d HOJA (%s) n=%d k=%d pd=%.6g",
-                    node_id, razon, n, k_ev, pd_f,
+                    "[builder] nodo %d HOJA (%s) n=%d n_events=%s pd=%s",
+                    node_id, razon, n, n_events_tuple, pd_f_tuple,
                 )
                 continue
 
@@ -267,7 +375,8 @@ class TreeBuilder:
             next_id += k_child
             nodos.append(TreeNode(
                 node_id=node_id, depth=depth, parent_id=parent_id,
-                n=n, n_events=k_ev, pd_jeffreys=pd_j, pd_final=pd_f,
+                n=n, n_events=n_events_tuple, pd_jeffreys=pd_j_tuple,
+                pd_final=pd_f_tuple, class_labels=class_labels_tuple,
                 is_leaf=False, split=cfg, child_ids=child_ids, leaf_reason=None,
             ))
             self._log.info(
@@ -281,6 +390,9 @@ class TreeBuilder:
         modelo = TreeModel(
             root_id=0, nodes=tuple(nodos), method=metodo,
             params_fingerprint=fingerprint,
+            class_labels=class_labels_tuple,
+            target_class=self._target_class,
+            target_class_index=0,
         )
         self._log.info(
             "[builder] arbol %s: %d nodos (%d hojas), fingerprint=%s",
@@ -340,13 +452,20 @@ class TreeBuilder:
             return GovernanceMode.RESEARCH.name
         return "CUSTOM"
 
-    def _fingerprint(self, spec: dict[str, PredictorType]) -> str:
+    def _fingerprint(
+        self, spec: dict[str, PredictorType], class_labels: tuple[str, ...]
+    ) -> str:
         """sha256 (16 hex) del dict canonico determinista.
 
         Incluye los hiperparametros PUBLICOS del motor (engine_params):
         dos ChaidEngine con alpha_merge distinto NO comparten fingerprint.
         Incluye el modo de gobernanza (Fase 2.1): dos arboles con distinto
         modo NO comparten fingerprint (trazabilidad MRM).
+
+        Phase 3.1: the payload also records target_class,
+        target_class_index, class_labels and n_classes. Two trees equal in
+        everything except the class of interest do NOT share a fingerprint
+        (MRM evidence that the class choice was explicit).
         """
         engine_params = {
             k: str(v) for k, v in sorted(vars(self._engine).items())
@@ -362,6 +481,10 @@ class TreeBuilder:
             "apply_jeffreys": self.apply_jeffreys,
             "pd_floor": self.pd_floor,  # None serializa como null (json)
             "seed": self.seed,
+            "target_class": str(self._target_class),
+            "target_class_index": 0,
+            "class_labels": list(class_labels),
+            "n_classes": len(class_labels),
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:16]

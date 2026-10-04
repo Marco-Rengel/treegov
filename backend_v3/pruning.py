@@ -31,6 +31,10 @@ Validacion cruzada k-fold y regla 1-SE: aplazadas a Fase 1.3 (documentado;
 la API no contiene parametros muertos).
 
 Dependencias: stdlib + numpy/pandas solo via estructuras del modelo.
+
+Fase 3.1 (multiclass): r(t) is defined as n - max(n_events), the
+number of rows that do not belong to the modal class. For K=2 this
+reduces exactly to min(k, n-k). See docs/3.1_design_multiclass.md §1.
 """
 
 from __future__ import annotations
@@ -75,7 +79,7 @@ class Pruner:
         """(n_hojas, errores) del subarbol vivo enraizado en nid."""
         if not children[nid]:
             nd = model.nodes[nid]
-            return 1, min(nd.n_events, nd.n - nd.n_events)
+            return 1, nd.n - max(nd.n_events)
         hojas = 0
         err = 0
         for cid in children[nid]:
@@ -109,7 +113,7 @@ class Pruner:
             if hojas <= 1:
                 continue
             nd = model.nodes[nid]
-            r_t = min(nd.n_events, nd.n - nd.n_events)
+            r_t = nd.n - max(nd.n_events)
             g_map[nid] = (r_t - err_sub) / (hojas - 1)
         if not g_map:
             return None
@@ -132,11 +136,8 @@ class Pruner:
                 self._eliminar_descendientes(children, nid)
             # medir el arbol vivo resultante
             if not children[model.root_id]:
-                n_hojas, err = 1, min(
-                    model.nodes[model.root_id].n_events,
-                    model.nodes[model.root_id].n
-                    - model.nodes[model.root_id].n_events,
-                )
+                nd_root = model.nodes[model.root_id]
+                n_hojas, err = 1, nd_root.n - max(nd_root.n_events)
             else:
                 n_hojas, err = self._hojas_errores(
                     model, children, model.root_id
@@ -187,7 +188,7 @@ class Pruner:
     ) -> TreeModel:
         """Nuevo TreeModel con ids reindexados 0..m-1 por BFS desde la raiz.
 
-        Los metadatos se heredan del nodo original (n, n_events, PD);
+        Los metadatos se heredan del nodo original (n, n_events, pd_jeffreys, pd_final, class_labels);
         depth/parent_id se recalculan; las hojas creadas por la poda reciben
         leaf_reason="podado"; las preexistentes conservan su razon.
         """
@@ -222,6 +223,7 @@ class Pruner:
                 n_events=nd.n_events,
                 pd_jeffreys=nd.pd_jeffreys,
                 pd_final=nd.pd_final,
+                class_labels=nd.class_labels,
                 is_leaf=es_hoja,
                 split=None if es_hoja else nd.split,
                 child_ids=tuple(mapa[c] for c in children[nid]),
@@ -233,6 +235,9 @@ class Pruner:
         modelo = TreeModel(
             root_id=0, nodes=tuple(nuevos), method=model.method,
             params_fingerprint=fp,
+            class_labels=model.class_labels,
+            target_class=model.target_class,
+            target_class_index=model.target_class_index,
         )
         self._log.info(
             "[pruning] alpha=%.6g: %d -> %d nodos (%d hojas)",

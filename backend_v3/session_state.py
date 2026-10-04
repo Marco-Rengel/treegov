@@ -119,6 +119,9 @@ class Session:
     def __init__(self, logger: logging.Logger | None = None) -> None:
         self._log = logger if logger is not None else get_logger("session")
         self._state = SessionState()
+        # Fase 3.1.a (TEMPORAL): target_class vive aquí hasta que SessionState
+        # lo almacene en 3.1.c. Default 1 para compatibilidad con tests.
+        self._target_class: int | str = 1
         self._df: pd.DataFrame | None = None
         self._X_train = None
         self._X_test = None
@@ -251,8 +254,9 @@ class Session:
         leaf_assignment = predict_leaf_assignment(
             self._state.tree, X, unseen_policy=unseen_policy
         )
+        # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of interest.
         pd_per_leaf = {
-            nd.node_id: nd.pd_final
+            nd.node_id: nd.pd_final[0]
             for nd in self._state.tree.nodes if nd.is_leaf
         }
         result = build_classification_matrix(
@@ -374,6 +378,7 @@ class Session:
         engine,
         *,
         target_type: TargetType = TargetType.BINARY,
+        target_class: int | str | None = None,
         max_depth: int = 4,
         min_child_size: int = 50,
         pd_floor: float | None = 0.0003,
@@ -394,6 +399,12 @@ class Session:
         st = self._state
         assert st.spec is not None
         assert self._X_train is not None and self._y_train is not None
+        # Fase 3.1.a (TEMPORAL): target_class viene del argumento o del
+        # atributo temporal de Session. En 3.1.c se leerá de SessionState.
+        if target_class is None:
+            target_class = self._target_class
+        else:
+            self._target_class = target_class
         if isinstance(engine, str):
             try:
                 engine = _ENGINE_FACTORIES[engine]()
@@ -403,7 +414,8 @@ class Session:
                     f"(validos: {sorted(_ENGINE_FACTORIES)})"
                 ) from None
         builder = TreeBuilder(
-            engine, target_type=target_type, max_depth=max_depth,
+            engine, target_type=target_type, target_class=target_class,
+            max_depth=max_depth,
             min_child_size=min_child_size, pd_floor=pd_floor,
             apply_jeffreys=apply_jeffreys,
             seed=st.seed, logger=get_logger("builder"),
@@ -555,7 +567,7 @@ class Session:
         # metricas OOT sobre las filas enrutables
         if n_val >= 15:
             p_val = np.array(
-                [model.nodes[int(a)].pd_final for a in asign_oot[validas]]
+                [model.nodes[int(a)].pd_final[0] for a in asign_oot[validas]]
             )
             g_eff = n_groups if n_val >= 5 * n_groups else max(3, n_val // 5)
             metrics = compute_oos_metrics(p_val, self._y_oot[validas],
@@ -572,7 +584,7 @@ class Session:
         asign_tr = predict_leaf_assignment(
             model, self._X_train, unseen_policy="error"
         )
-        p_tr = np.array([model.nodes[int(a)].pd_final for a in asign_tr])
+        p_tr = np.array([model.nodes[int(a)].pd_final[0] for a in asign_tr])
         n_tr = int(len(p_tr))
         g_eff_tr = min(5, max(3, n_tr // 5))
         m_tr = compute_oos_metrics(p_tr, self._y_train.to_numpy(),
@@ -585,7 +597,7 @@ class Session:
             asign_te = predict_leaf_assignment(
                 model, self._X_test, unseen_policy="error"
             )
-            p_te = np.array([model.nodes[int(a)].pd_final for a in asign_te])
+            p_te = np.array([model.nodes[int(a)].pd_final[0] for a in asign_te])
             n_te_eff = max(3, int(len(p_te)) // 5)
             gini_oos = compute_oos_metrics(
                 p_te, self._y_test, n_groups=n_te_eff

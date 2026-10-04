@@ -31,6 +31,11 @@ Approved design decisions (Phase 2.2 audit):
     rebuilds via node_id.
   - Zoom is idempotent: setTransform from scratch on every change,
     clamped to [ZOOM_MIN, ZOOM_MAX]; never an accumulated product.
+
+Phase 3.1 (multiclass): n_events, pd_jeffreys and pd_final are
+per-class tuples (index 0 = class of interest). The tree viewer
+displays index 0 for now; full multiclass rendering arrives in
+Phase 3.1.f.
 """
 
 from __future__ import annotations
@@ -154,8 +159,8 @@ def _node_label(node: TreeNode) -> str:
             lines.append(f"x ≤ {_fmt_num(split.threshold)}")
         else:
             lines.append(f"{len(split.branches or ())} {tr('tree_groups')}")
-    lines.append(f"n={node.n} · {tr('tree_node_events')}={node.n_events}")
-    lines.append(f"{tr('tree_node_pd')}={_fmt_pct(node.pd_final)}")
+    lines.append(f"n={node.n} · {tr('tree_node_events')}={node.n_events[0]}")
+    lines.append(f"{tr('tree_node_pd')}={_fmt_pct(node.pd_final[0])}")
     return "\n".join(lines)
 
 
@@ -179,11 +184,11 @@ def node_detail_lines(node: TreeNode) -> list[str]:
         f"{tr('tree_prop_node')}: {node.node_id}",
         f"{tr('tree_prop_depth')}: {node.depth}",
         f"n: {node.n}",
-        f"{tr('tree_node_events')}: {node.n_events}",
-        f"{tr('tree_prop_pd_jeffreys')}: {_fmt_num(node.pd_jeffreys)}",
-        f"{tr('tree_prop_pd_final')}: {_fmt_num(node.pd_final)}",
+        f"{tr('tree_node_events')}: {node.n_events[0]}",
+        f"{tr('tree_prop_pd_jeffreys')}: {_fmt_num(node.pd_jeffreys[0])}",
+        f"{tr('tree_prop_pd_final')}: {_fmt_num(node.pd_final[0])}",
     ]
-    if node.pd_final != node.pd_jeffreys:
+    if node.pd_final[0] != node.pd_jeffreys[0]:
         lines.append(tr("tree_prop_floor_note"))
     if node.is_leaf:
         lines.append(

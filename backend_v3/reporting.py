@@ -11,6 +11,12 @@ KS / AUC / Gini reuse the exact formulas documented in
 Wilcoxon-Mann-Whitney with mid-ranks, Hanley & McNeil 1982; Gini = 2*AUC - 1),
 reimplemented here on per-row PD: the Hosmer-Lemeshow ``n_groups`` logic of
 ``compute_oos_metrics`` does not apply to gains tables.
+
+Phase 3.1 (multiclass): both report functions remain binary-only.
+The model's class_labels must have exactly 2 entries; otherwise
+build_gains_table raises ValueError. build_classification_matrix
+delegates the K > 2 check to its caller (Session). Multiclass
+reports are scheduled for Phase 3.5.
 """
 
 from __future__ import annotations
@@ -208,6 +214,13 @@ def build_gains_table(
     if tie == "random" and seed is None:
         raise ValueError("[reporting] tie='random' requires an explicit seed")
 
+    if len(model.class_labels) != 2:
+        raise ValueError(
+            f"[reporting] gains table is binary-only in Phase 3.1 "
+            f"(model has K={len(model.class_labels)} classes). "
+            "Multiclass reports are scheduled for Phase 3.5."
+        )
+
     routed, leaf_ids, y_r = _validated_routed(leaf_assignment, y, "gains_table")
     n_excluded = int((~routed).sum())
     n_total = int(leaf_ids.size)
@@ -215,7 +228,8 @@ def build_gains_table(
         raise ValueError("[reporting] gains table undefined: no routed rows")
 
     pd_per_node = np.fromiter(
-        (nd.pd_final for nd in model.nodes), dtype=float, count=len(model.nodes)
+        (nd.pd_final[0] for nd in model.nodes),
+        dtype=float, count=len(model.nodes),
     )
     pd_row = pd_per_node[leaf_ids]
 

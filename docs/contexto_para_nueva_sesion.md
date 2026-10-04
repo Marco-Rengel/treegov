@@ -150,8 +150,8 @@ La implementación está dividida en 6 sub-fases:
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | 🟡 Próxima |
-| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ⏳ |
+| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | 🟡 WIP — código adaptado (180/206 tests passing; 26 fallos mecánicos en 5 archivos de tests) |
+| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ✅ (integrado en 3.1.a) |
 | 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ⏳ |
 | 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability | ⏳ |
 | 3.1.e | Wizard: selección obligatoria + counts + warning minoritaria | ⏳ |

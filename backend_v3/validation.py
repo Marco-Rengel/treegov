@@ -147,7 +147,10 @@ def predict_pd(
     out = np.full(len(X), np.nan, dtype=float)
     ok = asign >= 0
     for nid in {int(a) for a in asign[ok]}:
-        out[asign == nid] = model.nodes[nid].pd_final
+        # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of
+        # interest (target_class). predict_pd returns this scalar for now;
+        # the 2D-matrix variant arrives in Phase 3.1.d.
+        out[asign == nid] = model.nodes[nid].pd_final[0]
     return out
 
 

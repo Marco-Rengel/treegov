@@ -178,8 +178,8 @@ binarios hasta Fase 3.5.
   post-entrenamiento (badge de Gini negativo + botón de reversión).
 
 **Sub-fases planificadas** (6 sesiones):
-- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` 🟡
-- 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento
+- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` 🟡 WIP (código adaptado, 5 archivos de tests pendientes)
+- 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento ✅ (integrado en 3.1.a)
 - 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST
 - 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability
 - 3.1.e — Wizard: selección obligatoria + counts + warning minoritaria
