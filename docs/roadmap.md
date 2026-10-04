@@ -190,6 +190,17 @@ incidente que exponga la ausencia del guardrail runtime).
   el 03/10/2026. No afecta al producto ni al runtime; es exclusivamente
   la herramienta de asistencia durante el desarrollo. Ver `AGENTS.md`.
 
+## Releases
+
+- **v1.0.0a1** (03/10/2026) — Primera publicación real en PyPI.
+  Incluye `backend_v3` (capa analítica) y `frontend_v3` (GUI PySide6).
+  URL: https://pypi.org/project/treegov/1.0.0a1/
+  - Publicada con `twine` 7.0.0 + token con scope de proyecto.
+  - Verificada con instalación limpia desde PyPI en venv aislado.
+  - Suite de tests: 199/199 PASSED.
+- **v1.0.0a0** (fecha previa) — Placeholder reservado en PyPI. Solo
+  metadatos, sin código funcional.
+
 ## Pending decisions
 
 - **Distribution**: packaging method (PyInstaller / Inno Setup /

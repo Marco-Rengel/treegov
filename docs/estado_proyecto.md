@@ -17,7 +17,7 @@ y trazabilidad del proyecto, apto para:
 | Versión | 1.0.0a0 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | pypi.org/project/treegov |
+| PyPI | pypi.org/project/treegov/1.0.0a1 |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -335,7 +335,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Decisión de proveedor de IA** — migrado a Moonshot AI directo el 03/10/2026. Ver `audit_log.md`.
 - [ ] **Fase 2.4** — Reportes + integración. Diseño cerrado 30/09/2026.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
-- [ ] Publicar `treegov 1.0.0a1` en PyPI (al cierre de Fase 2).
+- [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
 - [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
 

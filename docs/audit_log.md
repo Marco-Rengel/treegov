@@ -1764,3 +1764,68 @@ disponible, con export HTML autocontenido.
 **Tests**: 199/199 PASSED.
 
 **Referencias**: `docs/roadmap.md`, `docs/estado_proyecto.md`.
+
+---
+
+### 03/10/2026 — Publicación 1.0.0a1 en PyPI
+
+**Estado**: Aprobado.
+**Modelo**: N/A (publicación manual con twine 7.0.0).
+**Revisor**: Marco Rengel
+**Artefactos**: `pyproject.toml`, `frontend_v3/__init__.py`, `README.md`,
+`README.es.md` (commit `9273395`).
+
+**Motivación**:
+Cierre de Fase 2 del roadmap. El nombre `treegov` ya estaba reservado en
+PyPI con un placeholder (`1.0.0a0`, 3.6 kB). Esta publicación reemplaza
+ese placeholder por el paquete real con `backend_v3` + `frontend_v3`.
+
+**Cambios aplicados**:
+
+- `pyproject.toml`: versión `1.0.0a0` → `1.0.0a1`; packages
+  `["backend_v3"]` → `["backend_v3", "frontend_v3"]`; añadido
+  `[tool.setuptools.package-data]` con `frontend_v3 =
+  ["resources/*.qss"]` (sin esto la GUI crashea al no encontrar el QSS).
+- `frontend_v3/__init__.py`: `__version__` bump a `1.0.0a1`.
+- `README.md` / `README.es.md`: links relativos → absolutos
+  (`https://github.com/...`) para que rendericen en PyPI; conteo de
+  tests actualizado a 199.
+
+**Proceso**:
+
+1. Token PyPI regenerado con scope de proyecto (`treegov-upload-2026`).
+2. Guardado en `~/.pypirc` vía `Read-Host -AsSecureString` (sin
+   exposición en terminal ni en prompts de Aider).
+3. `pyproject-build` → `treegov-1.0.0a1-py3-none-any.whl` (114 kB)
+   + `treegov-1.0.0a1.tar.gz` (155 kB).
+4. `twine check dist/*` → PASSED en ambos.
+5. Verificado que `styles.qss` y los 25 módulos `.py` están en el wheel.
+6. `twine upload dist/*` → exitoso. HTTP 200 confirmado vía
+   `curl https://pypi.org/pypi/treegov/1.0.0a1/json`.
+7. **Prueba de instalación limpia**: `python -m venv` en `C:\temp\`,
+   `pip install treegov==1.0.0a1`, import de `backend_v3` y `frontend_v3`
+   exitoso. Confirma que el paquete es instalable desde PyPI en cualquier
+   máquina.
+
+**Lecciones**:
+
+- **Nunca pegar código de PowerShell con bloques multilínea desde el
+  chat**: en la primera iteración, el portapapeles reemplazó el token
+  por el texto del comando. Solución: usar `Read-Host -AsSecureString`
+  en un solo bloque de 3-4 líneas.
+- **`package-data` explícito para recursos no-Python**: aunque
+  `frontend_v3` estuviera en `packages`, el `.qss` requiere
+  declaración explícita en `[tool.setuptools.package-data]`.
+- **`twine check` antes del upload**: detecta errores de README y
+  metadata que PyPI rechazaría.
+
+**Identidades verificadas**:
+
+- `https://pypi.org/project/treegov/1.0.0a1/` → página accesible.
+- `curl .../json` → HTTP 200.
+- Contenido del wheel: `frontend_v3/resources/styles.qss` presente.
+- Instalación limpia desde PyPI: `backend_v3 OK` + `frontend_v3 OK`.
+
+**Tests**: 199/199 PASSED (sin cambios en código).
+
+**Referencias**: `docs/roadmap.md`, `docs/estado_proyecto.md`.
