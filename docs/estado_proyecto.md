@@ -135,7 +135,8 @@ Sub-pasos:
 - 2.4.c.2.b Cableado MainWindow ✅ (03/10/2026)
 - 2.4.c.2.c.1 Export HTML ✅ (03/10/2026)
 - 2.4.c.2.c.2 Limpieza i18n ✅ (03/10/2026)
-- 2.4.c.2.c.3 Tests E2E ⏳
+- 2.4.c.2.c.3 Tests del panel ✅ (03/10/2026)
+- **2.4.c.2 completa** ✅ (03/10/2026)
 - 2.4.d Tests E2E + cierre ⏳
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
@@ -164,7 +165,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (178 tests)
+├── tests/ # Suite de tests (195 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── api.md
@@ -251,6 +252,13 @@ TreeGov/
   excepción `docs/audit_log.md -text`. Ver `audit_log.md` 03/10/2026.
 - **Configuración git global**: `core.autocrlf false` y `core.pager ""`
   (evita que la terminal se bloquee mostrando diffs largos).
+- **Fase 2.4.c.2 — panel de reportes**: 3 sub-pasos (a: panel + i18n,
+  b: cableado MainWindow, c: Export HTML + limpieza i18n + 7 tests).
+  Documentada en `audit_log.md` con detalle de las 4 iteraciones de
+  fix en `i18n.py` y las 2 excepciones de edición manual en VS Code.
+- **Fase 2.4.b — backend de reportes**: `GainsTable` +
+  `ClassificationMatrix` en `reporting.py`, 5 tests con valores
+  verificados a mano (KS=220/589, AUC=10612.5/14725).  
 
 Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numérica.
 
@@ -278,9 +286,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 9 |
 | e2e_mainwindow (frontend) | 5 |
-| **Total** | **188** |
+| reports_panel (frontend) | 7 |
+| **Total** | **195** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 178/178 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 195/195 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -385,8 +394,8 @@ aider
 3. Primer mensaje sugerido al agente:
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3 cerradas.
-> Fase 2.4 en curso (2.4.a completa, 2.4.b próxima).
-> Suite 178/178. Próximo paso: 2.4.b con Aider 0.86.2 + Kimi K3 vía
+> Fase 2.4 en curso (2.4.c.2 completa; 2.4.d próximamente).
+> Suite 195/195. Próximo paso: 2.4.d con Aider 0.86.2 + Kimi K3 vía
 > Moonshot AI directo."
 
 ---
