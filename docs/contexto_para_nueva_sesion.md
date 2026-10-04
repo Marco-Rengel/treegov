@@ -11,7 +11,7 @@
 4. `docs/estado_proyecto.md` — Dossier completo del proyecto
 5. `docs/methodology.md` — Metodología matemática con citas
 6. `docs/audit_log.md` — Bitácora cronológica (leer últimas 3 entradas)
-7. `docs/roadmap.md` — Plan de fases con sub-plan de 2.4
+7. `docs/roadmap.md` — Plan de fases
 8. `docs/prompt_para_asistente.md` — Brief para asistentes IA nuevos
 
 ## Estado actual del proyecto
