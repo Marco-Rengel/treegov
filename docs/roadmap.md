@@ -87,7 +87,9 @@ clasificación y exportación HTML autocontenido.
 | 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
 | 2.4.b Backend de reportes | ✅ (03/10/2026) | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; 5 tests con valores verificados a mano |
 | 2.4.c.1 Backend de Session | ✅ (03/10/2026) | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
-| 2.4.c.2 UI de reportes | ⏳ | `reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
+| 2.4.c.2.a Panel funcional | ✅ (03/10/2026) | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
+| 2.4.c.2.b Cableado MainWindow | ⏳ | Señales + refresh automático tras entrenar/evaluar |
+| 2.4.c.2.c Export HTML + tests | ⏳ | QTextBrowser + tests E2E |
 | 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
 
 **Diseño acordado (30/09/2026):**
