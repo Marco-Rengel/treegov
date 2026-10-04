@@ -1577,3 +1577,79 @@ introducir lógica analítica en el frontend (sala limpia).
 **Tests**: 188/188 PASSED (los E2E específicos del panel van en 2.4.c.2.c).
 
 **Referencias**: `docs/roadmap.md` (sección Fase 2.4).
+
+---
+
+### 03/10/2026 — Fase 2.4.c.2.c.1 + 2.4.c.2.c.2: Export HTML y limpieza i18n
+
+**Estado**: Aprobado.
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2).
+**Revisor**: Marco Rengel
+**Artefactos**: `frontend_v3/reports_panel.py` (commit `450ff55`),
+`frontend_v3/i18n.py` (commit `1eb4388`).
+
+**Motivación**:
+Cerrar las dos primeras piezas de 2.4.c.2.c: (a) exportar el panel de
+reportes a HTML autocontenido, (b) limpiar las claves i18n huérfanas
+acumuladas durante 2.4.c.2.a.
+
+**2.4.c.2.c.1 — Export HTML** (`reports_panel.py`, 169 inserciones):
+
+- Nuevo botón "Exportar HTML" en la fila de controles (objectName
+  `reportsExport`), conectado a `_on_export_clicked`.
+- `_build_report_html()` genera HTML autocontenido (CSS inline, sin
+  assets externos) con: header + metadatos (partición, threshold) +
+  tabla de gains + summary + matriz de clasificación + métricas
+  derivadas (precision, recall, F1, bad capture rate).
+- `_open_export_dialog(html)` abre un `QDialog` modal con
+  `QTextBrowser` (preview) + botones "Guardar como..." y "Cerrar".
+- `_save_html_to_file(parent, html)` usa `QFileDialog.getSaveFileName`
+  con filtro `*.html` y nombre por defecto `treegov_report.html`;
+  escribe con UTF-8 y notifica éxito/error vía `QMessageBox`.
+- 11 claves i18n nuevas (EN/ES, paridad estricta).
+- Sala limpia respetada: cero numpy/pandas/scipy/backend_v3.
+
+**2.4.c.2.c.2 — Limpieza i18n** (`i18n.py`, 28 líneas eliminadas):
+
+Se identificaron 14 claves sin uso (`reports_error_compute`,
+`reports_export_copy_hint`, `reports_matrix_capture`,
+`reports_matrix_real_bad/good`, `reports_no_gains`, `reports_no_matrix`,
+`reports_summary_n/good/bad/bad_rate/ks/auc/gini`). Fueron residuos de
+la fase 2.4.c.2.a, cuando el bloque i18n se escribió ANTES del código
+del panel y algunos nombres no coincidieron con los que el panel usa
+realmente.
+
+Eliminación mediante script Python controlado (no edición manual),
+verificando que cada clave aparecía exactamente 2 veces (EN + ES).
+
+**Hallazgos y lecciones**:
+
+1. **Detección de huérfanas con script**: un script con `re.findall` sobre
+   `tr("...")` en `frontend_v3/`, `backend_v3/` y `tests/` identificó 35
+   candidatas. De ellas, 17 eran **falsos positivos** (todas las
+   `reports_col_*`, usadas vía `tr(key)` con `key in self._HEADER_KEYS`).
+   Solo 14 eran huérfanas reales. Lección: el análisis estático no
+   detecta uso dinámico de claves; hay que revisar manualmente la lista
+   antes de borrar.
+
+2. **Eliminación programática > edición manual**: para 28 líneas en un
+   archivo grande, un script Python es más seguro y auditable que 28
+   ediciones manuales. El script verifica el conteo esperado y aborta si
+   algo no cuadra.
+
+3. **Limpieza recurrente**: como el panel usa 4 patrones dinámicos
+   (`tr('reports_sum_' + key)`, `tr('reports_matrix_' + key)`,
+   `tr('reports_partition_' + code)`, y `tr(key)` sobre `_HEADER_KEYS`),
+   futuras limpiezas de i18n deberán considerar esos patrones. Alternativa
+   futura: reescribir el panel para enumerar claves explícitamente
+   (`tr("reports_sum_n_total")` en lugar de componer con `+`), a cambio
+   de más líneas. Decisión diferida.
+
+**Identidades verificadas**:
+- Paridad EN/ES tras la limpieza: 195 / 195.
+- `set(_STRINGS["en"]) == set(_STRINGS["es"])`: perfecto.
+- Suite: 188/188 PASSED sin warnings.
+
+**Tests**: 188/188 PASSED (los E2E específicos del panel van en 2.4.c.2.c.3).
+
+**Referencias**: `docs/roadmap.md` (sección Fase 2.4).
