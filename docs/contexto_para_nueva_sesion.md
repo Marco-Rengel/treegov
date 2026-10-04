@@ -36,18 +36,19 @@
 | 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ✅ |
 | 2.3.f | Tests E2E + cierre (Fase 2.3 completa) | ✅ |
 | 2.4.a | Diseño estructural del panel de reportes | ✅ (01/10/2026) |
-| 2.4.b | Backend de reportes (GainsTable + ClassificationMatrix) | ⏳ Próxima |
-| 2.4.c | UI de reportes (tabla Qt + matriz + export HTML) | ⏳ |
-| 2.4.d | Tests E2E + cierre | ⏳ |
+| 2.4.b | Backend de reportes (GainsTable + ClassificationMatrix) | ✅ (03/10/2026) |
+| 2.4.c.1 | Métodos de reporte en Session | ✅ (03/10/2026) |
+| 2.4.c.2 | Panel de reportes funcional + cableado + export HTML + tests | ✅ (03/10/2026) |
+| 2.4.d | Tests E2E + cierre | ✅ (03/10/2026) |
 | 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
 
-**Suite de tests:** 178/178 PASSED
+**Suite de tests:** 199/199 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 29/09/2026: 178/178 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 03/10/2026: 199/199 tests.
 - **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
@@ -103,7 +104,7 @@ WSL (bash):
 | **Pegado en terminal** | A veces duplica contenido o deja caracteres colgando. Escribir comandos cortos a mano. |
 | `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
 | **Placeholder de API key** | Si pegas `$env:MOONSHOT_API_KEY = "sk-..."` literal, Aider devuelve 401. Verificar con `.Length` (~51) y `.Substring(0, 7)` sin duplicar `sk-`. |
-| **504 timeout en Aider+Kimi** | Prompts con contenido a insertar >100 líneas pueden saturar NIM. Trocear en 2-3 inserts consecutivos. Si aparece, esperar 2-5 min y reintentar. |
+| **Aider no aplica el edit (conversa)** | Con Moonshot, ocasionalmente Aider responde en prosa sin aplicar el cambio. Solución: prompt más directo ("TAREA: ... Aplica AHORA") o edición manual en VS Code con excepción documentada en `audit_log.md`. |
 
 ## Cómo retomar el trabajo
 
@@ -123,50 +124,36 @@ WSL (bash):
     source .venv_linux/bin/activate
     python -m pytest tests -q
 
-## Próximos pasos (Fase 2.4)
+## Estado de release
 
-**Objetivo:** panel de reportes analíticos con gains table, matriz de
-clasificación y exportación HTML autocontenido.
+**Última versión publicada:** `treegov 1.0.0a1` en PyPI (03/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0a1/
 
-**Sub-pasos:**
+Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
+PySide6). Verificación de instalación limpia completada.
 
-| Sub-paso | Estado | Alcance |
-|---|---|---|
-| 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
-| 2.4.b Backend de reportes | ⏳ Próxima | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; tests con valores verificados a mano |
-| 2.4.c UI de reportes | ⏳ | `reports_panel.py`: tabla Qt con orden configurable + matriz + export HTML |
-| 2.4.d Tests E2E + cierre | ⏳ | Tests del flujo completo + screenshot automatizado + docs |
+## Próximos pasos (Fase 3)
 
-**Diseño detallado:** ver `docs/roadmap.md` sección Fase 2.4.
+**Objetivo:** reportes analíticos avanzados + capa MCP para agentes LLM.
 
-**Decisiones clave acordadas (30/09/2026):**
-- `GainsTable` default `by="leaf"` (una fila por hoja), ordenadas por PD
-  ascendente (mejor primero, convención de burós).
-- Vista alternativa `by="bucket"` parametrizable (deciles/veintiles/N).
-- Tie-breaking default `preserve` (determinista). `random` disponible con
-  semilla, nunca default.
-- `ClassificationMatrix` con `threshold=0.5` por defecto, parametrizable.
-- HTML autocontenido (sin assets externos) vía `QTextBrowser`.
-- Tabla con `setSortingEnabled(True)`: usuario puede reordenar visualmente
-  sin afectar los cálculos Cum/Decum.
-- Sala limpia: cero numpy/pandas/scipy en frontend.
+**Alcance tentativo:**
+- Exportación dual: SQL anidado + Python puro.
+- Capa MCP (Model Context Protocol) como adaptador del backend headless.
+  No reemplaza a la GUI.
+- Soporte multiclase en el flujo del árbol (motores ya lo soportan;
+  `TreeBuilder`/`TreeNode` están binarios).
+- Ponderación por muestra (flujo de buró).
+- Categorías adicionales (Indet/Insufficient/No Perf).
 
-**Deudas documentadas para fases futuras:**
-- Fase 3.x — Soporte multiclase en el flujo del árbol (motores ya lo
-  soportan; `TreeBuilder`/`TreeNode` están binarios).
-- Fase 3.x — Ponderación por muestra (flujo de buró).
-- Fase 3.x — Categorías adicionales (Indet/Insufficient/No Perf).
+**Diseño detallado:** pendiente de acordar en la próxima sesión.
 
-**Herramienta:** Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (pipx).
-**Nota operativa actualizada 03/10/2026:** la migración a Moonshot eliminó
-los 504 de NIM. Se suavizan las reglas de prompts: hasta ~150 líneas de
-prosa por prompt, cambios multi-bloque dentro del mismo archivo permitidos.
-Se mantiene "un prompt = un archivo" por claridad de diffs y auditoría.
-Ver `docs/audit_log.md` entradas del 03/10/2026.
+**Deudas diferidas:**
+- Fase 2.4.e — screenshot automatizado de la GUI (requiere xvfb o runner
+  gráfico; sin impacto funcional).
+- Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
 
-**Ideas del experto (evaluar en 2.4 o 3):**
-
-- Restricciones de monotonía.
+**Ideas del experto (evaluar en Fase 3):**
+- Restricciones de monotonicidad.
 - Exportación de reglas legibles (Markdown/JSON).
 - Documentación automática del modelo.
 

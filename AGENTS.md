@@ -43,7 +43,7 @@ Los line endings del repo están normalizados vía `.gitattributes`
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 27/09/2026: 167/167 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 03/10/2026: 199/199 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
@@ -85,6 +85,7 @@ Los line endings del repo están normalizados vía `.gitattributes`
   - Prosa sin código literal (recomendado, no obligatorio).
   - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
   - Cambios multi-bloque dentro del mismo archivo: permitido.
+  - Si Aider falla 2-3 veces seguidas sobre el mismo archivo (conversa en lugar de aplicar), hacer la edición manual en VS Code y documentar la excepción en el audit_log (regla 29/09/2026).
 
 ## Gobernanza
 
