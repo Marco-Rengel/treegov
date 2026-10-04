@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 03/10/2026
+**Fecha de última actualización:** 04/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -142,10 +142,59 @@ Sub-pasos:
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
 
+### Fase 3.0 — Cierre de zona gris documental ✅ Cerrada 04/10/2026
+
+Módulos y documentos:
+- `docs/design_decisions.md` (nuevo) — 44 subsecciones documentando las
+  decisiones de implementación de Fases 0-2 que no estaban en
+  `methodology.md` ni en `audit_log.md`.
+- `docs/methodology.md` — 16 subsecciones nuevas (§1.7-§8.10) con las
+  fórmulas y convenciones numéricas que faltaban.
+- 4 parámetros configurables expuestos (canónico vs TreeGov):
+  - `QuestEngine.bonferroni_family` (default 2).
+  - `QuestEngine.nominal_high_card` (default "rate").
+  - `QuestEngine.qda_root_restriction` (default True).
+  - `StabilityMonitor.renormalize` / `psi_index.renormalize` (default False).
+- `docs/roadmap.md` — redefinición de las fases 3-7 (la Fase 3 original
+  mezclaba tres familias de trabajo).
+
+### Fase 3.1 — Multiclase 🔵 En curso
+
+**Diseño estructural completado** (04/10/2026):
+- `docs/3.1_design_multiclass.md` (nuevo, ~40 KB, 13 secciones).
+
+**Alcance de 3.1**: abrir `TreeNode`, `TreeModel`, `TreeBuilder` y
+`Session.fix_spec` a targets con K ≥ 2 clases. Solo CHAID (C&RT y QUEST
+bloquean K > 2 hasta Fase 3.4). Métricas y reportes siguen siendo
+binarios hasta Fase 3.5.
+
+**Decisiones clave**:
+- `pd_final`, `pd_jeffreys`, `n_events` pasan a `tuple[...]`.
+- Nuevo campo `TreeNode.class_labels`.
+- `target_class` y `class_labels` son **obligatorios** en `Session.fix_spec`.
+- Jeffreys multivariante: `(k_c + 0.5) / (n + K * 0.5)`.
+- Reordenamiento canónico interno: la clase de interés siempre en índice 0.
+- Wizard con validación pre-entrenamiento (3 checks) y alertas
+  post-entrenamiento (badge de Gini negativo + botón de reversión).
+
+**Sub-fases planificadas** (6 sesiones):
+- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` 🟡
+- 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento
+- 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST
+- 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability
+- 3.1.e — Wizard: selección obligatoria + counts + warning minoritaria
+- 3.1.f — MetricsPanel: badge Gini negativo + botón de reversión
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3** — Analítica avanzada + cierre documental: 3.0 (design_decisions.md + 4 parámetros configurables), 3.1 (multiclase), 3.2 (ponderación), 3.3 (Indet/No Perf), 3.4 (CRT/QUEST multiclase), 3.5 (reportes adaptados), 3.6 (validación con datos públicos), 3.6.b (modo no-bancario), 3.7 (v1.0.0 estable)
+- **Fase 3.2** — Ponderación por muestra (transversal al backend)
+- **Fase 3.3** — Categorías Indet / Insufficient / No Perf
+- **Fase 3.4** — CRT y QUEST multiclase
+- **Fase 3.5** — Reportes adaptados (multiclase + ponderación)
+- **Fase 3.6** — Validación con datasets públicos (German Credit, UCI)
+- **Fase 3.6.b** — Modo no-bancario (terminología + ejemplos + docs)
+- **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
 - **Fase 6** — Scoring batch y champion-challenger
@@ -168,10 +217,11 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (199 tests)
+├── tests/ # Suite de tests (206 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
+│ ├── 3.1_design_multiclass.md
 │ ├── api.md
 │ ├── roadmap.md
 │ ├── philosophy.md
@@ -275,7 +325,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | statistics.py | 13 |
 | chaid_engine.py | 19 |
 | crt_engine.py | 15 |
-| quest_engine.py | 13 |
+| quest_engine.py | 17 |
 | imputation.py | 5 |
 | splitting.py | 4 |
 | profiling.py | 3 |
@@ -283,7 +333,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | session_state.py | 24 |
 | validation.py | 8 |
 | pruning.py | 6 |
-| stability.py | 9 |
+| stability.py | 12 |
 | reporting.py | 11 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 9 |
@@ -292,9 +342,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 5 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **199** |
+| **Total** | **206** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 199/199 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 206/206 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -378,6 +428,7 @@ Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
    - `CONVENTIONS.md` (convenciones para Aider)
    - `docs/methodology.md` (metodología matemática)
    - `docs/design_decisions.md` (decisiones de implementación)
+   - `docs/3.1_design_multiclass.md` (diseño de Fase 3.1, en curso)
    - `docs/api.md` (API pública)
    - `docs/roadmap.md` (plan de fases)
    - `docs/audit_log.md` (histórico de decisiones)
@@ -399,8 +450,11 @@ aider
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4 cerradas.
-> Suite 199/199. Próximo paso: Fase 3 (reportes analíticos + capa MCP)
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4, 3.0 cerradas.
+> Fase 3.1 (multiclase) en curso: diseño estructural completado
+> (`docs/3.1_design_multiclass.md`).
+> Suite 206/206. Próximo paso: implementación 3.1.a (adaptar
+> `TreeNode`/`TreeModel` a tuple fields + `TreeBuilder.target_class`)
 > con Aider 0.86.2 + Kimi K3 vía Moonshot AI directo."
 
 ---

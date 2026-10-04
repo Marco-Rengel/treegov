@@ -35,7 +35,23 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.quest_engine
 
-- `QuestEngine`, `QuestSelection`
+- `QuestEngine(*, alpha=0.05, max_exhaustive_cardinality=10,
+  bonferroni_family=2, nominal_high_card="rate",
+  qda_root_restriction=True)`, `QuestSelection`
+  - `bonferroni_family` (int ≥ 1, default 2) — family multiplier in the
+    Stage-1 Bonferroni threshold `alpha / (family * J)`. Default 2
+    controls the FWER over the two test families (means + variance);
+    `1` reproduces the canonical Loh & Shih (1997) single-family
+    threshold. See `design_decisions.md` §4.1.
+  - `nominal_high_card` (str, default "rate") — strategy for nominal
+    predictors with K > `max_exhaustive_cardinality`. `"rate"` uses the
+    supervised-rate heuristic (Breiman/C&RT style); `"dummies_lda"`
+    (canonical Loh & Shih) is reserved for Phase 3.4 and raises
+    `NotImplementedError` if requested. See `design_decisions.md` §4.2.
+  - `qda_root_restriction` (bool, default True) — restricts the QDA
+    cutpoint to the inter-means interval. `False` accepts any real root
+    (canonical mode), tie-broken by closeness to the weighted mean. See
+    `design_decisions.md` §4.3.
 
 ## backend_v3.imputation
 
@@ -50,13 +66,23 @@ underscore) are internal and may change without notice.
 - `FlowState` (Enum), `SessionState`, `Session`
 - `Session.describe_dataset() -> (columns, types)` — read-only profile of
   the loaded dataset (types as `PredictorType.name` strings; Phase 2.1).
-- `Session.fix_spec(target, spec=None, *, predictors=None)` — optional
-  predictor subset filter applied inside the backend (Phase 2.1).
+- `Session.fix_spec(target, spec=None, *, predictors=None, target_class,
+  class_labels)` — optional predictor subset filter applied inside the
+  backend (Phase 2.1). `target_class` and `class_labels` are **mandatory**
+  as of Phase 3.1: they name the class of interest and the label for each
+  target class (see `docs/3.1_design_multiclass.md` §1bis).
 - `Session.train(engine, *, target_type, max_depth, min_child_size,
   pd_floor=0.0003, apply_jeffreys=True)` — `engine` accepts an engine
   instance or its name ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST");
   `pd_floor=None` + `apply_jeffreys=False` yields Research mode
-  (Phase 2.1).
+  (Phase 2.1). In Phase 3.1, multiclass targets (K > 2) are supported by
+  CHAID only; C&RT and QUEST reject K > 2 until Phase 3.4.
+- `Session.get_gains_table(*, partition, by, n_buckets, tie, seed)` —
+  flat DTO of a gains table for a routed partition (Phase 2.4.c.1).
+  Binary targets only in Phase 3.1; K > 2 raises `ValueError`.
+- `Session.get_classification_matrix(*, partition, threshold)` — flat
+  DTO of a classification matrix (Phase 2.4.c.1). Binary targets only in
+  Phase 3.1; K > 2 raises `ValueError`.
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
 
@@ -69,8 +95,14 @@ underscore) are internal and may change without notice.
 ## backend_v3.stability
 
 - `PSIReport`, `CSIReport`, `GiniDropReport`, `OOTReport`.
-- `StabilityMonitor` (leaf_psi / covariate_csi / report).
-- `psi_index(expected, actual)`, `traffic_light(value)`, `gini_drop_alert(drop)`.
+- `StabilityMonitor(*, eps=1e-4, renormalize=False)` (leaf_psi /
+  covariate_csi / report).
+- `psi_index(expected, actual, *, renormalize=False)`,
+  `traffic_light(value)`, `gini_drop_alert(drop)`.
+  - `renormalize` (bool, default False) — whether to renormalize both
+    distributions after the ε-clip. Default `False` preserves the
+    signal of vanishing bins (TreeGov convention); `True` is the
+    canonical renormalized variant. See `design_decisions.md` §7.4.
 
 ## backend_v3.pruning
 

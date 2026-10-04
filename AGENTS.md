@@ -43,7 +43,7 @@ Los line endings del repo están normalizados vía `.gitattributes`
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 03/10/2026: 199/199 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 04/10/2026: 206/206 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).

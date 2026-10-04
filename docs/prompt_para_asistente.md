@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 03/10/2026
+**Última actualización:** 04/10/2026
 
 ---
 
@@ -63,8 +63,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 5. Estado actual del proyecto
 
-- **Fases 0 a 2.2:** completadas y cerradas.
-- **Fase 2.3 (panel OOS/OOT):** **completa y cerrada** (29/09/2026).
+- **Fases 0 a 3.0:** completadas y cerradas.
   - 2.3.a/b/c: ✅
   - 2.3.d Backend (reporting.py + tests): ✅
   - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
@@ -73,12 +72,17 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   - **2.3.e.4 MetricsPanel funcional:** ✅ (29/09/2026)
   - **2.3.e.5 Cableado MainWindow ↔ MetricsPanel:** ✅ (29/09/2026)
   - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
-  - **Fase 2.4 (Reportes + integración):** en curso. 2.4.a completa (01/10/2026).
-- **Suite de tests:** 178/178 PASSED.
+- **Fase 2.3 (panel OOS/OOT):** completa y cerrada (29/09/2026).
+- **Fase 2.4 (Reportes + integración):** completa y cerrada (03/10/2026).
+- **Fase 3.0 (cierre de zona gris documental + 4 parámetros canónicos):**
+  completa y cerrada (04/10/2026).
+- **Fase 3.1 (multiclase):** en curso. Diseño estructural completado
+  (04/10/2026, `docs/3.1_design_multiclass.md`). Implementación
+  dividida en 6 sub-fases (3.1.a a 3.1.f).
+- **Suite de tests:** 206/206 PASSED.
 - **Herramienta:** Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (pipx).
-- **Próximo paso:** 2.4.b (Backend de reportes: `GainsTable` + `ClassificationMatrix`). Diseño acordado (30/09):
-  gains table por hoja (default) + buckets parametrizables, matriz de
-  clasificación, HTML autocontenido. Detalles en `docs/roadmap.md`.
+- **Próximo paso:** implementación 3.1.a — adaptar `TreeNode`/`TreeModel`
+  a tuple fields + `TreeBuilder.target_class`.
 
 ---
 
@@ -89,7 +93,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta de desarrollo (actualizado 03/10/2026)
+### Herramienta de desarrollo (actualizado 04/10/2026)
 - **Aider 0.86.2** con `moonshot/kimi-k3`. Migrado de NVIDIA NIM el
   03/10/2026 por inestabilidad (504 recurrentes).
 - **Cliente:** Aider 0.86.2 (no OpenCode, no Kimi Code Desktop).
@@ -108,11 +112,17 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   inicial: ~$0.02.
 - **Ventajas frente a NIM:** sin 504, contexto 1M completo, cache-hit
   nativo, tool calling estable.
-- **Reglas de prompts (suavizadas respecto a NIM):**
+- **Reglas de prompts (suavizadas respecto a NIM; actualizadas 04/10/2026):**
   - Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
   - Prosa sin código literal (recomendado, no obligatorio).
   - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
   - Cambios multi-bloque dentro del mismo archivo: permitido.
+  - **Verificar SIEMPRE el diff antes de aceptar el edit.** Aider ocasionalmente
+    "conversa" en lugar de aplicar (patrón documentado el 03/10/2026). Si
+    falla 2-3 veces seguidas sobre el mismo archivo, hacer la edición manual
+    y documentar la excepción.
+  - **Un prompt = un archivo**, incluso cuando el cambio toca varios. Los
+    prompts multi-archivo fallan con más frecuencia.
 - **Verificación obligatoria:** `git diff` + `pytest` antes de aceptar
   cualquier cambio. La disciplina MRM no cambia por tener mejor proveedor.
 
@@ -146,14 +156,16 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 4. `docs/contexto_para_nueva_sesion.md` — estado técnico detallado.
 5. `docs/estado_proyecto.md` — dossier completo.
 6. `docs/methodology.md` — metodología matemática con citas.
-7. `docs/audit_log.md` — bitácora cronológica (leer las últimas 3 entradas).
-8. `docs/roadmap.md` — plan de fases con sub-plan de 2.3.
+7. `docs/design_decisions.md` — decisiones de implementación.
+8. `docs/3.1_design_multiclass.md` — diseño de la fase 3.1 (en curso).
+9. `docs/audit_log.md` — bitácora cronológica (leer últimas 3 entradas).
+10. `docs/roadmap.md` — plan de fases.
 
 ---
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-2.3 cerradas, Fase 2.4 en curso (2.4.a completa, 2.4.b próxima). Suite 178/178. Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía Moonshot AI directo. Próximo paso: 2.4.b (GainsTable + ClassificationMatrix). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.0 cerradas, Fase 3.1 (multiclase) en curso con diseño estructural completado (`docs/3.1_design_multiclass.md`). Suite 206/206. Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía Moonshot AI directo. Próximo paso: implementación 3.1.a. ¿Qué necesitas para darme contexto?"
 
 ---
 

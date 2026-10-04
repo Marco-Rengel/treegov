@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 199/199 passing
+**Suite de tests**: 206/206 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -95,6 +95,8 @@ TreeGov/
 ├── tests/                   # Tests unitarios (dual: pytest / python directo)
 ├── docs/                    # Documentación
 │   ├── methodology.md       # Metodología matemática (EN)
+│   ├── design_decisions.md  # Decisiones de implementación (EN)
+│   ├── 3.1_design_multiclass.md  # Diseño multiclase (EN)
 │   ├── api.md               # API pública (EN)
 │   ├── roadmap.md           # Plan de fases (EN)
 │   ├── philosophy.md        # Filosofía (EN)
@@ -160,11 +162,21 @@ TreeGov/
 | **2.0-2.2** | GUI con PySide6: esqueleto, wizard transaccional, visor de árbol | Completada |
 | **2.3** | Panel de métricas OOS/OOT | Completada |
 | **2.4** | Reportes + integración | Completada |
-| **3** | Reportes analíticos + capa MCP para agentes LLM | Planificada |
-| **4** | Scoring batch + champion-challenger | Planificada |
-| **5** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planificada |
+| **3.0** | Cierre documental + parámetros canónicos configurables | Completada |
+| **3.1** | Soporte multiclase en el constructor de árboles | En progreso |
+| **3.2** | Ponderación por muestra | Planificada |
+| **3.3** | Categorías Indet / Insufficient / No Perf | Planificada |
+| **3.4** | Soporte multiclase en C&RT y QUEST | Planificada |
+| **3.5** | Reportes adaptados para multiclase y ponderación | Planificada |
+| **3.6** | Validación con datasets públicos | Planificada |
+| **3.6.b** | Modo no-bancario (vocabulario neutral + ejemplos) | Planificada |
+| **3.7** | Cierre Fase 3 + v1.0.0 estable | Planificada |
+| **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
+| **5** | Capa MCP para agentes LLM | Planificada |
+| **6** | Scoring batch + champion-challenger | Planificada |
+| **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 199/199 passing.**
+**Suite de tests: 206/206 passing.**
 
 ---
 

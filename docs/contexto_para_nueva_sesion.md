@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 03/10/2026
+**Fecha de última actualización:** 04/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -40,15 +40,24 @@
 | 2.4.c.1 | Métodos de reporte en Session | ✅ (03/10/2026) |
 | 2.4.c.2 | Panel de reportes funcional + cableado + export HTML + tests | ✅ (03/10/2026) |
 | 2.4.d | Tests E2E + cierre | ✅ (03/10/2026) |
-| 3+ | MCP, batch scoring, IFRS 9 | ⏳ |
+| 3.0 | Cierre de zona gris documental + 4 parámetros canónicos | ✅ (04/10/2026) |
+| 3.1.a | Diseño estructural multiclase (`docs/3.1_design_multiclass.md`) | ✅ (04/10/2026) |
+| 3.1.b-f | Implementación multiclase (`TreeNode`/`TreeModel` + wizard + panel) | ⏳ Próxima |
+| 3.2 | Ponderación por muestra | ⏳ |
+| 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ |
+| 3.4 | CRT/QUEST multiclase | ⏳ |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ |
+| 3.6 | Validación con datasets públicos | ⏳ |
+| 3.6.b | Modo no-bancario | ⏳ |
+| 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 199/199 PASSED
+**Suite de tests:** 206/206 PASSED
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 03/10/2026: 199/199 tests.
+- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 04/10/2026: 206/206 tests.
 - **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
 - **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
@@ -132,27 +141,36 @@ URL: https://pypi.org/project/treegov/1.0.0a1/
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-## Próximos pasos (Fase 3)
+## Próximos pasos (Fase 3.1)
 
-**Objetivo:** reportes analíticos avanzados + capa MCP para agentes LLM.
+**Fase 3.1 — Multiclase (en curso).**
 
-**Alcance tentativo:**
-- Exportación dual: SQL anidado + Python puro.
-- Capa MCP (Model Context Protocol) como adaptador del backend headless.
-  No reemplaza a la GUI.
-- Soporte multiclase en el flujo del árbol (motores ya lo soportan;
-  `TreeBuilder`/`TreeNode` están binarios).
-- Ponderación por muestra (flujo de buró).
-- Categorías adicionales (Indet/Insufficient/No Perf).
+El diseño estructural está completado (`docs/3.1_design_multiclass.md`).
+La implementación está dividida en 6 sub-fases:
 
-**Diseño detallado:** pendiente de acordar en la próxima sesión.
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | 🟡 Próxima |
+| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ⏳ |
+| 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ⏳ |
+| 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability | ⏳ |
+| 3.1.e | Wizard: selección obligatoria + counts + warning minoritaria | ⏳ |
+| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ⏳ |
+
+**Decisiones clave de Fase 3.1:**
+- `pd_final`, `pd_jeffreys`, `n_events` pasan a `tuple[...]`.
+- Nuevo campo `TreeNode.class_labels`.
+- `target_class` y `class_labels` **obligatorios** en `Session.fix_spec`.
+- Jeffreys multivariante: `(k_c + 0.5) / (n + K * 0.5)`.
+- Reordenamiento canónico: clase de interés siempre en índice 0.
+- Solo CHAID multiclase en 3.1 (C&RT y QUEST en 3.4).
+- Métricas y reportes siguen binarios hasta 3.5.
 
 **Deudas diferidas:**
-- Fase 2.4.e — screenshot automatizado de la GUI (requiere xvfb o runner
-  gráfico; sin impacto funcional).
+- Fase 2.4.e — screenshot automatizado de la GUI.
 - Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
 
-**Ideas del experto (evaluar en Fase 3):**
+**Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.
 - Exportación de reglas legibles (Markdown/JSON).
 - Documentación automática del modelo.

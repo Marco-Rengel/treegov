@@ -41,7 +41,8 @@ Toda fórmula estadística con cita bibliográfica explícita.
 
 ## Prompts grandes
 
-**Reglas actualizadas tras migración a Moonshot AI (03/10/2026):**
+**Reglas actualizadas tras migración a Moonshot AI (03/10/2026) y
+aprendizajes de las sesiones del 03 y 04/10/2026:**
 
 1. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
    hacer N sesiones separadas de Aider. Se mantiene por claridad de diffs y
@@ -63,6 +64,22 @@ Toda fórmula estadística con cita bibliográfica explícita.
 5. **Sin archivos innecesarios en contexto.** Al arrancar `aider archivo.py`,
    no aceptar "Add file to the chat?" salvo que el archivo aporte contexto
    esencial. Cada archivo extra suma tokens.
+
+6. **Verificar SIEMPRE el diff antes de aceptar el edit.** Aider ocasionalmente
+   "conversa" en lugar de aplicar (patrón documentado en `audit_log.md`
+   el 03/10/2026). Si falla 2-3 veces seguidas sobre el mismo archivo,
+   hacer la edición manual y documentar la excepción.
+
+7. **Nombres de funciones y parámetros en prompts.** Al escribir prompts
+   con llamadas a funciones (por ejemplo, `math.isclose(..., abs_tol=1e-3)`),
+   verificar el nombre exacto del parámetro. Errores como `abs=` en lugar de
+   `abs_tol=` provocan fallos evitables. Es responsabilidad del revisor
+   humano validar los nombres antes de enviar el prompt.
+
+8. **Verificación aritmética de valores esperados.** Cuando un test verifica
+   un valor calculado a mano (por ejemplo, la raíz QDA más cercana a un
+   punto), re-verificar la aritmética antes de fijar el valor. Es más
+   rápido re-verificar que corregir el test después.
 
 ## Preguntas interactivas de Aider
 
