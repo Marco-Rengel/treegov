@@ -2278,3 +2278,108 @@ con Ctrl+H es más rápido y seguro.
 **Referencias**:
 - `docs/3.1_design_multiclass.md` (§1-§3, §7).
 - `docs/design_decisions.md` §5.2, §6.4.
+
+---
+
+### 04/10/2026 — Fase 3.1.c: pasos 1-3 cerrados; paso 4 revertido y reprogramado
+
+**Estado**: Parcial. Pasos 1, 2 y 3 cerrados. Paso 4 (endurecimiento de
+firmas) intentado, revertido y reprogramado para próxima sesión. Paso 5
+(documentación) pendiente.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2, whole edit
+format).
+
+**Revisor**: Marco Rengel
+
+**Artefactos (commits)**:
+
+- `27d9e5b` — Paso 1: `TreeBuilder.__init__` acepta `class_labels`
+  opcional (default temporal `None`). 40 inserciones, 1 borrado.
+- `7b746be` — Paso 2b: `test_guards_target` adaptado a multiclase
+  (eliminado el bloque y3). 7 borrados.
+- `574c800` — Paso 2: `SessionState` gana `target_class` y
+  `class_labels`; `fix_spec` y `train` propagan; bloqueo multiclase
+  C&RT/QUEST. 102 inserciones, 11 borrados.
+- `c3b37e6` — Paso 3: adaptación mecánica de ~19 llamadas a
+  `fix_spec`; 11 tests nuevos de 3.1.c (obligatoriedad, persistencia,
+  multiclase K=3, bloqueo CRT/QUEST, CHAID y CHAID_EXHAUSTIVE
+  permitidos, `class_labels_dict`). 189 inserciones, 26 borrados.
+
+**Motivación**:
+
+Diseño de 3.1.c en `docs/3.1_design_multiclass.md` §4. Plan aprobado
+en 5 pasos (a, b, c, d, e) más un paso 5 documental.
+
+**Decisiones clave aplicadas**:
+
+- `fix_spec` gana `target_class` y `class_labels` con default temporal
+  `None` (paso 2). La lógica de validación se implementa completa ya
+  (cobertura exacta, `{0,1}` binario estricto, K≥3 libre); los defaults
+  solo cubren inputs de tests antiguos, no relajan validaciones.
+- `SessionState` gana `target_class: int | str | None = None` y
+  `class_labels: tuple[tuple[int | str, str], ...] = ()`.
+- `Session.train` lee `st.target_class` y `st.class_labels` como fuente
+  de verdad; calcula `class_labels_canonical` (target_class en índice 0,
+  resto ascendente); los pasa a `TreeBuilder`.
+- Bloqueo multiclase: `Session.train` con K>2 solo admite CHAID y
+  CHAID_EXHAUSTIVE; C&RT y QUEST lanzan `ValueError` con mensaje que
+  apunta a Fase 3.4. El bloqueo ocurre antes de instanciar el engine
+  (atomicidad).
+- Property nueva `Session.class_labels_dict`.
+
+**Incidentes durante la implementación**:
+
+1. `test_guards_target` falló tras el Paso 2 por la razón correcta:
+   el bloque y3 del test asumía que `fix_spec("y3")` con 3 clases
+   lanzaba `ValueError`, pero ya no. Adaptado en el sub-paso 2b.
+2. La fixture `_csv_k3` (introducida en el prompt del Paso 3) usaba
+   `edad` como predictor continuo, y CHAID rechaza continuos. Los tests
+   `test_train_allows_chaid_multiclass` y
+   `test_train_allows_chaid_exhaustive_multiclass` fallaron. Corregido
+   en un prompt correctivo: la fixture ahora usa solo predictores
+   categóricos (`seg1`, `seg2`). Lección: cuando se diseña una fixture
+   para CHAID, verificar que los predictores son categóricos.
+3. El Paso 4 (endurecimiento: `class_labels` y `target_class` sin
+   default en `TreeBuilder` y `fix_spec`; eliminar `target_class` de
+   `Session.train`) se intentó con un único prompt multi-archivo y
+   resultó en 46 tests fallidos. La causa no es un bug del edit, sino
+   que el endurecimiento de firmas rompe llamadas en:
+   - `frontend_v3/main_window.py` (`_train_pipeline` llama `fix_spec`
+     sin los nuevos kwargs).
+   - `tests/test_pruning.py`, `tests/test_stability.py`,
+     `tests/test_tree_builder.py`, `tests/test_tree_view.py`,
+     `tests/test_validation.py`, `tests/test_wizard.py`,
+     `tests/test_e2e_mainwindow.py`, `tests/test_e2e_reports.py`
+     (construyen `TreeBuilder` sin `class_labels`, o llaman `fix_spec`
+     sin los kwargs).
+   El Paso 4 fue revertido con `git checkout --` sobre los 3 archivos
+   modificados. Suite en 221/221 de vuelta.
+
+**Estado del Paso 4**: reprogramado. Requiere plan de mayor alcance:
+
+- **4.1** — Adaptar el frontend (producción):
+  `frontend_v3/wizard.py` (construcción del `cfg`) y
+  `frontend_v3/main_window.py` (`_train_pipeline`).
+- **4.2** — Adaptación mecánica de los ~7 archivos de tests.
+- **4.3** — Verificación.
+
+Requiere inspeccionar `frontend_v3/wizard.py` y el fragmento relevante
+de `frontend_v3/main_window.py` antes de escribir prompts.
+
+**Tests**: 221/221 PASSED en el commit `c3b37e6` (Paso 3 cerrado).
+Tras el intento fallido del Paso 4: 175/221 (revertido a 221/221).
+
+**Referencias**:
+
+- `docs/3.1_design_multiclass.md` §1bis, §2, §4, §7.
+- `docs/design_decisions.md` §0.3, §5.2, §5.3.
+
+**Pendientes de 3.1.c**:
+
+- Paso 4 (endurecimiento) — reprogramado.
+- Paso 5 (documentación: reconciliar `3.1_design_multiclass.md` §4.1
+  con K=2 `{0,1}` estricto vs K≥3 libre; aclarar
+  `CHAID_EXHAUSTIVE` permitido con K>2; añadir entrada nueva en
+  `design_decisions.md` sobre `class_labels` como obligatorio en
+  `TreeBuilder` y `fix_spec`; entrada de cierre en audit_log).
