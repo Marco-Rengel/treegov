@@ -82,7 +82,8 @@ def test_flujo_completo_y_bitacora():
         assert st1.state is FlowState.DATA_LOADED
         assert st1.n_rows == 120 and st1.n_cols == 3
 
-        st2 = s.fix_spec("default")
+        st2 = s.fix_spec("default", target_class=1,
+                         class_labels={0: "Bueno", 1: "Malo"})
         assert st2.state is FlowState.SPEC_FIXED
         assert st2.spec is not None
         spec_d = dict(st2.spec)
@@ -119,7 +120,8 @@ def test_atomicidad_fallo_no_corrompe_estado():
         _assert_raises(ValueError, s.fix_spec, "no_existe")
         assert s.state.state is FlowState.DATA_LOADED
         # reintento valido tiene que funcionar
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         assert s.state.state is FlowState.SPEC_FIXED
 
 
@@ -131,14 +133,16 @@ def test_guards_target():
         df2.to_csv(p2, index=False)
         s2 = Session(logger=_quiet_logger())
         s2.load_dataset(str(p2))
-        _assert_raises(ValueError, s2.fix_spec, "yn")
+        _assert_raises(ValueError, s2.fix_spec, "yn",
+                       target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         # target no 0/1 (p. ej. 1/2)
         df3 = pd.DataFrame({"edad": [1.0, 2.0, 3.0, 4.0], "y12": [1, 1, 2, 2]})
         p3 = Path(td) / "m12.csv"
         df3.to_csv(p3, index=False)
         s3 = Session(logger=_quiet_logger())
         s3.load_dataset(str(p3))
-        _assert_raises(ValueError, s3.fix_spec, "y12")
+        _assert_raises(ValueError, s3.fix_spec, "y12",
+                       target_class=1, class_labels={0: "Bueno", 1: "Malo"})
 
 
 def test_determinismo_dos_sesiones():
@@ -148,7 +152,8 @@ def test_determinismo_dos_sesiones():
         for _ in range(2):
             s = Session(logger=_quiet_logger())
             s.load_dataset(str(csv_path))
-            s.fix_spec("default")
+            s.fix_spec("default", target_class=1,
+                       class_labels={0: "Bueno", 1: "Malo"})
             s.partition(train_frac=0.7, seed=42)
             s.train(CrtEngine(), max_depth=4, min_child_size=5)
             arboles.append(s.state.tree)
@@ -163,7 +168,8 @@ def test_partition_guard_frac():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         _assert_raises(ValueError, s.partition, 1.5)
 
 
@@ -180,7 +186,8 @@ def test_evaluate_oos_e2e_valores_exactos():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         st = s.evaluate_oos(n_groups=3)
@@ -214,7 +221,8 @@ def test_prune_flujo_completo():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         st0 = s.state
@@ -280,7 +288,8 @@ def test_load_oot_y_evaluate_oot_e2e():
 
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_dev))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
 
@@ -346,7 +355,8 @@ def test_load_oot_temporal_verificado():
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_dev))
         s.fix_spec("default", spec={"edad": PredictorType.CONTINUOUS,
-                                    "seg": PredictorType.NOMINAL})
+                                    "seg": PredictorType.NOMINAL},
+                   target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         # time_col es metadato (fuera del spec): fecha presente en ambos
@@ -357,7 +367,8 @@ def test_load_oot_temporal_verificado():
         s2 = Session(logger=_quiet_logger())
         s2.load_dataset(str(csv_oot))            # este archivo es "posterior"
         s2.fix_spec("default", spec={"edad": PredictorType.CONTINUOUS,
-                                     "seg": PredictorType.NOMINAL})
+                                     "seg": PredictorType.NOMINAL},
+                    target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         s2.partition(train_frac=0.7, seed=42)
         s2.train(CrtEngine(), max_depth=4, min_child_size=5)
         # OOT = el dev (enero) es mas viejo que el "train" (mayo) -> ValueError
@@ -370,7 +381,8 @@ def test_load_oot_guards():
         csv_dev = _csv(tmp)
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_dev))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         # archivo inexistente
@@ -414,7 +426,8 @@ def test_fix_spec_predictors_subset():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        st = s.fix_spec("default", predictors=["edad"])
+        st = s.fix_spec("default", predictors=["edad"], target_class=1,
+                        class_labels={0: "Bueno", 1: "Malo"})
         spec_d = dict(st.spec)
         assert list(spec_d) == ["edad"]            # solo el predictor elegido
         assert spec_d["edad"] is PredictorType.CONTINUOUS
@@ -431,13 +444,14 @@ def test_fix_spec_predictors_invalidos():
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
         # predictor inexistente
-        _assert_raises(ValueError, s.fix_spec, "default",
-                       predictors=["no_existe"])
+        _assert_raises(ValueError, s.fix_spec, "default", predictors=["no_existe"],
+                       target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         # target no puede ser predictor
-        _assert_raises(ValueError, s.fix_spec, "default",
-                       predictors=["edad", "default"])
+        _assert_raises(ValueError, s.fix_spec, "default", predictors=["edad", "default"],
+                       target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         # subset vacio -> spec vacio
-        _assert_raises(ValueError, s.fix_spec, "default", predictors=[])
+        _assert_raises(ValueError, s.fix_spec, "default", predictors=[],
+                       target_class=1, class_labels={0: "Bueno", 1: "Malo"})
         # atomicidad: tras los fallos el estado sigue DATA_LOADED
         assert s.state.state is FlowState.DATA_LOADED
 
@@ -449,7 +463,8 @@ def test_train_engine_por_string():
         for eng in ("CRT", CrtEngine()):
             s = Session(logger=_quiet_logger())
             s.load_dataset(str(csv_path))
-            s.fix_spec("default")
+            s.fix_spec("default", target_class=1,
+                       class_labels={0: "Bueno", 1: "Malo"})
             s.partition(train_frac=0.7, seed=42)
             s.train(eng, max_depth=4, min_child_size=5)
             arboles.append(s.state.tree)
@@ -464,7 +479,8 @@ def test_train_engine_string_invalido():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         _assert_raises(ValueError, s.train, "XGBOOST")
         assert s.state.state is FlowState.PARTITIONED   # atomicidad
@@ -478,7 +494,8 @@ def test_reset_to_data_loaded():
         _assert_raises(ValueError, s.reset_to_data_loaded)
         s.load_dataset(str(csv_path))
         df_ref = s._df                       # cache interno (privado, test ok)
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         assert s.state.state is FlowState.TRAINED
@@ -493,7 +510,8 @@ def test_reset_to_data_loaded():
         assert s._X_train is None and s._imputer is None
         assert st.event_log[-1] == "reset_to_data_loaded"
         # el flujo puede rehacerse sin releer el archivo
-        s.fix_spec("default", predictors=["seg"])
+        s.fix_spec("default", predictors=["seg"], target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         assert dict(s.state.spec) == {"seg": PredictorType.NOMINAL}
 
 
@@ -508,7 +526,8 @@ def test_get_gains_table_returns_dict():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         gt = s.get_gains_table(partition="oos")
@@ -538,7 +557,8 @@ def test_get_gains_table_partition_oot_without_oot():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         _assert_raises(RuntimeError, s.get_gains_table, partition="oot")
@@ -551,7 +571,8 @@ def test_get_classification_matrix_custom_threshold():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         cm = s.get_classification_matrix(partition="oos", threshold=0.3)
@@ -568,11 +589,153 @@ def test_get_gains_table_invalid_partition():
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        s.fix_spec("default")
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
         s.partition(train_frac=0.7, seed=42)
         s.train(CrtEngine(), max_depth=4, min_child_size=5)
         _assert_raises(ValueError, s.get_gains_table, partition="foo")
         _assert_raises(ValueError, s.get_classification_matrix, partition="foo")
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.1.c paso 3: target_class / class_labels en fix_spec; bloqueo de
+# motores binarios (CRT/QUEST) con target multiclase; CHAID permitido
+# ---------------------------------------------------------------------------
+
+
+def _csv_k3(tmp: Path) -> Path:
+    """CSV con target de 3 clases {0,1,2} (120 filas).
+    Predictores categoricos: CHAID no admite continuos."""
+    seg1 = np.tile(["a", "b", "c"], 40)
+    seg2 = np.tile(["x", "y", "z"], 40)
+    df = pd.DataFrame({"seg1": seg1, "seg2": seg2,
+                       "default": np.tile([0, 1, 2], 40)})
+    p = tmp / "k3.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def test_fix_spec_requires_target_class():
+    """Paso 2 (default temporal activo): omitir target_class aun NO lanza."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        st = s.fix_spec("default", class_labels={0: "Bueno", 1: "Malo"})
+        assert isinstance(st, SessionState)
+        assert st.state is FlowState.SPEC_FIXED
+
+
+def test_fix_spec_requires_class_labels():
+    """Paso 2 (default temporal activo): omitir class_labels aun NO lanza."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        st = s.fix_spec("default", target_class=1)
+        assert isinstance(st, SessionState)
+        assert st.state is FlowState.SPEC_FIXED
+
+
+def test_fix_spec_persists_target_class_and_labels():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        assert s.state.target_class == 1
+        assert s.state.class_labels == ((0, "Bueno"), (1, "Malo"))
+
+
+def test_fix_spec_class_labels_missing_key():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        # falta la clave 1 -> ValueError
+        _assert_raises(ValueError, s.fix_spec, "default",
+                       target_class=1, class_labels={0: "Bueno"})
+
+
+def test_fix_spec_class_labels_extra_key():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        # clave 2 no observada en el target -> ValueError
+        _assert_raises(ValueError, s.fix_spec, "default",
+                       target_class=1,
+                       class_labels={0: "B", 1: "M", 2: "X"})
+
+
+def test_fix_spec_multiclass_k3_accepted():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        assert s.state.state is FlowState.SPEC_FIXED
+        assert s.state.target_class == 2
+        assert len(s.state.target_classes) == 3
+
+
+def test_train_blocks_crt_multiclass():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        _assert_raises(ValueError, s.train, "CRT")
+
+
+def test_train_blocks_quest_multiclass():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        _assert_raises(ValueError, s.train, "QUEST")
+
+
+def test_train_allows_chaid_multiclass():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        assert s.state.state is FlowState.TRAINED
+
+
+def test_train_allows_chaid_exhaustive_multiclass():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        s.train("CHAID_EXHAUSTIVE", max_depth=3, min_child_size=5)
+        assert s.state.state is FlowState.TRAINED
+
+
+def test_class_labels_dict_property():
+    s = Session(logger=_quiet_logger())
+    assert s.class_labels_dict == {}
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        assert s.class_labels_dict == {0: "Bueno", 1: "Malo"}
 
 
 if __name__ == "__main__":
