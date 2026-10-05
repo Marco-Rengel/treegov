@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from enum import Enum, auto
 from typing import Any
@@ -105,6 +105,8 @@ class SessionState:
     temporal_verified: bool | None = None    # Fase 1.3: time_col confirmado
     oot_report: OOTReport | None = None      # Fase 1.3: metricas OOT + PSI/CSI
     oot_source: str | None = None            # origen declarado ('external-file')
+    target_class: int | str | None = None    # Fase 3.1.c: clase de interes
+    class_labels: tuple[tuple[int | str, str], ...] = ()  # (valor, etiqueta)
     event_log: tuple[str, ...] = ("init/state=EMPTY",)
 
 
@@ -135,6 +137,12 @@ class Session:
     def state(self) -> SessionState:
         """Estado actual (inmutable)."""
         return self._state
+
+    @property
+    def class_labels_dict(self) -> dict[int | str, str]:
+        """Vista dict del mapping clase -> etiqueta humana
+        (conveniencia para GUI/MCP). Vacío antes de fix_spec."""
+        return dict(self._state.class_labels)
 
     # ------------------------------------------------------------------
     # transiciones
@@ -295,13 +303,18 @@ class Session:
     def fix_spec(
         self, target: str, spec: dict[str, PredictorType] | None = None,
         *, predictors: Sequence[str] | None = None,
+        target_class: int | str | None = None,
+        class_labels: Mapping[int | str, str] | None = None,
     ) -> SessionState:
-        """DATA_LOADED -> SPEC_FIXED. Target EXCLUSIVAMENTE binario (Fase 1).
+        """DATA_LOADED -> SPEC_FIXED. Target binario 0/1 o multiclase (3.1.c).
 
         Si spec es None, se infiere con profiling.infer_spec.
         Si se pasa `predictors` (Fase 2.1, GUI wizard), el spec resuelto se
         filtra a ese subconjunto; el filtrado vive AQUI (la GUI jamas toca
         el enum PredictorType).
+        Paso 2 de 3.1.c: `target_class` y `class_labels` tienen default
+        temporal None (clase 1 / etiquetas str(valor)); pasan a ser
+        obligatorios en el paso 4. Los defaults NO relajan validaciones.
         """
         self._require(FlowState.DATA_LOADED, "fix_spec")
         assert self._df is not None
@@ -310,14 +323,54 @@ class Session:
         if not self._df[target].notna().all():
             raise ValueError(f"[session] target {target!r} contiene NaN")
         valores = sorted(pd.unique(self._df[target].dropna()))
-        if len(valores) != 2:
+        if len(valores) < 2:
             raise ValueError(
-                f"[session] target {target!r} no binario: {len(valores)} clases"
+                f"[session] target {target!r} constante: "
+                f"{len(valores)} clase(s)"
             )
-        if set(valores) != {0, 1}:
+        if len(valores) == 2 and set(valores) != {0, 1}:
             raise ValueError(
-                f"[session] target {target!r} debe estar codificado 0/1 "
-                f"(evento=1); valores: {valores!r}"
+                f"[session] target binario {target!r} debe estar "
+                f"codificado 0/1 (evento=1); para otra codificacion, "
+                f"recodificar antes de cargar. Valores observados: "
+                f"{valores!r}"
+            )
+        # K >= 3: cualquier codificacion es valida.
+        # Defaults temporales (paso 2): rellenan el input, no relajan nada.
+        if target_class is None:
+            target_class = 1
+        if class_labels is None:
+            class_labels = {v: str(v) for v in valores}
+        if target_class not in valores:
+            raise ValueError(
+                f"[session] target_class {target_class!r} no esta entre "
+                f"las clases observadas: {valores!r}"
+            )
+        if not isinstance(class_labels, Mapping):
+            raise TypeError("[session] class_labels debe ser un Mapping")
+        claves = set(class_labels.keys())
+        faltan = sorted(set(valores) - claves)
+        if faltan:
+            raise ValueError(
+                f"[session] class_labels no cubre las clases observadas; "
+                f"faltan: {faltan!r}"
+            )
+        sobran = sorted(claves - set(valores))
+        if sobran:
+            raise ValueError(
+                f"[session] class_labels contiene claves no observadas: "
+                f"{sobran!r}"
+            )
+        for k, v in class_labels.items():
+            if not isinstance(v, str) or not v:
+                raise ValueError(
+                    f"[session] class_labels[{k!r}] debe ser un string "
+                    f"no vacio"
+                )
+        labels = list(class_labels.values())
+        if len(set(labels)) != len(labels):
+            self._log.warning(
+                "[session] class_labels con etiquetas duplicadas: %r", labels
             )
         if spec is None:
             spec = infer_spec(self._df, target, self._log)
@@ -338,7 +391,9 @@ class Session:
         return self._commit(
             FlowState.SPEC_FIXED,
             evento=f"fix_spec:{target}|predictores={len(spec)}",
-            target=target, target_classes=tuple(int(v) for v in valores),
+            target=target, target_classes=tuple(valores),
+            target_class=target_class,
+            class_labels=tuple(sorted(class_labels.items())),
             spec=tuple(spec.items()),
         )
 
@@ -394,14 +449,40 @@ class Session:
         Gobernanza (types.GovernanceMode): los defaults son BANKING
         (Jeffreys + PD Floor, BCBS CRE 20.39); apply_jeffreys=False con
         pd_floor=None produce el modo RESEARCH (PD cruda k/n).
+
+        Fase 3.1.c: la clase de interes y las etiquetas canonicas se leen
+        de SessionState (fijadas en fix_spec); el argumento target_class
+        queda como fallback temporal (se eliminara en el paso 4). Solo
+        CHAID / CHAID_EXHAUSTIVE admiten K > 2 clases en esta fase.
         """
         self._require(FlowState.PARTITIONED, "train")
         st = self._state
         assert st.spec is not None
         assert self._X_train is not None and self._y_train is not None
-        # Fase 3.1.a (TEMPORAL): target_class viene del argumento o del
-        # atributo temporal de Session. En 3.1.c se leerá de SessionState.
-        if target_class is None:
+        K = len(st.target_classes)
+        if isinstance(engine, str):
+            engine_name = engine
+        elif isinstance(engine, ChaidEngine):
+            engine_name = "CHAID_EXHAUSTIVE" if engine.exhaustive else "CHAID"
+        elif isinstance(engine, CrtEngine):
+            engine_name = "CRT"
+        elif isinstance(engine, QuestEngine):
+            engine_name = "QUEST"
+        else:
+            engine_name = type(engine).__name__
+        # Bloqueo multiclase previo a instanciar nada (atomicidad).
+        if K > 2 and engine_name not in ("CHAID", "CHAID_EXHAUSTIVE"):
+            raise ValueError(
+                f"[session] engine {engine_name!r} no soporta targets "
+                f"multiclase en Fase 3.1 (K={K} clases detectadas). "
+                f"Use CHAID o CHAID_EXHAUSTIVE para multiclase, o espere "
+                f"a la Fase 3.4."
+            )
+        # SessionState es la fuente de verdad; el argumento y el atributo
+        # temporal self._target_class solo actuan como fallback.
+        if st.target_class is not None:
+            target_class = st.target_class
+        elif target_class is None:
             target_class = self._target_class
         else:
             self._target_class = target_class
@@ -413,8 +494,18 @@ class Session:
                     f"[session] motor desconocido: {engine!r} "
                     f"(validos: {sorted(_ENGINE_FACTORIES)})"
                 ) from None
+        # Etiquetas canonicas: primero la clase de interes, luego el resto
+        # ordenado por valor original.
+        labels_map = dict(st.class_labels)
+        target_label = labels_map[target_class]
+        resto = tuple(
+            labels_map[c]
+            for c in sorted(c for c in labels_map if c != target_class)
+        )
+        class_labels_canonical = (target_label,) + resto
         builder = TreeBuilder(
             engine, target_type=target_type, target_class=target_class,
+            class_labels=class_labels_canonical,
             max_depth=max_depth,
             min_child_size=min_child_size, pd_floor=pd_floor,
             apply_jeffreys=apply_jeffreys,
