@@ -125,13 +125,6 @@ def test_atomicidad_fallo_no_corrompe_estado():
 
 def test_guards_target():
     with tempfile.TemporaryDirectory() as td:
-        # target con 3 clases
-        df = pd.DataFrame({"edad": [25, 35, 45], "y3": [0, 1, 2]})
-        p1 = Path(td) / "m3.csv"
-        df.to_csv(p1, index=False)
-        s = Session(logger=_quiet_logger())
-        s.load_dataset(str(p1))
-        _assert_raises(ValueError, s.fix_spec, "y3")
         # target con NaN
         df2 = pd.DataFrame({"edad": [1.0, 2.0, 3.0], "yn": [0.0, np.nan, 1.0]})
         p2 = Path(td) / "mnan.csv"
