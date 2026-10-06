@@ -48,6 +48,7 @@ def _modelo():
     y = pd.Series([0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1])
     X = pd.DataFrame({"x": x})
     tb = TreeBuilder(CrtEngine(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"),
                      max_depth=4, min_child_size=1)
     return tb.build(X, y, {"x": _CONT})
 
@@ -98,6 +99,7 @@ def test_modelo_raiz_sola():
     x = pd.Series([1.0, 2.0, 3.0, 4.0])
     y = pd.Series([0, 0, 1, 1])
     tb = TreeBuilder(CrtEngine(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"),
                      max_depth=4, min_child_size=10)
     m = tb.build(pd.DataFrame({"x": x}), y, {"x": _CONT})
     assert len(m.nodes) == 1
