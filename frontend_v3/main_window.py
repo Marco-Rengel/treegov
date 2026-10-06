@@ -488,7 +488,15 @@ class MainWindow(QMainWindow):
         self._refresh_reports_panel()
 
     def _train_pipeline(self, cfg: dict) -> None:
-        self._session.fix_spec(cfg["target"], predictors=cfg["predictors"])
+        # Phase 3.1.c step 4 (provisional until 3.1.e wizard):
+        # default class of interest to 1 with neutral labels; the wizard
+        # will provide these explicitly in Phase 3.1.e.
+        self._session.fix_spec(
+            cfg["target"],
+            predictors=cfg["predictors"],
+            target_class=cfg.get("target_class", 1),
+            class_labels=cfg.get("class_labels", {0: "Non-event", 1: "Event"}),
+        )
         self._session.partition(cfg["train_frac"], cfg["seed"])
         self._session.train(
             cfg["engine"],
