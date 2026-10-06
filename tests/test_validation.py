@@ -123,6 +123,7 @@ def test_predict_pd_y_fila_huerfana():
     y = pd.Series([0] * 5 + [1] * 5)
     m = TreeBuilder(
         CrtEngine(), target_type=TargetType.BINARY, target_class=1,
+        class_labels=("Event", "Non-event"),
         max_depth=4, min_child_size=2,
     ).build(X, y, {"x": PredictorType.CONTINUOUS})
     p = predict_pd(m, X)
