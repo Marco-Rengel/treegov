@@ -82,6 +82,7 @@ def _crt_model() -> TreeModel:
     spec = {"edad": PredictorType.CONTINUOUS}
     return TreeBuilder(
         CrtEngine(), target_type=TargetType.BINARY, target_class=1,
+        class_labels=("Event", "Non-event"),
         max_depth=4, min_child_size=5,
     ).build(df, y, spec)
 
@@ -103,6 +104,7 @@ def _chaid_model() -> TreeModel:
     spec = {"seg": PredictorType.NOMINAL}
     return TreeBuilder(
         ChaidEngine(), target_type=TargetType.BINARY, target_class=1,
+        class_labels=("Event", "Non-event"),
         max_depth=4, min_child_size=10,
     ).build(df, y, spec)
 
