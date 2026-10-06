@@ -29,10 +29,8 @@ Hard rules:
     is always index 0 of n_events / pd_jeffreys / pd_final / class_labels;
     the remaining classes follow in ascending order. The invariant
     sum(pd_final) == 1 holds for every node (enforced by TreeModel).
-    class_labels are human-readable labels in canonical order (index 0 =
-    target_class); during Phase 3.1.c step 1 they are optional, with a
-    str(c) fallback derived from the observed class values, until the
-    Step 4 hardening makes them mandatory.
+    class_labels are human-readable labels in canonical order
+    (index 0 = target_class).
   - Structural determinism: two build() calls with the same data and
     parameters produce identical TreeModel objects (==). params_fingerprint
     is a stable sha256 (json with sorted keys; no memory addresses).
@@ -201,7 +199,7 @@ class TreeBuilder:
         *,
         target_type: TargetType,
         target_class: int | str,
-        class_labels: tuple[str, ...] | None = None,
+        class_labels: tuple[str, ...],
         max_depth: int | None = 4,
         min_child_size: int = 50,
         pd_floor: float | None = 0.0003,
@@ -224,32 +222,28 @@ class TreeBuilder:
         the fingerprint. Mandatory by design (3.1 §1bis.1): no silent
         default may decide the semantics of the PD vector.
 
-        class_labels: Human-readable label per class in canonical order
-        (index 0 = target_class). When None (temporary default during
-        Phase 3.1.c step 1), labels are derived from the observed class
-        values as str(c). In Phase 3.1.c step 4 this parameter becomes
-        mandatory.
+        class_labels: Human-readable label per class in canonical
+        order (index 0 = target_class). Mandatory.
         """
         if not hasattr(engine, "best_split"):
             raise TypeError("engine debe exponer best_split(X, y, spec, ...)")
         if target_class is None:
             raise ValueError("target_class no puede ser None")
-        if class_labels is not None:
-            if not isinstance(class_labels, (tuple, list)) or not class_labels:
-                raise ValueError(
-                    "[tree_builder] class_labels invalido: debe ser una "
-                    "secuencia (tuple o list) no vacia de strings"
-                )
-            if any(not isinstance(lbl, str) or not lbl for lbl in class_labels):
-                raise ValueError(
-                    "[tree_builder] class_labels invalido: todas las "
-                    "etiquetas deben ser strings no vacios"
-                )
-            if len(set(class_labels)) != len(class_labels):
-                raise ValueError(
-                    "[tree_builder] class_labels invalido: etiquetas duplicadas"
-                )
-            class_labels = tuple(class_labels)
+        if not isinstance(class_labels, (tuple, list)) or not class_labels:
+            raise ValueError(
+                "[tree_builder] class_labels invalido: debe ser una "
+                "secuencia (tuple o list) no vacia de strings"
+            )
+        if any(not isinstance(lbl, str) or not lbl for lbl in class_labels):
+            raise ValueError(
+                "[tree_builder] class_labels invalido: todas las "
+                "etiquetas deben ser strings no vacios"
+            )
+        if len(set(class_labels)) != len(class_labels):
+            raise ValueError(
+                "[tree_builder] class_labels invalido: etiquetas duplicadas"
+            )
+        class_labels = tuple(class_labels)
         if max_depth is not None and (
             isinstance(max_depth, bool) or not isinstance(max_depth, Integral)
             or int(max_depth) < 1
@@ -328,18 +322,13 @@ class TreeBuilder:
         class_to_index = {c: i for i, c in enumerate(ordered_classes)}
         # Per-row canonical codes (0 = class of interest).
         ycodes = yv.map(class_to_index).to_numpy(dtype=np.int64)
-        if self._class_labels is None:
-            # Phase 3.1.c step 1 fallback (legacy 3.1.a behavior): derive
-            # the human-readable labels from the observed class values.
-            class_labels_tuple = tuple(str(c) for c in ordered_classes)
-        else:
-            if len(self._class_labels) != K:
-                raise ValueError(
-                    f"[tree_builder] class_labels tiene "
-                    f"{len(self._class_labels)} entradas pero el target "
-                    f"tiene {K} clases observadas"
-                )
-            class_labels_tuple = self._class_labels
+        if len(self._class_labels) != K:
+            raise ValueError(
+                f"[tree_builder] class_labels tiene "
+                f"{len(self._class_labels)} entradas pero el target "
+                f"tiene {K} clases observadas"
+            )
+        class_labels_tuple = self._class_labels
 
         fingerprint = self._fingerprint(spec, class_labels_tuple)
         nodos: list[TreeNode] = []

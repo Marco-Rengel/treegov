@@ -323,7 +323,8 @@ def test_guards_builder():
     # Fase 3.1: target_class fuera de las clases observadas -> ValueError
     _assert_raises(
         ValueError,
-        TreeBuilder(_crt(), target_type=_BIN, target_class=99).build,
+        TreeBuilder(_crt(), target_type=_BIN, target_class=99,
+                    class_labels=("Event", "Non-event")).build,
         X, y, {"x": _CONT},
     )
     # Fase 3.1: spec vacio -> ValueError

@@ -68,7 +68,9 @@ def test_estado_cero_formal():
 
 def test_transiciones_ilegales():
     s = Session(logger=_quiet_logger())
-    _assert_raises(ValueError, s.fix_spec, "default")
+    _assert_raises(ValueError, s.fix_spec, "default",
+                   target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
     _assert_raises(ValueError, s.partition)
     _assert_raises(ValueError, s.train, CrtEngine())
 
@@ -117,7 +119,9 @@ def test_atomicidad_fallo_no_corrompe_estado():
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
         # target invalido -> ValueError; el estado debe quedar DATA_LOADED
-        _assert_raises(ValueError, s.fix_spec, "no_existe")
+        _assert_raises(ValueError, s.fix_spec, "no_existe",
+                       target_class=1,
+                       class_labels={0: "Bueno", 1: "Malo"})
         assert s.state.state is FlowState.DATA_LOADED
         # reintento valido tiene que funcionar
         s.fix_spec("default", target_class=1,
@@ -616,25 +620,24 @@ def _csv_k3(tmp: Path) -> Path:
 
 
 def test_fix_spec_requires_target_class():
-    """Paso 2 (default temporal activo): omitir target_class aun NO lanza."""
+    """Paso 4 (endurecimiento): omitir target_class lanza TypeError."""
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        st = s.fix_spec("default", class_labels={0: "Bueno", 1: "Malo"})
-        assert isinstance(st, SessionState)
-        assert st.state is FlowState.SPEC_FIXED
+        _assert_raises(TypeError, s.fix_spec, "default",
+                       class_labels={0: "Bueno", 1: "Malo"})
+        assert s.state.state is FlowState.DATA_LOADED
 
 
 def test_fix_spec_requires_class_labels():
-    """Paso 2 (default temporal activo): omitir class_labels aun NO lanza."""
+    """Paso 4 (endurecimiento): omitir class_labels lanza TypeError."""
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv(Path(td))
         s = Session(logger=_quiet_logger())
         s.load_dataset(str(csv_path))
-        st = s.fix_spec("default", target_class=1)
-        assert isinstance(st, SessionState)
-        assert st.state is FlowState.SPEC_FIXED
+        _assert_raises(TypeError, s.fix_spec, "default", target_class=1)
+        assert s.state.state is FlowState.DATA_LOADED
 
 
 def test_fix_spec_persists_target_class_and_labels():

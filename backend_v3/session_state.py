@@ -121,9 +121,6 @@ class Session:
     def __init__(self, logger: logging.Logger | None = None) -> None:
         self._log = logger if logger is not None else get_logger("session")
         self._state = SessionState()
-        # Fase 3.1.a (TEMPORAL): target_class vive aquí hasta que SessionState
-        # lo almacene en 3.1.c. Default 1 para compatibilidad con tests.
-        self._target_class: int | str = 1
         self._df: pd.DataFrame | None = None
         self._X_train = None
         self._X_test = None
@@ -303,8 +300,8 @@ class Session:
     def fix_spec(
         self, target: str, spec: dict[str, PredictorType] | None = None,
         *, predictors: Sequence[str] | None = None,
-        target_class: int | str | None = None,
-        class_labels: Mapping[int | str, str] | None = None,
+        target_class: int | str,
+        class_labels: Mapping[int | str, str],
     ) -> SessionState:
         """DATA_LOADED -> SPEC_FIXED. Target binario 0/1 o multiclase (3.1.c).
 
@@ -312,9 +309,8 @@ class Session:
         Si se pasa `predictors` (Fase 2.1, GUI wizard), el spec resuelto se
         filtra a ese subconjunto; el filtrado vive AQUI (la GUI jamas toca
         el enum PredictorType).
-        Paso 2 de 3.1.c: `target_class` y `class_labels` tienen default
-        temporal None (clase 1 / etiquetas str(valor)); pasan a ser
-        obligatorios en el paso 4. Los defaults NO relajan validaciones.
+        `target_class` y `class_labels` son obligatorios: la clase
+        de interes y las etiquetas humanas por clase.
         """
         self._require(FlowState.DATA_LOADED, "fix_spec")
         assert self._df is not None
@@ -336,11 +332,6 @@ class Session:
                 f"{valores!r}"
             )
         # K >= 3: cualquier codificacion es valida.
-        # Defaults temporales (paso 2): rellenan el input, no relajan nada.
-        if target_class is None:
-            target_class = 1
-        if class_labels is None:
-            class_labels = {v: str(v) for v in valores}
         if target_class not in valores:
             raise ValueError(
                 f"[session] target_class {target_class!r} no esta entre "
@@ -433,7 +424,6 @@ class Session:
         engine,
         *,
         target_type: TargetType = TargetType.BINARY,
-        target_class: int | str | None = None,
         max_depth: int = 4,
         min_child_size: int = 50,
         pd_floor: float | None = 0.0003,
@@ -451,9 +441,9 @@ class Session:
         pd_floor=None produce el modo RESEARCH (PD cruda k/n).
 
         Fase 3.1.c: la clase de interes y las etiquetas canonicas se leen
-        de SessionState (fijadas en fix_spec); el argumento target_class
-        queda como fallback temporal (se eliminara en el paso 4). Solo
-        CHAID / CHAID_EXHAUSTIVE admiten K > 2 clases en esta fase.
+        de SessionState (fijadas en fix_spec). La clase de interes se lee
+        exclusivamente de SessionState (fijada en fix_spec). Solo CHAID /
+        CHAID_EXHAUSTIVE admiten K > 2 clases en esta fase.
         """
         self._require(FlowState.PARTITIONED, "train")
         st = self._state
@@ -478,14 +468,14 @@ class Session:
                 f"Use CHAID o CHAID_EXHAUSTIVE para multiclase, o espere "
                 f"a la Fase 3.4."
             )
-        # SessionState es la fuente de verdad; el argumento y el atributo
-        # temporal self._target_class solo actuan como fallback.
-        if st.target_class is not None:
-            target_class = st.target_class
-        elif target_class is None:
-            target_class = self._target_class
-        else:
-            self._target_class = target_class
+        # Fase 3.1.c paso 4: SessionState es la unica fuente de verdad.
+        # El endurecimiento de fix_spec garantiza target_class no-None.
+        target_class = st.target_class
+        if target_class is None:
+            raise RuntimeError(
+                "[session] train sin target_class en SessionState "
+                "(fix_spec no ejecutado o estado corrupto)"
+            )
         if isinstance(engine, str):
             try:
                 engine = _ENGINE_FACTORIES[engine]()
