@@ -69,8 +69,9 @@ def test_fixture_a_estructura_y_pd():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=2,
-                     pd_floor=0.0003)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
+                     min_child_size=2, pd_floor=0.0003)
     modelo = tb.build(X, y, {"x": _CONT})
 
     assert isinstance(modelo, TreeModel)
@@ -101,7 +102,9 @@ def test_bfs_ids_y_niveles():
     x = pd.Series([1.0] * 4 + [2.0] * 4 + [3.0] * 4 + [4.0] * 4)
     y = pd.Series([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1])
     X = pd.DataFrame({"x": x})
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=3, min_child_size=4)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=3,
+                     min_child_size=4)
     m = tb.build(X, y, {"x": _CONT})
     assert [nd.node_id for nd in m.nodes] == [0, 1, 2, 3, 4]
     assert [nd.depth for nd in m.nodes] == [0, 1, 1, 2, 2]
@@ -115,7 +118,9 @@ def test_min_child_rechaza_split_completo():
     x = pd.Series([1.0] * 95 + [100.0] * 5)
     y = pd.Series([0] * 95 + [1] * 5)
     X = pd.DataFrame({"x": x})
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=6)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
+                     min_child_size=6)
     m = tb.build(X, y, {"x": _CONT})
     assert len(m.nodes) == 1
     assert m.nodes[0].is_leaf
@@ -127,13 +132,15 @@ def test_max_depth_y_min_child_en_raiz():
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
     # max_depth=1: hijos son hojas por profundidad
-    m1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=1,
+    m1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=1,
                      min_child_size=2).build(X, y, {"x": _CONT})
     assert len(m1.nodes) == 3
     assert all(nd.is_leaf for nd in m1.nodes[1:])
     assert all(nd.leaf_reason == "max_depth" for nd in m1.nodes[1:])
     # min_child: raiz n=10 < 2*6 -> hoja "min_child"
-    m2 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    m2 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
                      min_child_size=7).build(X, y, {"x": _CONT})
     assert len(m2.nodes) == 1
     assert m2.nodes[0].leaf_reason == "min_child"
@@ -144,7 +151,8 @@ def test_chaid_multirama():
     y = pd.Series([0] * 40 + [0] * 16 + [1] * 24 + [1] * 40)
     X = pd.DataFrame({"nivel": x})
     tb = TreeBuilder(_quiet_engine(ChaidEngine), target_type=_BIN,
-                     target_class=1, max_depth=3, min_child_size=10)
+                     target_class=1, class_labels=("Event", "Non-event"),
+                     max_depth=3, min_child_size=10)
     m = tb.build(X, y, {"nivel": _NOM})
     assert m.method == "CHAID"
     raiz = m.nodes[0]
@@ -160,7 +168,8 @@ def test_builds_con_cada_motor_son_validos():
     y = pd.Series(([0] * 10 + [1] * 10) * 3)
     X = pd.DataFrame({"x": x})
     for eng in (_crt(), _quiet_engine(QuestEngine)):
-        m = TreeBuilder(eng, target_type=_BIN, target_class=1, max_depth=4,
+        m = TreeBuilder(eng, target_type=_BIN, target_class=1,
+                        class_labels=("Event", "Non-event"), max_depth=4,
                         min_child_size=5).build(X, y, {"x": _CONT})
         assert len(m.nodes) >= 3
         assert m.nodes[0].split is not None
@@ -168,7 +177,9 @@ def test_builds_con_cada_motor_son_validos():
     xo = pd.Series([1] * 30 + [2] * 30)
     yo = pd.Series([0] * 25 + [1] * 5 + [1] * 25 + [0] * 5)
     m = TreeBuilder(_quiet_engine(ChaidEngine, exhaustive=True),
-                    target_type=_BIN, target_class=1, max_depth=4, min_child_size=5).build(
+                    target_type=_BIN, target_class=1,
+                    class_labels=("Event", "Non-event"),
+                    max_depth=4, min_child_size=5).build(
         pd.DataFrame({"b": xo}), yo, {"b": PredictorType.ORDINAL}
     )
     assert m.method == "CHAID_EXHAUSTIVE"
@@ -178,13 +189,19 @@ def test_determinismo_fingerprint():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    tb1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=2)
-    tb2 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=2)
+    tb1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                      class_labels=("Event", "Non-event"),
+                      max_depth=4, min_child_size=2)
+    tb2 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                      class_labels=("Event", "Non-event"),
+                      max_depth=4, min_child_size=2)
     m1, m2 = tb1.build(X, y, {"x": _CONT}), tb2.build(X, y, {"x": _CONT})
     assert m1 == m2  # estructura completa identica (event_log NO vive aqui)
     assert m1.params_fingerprint == m1.params_fingerprint == m2.params_fingerprint
     # cambiar un parametro cambia el fingerprint
-    tb3 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=5, min_child_size=2)
+    tb3 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                      class_labels=("Event", "Non-event"),
+                      max_depth=5, min_child_size=2)
     assert tb3.build(X, y, {"x": _CONT}).params_fingerprint != m1.params_fingerprint
 
 
@@ -194,13 +211,18 @@ def test_fingerprint_incluye_hiperparametros_del_motor():
     spec = {"b": PredictorType.ORDINAL}
     eng1 = ChaidEngine(alpha_merge=0.05)
     eng2 = ChaidEngine(alpha_merge=0.10)
-    tb1 = TreeBuilder(eng1, target_type=_BIN, target_class=1, max_depth=4, min_child_size=5)
-    tb2 = TreeBuilder(eng2, target_type=_BIN, target_class=1, max_depth=4, min_child_size=5)
+    tb1 = TreeBuilder(eng1, target_type=_BIN, target_class=1,
+                      class_labels=("Event", "Non-event"),
+                      max_depth=4, min_child_size=5)
+    tb2 = TreeBuilder(eng2, target_type=_BIN, target_class=1,
+                      class_labels=("Event", "Non-event"),
+                      max_depth=4, min_child_size=5)
     labels = ("Event", "Non-event")
     assert tb1._fingerprint(spec, labels) != tb2._fingerprint(spec, labels)
     # determinismo interno: mismo motor, mismo fingerprint
     assert tb1._fingerprint(spec, labels) == TreeBuilder(
         ChaidEngine(alpha_merge=0.05), target_type=_BIN, target_class=1,
+        class_labels=("Event", "Non-event"),
         max_depth=4, min_child_size=5,
     )._fingerprint(spec, labels)
 
@@ -211,7 +233,8 @@ def test_regla_min_child_es_2x_no_3x():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    m = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    m = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                    class_labels=("Event", "Non-event"), max_depth=4,
                     min_child_size=4).build(X, y, {"x": _CONT})
     assert len(m.nodes) == 3            # split realizado
     assert not m.nodes[0].is_leaf
@@ -280,21 +303,22 @@ def test_guards_builder():
     # excepcion del motor PROPAGA (fail-fast)
     _assert_raises(
         ValueError,
-        TreeBuilder(_Explota(), target_type=_BIN, target_class=1, max_depth=4,
+        TreeBuilder(_Explota(), target_type=_BIN, target_class=1,
+                    class_labels=("Event", "Non-event"), max_depth=4,
                     min_child_size=2).build,
         X, y, {"x": _CONT},
     )
     _assert_raises(
         ValueError, TreeBuilder, _crt(), target_type=_BIN, target_class=1,
-        max_depth=0,
+        class_labels=("Event", "Non-event"), max_depth=0,
     )
     _assert_raises(
         ValueError, TreeBuilder, _crt(), target_type=_BIN, target_class=1,
-        min_child_size=0,
+        class_labels=("Event", "Non-event"), min_child_size=0,
     )
     _assert_raises(
         ValueError, TreeBuilder, _crt(), target_type=_BIN, target_class=1,
-        pd_floor=1.5,
+        class_labels=("Event", "Non-event"), pd_floor=1.5,
     )
     # Fase 3.1: target_class fuera de las clases observadas -> ValueError
     _assert_raises(
@@ -305,7 +329,8 @@ def test_guards_builder():
     # Fase 3.1: spec vacio -> ValueError
     _assert_raises(
         ValueError,
-        TreeBuilder(_crt(), target_type=_BIN, target_class=1).build,
+        TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                    class_labels=("Event", "Non-event")).build,
         X, y, {},
     )
 
@@ -320,7 +345,9 @@ def test_governance_banking_default():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=2)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"),
+                     max_depth=4, min_child_size=2)
     assert tb.apply_jeffreys is True and tb.pd_floor == 0.0003
     m = tb.build(X, y, {"x": _CONT})
     izq = m.nodes[1]                       # hoja pura: k=0, n=5
@@ -334,7 +361,9 @@ def test_governance_research_raw_pd():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4, min_child_size=2,
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"),
+                     max_depth=4, min_child_size=2,
                      apply_jeffreys=False, pd_floor=None)
     m = tb.build(X, y, {"x": _CONT})
     izq, der = m.nodes[1], m.nodes[2]
@@ -349,7 +378,9 @@ def test_fingerprint_distingue_modos():
     """MRM: dos arboles con distinto governance mode NO comparten fingerprint."""
     spec = {"x": _CONT}
     labels = ("Event", "Non-event")
-    base = dict(target_type=_BIN, target_class=1, max_depth=4, min_child_size=2)
+    base = dict(target_type=_BIN, target_class=1,
+                class_labels=("Event", "Non-event"),
+                max_depth=4, min_child_size=2)
     fp_banking = TreeBuilder(_crt(), **base)._fingerprint(spec, labels)
     fp_research = TreeBuilder(_crt(), apply_jeffreys=False,
                               pd_floor=None, **base)._fingerprint(spec, labels)
@@ -365,14 +396,15 @@ def test_guards_governance():
     # apply_jeffreys no bool -> ValueError
     _assert_raises(
         ValueError, TreeBuilder, _crt(), target_type=_BIN, target_class=1,
-        apply_jeffreys="yes",
+        class_labels=("Event", "Non-event"), apply_jeffreys="yes",
     )
     # pd_floor negativo -> ValueError; None explicito es valido
     _assert_raises(
         ValueError, TreeBuilder, _crt(), target_type=_BIN, target_class=1,
-        pd_floor=-0.1,
+        class_labels=("Event", "Non-event"), pd_floor=-0.1,
     )
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, pd_floor=None)
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), pd_floor=None)
     assert tb.pd_floor is None
 
 
@@ -389,9 +421,11 @@ def test_grow_full_max_depth_none():
     X = pd.DataFrame({"x": x})
     spec = {"x": PredictorType.CONTINUOUS}
     # contraste: max_depth=4 vs max_depth=None sobre el mismo dataset
-    m4 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    m4 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
                      min_child_size=5).build(X, y, spec)
-    m_full = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=None,
+    m_full = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                         class_labels=("Event", "Non-event"), max_depth=None,
                          min_child_size=5).build(X, y, spec)
     depth_m4 = max(nd.depth for nd in m4.nodes)
     depth_full = max(nd.depth for nd in m_full.nodes)
@@ -411,7 +445,8 @@ def test_multiclass_binary_pd_values():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
                      min_child_size=2, pd_floor=0.0003)
     m = tb.build(X, y, {"x": _CONT})
     raiz, izq, der = m.nodes
@@ -429,7 +464,8 @@ def test_multiclass_binary_pd_sums_to_one():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    m = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    m = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                    class_labels=("Event", "Non-event"), max_depth=4,
                     min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
     for nd in m.nodes:
         assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
@@ -443,9 +479,11 @@ def test_multiclass_target_class_inverted():
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
-    m1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1, max_depth=4,
+    m1 = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
                      min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
-    m2 = TreeBuilder(_crt(), target_type=_BIN, target_class=0, max_depth=4,
+    m2 = TreeBuilder(_crt(), target_type=_BIN, target_class=0,
+                     class_labels=("Non-event", "Event"), max_depth=4,
                      min_child_size=2, pd_floor=0.0003).build(X, y, {"x": _CONT})
     assert m1.params_fingerprint != m2.params_fingerprint
     assert math.isclose(m1.nodes[0].pd_final[0], m2.nodes[0].pd_final[1],
@@ -464,7 +502,8 @@ def test_multiclass_k3_builds():
     y = pd.Series([0] * 40 + [1] * 40 + [2] * 40)
     X = pd.DataFrame({"nivel": x})
     m = TreeBuilder(_quiet_engine(ChaidEngine), target_type=_BIN,
-                    target_class=0, max_depth=3, min_child_size=10).build(
+                    target_class=0, class_labels=("Low", "Mid", "High"),
+                    max_depth=3, min_child_size=10).build(
         X, y, {"nivel": _NOM})
     assert m.method == "CHAID"
     assert len(m.class_labels) == 3
