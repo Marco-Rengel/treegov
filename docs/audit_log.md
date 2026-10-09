@@ -2428,3 +2428,78 @@ Moonshot/Kimi requiere para cachear de forma efectiva.
 
 **Referencias**: docs/prompt_para_asistente.md sección 6,
 docs/contexto_para_nueva_sesion.md.
+
+---
+
+### 09/10/2026 — Configuración de OpenCode y decisión de herramienta activa
+
+**Estado**: Aprobado. OpenCode 1.18.35 pasa a ser la herramienta
+activa de desarrollo. Aider 0.86.2 queda como respaldo documentado.
+
+**Motivación**:
+Tras la migración de Aider a OpenCode documentada en la entrada
+anterior, se configura OpenCode para el proyecto TreeGov con el
+objetivo de reducir el consumo de tokens en Kimi K3 y establecer
+un flujo de trabajo más eficiente.
+
+**Configuración aplicada**:
+
+- **OpenCode 1.18.35** (npm, `opencode-ai@1.18.35`), actualizado
+  desde 1.18.32 el 06/10/2026.
+- **Autenticación**: `opencode auth login` con provider `Moonshot AI`
+  (internacional, endpoint `https://api.moonshot.ai/v1`). La
+  credencial se guarda en `~/.local/share/opencode/auth.json`.
+- **Modelo activo**: Kimi K3 (`moonshot/kimi-k3`).
+- **Archivo de configuración del proyecto**: `opencode.json` en la
+  raíz del repo, con:
+  - `model: "moonshot/kimi-k3"`
+  - `small_model: "moonshot/kimi-k3"`
+  - `setCacheKey: true` (activa caché de prompt con clave estable)
+  - `autoupdate: false` (coherente con MRM: el humano decide cuándo
+    actualizar)
+  - `share: "disabled"` (privacidad)
+
+**Limpieza del entorno**:
+
+- Desinstalado `@deepseek-ai/dsh@0.1.1-rc.2` (paquete residual,
+  452 dependencias eliminadas).
+- Eliminado `.opencode-backup-20260927-144613/` (backup obsoleto
+  de la migración anterior, ~250 MB).
+- Eliminados los archivos temporales `.opencode_listado.txt`,
+  `.opencode_backup_listado.txt`, `.opencode_git.txt`.
+
+**Verificación de funcionamiento**:
+
+- OpenCode 1.18.35 arranca en el proyecto.
+- Kimi K3 responde correctamente al prompt de prueba: "¿Qué es
+  TreeGov?" — la respuesta identificó correctamente la arquitectura
+  de "sala limpia" (backend_v3 / frontend_v3), la naturaleza de
+  aplicación de escritorio, y los principios de gobernanza,
+  trazabilidad y reproducibilidad.
+
+**Decisión arquitectónica**:
+
+- **OpenCode 1.18.35 es la herramienta activa.** Toda nueva tarea
+  de documentación, edición y refactorización se hace con OpenCode.
+- **Aider 0.86.2 queda como respaldo documentado.** Se mantiene
+  instalado, no se desinstala. Se usará solo si OpenCode falla en
+  algún caso concreto.
+- **Sin caché explícita verificada en OpenCode 1.18.x.** La flag
+  `setCacheKey: true` está configurada, pero su efecto real se
+  medirá en el próximo `Product Bill` de Kimi. El plugin
+  `oc-plugin-caching` requiere un fork de OpenCode y no está
+  disponible en la versión estándar.
+
+**Estado del proyecto tras esta decisión**:
+
+- Fase 3.1.c: pasos 1 a 4.6 cerrados. Paso 4.7 (documentación)
+  pendiente.
+- Suite: 221/221 PASSED.
+- Repo: 14 commits adelante de `origin/main` (sin push).
+
+**Referencias**:
+
+- `docs/prompt_para_asistente.md` (sección 6, herramientas).
+- `docs/contexto_para_nueva_sesion.md` (estado del entorno).
+
+---
