@@ -68,6 +68,8 @@ def _cfg() -> dict:
         "engine": "CRT",
         "target": "default",
         "predictors": ["edad", "seg", "ratio"],
+        "target_class": 1,
+        "class_labels": {0: "Non-event", 1: "Event"},
         "train_frac": 0.7,
         "seed": 42,
         "max_depth": 3,

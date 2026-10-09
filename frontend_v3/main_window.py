@@ -426,7 +426,11 @@ class MainWindow(QMainWindow):
             self._reports_panel.set_classification_matrix(None)
             self._hud_reset()
         columns, types = self._dataset_info
-        wiz = ModelWizard(columns, types, parent=self)
+        wiz = ModelWizard(
+            columns, types,
+            target_provider=lambda col: self._session.describe_target(col),
+            parent=self,
+        )
         wiz.finished_with_config.connect(self._on_wizard_finished)
         wiz.finished.connect(self._on_wizard_closed)
         self._wizard = wiz
@@ -488,14 +492,11 @@ class MainWindow(QMainWindow):
         self._refresh_reports_panel()
 
     def _train_pipeline(self, cfg: dict) -> None:
-        # Phase 3.1.c step 4 (provisional until 3.1.e wizard):
-        # default class of interest to 1 with neutral labels; the wizard
-        # will provide these explicitly in Phase 3.1.e.
         self._session.fix_spec(
             cfg["target"],
             predictors=cfg["predictors"],
-            target_class=cfg.get("target_class", 1),
-            class_labels=cfg.get("class_labels", {0: "Non-event", 1: "Event"}),
+            target_class=cfg["target_class"],
+            class_labels=cfg["class_labels"],
         )
         self._session.partition(cfg["train_frac"], cfg["seed"])
         self._session.train(

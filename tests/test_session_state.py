@@ -802,6 +802,57 @@ def test_gains_table_multiclass_raises():
         _assert_raises(ValueError, s.get_gains_table, partition="oos")
 
 
+def test_describe_target_returns_counts():
+    """describe_target devuelve {valor: freq} ordenado por valor."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        counts = s.describe_target("default")
+        # Fixture _csv: y = 1_{edad >= 40}, 120 filas, edad en [20,60).
+        # 60 filas con y=0, 60 con y=1.
+        assert counts == {0: 60, 1: 60}
+
+
+def test_describe_target_multiclass():
+    """describe_target con K=3."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        counts = s.describe_target("default")
+        assert counts == {0: 40, 1: 40, 2: 40}
+
+
+def test_describe_target_unknown_column():
+    """Columna inexistente -> ValueError."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, s.describe_target, "no_existe")
+
+
+def test_describe_target_without_dataset():
+    """Sin dataset cargado -> RuntimeError."""
+    s = Session(logger=_quiet_logger())
+    _assert_raises(RuntimeError, s.describe_target, "default")
+
+
+def test_describe_target_does_not_mutate_state():
+    """Lectura pura: no cambia de estado ni modifica el event_log."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        st_before = s.state
+        s.describe_target("default")
+        st_after = s.state
+        assert st_before is st_after
+        assert st_after.state is FlowState.DATA_LOADED
+        assert st_after.event_log == st_before.event_log
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

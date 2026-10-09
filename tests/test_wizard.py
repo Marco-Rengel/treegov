@@ -51,6 +51,14 @@ def _make_wizard() -> ModelWizard:
     return ModelWizard(_COLS, _TYPES)
 
 
+def _make_wizard_with_provider(counts: dict):
+    _get_app()
+    return ModelWizard(
+        _COLS, _TYPES,
+        target_provider=lambda _col: counts,
+    )
+
+
 def _csv_tiny(tmp: Path) -> Path:
     """120 filas; y = 1_{edad >= 40} (mismo fixture que test_session_state)."""
     n = 120
@@ -59,6 +67,20 @@ def _csv_tiny(tmp: Path) -> Path:
     df = pd.DataFrame({"edad": edad, "seg": seg,
                        "default": (edad >= 40).astype(int)})
     p = tmp / "mini_gui.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def _csv_imbalanced(tmp: Path) -> Path:
+    """120 filas; default con desbalance 20/100 para probar el
+    warning de clase mayoritaria."""
+    n = 120
+    edad = np.tile(np.arange(20, 60), 3)
+    seg = np.tile(["a", "b", "c"], 40)
+    # 100 unos, 20 ceros.
+    y = np.array([1] * 100 + [0] * 20)
+    df = pd.DataFrame({"edad": edad, "seg": seg, "default": y})
+    p = tmp / "mini_imbalanced.csv"
     df.to_csv(p, index=False)
     return p
 
@@ -209,13 +231,16 @@ def test_wizard_finish_emits_config():
     assert len(captured) == 1
     cfg = captured[0]
     assert set(cfg) == {
-        "engine", "target", "predictors", "train_frac", "seed",
-        "max_depth", "min_child_size", "governance_mode",
-        "apply_jeffreys", "pd_floor",
+        "engine", "target", "predictors", "target_class", "class_labels",
+        "train_frac", "seed", "max_depth", "min_child_size",
+        "governance_mode", "apply_jeffreys", "pd_floor",
     }
     assert cfg["engine"] == "CRT"
     assert cfg["target"] == "default"
     assert cfg["predictors"] == ["edad"]
+    # sin target_provider: contrato presente pero vacio
+    assert cfg["target_class"] is None
+    assert cfg["class_labels"] == {}
     assert cfg["train_frac"] == 0.7 and cfg["seed"] == 42
     assert cfg["max_depth"] == 4 and cfg["min_child_size"] == 50
     assert cfg["governance_mode"] == "BANKING"
@@ -309,6 +334,8 @@ def test_mainwindow_wizard_config_trains():
         cfg = {
             "engine": "CRT", "target": "default",
             "predictors": ["edad", "seg"],
+            "target_class": 1,
+            "class_labels": {0: "Non-event", 1: "Event"},
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
             "governance_mode": "BANKING",
@@ -335,6 +362,62 @@ def test_mainwindow_wizard_config_trains():
         assert all(nd.pd_final == nd.pd_jeffreys for nd in hojas)  # sin floor
         w.close()
         w.deleteLater()
+
+
+def test_wizard_default_class_selected():
+    """Fase 3.1.e.4: tras poblar la tabla, SIEMPRE hay una clase
+    de interés seleccionada por default (última fila del orden
+    ascendente)."""
+    wiz = _make_wizard_with_provider({0: 60, 1: 60})
+    page = wiz.page_predictors
+    # Forzar el poblado de la tabla llamando al refresh.
+    page._refresh_class_table()
+    assert page._tbl_classes.rowCount() == 2
+    tc = page.target_class()
+    assert tc is not None
+    # El default es la última fila en orden ascendente -> 1.
+    assert tc == 1
+    labels = page.class_labels()
+    assert labels == {0: "0", 1: "1"}
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_shows_counts_per_class():
+    """Fase 3.1.e.4: la tabla muestra el count por clase."""
+    wiz = _make_wizard_with_provider({0: 30, 1: 90})
+    page = wiz.page_predictors
+    page._refresh_class_table()
+    assert page._tbl_classes.rowCount() == 2
+    # Columna 2 tiene los counts, en orden ascendente por valor.
+    item0 = page._tbl_classes.item(0, 2)
+    item1 = page._tbl_classes.item(1, 2)
+    assert item0 is not None and item0.text() == "30"
+    assert item1 is not None and item1.text() == "90"
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_minority_warning_shown():
+    """Fase 3.1.e.4: warning amber si la clase elegida es la
+    mayoritaria (sin empate)."""
+    wiz = _make_wizard_with_provider({0: 20, 1: 100})
+    page = wiz.page_predictors
+    page._refresh_class_table()
+    # Default: última fila -> valor 1 (mayoritaria, count 100).
+    # El radio de la fila 1 se marcó por default y disparó
+    # _on_interest_toggled -> warning visible.
+    assert page.target_class() == 1
+    # NOTA: isVisible() es False mientras el wizard toplevel no se
+    # muestre (offscreen); el flag que controla el codigo es el de
+    # "hidden", asi que se verifica con isHidden().
+    assert page._lbl_warning.isHidden() is False
+    # Cambiar a la clase minoritaria (fila 0) debe ocultar el
+    # warning.
+    page._class_rows[0]["radio"].setChecked(True)
+    assert page._lbl_warning.isHidden() is True
+    wiz.close()
+    wiz.deleteLater()
 
 
 # ---------------------------------------------------------------------------

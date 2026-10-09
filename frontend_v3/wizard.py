@@ -16,6 +16,8 @@ Governance Mode BANKING/RESEARCH of backend_v3.types).
 
 from __future__ import annotations
 
+from typing import Callable
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCloseEvent, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
@@ -26,13 +28,18 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSlider,
     QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
     QWizard,
@@ -118,6 +125,8 @@ class PredictorsPage(QWizardPage):
         self,
         columns: tuple[str, ...],
         types: dict[str, str],
+        *,
+        target_provider: Callable[[str], dict] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -125,6 +134,7 @@ class PredictorsPage(QWizardPage):
             raise ValueError("PredictorsPage requires at least one column")
         self._columns = columns
         self._types = types
+        self._target_provider = target_provider
 
         layout = QVBoxLayout(self)
 
@@ -137,6 +147,41 @@ class PredictorsPage(QWizardPage):
         target_row.addWidget(self._lbl_target)
         target_row.addWidget(self._combo_target, 1)
         layout.addLayout(target_row)
+
+        self._group_class = QGroupBox()
+        self._group_class.setObjectName("groupClassOfInterest")
+        gclass_layout = QVBoxLayout(self._group_class)
+
+        self._lbl_class_hint = QLabel()
+        gclass_layout.addWidget(self._lbl_class_hint)
+
+        self._tbl_classes = QTableWidget(0, 4)
+        self._tbl_classes.setObjectName("tblClasses")
+        self._tbl_classes.setHorizontalHeaderLabels(
+            ["", "", "", ""]  # se retraduce en retranslate_ui
+        )
+        header = self._tbl_classes.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._tbl_classes.verticalHeader().setVisible(False)
+        self._tbl_classes.setEditTriggers(
+            QTableWidget.EditTrigger.DoubleClicked
+            | QTableWidget.EditTrigger.EditKeyPressed
+        )
+        self._tbl_classes.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self._tbl_classes.setSelectionMode(
+            QTableWidget.SelectionMode.SingleSelection
+        )
+        gclass_layout.addWidget(self._tbl_classes)
+
+        self._lbl_warning = QLabel()
+        self._lbl_warning.setObjectName("lblClassWarning")
+        self._lbl_warning.setWordWrap(True)
+        self._lbl_warning.setVisible(False)  # se muestra si aplica
+        gclass_layout.addWidget(self._lbl_warning)
+
+        layout.addWidget(self._group_class)
 
         lists_row = QHBoxLayout()
         left_box = QVBoxLayout()
@@ -191,6 +236,25 @@ class PredictorsPage(QWizardPage):
             for i in range(self._lst_selected.count())
         ]
 
+    def target_class(self):
+        """Valor de la clase de interés seleccionada, o None."""
+        if self._tbl_classes.rowCount() == 0:
+            return None
+        radio_group = getattr(self, "_interest_group", None)
+        if radio_group is None:
+            return None
+        for r in getattr(self, "_class_rows", []):
+            if r["radio"].isChecked():
+                return r["value"]
+        return None
+
+    def class_labels(self) -> dict:
+        """Mapping {valor: etiqueta_humana} tal como está editado."""
+        return {
+            r["value"]: r["label_edit"].text()
+            for r in getattr(self, "_class_rows", [])
+        }
+
     # --- internals ---------------------------------------------------------
 
     def _make_item(self, col: str, enabled: bool = True) -> QListWidgetItem:
@@ -221,7 +285,106 @@ class PredictorsPage(QWizardPage):
                 continue
             disabled = self._is_chaid() and self._types[col] == "CONTINUOUS"
             self._lst_available.addItem(self._make_item(col, not disabled))
+        self._refresh_class_table()
         self.completeChanged.emit()
+
+    def _refresh_class_table(self) -> None:
+        """Repobla la tabla de clases desde el target_provider.
+
+        Sin callback (None): tabla vacía, sin warning.
+        Con callback: una fila por clase, con QLineEdit editable para
+        la etiqueta humana, el valor original y el count. La última
+        fila queda seleccionada por default (default neutral; el
+        analista debe elegir explícitamente en cualquier caso).
+        Warning amber si la clase seleccionada es la mayoritaria y
+        NO hay empate entre clases.
+        """
+        self._tbl_classes.setRowCount(0)
+        self._lbl_warning.setVisible(False)
+        if self._target_provider is None:
+            return
+        try:
+            counts = self._target_provider(self.target())
+        except (ValueError, RuntimeError):
+            # Target no resuelto o dataset ausente: tabla vacía sin
+            # error visible; el wizard no debe romper por esto.
+            return
+        if not counts:
+            return
+
+        # Orden ascendente por valor, como describe_target.
+        items = sorted(counts.items(), key=lambda kv: kv[0])
+
+        # Grupo exclusivo para el radio de "clase de interés".
+        self._interest_group = QButtonGroup(self)
+        self._interest_group.setExclusive(True)
+
+        self._tbl_classes.setRowCount(len(items))
+        max_count = max(c for _, c in items)
+        # ¿Hay empate entre clases? Si todas las clases con count
+        # máximo son iguales -> no hay "mayoría" clara.
+        n_mayoritarias = sum(1 for _, c in items if c == max_count)
+        hay_mayoria_clara = n_mayoritarias == 1 and len(items) >= 2
+
+        ultimo_radio: QRadioButton | None = None
+        self._class_rows: list[dict] = []
+
+        for row_idx, (valor, count) in enumerate(items):
+            # Columna 0: etiqueta humana (editable).
+            edit = QLineEdit(str(valor))
+            self._tbl_classes.setCellWidget(row_idx, 0, edit)
+
+            # Columna 1: valor original (read-only).
+            item_val = QTableWidgetItem(str(valor))
+            item_val.setFlags(
+                item_val.flags() & ~Qt.ItemFlag.ItemIsEditable
+            )
+            self._tbl_classes.setItem(row_idx, 1, item_val)
+
+            # Columna 2: count (read-only).
+            item_cnt = QTableWidgetItem(str(count))
+            item_cnt.setFlags(
+                item_cnt.flags() & ~Qt.ItemFlag.ItemIsEditable
+            )
+            self._tbl_classes.setItem(row_idx, 2, item_cnt)
+
+            # Columna 3: radio de interés.
+            radio = QRadioButton()
+            radio.setObjectName(f"radioInterest_{valor}")
+            radio.toggled.connect(self._on_interest_toggled)
+            self._interest_group.addButton(radio)
+            self._tbl_classes.setCellWidget(row_idx, 3, radio)
+
+            self._class_rows.append({
+                "value": valor,
+                "label_edit": edit,
+                "count": count,
+                "radio": radio,
+            })
+            ultimo_radio = radio
+
+        # Default: última fila seleccionada (neutral; el analista
+        # debe elegir explícitamente).
+        if ultimo_radio is not None:
+            ultimo_radio.setChecked(True)
+        # Guardar la info de mayoría para _on_interest_toggled.
+        self._class_majority = max_count if hay_mayoria_clara else None
+
+    def _on_interest_toggled(self, _checked: bool) -> None:
+        """Muestra u oculta el warning de clase mayoritaria."""
+        majority = getattr(self, "_class_majority", None)
+        if majority is None:
+            self._lbl_warning.setVisible(False)
+            return
+        rows = getattr(self, "_class_rows", [])
+        for r in rows:
+            if r["radio"].isChecked():
+                if r["count"] == majority:
+                    self._lbl_warning.setVisible(True)
+                else:
+                    self._lbl_warning.setVisible(False)
+                return
+        self._lbl_warning.setVisible(False)
 
     def _move(self, back: bool, all_items: bool) -> None:
         src = self._lst_selected if back else self._lst_available
@@ -277,6 +440,15 @@ class PredictorsPage(QWizardPage):
         self._lbl_chaid_note.setText(
             tr("step2_chaid_cont_note") if self._is_chaid() else ""
         )
+        self._group_class.setTitle(tr("step2_class_group_title"))
+        self._lbl_class_hint.setText(tr("step2_class_hint"))
+        self._tbl_classes.setHorizontalHeaderLabels([
+            tr("step2_class_col_label"),
+            tr("step2_class_col_value"),
+            tr("step2_class_col_count"),
+            tr("step2_class_col_interest"),
+        ])
+        self._lbl_warning.setText(tr("step2_class_warning_majority"))
 
 
 # ---------------------------------------------------------------------------
@@ -510,6 +682,8 @@ class ModelWizard(QWizard):
         self,
         columns: tuple[str, ...],
         types: dict[str, str],
+        *,
+        target_provider: Callable[[str], dict] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -519,7 +693,9 @@ class ModelWizard(QWizard):
         self.setModal(False)
 
         self.page_engine = EnginePage(self)
-        self.page_predictors = PredictorsPage(columns, types, self)
+        self.page_predictors = PredictorsPage(
+            columns, types, target_provider=target_provider, parent=self
+        )
         self.page_validation = ValidationPage(self)
         self.page_governance = GovernancePage(self)
         for page in (self.page_engine, self.page_predictors,
@@ -541,6 +717,8 @@ class ModelWizard(QWizard):
             "engine": self.page_engine.selected_engine(),
             "target": self.page_predictors.target(),
             "predictors": self.page_predictors.selected_predictors(),
+            "target_class": self.page_predictors.target_class(),
+            "class_labels": self.page_predictors.class_labels(),
             "train_frac": self.page_validation.train_frac(),
             "seed": self.page_validation.seed(),
             "max_depth": self.page_governance.max_depth(),

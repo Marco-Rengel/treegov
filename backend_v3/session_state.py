@@ -179,6 +179,35 @@ class Session:
         self._log.info("[session] describe_dataset: %d columnas", len(cols))
         return cols, tipos
 
+    def describe_target(self, target: str) -> dict:
+        """Frecuencia por valor observado en la columna target
+        (lectura pura, sin transicion de estado).
+
+        Pensado para GUI/MCP (Fase 3.1.e): tras load_dataset permite
+        poblar el combo de clase de interes con las clases observadas
+        y sus counts, sin exponer el DataFrame ni pandas.
+
+        Returns:
+            dict {valor_observado: frecuencia}, ordenado por valor
+            ascendente. Los valores conservan su tipo original (int,
+            str, etc.). Las filas con NaN en el target se ignoran.
+
+        Raises:
+            RuntimeError: sin dataset cargado.
+            ValueError: target no es una columna del dataset.
+        """
+        if self._df is None:
+            raise RuntimeError(
+                "[session] describe_target sin dataset cargado"
+            )
+        if target not in self._df.columns:
+            raise ValueError(
+                f"[session] describe_target: columna ausente {target!r}"
+            )
+        vc = self._df[target].value_counts(dropna=True)
+        ordenado = sorted(vc.items(), key=lambda kv: kv[0])
+        return {k: int(v) for k, v in ordenado}
+
     def _routed_partition(self, partition: str) -> tuple[Any, Any, str]:
         """Resolve a partition name to its cached (X, y) and unseen policy.
 

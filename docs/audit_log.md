@@ -2628,3 +2628,86 @@ suite siga verde durante la transición.
 - Paso 5: cierre documental completo de 3.1.c.
 
 ---
+
+### 09/10/2026 — Fase 3.1.e: wizard multiclase (frontend)
+
+**Estado**: Cerrada. Suite 238/238 PASSED.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel
+
+**Motivación**:
+Con el endurecimiento de firmas del Paso 4.6 (05/10/2026),
+`Session.fix_spec` exige `target_class` y `class_labels`
+obligatorios. El frontend puenteaba esto con defaults provisionales
+inyectados en `MainWindow._train_pipeline`. La Fase 3.1.e cierra
+el ciclo: el wizard multiclase ahora provee explícitamente esos
+dos parámetros, y el puente provisional se retira.
+
+**Alcance** (8 sub-pasos, ejecutados secuencialmente):
+
+| Sub-paso | Alcance | Artefactos |
+|---|---|---|
+| 3.1.e.1 | `Session.describe_target(target) -> dict` (frecuencia por clase, lectura pura) + 5 tests | `backend_v3/session_state.py`, `tests/test_session_state.py` |
+| 3.1.e.2.a | Esqueleto UI: `QGroupBox` con `QTableWidget` (etiqueta / valor / count / radio de interés) + 7 claves i18n EN/ES | `frontend_v3/wizard.py`, `frontend_v3/i18n.py` |
+| 3.1.e.2.b | Lógica: `_refresh_class_table()`, `_on_interest_toggled()`, warning amber si clase mayoritaria sin empate, métodos públicos `target_class()` y `class_labels()` | `frontend_v3/wizard.py` |
+| 3.1.e.2.c | `ModelWizard.current_config()` extendido con `target_class` y `class_labels` | `frontend_v3/wizard.py`, `tests/test_wizard.py` |
+| 3.1.e.3.a | `_cfg()` de tests E2E alineado con el contrato multiclase | `tests/test_e2e_mainwindow.py`, `tests/test_e2e_reports.py` |
+| 3.1.e.3.b | Inyección de `target_provider` en `_on_new_wizard`: `lambda col: self._session.describe_target(col)` | `frontend_v3/main_window.py`, `frontend_v3/wizard.py` |
+| 3.1.e.3.c | Retirada del puente provisional de `_train_pipeline`: `cfg["target_class"]` y `cfg["class_labels"]` con acceso directo | `frontend_v3/main_window.py`, `tests/test_wizard.py`, `tests/test_tree_view.py` |
+| 3.1.e.4 | 3 tests nuevos (default class selected, counts visible, minority warning) | `tests/test_wizard.py` |
+
+**Decisiones clave**:
+
+- **Callback `target_provider`** (sala limpia): el wizard recibe
+  `Callable[[str], dict]`, nunca la `Session`. El método
+  `Session.describe_target` es la fuente de verdad; el wizard solo
+  lo invoca.
+- **`ModelWizard.__init__` reenvía `target_provider`** a
+  `PredictorsPage` (cableado mínimo, sin él el kwarg lanzaba
+  `TypeError`).
+- **Default neutral en la tabla**: la última fila del orden
+  ascendente queda seleccionada por defecto. El analista puede
+  proceder sin elegir; el warning amber le indica si eligió la
+  clase mayoritaria.
+- **Warning amber no bloqueante**: si hay mayoría clara (una única
+  clase con el count máximo y ≥2 clases), el warning se muestra.
+  Con empate, no se muestra (no hay "mayoría" clara).
+- **Acceso directo en `_train_pipeline`**: `cfg["target_class"]` y
+  `cfg["class_labels"]`, sin `.get()` con defaults. Si falta alguna
+  clave, `KeyError` explícito (coherente con el endurecimiento de
+  3.1.c paso 4).
+
+**Hallazgos durante la implementación**:
+
+1. **`ModelWizard.__init__` no reenviaba `target_provider`** (el
+   prompt de 3.1.e.2.a lo añadió solo a `PredictorsPage`). Detectado
+   por `test_e2e_new_wizard_resets_panel` con `TypeError`. Corregido
+   en 3.1.e.3.b con el forwarding mínimo.
+2. **2 tests con `cfg` a mano** sin las claves nuevas fallaron tras
+   retirar el puente (`test_mainwindow_wizard_config_trains`,
+   `test_tree_view.py::test_e2e_mainwindow`). El `KeyError` era
+   capturado por `_run_guarded` y la sesión quedaba en
+   `DATA_LOADED`. Alineados con el contrato en 3.1.e.3.c. **El fallo
+   explícito hizo exactamente su trabajo**: detectó los 2 únicos
+   emisores de cfg incompletos del codebase.
+3. **`isVisible()` en Qt offscreen**: dentro de un widget no
+   mostrado, `isVisible()` devuelve `False` aunque el código llame a
+   `setVisible(True)`. Las aserciones del test del warning se
+   adaptaron a `isHidden()` (el flag que el código controla).
+   Documentado en el test.
+
+**Tests**:
+- 238/238 PASSED (antes de 3.1.e: 230).
+- 8 tests nuevos (5 en `test_session_state.py` para 3.1.e.1;
+  3 en `test_wizard.py` para 3.1.e.4).
+- 1 test adaptado en `test_wizard.py`
+  (`test_wizard_finish_emits_config`, guardián del contrato).
+- 3 tests adaptados con `cfg` a mano.
+
+**Referencias**:
+- `docs/3.1_design_multiclass.md` §1ter, §1quater.
+- `docs/design_decisions.md` §5.7 (class_labels obligatorio).
+
+---

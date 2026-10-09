@@ -86,6 +86,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_chaid_cont_note": (
             "Note: CHAID engines reject [CONT] predictors by contract."
         ),
+        "step2_class_group_title": "Class of interest and labels",
+        "step2_class_hint": (
+            "Edit the human-readable label of each class and pick the "
+            "class of interest."
+        ),
+        "step2_class_col_label": "Label",
+        "step2_class_col_value": "Value",
+        "step2_class_col_count": "Rows",
+        "step2_class_col_interest": "Interest",
+        "step2_class_warning_majority": (
+            "Warning: the selected class of interest is the majority class."
+        ),
         "step3_title": "Step 3 — Validation scheme",
         "step3_subtitle": "Stratified holdout partition (Hamilton-Hare).",
         "step3_scheme_label": "Scheme",
@@ -310,6 +322,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_hint_min_one": "Seleccione al menos un predictor para continuar.",
         "step2_chaid_cont_note": (
             "Nota: los motores CHAID rechazan predictores [CONT] por contrato."
+        ),
+        "step2_class_group_title": "Clase de interés y etiquetas",
+        "step2_class_hint": (
+            "Edite la etiqueta legible de cada clase y elija la clase "
+            "de interés."
+        ),
+        "step2_class_col_label": "Etiqueta",
+        "step2_class_col_value": "Valor",
+        "step2_class_col_count": "Filas",
+        "step2_class_col_interest": "Interés",
+        "step2_class_warning_majority": (
+            "Aviso: la clase de interés seleccionada es la clase mayoritaria."
         ),
         "step3_title": "Paso 3 — Esquema de validación",
         "step3_subtitle": "Partición holdout estratificada (Hamilton-Hare).",

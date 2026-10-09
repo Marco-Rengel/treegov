@@ -355,6 +355,8 @@ def test_e2e_mainwindow():
         cfg = {
             "engine": "CRT", "target": "default",
             "predictors": ["edad", "seg"],
+            "target_class": 1,
+            "class_labels": {0: "Non-event", 1: "Event"},
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
             "governance_mode": "BANKING",
