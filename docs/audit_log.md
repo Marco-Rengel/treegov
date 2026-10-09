@@ -2503,3 +2503,128 @@ un flujo de trabajo más eficiente.
 - `docs/contexto_para_nueva_sesion.md` (estado del entorno).
 
 ---
+
+---
+
+### 05/10/2026 — Fase 3.1.c paso 4: endurecimiento de firmas
+
+**Estado**: Paso 4 completado. Suite 221/221 verde en cada commit.
+
+**Nota de cronología**: esta entrada se escribe el 09/10/2026,
+pero documenta hechos del 05/10/2026. El retraso en documentarla se
+debe a la migración de herramienta (Aider → OpenCode) que ocupó las
+sesiones del 07-09/10. Se respeta la política append-only: va al
+final del archivo aunque su fecha sea anterior a otras entradas
+recientes.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (Aider 0.86.2, whole
+edit format).
+
+**Revisor**: Marco Rengel
+
+**Motivación**:
+El Paso 3 (commit `c3b37e6`) dejó `target_class` y `class_labels` con
+defaults temporales (`None`) en `TreeBuilder`, `Session.fix_spec` y
+`Session.train`. Este Paso 4 endurece las firmas para que ambos sean
+obligatorios, elimina los fallbacks temporales y el atributo
+`Session._target_class`, y adapta todos los consumidores para que la
+suite siga verde durante la transición.
+
+**Artefactos (commits)**:
+
+- `51a8494` — Paso 4.1: `frontend_v3/main_window.py`; puente
+  provisional en `_train_pipeline` que inyecta
+  `target_class=cfg.get("target_class", 1)` y
+  `class_labels=cfg.get("class_labels", {0: "Non-event", 1: "Event"})`
+  en la llamada a `fix_spec`. Se retirará cuando la Fase 3.1.e provea
+  estos valores desde el wizard.
+- `4dbb27b` — Paso 4.2: `tests/test_pruning.py`; 2 llamadas a
+  `TreeBuilder` reciben `class_labels=("Event", "Non-event")`.
+- `5db70b7` — Paso 4.3a: `tests/test_stability.py`; 1 llamada.
+- `8133e1c` — Paso 4.3b: `tests/test_validation.py`; 1 llamada.
+- `bdc97ed` — Paso 4.4: `tests/test_tree_view.py`; 2 llamadas.
+- `a14fa28` — Paso 4.5: `tests/test_tree_builder.py`; 32 llamadas
+  adaptadas, incluyendo 5 casos especiales descritos explícitamente
+  en el prompt (target_class=99 sin cambios en el constructor,
+  target_class=0 con labels invertidos, target_class=0 con K=3 con
+  labels de 3 elementos, y varios _assert_raises).
+- `4cd1222` — Paso 4.6: endurecimiento. `TreeBuilder.class_labels`
+  obligatorio; `Session.fix_spec` sin defaults; `Session.train` sin
+  parámetro `target_class`; eliminado `Session._target_class`; 3
+  tests adaptados (2 en `test_session_state.py`, 1 en
+  `test_tree_builder.py`).
+
+**Decisiones clave aplicadas**:
+
+- `TreeBuilder.class_labels` es keyword-only obligatorio. La rama
+  de fallback `str(c)` se elimina.
+- `Session.fix_spec` exige `target_class` y `class_labels`. Los
+  defaults temporales se eliminan.
+- `Session.train` lee `target_class` exclusivamente de
+  `SessionState`. Si es `None`, lanza `RuntimeError` (defensa).
+- `Session._target_class` (puente 3.1.a) se elimina por completo.
+- El frontend sigue funcionando mediante un puente provisional en
+  `_train_pipeline` que inyecta los defaults. Este puente se retira
+  en la Fase 3.1.e cuando el wizard provea los valores desde la UI.
+
+**Incidentes durante la implementación**:
+
+1. **Intento fallido del endurecimiento** (04/10/2026, sesión previa):
+   se intentó aplicar el endurecimiento en un único prompt
+   multi-archivo sin haber adaptado antes el frontend y los ~8
+   archivos de tests. Resultado: 46 tests fallidos. Se revirtió con
+   `git checkout --` y se reprogramó como secuencia de 6 sub-pasos
+   (4.1 a 4.6), cada uno con suite verde intermedia. Esta vez
+   funcionó sin sorpresas.
+
+2. **Fixture CHAID del Paso 3** (04/10/2026): la fixture `_csv_k3`
+   introducida en el prompt del Paso 3 usaba `edad` como predictor
+   continuo, y CHAID rechaza continuos. Los tests
+   `test_train_allows_chaid_multiclass` y
+   `test_train_allows_chaid_exhaustive_multiclass` fallaron. Se
+   corrigió la fixture a predictores categóricos (`seg1`, `seg2`) en
+   un prompt correctivo.
+
+3. **Aviso correcto de Aider durante el 4.6**: Aider detectó 2 tests
+   olvidados (`test_transiciones_ilegales`,
+   `test_atomicidad_fallo_no_corrompe_estado`) que llamaban a
+   `fix_spec` sin los kwargs ahora obligatorios, y un tercero que el
+   prompt original no había previsto (`test_guards_builder` con
+   `target_class=99` sin `class_labels`). Los 3 se corrigieron en un
+   prompt correctivo antes de commitear.
+
+**Lecciones operativas**:
+
+- **Un prompt = un archivo** sigue siendo la regla. El endurecimiento
+  se planificó como 6 sub-pasos porque tocar 3-4 archivos en un solo
+  prompt no era viable.
+- **Prompt fuerte con casos especiales explícitos** funcionó. Para el
+  sub-paso 4.5 (32 llamadas a `TreeBuilder`) el prompt enumeró cada
+  excepción con su línea exacta, su valor de `class_labels` específico
+  y su razón. Aider lo aplicó sin error en una sola pasada. Esta
+  técnica se retiene como patrón para bulk edits futuros.
+- **El endurecimiento de firmas rompe también las llamadas "de test
+  de error"** (aquellas que esperan que un test falle). El constructor
+  valida antes que `build()`, así que también necesitan los argumentos
+  obligatorios. Este caso apareció en `test_guards_builder`.
+- **PowerShell muestra mal UTF-8 en consola**: al verificar archivos
+  con caracteres no-ASCII (guiones largos, `§`, `≥`, acentos) en
+  PowerShell, redirigir con `-Encoding utf8` o abrir en VS Code. No
+  confiar en la salida cruda.
+
+**Tests**: 221/221 PASSED en los 7 commits del Paso 4. Cero regresiones.
+
+**Referencias**:
+
+- `docs/3.1_design_multiclass.md` §1bis, §4.
+- `docs/design_decisions.md` §0.3, §5.2, §5.3.
+
+**Pendientes de 3.1.c**:
+
+- Paso 4.7: documentación (esta entrada; reconciliación de §4.1 del
+  diseño multiclase; reconciliación de §5.2 y §5.3 de
+  `design_decisions.md`; nueva entrada sobre `class_labels`
+  obligatorio).
+- Paso 5: cierre documental completo de 3.1.c.
+
+---
