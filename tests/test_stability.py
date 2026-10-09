@@ -214,6 +214,40 @@ def test_stability_monitor_renormalize_invalid():
     assert StabilityMonitor(renormalize=True).renormalize is True
 
 
+def test_stability_monitor_agnostic_to_k():
+    """Fase 3.1.d: StabilityMonitor NO bloquea K>2.
+
+    El diseño §5.3 del 3.1_design_multiclass.md establece que PSI y
+    CSI son target-agnostic; el bloqueo multiclase vive en
+    Session.evaluate_oot (por el Gini Drop, que sí es binario).
+    Este test documenta explícitamente esa distinción: el monitor
+    de estabilidad procesa un modelo con K=3 sin problemas.
+
+    Nota: el bloqueo no se prueba aquí (ya está en
+    tests/test_session_state.py::test_evaluate_oot_multiclass_raises).
+    Aquí solo verificamos que la capa inferior es agnóstica.
+    """
+    # Fixture K=3: 3 hojas puras, cada una 30 filas de su clase.
+    # Predictor categórico para no depender de bins continuos.
+    seg = np.tile(["a", "b", "c"], 30)
+    y = np.tile([0, 1, 2], 30)
+    X = pd.DataFrame({"seg": seg})
+    from backend_v3.chaid_engine import ChaidEngine
+    m = TreeBuilder(ChaidEngine(), target_type=_BIN, target_class=2,
+                    class_labels=("Bajo", "Alto", "Medio"),
+                    max_depth=3, min_child_size=5).build(
+        X, pd.Series(y), {"seg": PredictorType.NOMINAL})
+    # leaf_psi: misma cohorte como train y como actual -> PSI = 0.
+    asign = predict_leaf_assignment(m, X)
+    hojas = [nd for nd in m.nodes if nd.is_leaf]
+    counts = np.array(
+        [float((asign == nd.node_id).sum()) for nd in hojas], dtype=float
+    )
+    mon = StabilityMonitor()
+    rep = mon.leaf_psi(m, counts, asign)
+    assert rep.psi == 0.0 and rep.flag == "STABLE"
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

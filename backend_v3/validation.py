@@ -137,20 +137,24 @@ def predict_leaf_assignment(
 def predict_pd(
     model: TreeModel, X: pd.DataFrame, *, unseen_policy: str = "error"
 ) -> np.ndarray:
-    """Devuelve pd_final por fila (np.nan en filas excluidas por politica).
+    """Devuelve una matriz (n_rows, K) con el vector pd_final por fila.
+
+    La columna c corresponde a la clase model.class_labels[c] (orden
+    canonico: indice 0 = target_class). Las filas excluidas por politica
+    (asign < 0) quedan con np.nan en las K columnas. For K=2 with
+    target_class=1, column 0 is numerically identical to the pre-3.1
+    scalar PD (parity invariant §10.1).
 
     X_test se asume imputado con TrainOnlyImputer ajustado SOLO sobre train
     (politica anti-leakage); la politica ante valores no vistos es visible
     via 'unseen_policy' (default conservador: error).
     """
     asign = predict_leaf_assignment(model, X, unseen_policy=unseen_policy)
-    out = np.full(len(X), np.nan, dtype=float)
+    n_classes = len(model.class_labels)
+    out = np.full((len(X), n_classes), np.nan, dtype=float)
     ok = asign >= 0
     for nid in {int(a) for a in asign[ok]}:
-        # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of
-        # interest (target_class). predict_pd returns this scalar for now;
-        # the 2D-matrix variant arrives in Phase 3.1.d.
-        out[asign == nid] = model.nodes[nid].pd_final[0]
+        out[asign == nid] = model.nodes[nid].pd_final
     return out
 
 
@@ -161,7 +165,13 @@ def compute_oos_metrics(
     log = get_logger("validation")
     pv = np.asarray(p, dtype=float)
     yv = np.asarray(y, dtype=int)
-    if pv.shape != yv.shape or pv.ndim != 1:
+    if pv.ndim != 1:
+        raise ValueError(
+            "[validation] compute_oos_metrics recibio una matriz 2D (K "
+            "clases). Las metricas multiclase estan planificadas para la "
+            "Fase 3.5."
+        )
+    if pv.shape != yv.shape:
         raise ValueError("[validation] p e y deben ser vectores de igual longitud")
     n = int(pv.size)
     if n == 0:

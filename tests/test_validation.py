@@ -127,12 +127,70 @@ def test_predict_pd_y_fila_huerfana():
         max_depth=4, min_child_size=2,
     ).build(X, y, {"x": PredictorType.CONTINUOUS})
     p = predict_pd(m, X)
-    assert p.shape == (10,)
-    assert p[0] < p[-1]
-    assert math.isclose(p[0], 0.5 / 6.0, rel_tol=1e-12)
+    # Phase 3.1.d: predict_pd returns (n_rows, K); binary consumers
+    # read column 0 (parity invariant 10.1).
+    assert p.shape == (10, 2)
+    p0 = p[:, 0]
+    assert p0[0] < p0[-1]
+    assert math.isclose(p0[0], 0.5 / 6.0, rel_tol=1e-12)
     # NaN en el predictor del split -> fila huerfana -> ValueError
     Xbad = pd.DataFrame({"x": [1.0, np.nan]})
     _assert_raises(ValueError, predict_pd, m, Xbad)
+
+
+def test_predict_pd_2d_binary_shape():
+    """K=2: predict_pd devuelve (n_rows, 2); columnas suman 1."""
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    m = TreeBuilder(
+        CrtEngine(), target_type=TargetType.BINARY, target_class=1,
+        class_labels=("Event", "Non-event"),
+        max_depth=4, min_child_size=2,
+    ).build(X, y, {"x": PredictorType.CONTINUOUS})
+    p = predict_pd(m, X)
+    assert p.shape == (10, 2)
+    # Cada fila suma 1 (invariante 10.1 del diseño).
+    sums = p.sum(axis=1)
+    assert np.allclose(sums, 1.0, atol=1e-12)
+    # Columna 0 = clase de interés (Event, target_class=1).
+    # Columna 1 = la otra clase.
+    # La fila 0 cae en la hoja de "x <= 5", con 5 eventos / 5 no eventos.
+    # Con Jeffreys: pd_event = 0.5/6 = 0.083333... para la hoja con 0 eventos.
+    # Verificación: p[0, 0] < p[-1, 0] (filas más "event-prone" al final).
+    assert p[0, 0] < p[-1, 0]
+
+
+def test_predict_pd_2d_multiclass_shape():
+    """K=3: predict_pd devuelve (n_rows, 3); columnas suman 1."""
+    # Fixture K=3: predictor categórico (CHAID no admite continuos).
+    seg = np.tile(["a", "b", "c"], 40)
+    y = pd.Series(np.tile([0, 1, 2], 40))
+    X = pd.DataFrame({"seg": seg})
+    from backend_v3.chaid_engine import ChaidEngine
+    m = TreeBuilder(
+        ChaidEngine(), target_type=TargetType.BINARY, target_class=2,
+        class_labels=("Alto", "Bajo", "Medio"),
+        max_depth=3, min_child_size=5,
+    ).build(X, y, {"seg": PredictorType.NOMINAL})
+    p = predict_pd(m, X)
+    assert p.shape == (len(X), 3)
+    sums = p.sum(axis=1)
+    assert np.allclose(sums, 1.0, atol=1e-12)
+    # Columna 0 = target_class=2 ("Alto"), la clase de interés.
+    # El árbol debe separar las 3 clases perfectamente (seg-driven),
+    # así que la columna 0 será 0 donde seg != "c" y ~1 donde seg == "c".
+    # (Verificación laxa para no atar el test a la codificación exacta
+    # de la clase: solo comprobamos el rango).
+    assert p[:, 0].min() >= 0.0
+    assert p[:, 0].max() <= 1.0
+
+
+def test_compute_oos_metrics_multiclass_raises():
+    """K>2: compute_oos_metrics rechaza la matriz con ValueError."""
+    p_2d = np.array([[0.2, 0.3, 0.5], [0.1, 0.4, 0.5]])
+    y = np.array([0, 1])
+    _assert_raises(ValueError, compute_oos_metrics, p_2d, y)
 
 
 # ---------------------------------------------------------------------------

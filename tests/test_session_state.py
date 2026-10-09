@@ -741,6 +741,67 @@ def test_class_labels_dict_property():
         assert s.class_labels_dict == {0: "Bueno", 1: "Malo"}
 
 
+def test_evaluate_oos_multiclass_raises():
+    """Fase 3.1.d: evaluate_oos bloquea K>2 con ValueError."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        _assert_raises(ValueError, s.evaluate_oos)
+
+
+def test_evaluate_oot_multiclass_raises():
+    """Fase 3.1.d: evaluate_oot bloquea K>2 con ValueError."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_k3(tmp)
+        # Cohort OOT K=3: reusamos el mismo fixture (los tests de bloqueo
+        # no dependen de la separabilidad real train/OOT).
+        csv_oot = tmp / "oot_k3.csv"
+        df = pd.read_csv(csv_dev)
+        df.to_csv(csv_oot, index=False)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        # load_oot verifica columnas contra spec+target; como el OOT es
+        # el mismo CSV, coincide.
+        s.load_oot(str(csv_oot))
+        _assert_raises(ValueError, s.evaluate_oot)
+
+
+def test_classification_matrix_multiclass_raises():
+    """Fase 3.1.d: get_classification_matrix bloquea K>2 con ValueError."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        _assert_raises(ValueError, s.get_classification_matrix)
+
+
+def test_gains_table_multiclass_raises():
+    """Fase 3.1.d: get_gains_table bloquea K>2 (delegado al builder)."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        _assert_raises(ValueError, s.get_gains_table, partition="oos")
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

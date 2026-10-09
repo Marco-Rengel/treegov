@@ -255,6 +255,13 @@ class Session:
         """
         if self._state.tree is None:
             return None
+        K = len(self._state.tree.class_labels)
+        if K > 2:
+            raise ValueError(
+                f"[session] get_classification_matrix: clasificacion "
+                f"multiclase no implementada en Fase 3.1 (K={K} clases "
+                f"detectadas). Planificada para la Fase 3.5."
+            )
         X, y, unseen_policy = self._routed_partition(partition)
         leaf_assignment = predict_leaf_assignment(
             self._state.tree, X, unseen_policy=unseen_policy
@@ -520,7 +527,15 @@ class Session:
         st = self._state
         assert st.tree is not None
         assert self._X_test is not None and self._y_test is not None
-        p = predict_pd(st.tree, self._X_test)
+        K = len(st.tree.class_labels)
+        if K > 2:
+            raise ValueError(
+                f"[session] evaluate_oos: metricas multiclase no "
+                f"implementadas en Fase 3.1 (K={K} clases detectadas). "
+                f"Planificadas para la Fase 3.5."
+            )
+        p_2d = predict_pd(st.tree, self._X_test)
+        p = p_2d[:, 0]  # Phase 3.1.d: binary consumers read column 0
         metrics = compute_oos_metrics(p, self._y_test, n_groups=n_groups)
         return self._commit(
             st.state,
@@ -577,9 +592,13 @@ class Session:
         if not df_oot[st.target].notna().all():
             raise ValueError(f"[session] target OOT con NaN: {st.target!r}")
         valores = sorted(pd.unique(df_oot[st.target]))
-        if set(valores) != {0, 1}:
+        # Fase 3.1.d: el target OOT debe cubrir exactamente las clases del
+        # spec (para K=2, target_classes == (0, 1): comportamiento identico
+        # al chequeo pre-3.1 "fuera de 0/1").
+        if set(valores) != set(st.target_classes):
             raise ValueError(
-                f"[session] target OOT fuera de 0/1: {valores!r}"
+                f"[session] target OOT no coincide con las clases del "
+                f"spec: {valores!r} vs {sorted(st.target_classes)!r}"
             )
 
         if self._imputer is None:
@@ -629,6 +648,15 @@ class Session:
         cuentan en n_excluded y forman su propio bin en PSI.
         """
         self._require(FlowState.OOT_LOADED, "evaluate_oot")
+        st_check = self._state
+        if st_check.tree is not None:
+            K = len(st_check.tree.class_labels)
+            if K > 2:
+                raise ValueError(
+                    f"[session] evaluate_oot: metricas multiclase no "
+                    f"implementadas en Fase 3.1 (K={K} clases "
+                    f"detectadas). Planificadas para la Fase 3.5."
+                )
         from .stability import GiniDropReport, StabilityMonitor, gini_drop_alert
 
         st = self._state

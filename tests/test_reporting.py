@@ -344,3 +344,33 @@ def test_excluded_rows_are_not_counted() -> None:
     assert result.n_bad == 94
     assert result.n_good == 154
     assert len(result.rows) == 3
+
+
+def test_gains_table_multiclass_raises() -> None:
+    """Fase 3.1.d: build_gains_table bloquea K>2 con ValueError.
+
+    Construye un TreeModel K=3 minimal (una sola hoja, 3 clases) y
+    verifica que build_gains_table lo rechaza antes de procesar.
+    """
+    from backend_v3.tree_builder import TreeModel, TreeNode
+
+    leaf = TreeNode(
+        node_id=0, depth=0, parent_id=None,
+        n=30, n_events=(10, 10, 10),
+        pd_jeffreys=(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0),
+        pd_final=(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0),
+        class_labels=("Low", "Mid", "High"),
+        is_leaf=True, split=None, child_ids=(),
+        leaf_reason="sin_split",
+    )
+    model = TreeModel(
+        root_id=0, nodes=(leaf,), method="CHAID",
+        params_fingerprint="test0000000000",
+        class_labels=("Low", "Mid", "High"),
+        target_class=0,
+        target_class_index=0,
+    )
+    assign = np.array([0] * 30)
+    y = np.array([0] * 10 + [1] * 10 + [2] * 10)
+    with pytest.raises(ValueError):
+        build_gains_table(model, assign, y)
