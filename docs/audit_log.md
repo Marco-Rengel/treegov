@@ -2383,3 +2383,48 @@ Tras el intento fallido del Paso 4: 175/221 (revertido a 221/221).
   `CHAID_EXHAUSTIVE` permitido con K>2; añadir entrada nueva en
   `design_decisions.md` sobre `class_labels` como obligatorio en
   `TreeBuilder` y `fix_spec`; entrada de cierre en audit_log).
+
+---
+
+### 09/10/2026 — Migración de Aider a OpenCode; hallazgo de caché y saldo
+
+**Estado**: Aprobado. Herramienta activa: OpenCode 1.18.35.
+
+**Motivación**:
+Durante las sesiones del 05-07/10 se consumieron $26.82 en 4 días con
+Aider 0.86.2 + Kimi K3. El análisis del Product Bill reveló: $25.97 en
+Model Inference, $0.05 en Context Caching. Es decir, la caché no estaba
+funcionando: Aider no envía los "cache control breakpoints" que
+Moonshot/Kimi requiere para cachear de forma efectiva.
+
+**Hallazgo técnico**:
+
+- Aider 0.86.2 solo soporta caché explícita para Anthropic y DeepSeek.
+  Para Kimi K3, el mecanismo prompt_cache_options configurado en
+  ~/.aider.model.settings.yml no llega correctamente a la API.
+- Un timeout de 15 minutos (07/10) consumió $0.80 sin producir diff.
+- OpenCode 1.18.35 tiene soporte nativo para providers OpenAI-compatible
+  y configuración de caché vía setCacheKey.
+
+**Artefactos**:
+
+- OpenCode actualizado de 1.18.32 a 1.18.35 (npm).
+- Autenticación: opencode auth login -> Moonshot AI (internacional) ->
+  key guardada en ~/.local/share/opencode/auth.json.
+- .aider.conf.yml: map-tokens: 1024, cache-prompts: true,
+  caches_by_default: true.
+- ~/.aider.model.settings.yml: cache_control: true,
+  prompt_cache_options (no efectivo).
+- Aider queda como respaldo documentado (Opción Y). No se desinstala.
+
+**Pendientes de 3.1.c**:
+
+- A.1: entrada del Paso 4 en audit_log.md (este bloque es la entrada de
+  hoy, no la del Paso 4).
+- A.2: reconciliar docs/3.1_design_multiclass.md sección 4.1.
+- A.3: reconciliar docs/design_decisions.md secciones 5.2, 5.3 + nueva
+  entrada sobre class_labels.
+- Paso 5: cierre documental completo.
+
+**Referencias**: docs/prompt_para_asistente.md sección 6,
+docs/contexto_para_nueva_sesion.md.
