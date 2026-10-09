@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 04/10/2026
+**Fecha de última actualización:** 09/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -41,8 +41,10 @@
 | 2.4.c.2 | Panel de reportes funcional + cableado + export HTML + tests | ✅ (03/10/2026) |
 | 2.4.d | Tests E2E + cierre | ✅ (03/10/2026) |
 | 3.0 | Cierre de zona gris documental + 4 parámetros canónicos | ✅ (04/10/2026) |
-| 3.1.a | Diseño estructural multiclase (`docs/3.1_design_multiclass.md`) | ✅ (04/10/2026) |
-| 3.1.b-f | Implementación multiclase (`TreeNode`/`TreeModel` + wizard + panel) | ⏳ Próxima |
+| 3.1.a | TreeNode/TreeModel tuple fields + TreeBuilder.target_class | ✅ (04/10/2026) |
+| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento | ✅ (integrado en 3.1.a) |
+| 3.1.c | Session.fix_spec + SessionState + bloqueo C&RT/QUEST | ✅ (pasos 1-4.6 cerrados; 4.7 pendiente) |
+| 3.1.d-f | predict_pd 2D + wizard + MetricsPanel | ⏳ Próxima |
 | 3.2 | Ponderación por muestra | ⏳ |
 | 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ |
 | 3.4 | CRT/QUEST multiclase | ⏳ |
@@ -51,7 +53,7 @@
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 210/210 PASSED
+**Suite de tests:** 221/221 PASSED
 
 ## Entorno de desarrollo
 
@@ -81,8 +83,16 @@ WSL (bash):
 
 - VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
 - Windows Terminal con Ubuntu por defecto.
-- **Aider 0.86.2** (reemplaza a OpenCode desde el 27/09/2026 y a NVIDIA NIM
-  desde el 03/10/2026).
+- **OpenCode 1.18.35** — **herramienta activa** desde el 09/10/2026.
+  Cliente de desarrollo con Kimi K3. Instalación global vía `npm`.
+  Autenticación: `opencode auth login` con provider `Moonshot AI`
+  (internacional, endpoint `https://api.moonshot.ai/v1`).
+  Configuración de proyecto: `opencode.json` en la raíz (versionado).
+  Nivel de razonamiento: `high` por defecto (`max` reservado para
+  tareas complejas).
+- **Aider 0.86.2** — **herramienta de respaldo** desde el 09/10/2026.
+- **Aider 0.86.2** (histórico: reemplazó a OpenCode el 27/09/2026 y a
+  NVIDIA NIM el 03/10/2026; desde el 09/10/2026 es respaldo, ver arriba).
 - **Modelo:** `moonshot/kimi-k3` (Moonshot AI directo, plataforma internacional).
 - **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).
 - **Configuración local:** `.aider.conf.yml` (no versionado).
@@ -97,6 +107,16 @@ WSL (bash):
 - **Costes:** $3/M tokens input, $15/M output.
 - **Configuración de proyecto:** `.aider.conf.yml` (ignorado por git).
 - **Flags clave:** `auto-commits: false`, `auto-lint: false`, `auto-test: false`.
+
+### Configuración de OpenCode
+
+- **API key:** configurada vía `opencode auth login`. Se guarda en
+  `~/.local/share/opencode/auth.json`. No vive en variable de
+  entorno.
+- **Costes:** $3/M input, $15/M output.
+- **Configuración de proyecto:** `opencode.json` (versionado).
+- **Flags clave:** `setCacheKey: true`, `autoupdate: false`,
+  `share: "disabled"`.
 
 ## Problemas conocidos y soluciones
 
@@ -114,8 +134,31 @@ WSL (bash):
 | `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
 | **Placeholder de API key** | Si pegas `$env:MOONSHOT_API_KEY = "sk-..."` literal, Aider devuelve 401. Verificar con `.Length` (~51) y `.Substring(0, 7)` sin duplicar `sk-`. |
 | **Aider no aplica el edit (conversa)** | Con Moonshot, ocasionalmente Aider responde en prosa sin aplicar el cambio. Solución: prompt más directo ("TAREA: ... Aplica AHORA") o edición manual en VS Code con excepción documentada en `audit_log.md`. |
+| **PowerShell muestra mal UTF-8 en consola** | Al verificar archivos con caracteres no-ASCII (`—`, acentos, `§`, `≥`), `git diff` en PowerShell muestra caracteres corruptos aunque el archivo esté bien. Solución: verificar en VS Code, o redirigir el diff a archivo con `Out-File -Encoding utf8` antes de leerlo. |
+| **OpenCode no soporta caché explícita en V1** | El plugin `oc-plugin-caching` requiere un fork; la V1 estándar solo tiene caché implícita vía `setCacheKey: true`. Ver `audit_log.md` 09/10/2026. |
 
 ## Cómo retomar el trabajo
+
+### Flujo con OpenCode (herramienta activa)
+
+    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    .\.venv\Scripts\activate
+    python -m pytest tests -q
+    opencode
+
+La autenticación con Moonshot AI ya está configurada
+(`~/.local/share/opencode/auth.json`). No requiere variables de
+entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
+
+### Flujo con Aider (respaldo)
+
+    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    .\.venv\Scripts\activate
+    python -m pytest tests -q
+    $key = Read-Host "Pega tu Moonshot API key" -AsSecureString
+    $env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
+    Remove-Variable key
+    aider
 
 ### Windows (principal)
 
@@ -152,7 +195,7 @@ La implementación está dividida en 6 sub-fases:
 |---|---|---|
 | 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | ✅ (04/10/2026) |
 | 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ✅ (integrado en 3.1.a) |
-| 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ⏳ |
+| 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ✅ pasos 1-4.6 (4.7 pendiente) |
 | 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability | ⏳ |
 | 3.1.e | Wizard: selección obligatoria + counts + warning minoritaria | ⏳ |
 | 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ⏳ |
