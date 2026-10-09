@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 04/10/2026
+**Última actualización:** 09/10/2026
 
 ---
 
@@ -93,38 +93,73 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta de desarrollo (actualizado 04/10/2026)
-- **Aider 0.86.2** con `moonshot/kimi-k3`. Migrado de NVIDIA NIM el
-  03/10/2026 por inestabilidad (504 recurrentes).
-- **Cliente:** Aider 0.86.2 (no OpenCode, no Kimi Code Desktop).
+### Herramienta activa — OpenCode 1.18.35 (actualizado 09/10/2026)
+
+- **OpenCode 1.18.35** con `moonshot/kimi-k3`.
+- **Cliente:** OpenCode 1.18.35 (V1, no V2). Actualizado desde
+  1.18.32 el 06/10/2026.
+- **Instalación:** global vía `npm` (`opencode-ai@1.18.35`).
+  Ubicación: `C:\Users\maren\AppData\Roaming\npm\opencode.ps1`.
+- **Autenticación:** `opencode auth login` con provider `Moonshot AI`
+  (internacional, endpoint `https://api.moonshot.ai/v1`). La
+  credencial se guarda en `~/.local/share/opencode/auth.json`.
+- **Modelo:** `moonshot/kimi-k3` (Kimi K3, contexto 1M).
+- **Nivel de razonamiento:** `high` por defecto. Reservar `max` para
+  tareas complejas (refactorización estructural, depuración de bugs).
+  Para documentación y ediciones quirúrgicas, `high` es suficiente y
+  consume la mitad de tokens de razonamiento.
+- **Configuración del proyecto:** `opencode.json` en la raíz (versionado).
+  Contiene: `model`, `small_model`, `setCacheKey: true`,
+  `autoupdate: false`, `share: "disabled"`.
+- **API key:** configurada vía `opencode auth login`. No vive en
+  variable de entorno (OpenCode la gestiona internamente).
+- **Costes:** $3/M tokens de entrada, $15/M de salida. Coste medido por
+  tarea (documentación ~200 líneas Markdown): ~$0.09. Compárese con
+  ~$0.60 por tarea equivalente en Aider.
+
+**Herramienta de respaldo — Aider 0.86.2:**
+
+Aider 0.86.2 queda instalado como respaldo documentado. Se usará solo
+si OpenCode falla en un caso concreto.
+
 - **Instalación:** global vía `pipx` con Python 3.11.9.
 - **Configuración local:** `.aider.conf.yml` (no versionado).
 - **Plantilla versionada:** `.aider.conf.example.yml`.
-- **Metadata de modelos:**
-  - `~/.aider.model.metadata.json` — contexto y costes.
-  - `~/.aider.model.settings.yml` — comportamiento (temperature, edit format).
-- **Modelo:** `kimi-k3` servido por Moonshot AI directo
-  (`https://api.moonshot.ai/v1`).
+- **Metadata de modelos:** `~/.aider.model.metadata.json` y
+  `~/.aider.model.settings.yml`.
 - **API key:** `$env:MOONSHOT_API_KEY` exportada por sesión (PowerShell).
-  Longitud real ~51 caracteres, prefijo `sk-`. Se pide de forma segura con
-  `Read-Host -AsSecureString`.
-- **Costes:** $3/M tokens de entrada, $15/M de salida. Sesión de prueba
-  inicial: ~$0.02.
-- **Ventajas frente a NIM:** sin 504, contexto 1M completo, cache-hit
-  nativo, tool calling estable.
-- **Reglas de prompts (suavizadas respecto a NIM; actualizadas 04/10/2026):**
-  - Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
-  - Prosa sin código literal (recomendado, no obligatorio).
-  - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
-  - Cambios multi-bloque dentro del mismo archivo: permitido.
-  - **Verificar SIEMPRE el diff antes de aceptar el edit.** Aider ocasionalmente
-    "conversa" en lugar de aplicar (patrón documentado el 03/10/2026). Si
-    falla 2-3 veces seguidas sobre el mismo archivo, hacer la edición manual
-    y documentar la excepción.
-  - **Un prompt = un archivo**, incluso cuando el cambio toca varios. Los
-    prompts multi-archivo fallan con más frecuencia.
-- **Verificación obligatoria:** `git diff` + `pytest` antes de aceptar
-  cualquier cambio. La disciplina MRM no cambia por tener mejor proveedor.
+
+**Reglas de prompts (comunes a ambas herramientas):**
+
+- Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
+- Prosa sin código literal (recomendado, no obligatorio).
+- Hasta ~150 líneas de prosa por prompt.
+- Cambios multi-bloque dentro del mismo archivo: permitido.
+- **Verificar SIEMPRE el diff antes de aceptar el edit.**
+- **Un prompt = un archivo**, incluso cuando el cambio toca varios.
+
+**Verificación obligatoria tras cada edición:**
+
+- `python -m pytest tests -q`
+- `git status`
+- `git --no-pager diff --stat <archivo>`
+
+La disciplina MRM no cambia por tener mejor proveedor.
+
+**Lección operativa — verificación visual de UTF-8:**
+
+Cuando se verifiquen archivos con caracteres no-ASCII (guiones largos
+`—`, acentos, `§`, `≥`, etc.), NO usar `git diff` a secas en
+PowerShell: la consola muestra caracteres corruptos aunque el archivo
+esté bien. Alternativas:
+
+- Abrir el archivo en VS Code (fuente de verdad visual).
+- Redirigir el diff a archivo con codificación UTF-8:
+  `git --no-pager diff archivo.md | Out-File -Encoding utf8 temp.txt`
+  y abrir `temp.txt` en VS Code.
+- Usar solo `--stat` para conteos, sin ver el diff completo.
+
+Esta lección está documentada en `docs/audit_log.md` (05/10/2026).
 
 ### Privacidad
 - Moonshot AI es servicio de pago (NOVASCENT/Singapur), pero sigue siendo
