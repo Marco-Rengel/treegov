@@ -149,6 +149,17 @@ unacceptable. Hence the split: internal stays, external translates.
 | "default" (example target) | Outcome |
 | "PD" (display) | Probability |
 
+**Update (09/10/2026, Fase 3.1.c).** With the introduction of
+mandatory `class_labels` (see §5.7), the analyst now provides
+human-readable labels for every target class. These labels are
+user input; TreeGov does not impose "Malo"/"Bueno" or any other
+credit-specific default. The split is thus refined: internal
+identifiers stay credit-specific (backward compat, fingerprints,
+tests), while external *labels* — including the labels shown in
+the target-class combo, reports, and the fingerprint — become
+explicit user choices. This is the first concrete step toward the
+full neutral-vocabulary mode planned for Phase 3.6.b.
+
 ---
 
 ## §1. Type and contract decisions
@@ -489,44 +500,84 @@ explicit answer. Working hypothesis: row count (physical minimum for
 statistical validity), with a possible future `min_child_weight`
 parameter for weighted minima.
 
-### 5.2 `TreeNode.pd_final` is scalar
+### 5.2 `TreeNode.pd_final` is a tuple (was scalar)
 
-**Context.** `pd_final` is the operational probability for a leaf. It
-is typed `float`, not `tuple[float, ...]` or `np.ndarray`.
+**Context.** `pd_final` is the operational probability vector for a
+leaf. Before 3.1 it was typed `float` and restricted TreeGov to
+binary targets.
 
-**Decision.** Scalar. This restricts TreeGov to binary targets.
+**Decision (post 3.1).** `pd_final` is typed `tuple[float, ...]`,
+one component per target class, in canonical order (index 0 =
+`target_class`). The same applies to `pd_jeffreys` and `n_events`.
 
-**Rationale (historical).** Phase 0/1 was designed for binary credit
-risk modelling. Binary targets dominate the credit-scoring use case.
-Multiclass was deferred — the engines support it (CHAID uses χ² with
-K classes; C&RT uses Gini impurity with K classes) but the container
-(TreeBuilder, TreeNode) does not.
+**Historical rationale (Phases 0/1).** Phase 0/1 was designed for
+binary credit-risk modelling, where scalar PD dominates. Multiclass
+was deferred: the engines supported it (CHAID uses χ² with K
+classes; C&RT uses Gini impurity with K classes) but the container
+(`TreeBuilder`, `TreeNode`) did not.
 
-**Consequences.** This is the **single biggest obstacle** to
-multiclass support and, by extension, to non-credit use. Planned fix:
-Phase 3.1 converts `pd_final` to `tuple[float, ...]` and adapts the
-downstream consumers (`validation`, `reporting`, `stability`).
-Documented as a known limitation in `roadmap.md`.
+**Rationale for the change (Phase 3.1.a).** The biggest obstacle to
+multiclass support — and, by extension, to non-credit use — was the
+scalar `pd_final`. Phase 3.1.a converted it to a tuple, added a new
+field `TreeNode.class_labels` (human-readable label per class), and
+adapted every downstream consumer (`validation`, `reporting`,
+`stability`, `tree_view`). The invariant `sum(pd_final) == 1` is
+enforced at construction (`TreeModel.__post_init__`).
 
-### 5.3 `target_type` restricted to BINARY in `build()`
+**Backward compatibility (K = 2).** For a binary target with
+`target_class=1`, the tuple is `(pd_0, pd_1)` and `pd_final[0]` is
+numerically identical to the pre-3.1 scalar. Consumers that read
+`pd_final[0]` see no change.
+
+**Consequences.** Non-binary targets are now reachable through the
+tree-building pipeline (subject to engine restrictions; see §5.3).
+Non-credit use (biology, social sciences) is unblocked at the
+container level. Consumer code that read `pd_final` as a scalar must
+read `pd_final[0]`.
+
+### 5.3 `target_type` allows BINARY `{0,1}` or CATEGORICAL K≥3
 
 **Context.** `TargetType` (see `types.py`) has three values: BINARY,
-CATEGORICAL, CONTINUOUS. The engines handle all three. But
-`TreeBuilder.build()` raises a `ValueError` if `set(y) != {0, 1}`.
+CATEGORICAL, CONTINUOUS. The engines handle all three. Before 3.1,
+`TreeBuilder.build()` raised `ValueError` if `set(y) != {0, 1}`.
 
-**Decision.** Restrict to BINARY at the builder level, even though
-lower layers support more.
+**Decision (post 3.1).** `TreeBuilder.build()` accepts:
+- **BINARY** with strict encoding `{0, 1}` (K = 2).
+- **CATEGORICAL** with any encoding, K ≥ 3 (multiclass).
 
-**Rationale.** `TreeBuilder` produces a `TreeModel` whose `TreeNode`s
-hold scalar PDs (see §5.2). For multiclass or continuous targets, the
-scalar PD would be meaningless. Blocking at the builder is honest:
-better a clear error than a silently wrong model.
+It rejects:
+- K < 2 (constant target, no split value).
+- NaN in the target.
+- BINARY with encoding different from `{0, 1}` (e.g., `{1, 2}` or
+  `{-1, 1}`), for the same reason documented in §10.1 (the K=2
+  binary parity invariant).
 
-**Consequences.** The engines' broader capabilities are unreachable
-through the standard flow. Planned fix: Phase 3.1 opens BINARY and
-CATEGORICAL; continuous regression (target_type=CONTINUOUS) is deferred
-to Phase 3.4 or later, pending a decision on which metric to attach to
-a leaf's "prediction" (mean? median? quantile?).
+`TargetType.CONTINUOUS` remains blocked at the builder level
+(regression trees deferred to a future phase).
+
+**Rationale.** The non-negotiable invariant of Phase 3.1 (§10.1 of
+`docs/3.1_design_multiclass.md`) is that a binary model with
+`target_class=1` be **numerically identical** to the pre-3.1 model.
+That invariant is guaranteed only if the binary encoding stays
+strictly `{0, 1}`. For K ≥ 3, there is no pre-3.1 behaviour to
+preserve, so any encoding is accepted.
+
+**Reconciliation note (09/10/2026).** The original 3.1 design said
+the binary validation would be "relaxed to K ≥ 2". During
+implementation (Pasos 4.1-4.6) it was decided to **keep binary
+strict at `{0, 1}`** and to **open multiclass only for K ≥ 3**. This
+is stricter than the original design, not more permissive. The
+K ≥ 3 case is genuinely new; the K = 2 case is deliberately
+unchanged.
+
+**Consequences.** A binary target that is not encoded as `{0, 1}`
+must be recoded before `fix_spec`. This is documented in the error
+message raised by `fix_spec`. A multiclass target with any encoding
+is accepted.
+
+**Deferred to a future phase.** Continuous regression targets
+(`target_type=CONTINUOUS`), pending a decision on which metric to
+attach to a leaf's "prediction" (mean? median? quantile?).
 
 ### 5.4 `grow_full` mode (`max_depth=None`)
 
@@ -596,6 +647,57 @@ mistake two substantively different models for the same one.
   is documented in §10.1.
 
 **Reference.** See `tree_builder.py::_fingerprint`.
+
+### 5.7 `class_labels` is mandatory in `TreeBuilder` and `Session.fix_spec`
+
+**Context.** When a tree is trained on a multiclass target, the
+reports (gains table, confusion matrix), the GUI, and the fingerprint
+all need a human-readable label for each class. A generic default
+("Class 0", "Class 1") would be neutral but unhelpful. A silent
+default drawn from the data ("0", "1") would be even worse: it hides
+the analyst's semantic intent.
+
+**Alternatives considered.**
+- **(a)** No labels; derive them as `str(class_value)`. Rejected:
+  unhelpful and hides intent.
+- **(b)** Generic default `"Class {i}"`. Rejected: same problem.
+- **(c)** Mandatory explicit labels from the analyst. **Chosen.**
+
+**Decision.** `class_labels` is a mandatory keyword-only parameter in
+both `TreeBuilder.__init__` and `Session.fix_spec`. It is a mapping
+from every observed class value to a non-empty string. Missing keys,
+extra keys, or non-string/empty labels raise `ValueError`. Duplicate
+labels are allowed but produce a `WARNING` in the log.
+
+**Rationale.** Making `class_labels` mandatory forces the analyst to
+think about the semantics of each class at configuration time. This
+mirrors the decision made for `target_class` (§5.6 and the parallel
+reasoning in `docs/3.1_design_multiclass.md` §1bis). The labels are
+domain-neutral: TreeGov does not impose credit-specific or
+domain-specific values.
+
+**Fingerprint.** The `class_labels` enter the `params_fingerprint`
+payload (as a tuple of strings, in canonical order). Two trees with
+the same data and hyperparameters but different labels produce
+different fingerprints. Rationale: labels appear in reports and are
+part of the model artefact identity.
+
+**Consequences.**
+- `Session.fix_spec` calls without `class_labels` fail with
+  `TypeError` (missing required argument).
+- The wizard (Phase 3.1.e) offers the observed classes with editable
+  labels and row counts; the analyst confirms the mapping before
+  training.
+- Downstream consumers (`reporting`, `tree_view`) read
+  `TreeNode.class_labels[c]` and `TreeModel.class_labels[c]` to
+  display human-readable labels.
+- Fingerprints computed before 3.1.c will not match those computed
+  after, on the same data. Acceptable at v1.0.0a1 (alpha; no
+  production models).
+
+**Reference.** `docs/3.1_design_multiclass.md` §1bis.1 (target_class
+mandatory), §1bis.2 (class_labels mandatory), §7.1 (fingerprint
+changes).
 
 ---
 
