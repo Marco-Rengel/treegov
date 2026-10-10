@@ -3030,3 +3030,56 @@ El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement
 - `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 — Fase 3.2.e: TreeBuilder con pesos por muestra
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `backend_v3/tree_builder.py`, `tests/test_tree_builder.py`.
+
+**Motivación**: Quinta sub-fase de la Fase 3.2. Los tres motores (CHAID, C&RT, QUEST) ya calculan sus splits con conteos ponderados. Falta que el árbol registre la masa ponderada por clase en cada nodo (`w_events`), que el Jeffreys multivariante use esa masa, que exista un `min_child_weight` opcional que complemente el `min_child_size` existente, y que el fingerprint registre el modo de ponderación.
+
+**Cambios aplicados**:
+
+- `TreeNode` gana el campo `w_events: tuple[float, ...] = ()` al final (restricción de dataclass: campos con default después de los que no lo tienen). El default vacío preserva compatibilidad con los tests que construyen `TreeNode` a mano.
+- `TreeModel.__post_init__` valida: si `w_events` no está vacío, `len(w_events) == K` y todos los valores >= 0. Nodos con `w_events == ()` no se validan (compatibilidad).
+- `TreeBuilder.__init__` gana tres parámetros keyword-only:
+  - `weights: np.ndarray | None = None`
+  - `min_child_weight: float | None = None`
+  - `weight_col: str | None = None`
+  Validación: `weights` si no es None debe ser 1D, finito, todos estrictamente positivos. `min_child_weight` si no es None debe ser float > 0. `weight_col` es None o string no vacío.
+- En `build()` se materializa `w = weights` o `np.ones(n)`.
+- Por nodo: `w_counts = np.bincount(Yn, weights=w[idx], minlength=K)`. Con `weights=None`, `w_counts = counts.astype(float)` (paridad numérica exacta con el comportamiento actual).
+- `pd_jeffreys[c] = (w_counts[c] + 0.5) / (sum(w_counts) + K*0.5)`. Con `weights=None`, `sum(w_counts) == n` (idéntico al actual).
+- `n_events_tuple` sigue siendo `tuple[int, ...]` (filas físicas). `w_events_tuple` es nuevo, `tuple[float, ...]`.
+- Al motor se le pasa `weights=w[idx]` si hay pesos, `weights=None` si no.
+- `min_child_size` sigue midiendo filas físicas (comportamiento actual). `min_child_weight`, si no es None, comprueba además que cada rama tenga peso acumulado >= `min_child_weight`. Criterio acumulativo: si falla cualquiera de los dos, el split se rechaza y el nodo queda hoja con `leaf_reason="rama_insuficiente"`.
+- `_fingerprint` gana tres entradas al payload: `"weighted": bool`, `"weight_col": str | None`, `"min_child_weight": float | None`.
+- Log nuevo al inicio de `build()` con el modo de ponderación.
+
+**Identidades verificadas**:
+
+- Con `weights=None`: `TreeModel` idéntico al pre-3.2 (comparación `==` sobre el dataclass frozen completo).
+- Con `weights=ones`: mismo `TreeModel` que sin pesos.
+- Con pesos no triviales: `w_events` poblado por nodo; `sum(root.w_events) == sum(weights)` con math.isclose.
+- Con `weights=ones`: `w_events == float(n_events)` por nodo.
+- PD de la raíz refleja proporción ponderada, no conteo de filas.
+- `min_child_weight` grande rechaza splits.
+- `min_child_weight` acumulativo con `min_child_size`.
+- Fingerprint distinto entre ponderado y no ponderado; distinto por `weight_col`; distinto por `min_child_weight`.
+- `TreeNode` sin `w_events` se construye sin error.
+- `TreeNode` con `w_events` de longitud incorrecta o con negativos es rechazado por `TreeModel.__post_init__`.
+
+**Decisión registrada**: `w_events` es puramente informativo: no altera el routing ni la poda. El campo tiene default vacío para preservar compatibilidad con los tests que construyen `TreeNode` a mano. La validación estricta de longitud y no-negatividad solo se aplica a nodos que declaran `w_events` explícitamente. Documentado en `docs/design_decisions.md` §13.5.
+
+**Tests**: 12 tests nuevos en `tests/test_tree_builder.py`. Suite completa: 302/302 PASSED (290 previos + 12 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.5 (nueva).
+- `docs/roadmap.md` (tabla 3.2).
+
+---

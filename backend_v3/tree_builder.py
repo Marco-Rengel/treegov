@@ -31,6 +31,14 @@ Hard rules:
     sum(pd_final) == 1 holds for every node (enforced by TreeModel).
     class_labels are human-readable labels in canonical order
     (index 0 = target_class).
+  - Phase 3.2.e (sample weights): TreeBuilder accepts `weights`
+    (per-row masses), `min_child_weight` (weighted-mass floor per
+    branch, cumulative with `min_child_size`, which still measures
+    PHYSICAL ROWS) and `weight_col` (fingerprint traceability only).
+    Each node records `w_events` (weighted mass per class), purely
+    informative: it does NOT alter routing nor pruning. The Jeffreys
+    PD uses the weighted mass (Heeringa, West & Berglund 2010, §5.3).
+    With `weights=None` behavior is bit-identical to pre-3.2.
   - Structural determinism: two build() calls with the same data and
     parameters produce identical TreeModel objects (==). params_fingerprint
     is a stable sha256 (json with sorted keys; no memory addresses).
@@ -89,6 +97,12 @@ class TreeNode:
     child_ids: tuple[int, ...]
     leaf_reason: str | None  # None en internos; "max_depth" | "min_child" |
                              # "sin_split" | "rama_insuficiente" en hojas
+    # Phase 3.2.e: per-class WEIGHTED mass, canonical order. Purely
+    # informative (no routing/pruning effect). Empty tuple for hand-built
+    # nodes (tests); TreeBuilder.build always populates it. Placed last
+    # because dataclass rules forbid a defaulted field between non-defaulted
+    # ones (logical position: right after n_events).
+    w_events: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -146,6 +160,14 @@ class TreeModel:
                     raise ValueError(
                         f"[TreeModel] nodo {nd.node_id}: "
                         f"n_events[{c}]={k_c} > n={nd.n}"
+                    )
+            # Phase 3.2.e: w_events (si presente) debe tener longitud K y
+            # valores >= 0; la tupla vacia es valida (nodos a mano en tests)
+            if nd.w_events:
+                if len(nd.w_events) != K or any(v < 0 for v in nd.w_events):
+                    raise ValueError(
+                        f"[TreeModel] nodo {nd.node_id}: w_events invalido "
+                        f"(len={len(nd.w_events)}, modelo={K})"
                     )
             if nd.is_leaf:
                 if nd.split is not None or nd.child_ids:
@@ -206,6 +228,9 @@ class TreeBuilder:
         apply_jeffreys: bool = True,
         seed: int | None = None,
         logger: logging.Logger | None = None,
+        weights: np.ndarray | None = None,
+        min_child_weight: float | None = None,
+        weight_col: str | None = None,
     ) -> None:
         """max_depth=None -> modo grow_full (crece hasta min_child_size).
 
@@ -224,6 +249,25 @@ class TreeBuilder:
 
         class_labels: Human-readable label per class in canonical
         order (index 0 = target_class). Mandatory.
+
+        weights (Phase 3.2.e, keyword-only): per-row sample weights of
+        X_train (1D, finite, strictly positive). The engines receive the
+        sub-vector per node and compute weighted splits; the per-class
+        weighted mass is recorded in `TreeNode.w_events` (purely
+        informative: no routing/pruning effect) and feeds the Jeffreys PD
+        (Heeringa, West & Berglund 2010, §5.3). With weights=None the
+        behavior is bit-identical to pre-3.2.
+
+        min_child_weight (keyword-only): minimum ACCUMULATED WEIGHT per
+        branch; if any branch falls below, the whole split is rejected
+        ("rama_insuficiente", same absolute-floor criterion as
+        min_child_size). min_child_size measures PHYSICAL ROWS,
+        min_child_weight measures WEIGHTED MASS: they can be combined and
+        are cumulative. None (default) disables the check.
+
+        weight_col (keyword-only): name of the weight column in the CSV,
+        recorded in the fingerprint for traceability only; not used
+        numerically.
         """
         if not hasattr(engine, "best_split"):
             raise TypeError("engine debe exponer best_split(X, y, spec, ...)")
@@ -263,6 +307,30 @@ class TreeBuilder:
             raise ValueError(
                 f"apply_jeffreys debe ser bool: {apply_jeffreys!r}"
             )
+        if weights is not None:
+            w_arr = np.asarray(weights, dtype=float)
+            if w_arr.ndim != 1:
+                raise ValueError(
+                    f"weights debe ser 1D (recibido shape={w_arr.shape})"
+                )
+            if not np.all(np.isfinite(w_arr)) or not np.all(w_arr > 0.0):
+                raise ValueError(
+                    "weights deben ser finitos y estrictamente positivos"
+                )
+        if min_child_weight is not None and (
+            isinstance(min_child_weight, bool)
+            or not float(min_child_weight) > 0.0
+        ):
+            raise ValueError(
+                f"min_child_weight debe ser float > 0 o None: "
+                f"{min_child_weight!r}"
+            )
+        if weight_col is not None and (
+            not isinstance(weight_col, str) or not weight_col
+        ):
+            raise ValueError(
+                f"weight_col debe ser None o un string no vacio: {weight_col!r}"
+            )
         self._engine = engine
         self._target_type = target_type
         self._target_class = target_class
@@ -274,6 +342,11 @@ class TreeBuilder:
         self.pd_floor = None if pd_floor is None else float(pd_floor)
         self.apply_jeffreys = apply_jeffreys
         self.seed = seed
+        self._weights = None if weights is None else np.asarray(weights, dtype=float)
+        self._min_child_weight = (
+            None if min_child_weight is None else float(min_child_weight)
+        )
+        self._weight_col = weight_col
         self._log = logger if logger is not None else get_logger("builder")
 
     # ------------------------------------------------------------------
@@ -330,6 +403,21 @@ class TreeBuilder:
             )
         class_labels_tuple = self._class_labels
 
+        # Phase 3.2.e: vector de pesos por fila (unos si no ponderado)
+        if self._weights is None:
+            w = np.ones(len(X))
+        else:
+            w = self._weights
+            if w.size != len(X):
+                raise ValueError(
+                    f"[tree_builder] weights (n={w.size}) e X (n={len(X)}) "
+                    "difieren en longitud"
+                )
+        self._log.info(
+            "[builder] ponderado=%s weight_col=%s min_child_weight=%s",
+            self._weights is not None, self._weight_col, self._min_child_weight,
+        )
+
         fingerprint = self._fingerprint(spec, class_labels_tuple)
         nodos: list[TreeNode] = []
         cola: deque[tuple[int, int | None, int, np.ndarray]] = deque()
@@ -343,17 +431,29 @@ class TreeBuilder:
             # Per-class counts in canonical order (index 0 = target_class).
             counts = np.bincount(Yn, minlength=K)
             n_events_tuple = tuple(int(c) for c in counts)
+            # Phase 3.2.e: masa ponderada por clase. Con weights=None es
+            # counts.astype(float) (mismos valores, tipo float: paridad
+            # exacta con el codigo pre-3.2).
+            if self._weights is None:
+                w_counts = counts.astype(float)
+            else:
+                w_counts = np.bincount(Yn, weights=w[idx], minlength=K)
+            w_events_tuple = tuple(float(c) for c in w_counts)
             if self.apply_jeffreys:
                 # Multivariate Jeffreys: posterior mean under a symmetric
                 # Dirichlet(0.5, ..., 0.5) prior (Jeffreys 1946). For K = 2
                 # it reduces exactly to the binary (k + 0.5) / (n + 1.0).
-                denom = n + K * 0.5
+                # Phase 3.2.e: usa la masa ponderada w_counts; con
+                # weights=None, sum(w_counts) == n (identico al pre-3.2).
+                denom = float(w_counts.sum()) + K * 0.5
                 pd_j_tuple = tuple(
-                    float((k_c + 0.5) / denom) for k_c in counts
+                    float((k_c + 0.5) / denom) for k_c in w_counts
                 )
             else:
+                n_tot_w = float(w_counts.sum())
                 pd_j_tuple = tuple(
-                    float(k_c / n) if n > 0 else 0.0 for k_c in counts
+                    float(k_c / n_tot_w) if n_tot_w > 0 else 0.0
+                    for k_c in w_counts
                 )
             if self.pd_floor is not None:
                 # Component-wise soft floor + renormalization (design 3.1
@@ -375,15 +475,25 @@ class TreeBuilder:
                 razon = "min_child"
             else:
                 cfg = self._engine.best_split(
-                    X.iloc[idx], yv.iloc[idx], spec, target_type=self._target_type
+                    X.iloc[idx], yv.iloc[idx], spec,
+                    target_type=self._target_type,
+                    weights=None if self._weights is None else w[idx],
                 )  # excepciones PROPAGAN (fail-fast, no capturamos)
                 if cfg is None:
                     razon = "sin_split"
                 else:
                     partes = self._partition(X, idx, cfg)
+                    # min_child_size mide FILAS FISICAS (sin cambios)
                     if any(len(p) < self.min_child_size for p in partes):
                         razon = "rama_insuficiente"  # rechazo del split entero
                         cfg = None
+                    elif self._min_child_weight is not None:
+                        # min_child_weight mide MASA PONDERADA (acumulativo
+                        # con min_child_size; mismo criterio absoluto)
+                        pesos_rama = [float(w[p].sum()) for p in partes]
+                        if any(pr < self._min_child_weight for pr in pesos_rama):
+                            razon = "rama_insuficiente"
+                            cfg = None
 
             if razon is not None:
                 nodos.append(TreeNode(
@@ -391,6 +501,7 @@ class TreeBuilder:
                     n=n, n_events=n_events_tuple, pd_jeffreys=pd_j_tuple,
                     pd_final=pd_f_tuple, class_labels=class_labels_tuple,
                     is_leaf=True, split=None, child_ids=(), leaf_reason=razon,
+                    w_events=w_events_tuple,
                 ))
                 self._log.debug(
                     "[builder] nodo %d HOJA (%s) n=%d n_events=%s pd=%s",
@@ -406,6 +517,7 @@ class TreeBuilder:
                 n=n, n_events=n_events_tuple, pd_jeffreys=pd_j_tuple,
                 pd_final=pd_f_tuple, class_labels=class_labels_tuple,
                 is_leaf=False, split=cfg, child_ids=child_ids, leaf_reason=None,
+                w_events=w_events_tuple,
             ))
             self._log.info(
                 "[builder] nodo %d divide con %r en %d ramas (ids %s)",
@@ -513,6 +625,11 @@ class TreeBuilder:
             "target_class_index": 0,
             "class_labels": list(class_labels),
             "n_classes": len(class_labels),
+            # Phase 3.2.e: weighting mode in the fingerprint (changes
+            # pre-3.2 fingerprints; documented precedent: Phase 3.1)
+            "weighted": self._weights is not None,
+            "weight_col": self._weight_col,
+            "min_child_weight": self._min_child_weight,
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:16]

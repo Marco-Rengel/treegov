@@ -1446,6 +1446,55 @@ estricta.
 
 ---
 
+### 13.5 TreeNode.w_events — informative field with empty default
+
+**Context.** La ponderación por muestra (Fase 3.2) introduce la masa
+ponderada por clase en cada nodo del árbol. Hace falta decidir cómo
+se expone esa masa en `TreeNode` sin romper los ~30 tests que
+construyen `TreeNode` a mano (pruning, reporting, validation,
+tree_view, etc.).
+
+**Alternatives considered.**
+
+- (a) Añadir `w_events: tuple[float, ...]` como campo obligatorio.
+  Rechazada: rompe la construcción manual de `TreeNode` en todos los
+  tests existentes y obliga a actualizar ~30 fixtures.
+- (b) Añadir `w_events: tuple[float, ...] = ()` con default vacío.
+  Adoptada. Los tests que construyen `TreeNode` a mano siguen
+  funcionando sin cambios. Los nodos producidos por `TreeBuilder`
+  siempre lo pueblan. `TreeModel.__post_init__` valida coherencia
+  solo cuando el campo no está vacío.
+- (c) Derivar `w_events` de `n_events` cuando no se especifica.
+  Rechazada: no hay información suficiente para distinguir "nodo sin
+  pesos" de "nodo con pesos todos 1" sin consultar el modo del
+  builder, que no está disponible en el `TreeModel`.
+
+**Decision.** Opción (b).
+
+**Rationale.** La regla de oro de la Fase 3.2 es "sin pesos, paridad
+exacta". Añadir un campo obligatorio obligaría a tocar todos los
+tests y aumentaría el riesgo de introducir cambios sutiles en el
+camino no ponderado. El default vacío es el mecanismo estándar de
+Python para extensiones compatibles hacia atrás.
+
+**Consequences.**
+
+- `TreeNode.w_events` es `()` en nodos construidos a mano sin
+  declarar pesos; es una tupla poblada en nodos producidos por
+  `TreeBuilder`.
+- La validación de longitud (`== K`) y no-negatividad se aplica solo
+  a nodos con `w_events` no vacío.
+- `w_events` es puramente informativo: no altera routing, no altera
+  poda (`pruning.py` no lo lee), no altera métricas downstream.
+- Documentado en `docs/audit_log.md` entrada del 10/10/2026 (Fase
+  3.2.e).
+
+**Cross-reference.** `backend_v3/tree_builder.py::TreeNode`;
+`docs/design_decisions.md` §5.2 (pd_final tuple); `docs/audit_log.md`
+entrada del 10/10/2026 (Fase 3.2.e).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

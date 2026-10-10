@@ -516,6 +516,187 @@ def test_multiclass_k3_builds():
     assert m.nodes[0].n_events == (40, 40, 40)
 
 
+# ---------------------------------------------------------------------------
+# 3.2.e - Ponderación por muestra (weights / min_child_weight / weight_col)
+#
+# Contrato verificado aqui:
+#   * weights=None -> TreeModel identico al pre-3.2; weights=ones -> misma
+#     estructura (el fingerprint difiere SOLO por el flag "weighted").
+#   * w_events es informativo: no altera routing ni poda.
+#   * min_child_size mide FILAS fisicas; min_child_weight mide MASA
+#     ponderada; son acumulativos.
+#   * Fingerprint incluye weighted / weight_col / min_child_weight.
+# ---------------------------------------------------------------------------
+
+
+def _fixture_weighted_a():
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    return X, y, {"x": _CONT}
+
+
+def _builder_weighted(**kw):
+    kw.setdefault("target_type", _BIN)
+    kw.setdefault("target_class", 1)
+    kw.setdefault("class_labels", ("Event", "Non-event"))
+    kw.setdefault("max_depth", 4)
+    kw.setdefault("min_child_size", 2)
+    return TreeBuilder(_crt(), **kw)
+
+
+def test_weighted_builder_parity_none():
+    X, y, spec = _fixture_weighted_a()
+    m_sin = _builder_weighted().build(X, y, spec)
+    m_ones = _builder_weighted(weights=np.ones(len(X))).build(X, y, spec)
+    # estructura completa identica (nodos, metodo, clases)
+    assert m_sin.nodes == m_ones.nodes
+    assert m_sin.method == m_ones.method
+    assert m_sin.class_labels == m_ones.class_labels
+    assert m_sin.target_class == m_ones.target_class
+    # el fingerprint difiere SOLO por el flag "weighted" (ver test
+    # test_weighted_builder_fingerprint_weighted_flag): es el contrato 3.2.e
+    assert m_sin.params_fingerprint != m_ones.params_fingerprint
+
+
+def test_weighted_builder_w_events_populated():
+    X, y, spec = _fixture_weighted_a()
+    rng = np.random.default_rng(2026)
+    w = rng.uniform(0.5, 2.0, len(X))
+    m = _builder_weighted(weights=w).build(X, y, spec)
+    raiz = m.nodes[0]
+    assert len(raiz.w_events) == 2
+    assert math.isclose(sum(raiz.w_events), float(w.sum()), rel_tol=1e-9)
+
+
+def test_weighted_builder_w_events_uniform_matches_n_events():
+    X, y, spec = _fixture_weighted_a()
+    m = _builder_weighted(weights=np.ones(len(X))).build(X, y, spec)
+    for nd in m.nodes:
+        assert len(nd.w_events) == 2
+        assert tuple(nd.w_events) == tuple(float(c) for c in nd.n_events)
+
+
+def test_weighted_builder_pd_uses_weighted_counts():
+    # clase 1 (indice 0 canonico) con peso 1 x5 = 5.0; clase 0 con peso
+    # 2 x5 = 10.0. Jeffreys multivariante sobre la masa: pd_j[0] =
+    # (5 + 0.5) / (15 + 2*0.5) = 5.5/16 = 0.34375 (proporcion PONDERADA,
+    # no la de filas, que daria 5.5/11 = 0.5)
+    X, y, spec = _fixture_weighted_a()
+    w = np.array([2.0] * 5 + [1.0] * 5)
+    m = _builder_weighted(weights=w).build(X, y, spec)
+    raiz = m.nodes[0]
+    assert raiz.w_events == (5.0, 10.0)
+    esperado = 5.5 / 16.0
+    assert math.isclose(raiz.pd_jeffreys[0], esperado, rel_tol=1e-12)
+    assert not math.isclose(raiz.pd_jeffreys[0], 0.5, rel_tol=1e-9)
+    # invariante: sum(pd_final) == 1
+    assert abs(sum(raiz.pd_final) - 1.0) <= 1e-12
+
+
+def test_weighted_builder_min_child_weight_rejects():
+    # fixture A (t=5.5, ramas 5/5 con pesos 1 -> masa 5 por rama);
+    # min_child_weight=100 > cualquier masa posible -> TODO split rechazado.
+    # Causa raiz: alguna rama por debajo del minimo -> "rama_insuficiente"
+    # (mismo criterio absoluto que min_child_size; el split se intenta, la
+    # particion existe, y se rechaza entera).
+    X, y, spec = _fixture_weighted_a()
+    m = _builder_weighted(
+        weights=np.ones(len(X)), min_child_weight=100.0
+    ).build(X, y, spec)
+    assert len(m.nodes) == 1
+    assert m.nodes[0].is_leaf
+    assert m.nodes[0].leaf_reason == "rama_insuficiente"
+
+
+def test_weighted_builder_min_child_weight_accumulative_with_size():
+    # fixture A con pesos asimetricos: rama izquierda (x<=5.5) son las 5
+    # primeras filas con peso 0.1 -> masa 0.5; rama derecha masa 5.0.
+    # min_child_size=2 se cumple (5 filas por lado); min_child_weight=1.0
+    # NO se cumple en la izquierda -> split rechazado.
+    # Con min_child_weight=None el mismo split SI se acepta.
+    X, y, spec = _fixture_weighted_a()
+    w = np.array([0.1] * 5 + [1.0] * 5)
+    m_rech = _builder_weighted(weights=w, min_child_weight=1.0).build(
+        X, y, spec
+    )
+    assert len(m_rech.nodes) == 1
+    assert m_rech.nodes[0].leaf_reason == "rama_insuficiente"
+    m_ok = _builder_weighted(weights=w, min_child_weight=None).build(
+        X, y, spec
+    )
+    assert len(m_ok.nodes) == 3
+    assert not m_ok.nodes[0].is_leaf
+
+
+def test_weighted_builder_fingerprint_weighted_flag():
+    X, y, spec = _fixture_weighted_a()
+    fp_sin = _builder_weighted().build(X, y, spec).params_fingerprint
+    fp_con = _builder_weighted(weights=np.ones(len(X))).build(
+        X, y, spec
+    ).params_fingerprint
+    assert fp_sin != fp_con
+
+
+def test_weighted_builder_fingerprint_differs_by_weight_col():
+    X, y, spec = _fixture_weighted_a()
+    w = np.ones(len(X))
+    fp_a = _builder_weighted(weights=w, weight_col="peso_a").build(
+        X, y, spec
+    ).params_fingerprint
+    fp_b = _builder_weighted(weights=w, weight_col="peso_b").build(
+        X, y, spec
+    ).params_fingerprint
+    assert fp_a != fp_b
+
+
+def test_weighted_builder_fingerprint_includes_min_child_weight():
+    X, y, spec = _fixture_weighted_a()
+    w = np.ones(len(X))
+    fp_none = _builder_weighted(weights=w, min_child_weight=None).build(
+        X, y, spec
+    ).params_fingerprint
+    fp_100 = _builder_weighted(weights=w, min_child_weight=100.0).build(
+        X, y, spec
+    ).params_fingerprint
+    assert fp_none != fp_100
+
+
+def test_weighted_builder_w_events_empty_in_hand_built_tree():
+    # nodo a mano SIN w_events (default ()): construccion valida
+    from backend_v3.tree_builder import TreeNode
+    labels = ("Event", "Non-event")
+    raiz = TreeNode(node_id=0, depth=0, parent_id=None, n=10, n_events=(5, 5),
+                    pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+                    class_labels=labels, is_leaf=True, split=None,
+                    child_ids=(), leaf_reason="sin_split")
+    assert raiz.w_events == ()
+    m = TreeModel(0, (raiz,), "CRT", "fp", labels, 1, 0)
+    assert m.nodes[0].w_events == ()
+
+
+def test_weighted_builder_w_events_negative_rejected():
+    from backend_v3.tree_builder import TreeNode
+    labels = ("Event", "Non-event")
+    malo = TreeNode(node_id=0, depth=0, parent_id=None, n=10, n_events=(5, 5),
+                    pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+                    class_labels=labels, is_leaf=True, split=None,
+                    child_ids=(), leaf_reason="sin_split",
+                    w_events=(-1.0, 2.0))
+    _assert_raises(ValueError, TreeModel, 0, (malo,), "CRT", "fp", labels, 1, 0)
+
+
+def test_weighted_builder_w_events_wrong_length_rejected():
+    from backend_v3.tree_builder import TreeNode
+    labels = ("Event", "Non-event")  # K=2, pero w_events tiene longitud 1
+    malo = TreeNode(node_id=0, depth=0, parent_id=None, n=10, n_events=(5, 5),
+                    pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+                    class_labels=labels, is_leaf=True, split=None,
+                    child_ids=(), leaf_reason="sin_split",
+                    w_events=(1.0,))
+    _assert_raises(ValueError, TreeModel, 0, (malo,), "CRT", "fp", labels, 1, 0)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())
