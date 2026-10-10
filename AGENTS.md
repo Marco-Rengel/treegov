@@ -51,6 +51,17 @@ volver), o cambio trivial de 1 línea consolidado en la entrada de
 bloque. Ver `docs/roadmap.md` sección "Recorded architectural
 decisions: Phase closure documentation: never deferred".
 
+**Regla de ráfaga.** La caché de prompt de Moonshot solo se activa si
+el prefijo entre peticiones es idéntico y han pasado menos de 5
+minutos desde la anterior. Trabajar en ráfagas cortas: varias tareas
+seguidas sin pausas largas, luego verificar todo junto en PowerShell,
+luego commit. No cerrar OpenCode entre tareas. No verificar en PS
+entre cada tarea. Verificado empíricamente el 10/10/2026: tareas con
+pausa >5 min cuestan ~$0.15, tareas inmediatas cuestan ~$0.00. Ver
+`docs/audit_log.md` entrada del 10/10/2026 y
+`docs/contexto_para_nueva_sesion.md` sección "Regla de oro de la caché
+de Moonshot".
+
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
@@ -62,13 +73,14 @@ decisions: Phase closure documentation: never deferred".
 ## Herramienta de desarrollo: OpenCode
 
 - **Versión:** 1.18.35 (global vía `npm`).
-- **Modelo:** `moonshot/kimi-k3` (Kimi K3).
+- **Modelo:** `moonshotai/kimi-k3` (Kimi K3).
 - **Autenticación:** `opencode auth login` con provider `Moonshot AI`
   (internacional, endpoint `https://api.moonshot.ai/v1`). La key es
   propia de Moonshot, NO se pasa por NVIDIA NIM.
 - **Configuración del proyecto:** `opencode.json` en la raíz
-  (versionado), con `model`, `small_model`, `setCacheKey: true`,
-  `autoupdate: false`, `share: "disabled"`.
+  (versionado), con `model`, `small_model`, `plugin`
+  (`@jimmyyen/opencode-context-cache`), `autoupdate: false`,
+  `share: "disabled"`.
 - **Sin variables de entorno:** OpenCode gestiona la key internamente
   en `~/.local/share/opencode/auth.json`.
 
@@ -118,6 +130,32 @@ Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
     $env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
     Remove-Variable key
     aider <archivo1> <archivo2>
+
+### Configuración correcta del modelo
+
+El archivo `opencode.json` del proyecto debe tener
+`"model": "moonshotai/kimi-k3"` y `"small_model": "moonshotai/kimi-k3"`
+(con "ai" al final). Un typo como `"moonshot"` hace que OpenCode caiga
+silenciosamente a un modelo de fallback más caro. Este fue el origen
+del gasto anómalo del 05-06/10/2026 ($5.14 y $13.75 en Model
+Inference respectivamente). Verificado: los logs de OpenCode mostraban
+"Model not found: moonshot/kimi-k3. Did you mean: moonshotai,
+moonshotai-cn?".
+
+### Plugin de caché
+
+El plugin `@jimmyyen/opencode-context-cache` debe estar en el array
+`plugin` del `opencode.json`. Sin él, la caché de prompt de Moonshot
+no se activa correctamente. Con él, el coste por tarea dentro de la
+ventana de 5 minutos es prácticamente cero.
+
+### Plugins fantasma eliminados
+
+La carpeta `.opencode/` del proyecto fue eliminada el 10/10/2026.
+Contenía un archivo `opencode.json` con dos plugins problemáticos:
+`opencode-supermemory` (roto) y `opencode-auto-resume`. No recrear esa
+carpeta sin justificación. Si algún día se necesita un plugin global,
+usar la configuración global en `~/.config/opencode/`.
 
 ## Gobernanza
 

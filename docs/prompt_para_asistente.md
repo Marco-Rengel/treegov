@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 09/10/2026
+**Última actualización:** 10/10/2026
 
 ---
 
@@ -59,6 +59,8 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
 - **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
 - **Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase cierra, la actualización de audit_log + roadmap + estado_proyecto + documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo desincroniza el contexto y cuesta tiempo de reconstrucción en el siguiente chat (esto ya ocurrió en 3.1.d/e). Excepciones: solo 504/timeout del proveedor o cambio trivial de 1 línea consolidado.
+- **Trabajo en ráfaga con el cliente CLI.** La caché de prompt de Moonshot solo funciona si las tareas se hacen con menos de 5 minutos de separación dentro de la misma sesión. Regla operativa: mantener OpenCode abierto durante toda la jornada, no cerrarlo entre tareas, no verificar en PowerShell entre cada tarea. Acumular varias tareas y verificar en bloque al final. Verificado empíricamente: tareas con pausas largas cuestan ~$0.15, tareas inmediatas cuestan ~$0.00.
+- **Nunca aplazar la documentación de cierre.** Ya estaba en el brief, pero se refuerza: cuando una sub-fase cierra, la actualización de `audit_log` + `roadmap` + `estado_proyecto` + documentos de contexto se hace en el mismo bloque. Si se aplaza, el coste de reconstruir el contexto en el siguiente chat es más alto que hacerlo bien la primera vez.
 
 ---
 
@@ -83,7 +85,13 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Suite de tests:** 243/243 PASSED.
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
-  (key propia de Moonshot). Aider 0.86.2 como respaldo documentado.
+  (key propia de Moonshot), con la configuración corregida
+  (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
+  Aider 0.86.2 como respaldo documentado.
+- **Anomalía de consumo de tokens:** resuelta el 10/10/2026 (causa
+  raíz: typo `moonshot` → fallback caro; agravantes: plugins fantasma
+  y TTL de caché de 5 min). Ver `docs/audit_log.md` entrada del
+  10/10/2026.
 - **Próximo paso:** Fase 3.2 — ponderación por muestra (pesos
   transversales al backend para muestras sesgadas de buró).
 
@@ -98,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ### Herramienta activa — OpenCode 1.18.35 (actualizado 09/10/2026)
 
-- **OpenCode 1.18.35** con `moonshot/kimi-k3`.
+- **OpenCode 1.18.35** con `moonshotai/kimi-k3`.
 - **Cliente:** OpenCode 1.18.35 (V1, no V2). Actualizado desde
   1.18.32 el 06/10/2026.
 - **Instalación:** global vía `npm` (`opencode-ai@1.18.35`).
@@ -109,19 +117,36 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   se guarda en `~/.local/share/opencode/auth.json`. Esta migración
   eliminó los 504 recurrentes de NIM que históricamente forzaban
   aplazamientos (incluidos los de documentación de cierre).
-- **Modelo:** `moonshot/kimi-k3` (Kimi K3, contexto 1M).
+- **Modelo:** `moonshotai/kimi-k3` (Kimi K3, contexto 1M).
 - **Nivel de razonamiento:** `high` por defecto. Reservar `max` para
   tareas complejas (refactorización estructural, depuración de bugs).
   Para documentación y ediciones quirúrgicas, `high` es suficiente y
   consume la mitad de tokens de razonamiento.
 - **Configuración del proyecto:** `opencode.json` en la raíz (versionado).
-  Contiene: `model`, `small_model`, `setCacheKey: true`,
-  `autoupdate: false`, `share: "disabled"`.
+  Contiene: `model`, `small_model`, `plugin`
+  (`@jimmyyen/opencode-context-cache`), `autoupdate: false`,
+  `share: "disabled"`. (`setCacheKey` se eliminó el 10/10/2026: no-op
+  en 1.18.35, bug PR #51956.)
 - **API key:** configurada vía `opencode auth login`. No vive en
   variable de entorno (OpenCode la gestiona internamente).
 - **Costes:** $3/M tokens de entrada, $15/M de salida. Coste medido por
   tarea (documentación ~200 líneas Markdown): ~$0.09. Compárese con
   ~$0.60 por tarea equivalente en Aider.
+
+**Configuración correcta del modelo:**
+
+El archivo `opencode.json` debe usar `moonshotai/kimi-k3` (con "ai" al
+final). Un typo como `moonshot` hace que OpenCode caiga a un modelo de
+fallback carísimo. Verificado el 10/10/2026: el gasto de los días
+05-06/10 fue de $5.14 y $13.75 por este motivo.
+
+**Regla de la caché de Moonshot:**
+
+La caché es automática y solo se activa si el prefijo es idéntico
+entre peticiones y hay menos de 5 minutos entre ellas. Trabajar en
+ráfagas cortas. No reiniciar el cliente entre tareas. Ver
+`docs/contexto_para_nueva_sesion.md` sección "Regla de oro de la caché
+de Moonshot".
 
 **Herramienta de respaldo — Aider 0.86.2:**
 
@@ -134,6 +159,11 @@ si OpenCode falla en un caso concreto.
 - **Metadata de modelos:** `~/.aider.model.metadata.json` y
   `~/.aider.model.settings.yml`.
 - **API key:** `$env:MOONSHOT_API_KEY` exportada por sesión (PowerShell).
+- **Nota (10/10/2026):** Aider también mostró el mismo problema de
+  consumo excesivo (los $25.97 en Model Inference del 03-07/10). La
+  causa común fue el patrón de entrar y salir del cliente, que
+  destruye el prefijo de caché. Aider queda como respaldo, pero
+  requiere la misma disciplina de ráfaga.
 
 **Reglas de prompts (comunes a ambas herramientas):**
 
@@ -166,6 +196,15 @@ esté bien. Alternativas:
 - Usar solo `--stat` para conteos, sin ver el diff completo.
 
 Esta lección está documentada en `docs/audit_log.md` (05/10/2026).
+
+**Herramienta alternativa probada — Kimi Code CLI 2.1.1:**
+
+Probada el 10/10/2026. Es el cliente oficial de Moonshot, pero inyecta
+metadatos dinámicos (paths absolutos, timestamps, telemetría) que
+rompen el prefix matching de la caché ($0.22 con thinking=high, $0.12
+con thinking=low para una tarea de ~25K de contexto). Se mantiene
+OpenCode como herramienta principal; Kimi Code CLI queda como
+alternativa para tareas puntuales.
 
 ### Privacidad
 - Moonshot AI es servicio de pago (NOVASCENT/Singapur), pero sigue siendo
@@ -206,7 +245,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.1 cerradas, Fase 3.2 (ponderación) es el próximo paso. Suite 243/243. Herramienta: OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo (key propia). ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.1 cerradas, Fase 3.2 (ponderación) es el próximo paso. Suite 243/243. Herramienta: OpenCode 1.18.35 con configuración corregida (moonshotai + plugin de caché). El 10/10/2026 se resolvió la anomalía de consumo de tokens. Regla operativa: trabajar en ráfagas cortas para mantener la caché. ¿Qué necesitas para darme contexto?"
 
 ---
 

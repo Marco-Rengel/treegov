@@ -24,6 +24,36 @@ Después de CADA tarea de edición, el humano verifica con:
 
 Si la suite baja de 243/243 tests, no se commitea.
 
+**Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
+a los 5 minutos de inactividad. Verificar en PowerShell entre cada
+tarea destruye la caché y multiplica el coste. Regla: hacer varias
+tareas seguidas en la misma sesión de OpenCode, verificar todo en
+bloque al final, luego commit. Ver sección "## Trabajo en ráfaga" más
+abajo.
+
+## Trabajo en ráfaga
+
+La caché de prompt de Moonshot funciona solo si el prefijo entre
+peticiones es idéntico y hay menos de 5 minutos entre ellas.
+Verificado empíricamente el 10/10/2026: tres tareas consecutivas
+costaron $0.113, $0.155 y $0.000. Las dos primeras tuvieron pausas
+largas (TTL expirado, caché muerta). La tercera fue inmediata (caché
+activa, coste cero).
+
+Reglas operativas derivadas:
+
+- **No cerrar OpenCode entre tareas.** Cada cierre destruye el
+  prefijo y la siguiente tarea paga el contexto completo.
+- **No verificar en PowerShell entre tareas.** Solo al final del
+  bloque, cuando ya estén hechas todas las tareas del día.
+- **No verificar con `git status` ni `git diff` entre tareas.**
+  Acumular y verificar en bloque.
+- **Si hay que hacer una pausa larga (>5 min), asumirlo.** La
+  siguiente tarea pagará el prefijo completo. No es un error, es el
+  comportamiento esperado.
+- **Tareas en ráfaga**: 4-6 tareas seguidas sin pausa, luego
+  verificación + commit. Repetir.
+
 ## Comentarios y docs
 
 - Código: docstrings y comentarios en **inglés**.
@@ -109,6 +139,16 @@ desincroniza el contexto y cuesta tiempo de reconstrucción en el
 siguiente chat. Excepciones: solo 504/timeout del proveedor o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
 
+**Disciplina de ráfaga en la práctica.** Un bloque de trabajo típico:
+abrir OpenCode, hacer 4-6 tareas seguidas (prompts que el asistente
+estratégico diseña, el agente aplica, no hay verificación intermedia),
+al terminar el bloque ejecutar `git status` + `git diff --stat` +
+`python -m pytest tests -q` en PowerShell, revisar el diff, commit,
+push. Luego si se necesita otra ronda, mantener OpenCode abierto y
+empezar la siguiente ráfaga. La única razón para cerrar y reabrir
+OpenCode es un cambio en `opencode.json` que requiera recarga de
+configuración.
+
 ## Proveedor de IA: Moonshot AI directo (desde 03/10/2026)
 
 Cliente activo desde 09/10/2026: OpenCode 1.18.35, autenticado con key
@@ -129,3 +169,16 @@ Aider.
   por tiempo de servidor, contexto 1M completo.
 - **Verificación obligatoria sigue aplicando:** `git diff` + `pytest` antes
   de aceptar cualquier cambio.
+
+**Configuración correcta para OpenCode.** El archivo `opencode.json`
+del proyecto debe tener:
+
+- `"model": "moonshotai/kimi-k3"` (con "ai" al final).
+- `"small_model": "moonshotai/kimi-k3"`.
+- `"plugin": ["@jimmyyen/opencode-context-cache"]`.
+- Sin bloque `provider.moonshot.options.setCacheKey` (no funciona en
+  OpenCode 1.18.35, PR #51956).
+
+Un typo como `"moonshot/kimi-k3"` (sin "ai") hace que OpenCode caiga a
+un modelo de fallback carísimo. Esto causó el gasto anómalo del
+05-06/10/2026 ($5.14 y $13.75 respectivamente).

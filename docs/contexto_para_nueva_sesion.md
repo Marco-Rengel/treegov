@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 09/10/2026
+**Fecha de última actualización:** 10/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -26,6 +26,25 @@ documentos de contexto respecto al código real y fuerza
 reconstrucciones costosas al abrir un chat nuevo. Excepciones:
 504/timeout del proveedor de IA (se documenta al volver), o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
+
+## Regla de oro de la caché de Moonshot
+
+La caché de prompt de Moonshot es automática y no requiere
+configuración en la cuenta. Solo se activa si se cumplen tres
+condiciones simultáneas: (a) el prefijo de la petición es idéntico al
+de la petición anterior (mismo system prompt, mismo repo-map, mismos
+archivos leídos), (b) el prefijo tiene al menos 256 tokens, (c) la
+petición llega dentro del TTL, que por defecto es de 5 minutos.
+Verificado empíricamente el 10/10/2026: tres tareas consecutivas
+costaron $0.113, $0.155 y $0.000. Las dos primeras tuvieron pausas
+largas (>5 min) y expiraron la caché. La tercera fue inmediata y se
+facturó a $0.00. Consecuencia operativa obligatoria: mantener la
+sesión de OpenCode abierta durante toda la jornada y hacer las tareas
+en ráfagas cortas (menos de 5 minutos entre una tarea y la
+siguiente). Si hay que hacer una pausa larga, la siguiente tarea paga
+el prefijo completo. La regla es no verificar en PowerShell entre
+cada tarea, sino acumular varias tareas y verificar en bloque al
+final.
 
 ## Estado actual del proyecto
 
@@ -107,6 +126,16 @@ WSL (bash):
   Configuración de proyecto: `opencode.json` en la raíz (versionado).
   Nivel de razonamiento: `high` por defecto (`max` reservado para
   tareas complejas).
+  **Modelo configurado:** `moonshotai/kimi-k3` (con la "ai" al final)
+  en los campos `model` y `small_model` de `opencode.json`. Antes
+  decía `moonshot/kimi-k3` y eso hacía que OpenCode cayera a un
+  modelo de fallback carísimo (causa raíz de la anomalía de consumo,
+  ver `docs/audit_log.md` 10/10/2026).
+  **Plugin de caché:** `@jimmyyen/opencode-context-cache` instalado y
+  activo (estabiliza la cache key de Moonshot).
+  **Nota:** Kimi Code CLI 2.1.1 se probó como alternativa, pero su
+  inyección de metadatos dinámicos rompe el prefix matching de la
+  caché. OpenCode se mantiene como herramienta principal.
 - **Aider 0.86.2** — **herramienta de respaldo** desde el 09/10/2026.
 - **Aider 0.86.2** (histórico: reemplazó a OpenCode el 27/09/2026 y a
   NVIDIA NIM el 03/10/2026; desde el 09/10/2026 es respaldo, ver arriba).
@@ -132,8 +161,9 @@ WSL (bash):
   entorno.
 - **Costes:** $3/M input, $15/M output.
 - **Configuración de proyecto:** `opencode.json` (versionado).
-- **Flags clave:** `setCacheKey: true`, `autoupdate: false`,
-  `share: "disabled"`.
+- **Flags clave:** `autoupdate: false`, `share: "disabled"`.
+  (`setCacheKey` se eliminó el 10/10/2026: era un no-op en OpenCode
+  1.18.35, bug PR #51956.)
 
 ## Problemas conocidos y soluciones
 
@@ -154,6 +184,8 @@ WSL (bash):
 | **PowerShell muestra mal UTF-8 en consola** | Al verificar archivos con caracteres no-ASCII (`—`, acentos, `§`, `≥`), `git diff` en PowerShell muestra caracteres corruptos aunque el archivo esté bien. Solución: verificar en VS Code, o redirigir el diff a archivo con `Out-File -Encoding utf8` antes de leerlo. |
 | **OpenCode no soporta caché explícita en V1** | El plugin `oc-plugin-caching` requiere un fork; la V1 estándar solo tiene caché implícita vía `setCacheKey: true`. Ver `audit_log.md` 09/10/2026. |
 | **Documentación de cierre aplazada** | Regla de oro desde 09/10/2026: la documentación de cierre de sub-fase se hace en el mismo bloque de trabajo (roadmap + estado_proyecto + contexto + audit_log), nunca en sesión aparte. Excepciones: 504 del proveedor de IA, o cambio trivial de 1 línea consolidado en la entrada de bloque. Ver `docs/roadmap.md` "Recorded architectural decisions: Phase closure documentation: never deferred". |
+| **Consumo excesivo de tokens en OpenCode/Kimi Code CLI/Aider** | Causa raíz el 10/10/2026: modelo mal escrito (`moonshot` en lugar de `moonshotai`) + plugins fantasma + TTL de caché expirado por pausas largas. Ver `docs/roadmap.md` subsección RESOLVED. Regla: mantener sesión viva, trabajar en ráfagas. |
+| **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 
 ## Cómo retomar el trabajo
 
