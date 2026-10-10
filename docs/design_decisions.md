@@ -1394,6 +1394,58 @@ entry of 10/10/2026 (Fase 3.2.c).
 
 ---
 
+### 13.4 Weighted variance divisor — W − 1 vs W
+
+**Context.** En la ponderación por muestra, la varianza de un grupo
+admite dos definiciones estándar:
+
+- Varianza muestral ponderada: `sum(w_i * (x_i - m)^2) / (W - 1)`,
+  donde `W = sum(w_i)`. Convención "pesos como frecuencias".
+- Varianza poblacional ponderada: `sum(w_i * (x_i - m)^2) / W`.
+  Convención "pesos como masa".
+
+La elección afecta a la fórmula del QDA de QUEST (Etapa 2), porque
+las varianzas entran en los coeficientes de la ecuación cuadrática.
+
+**Alternatives considered.**
+
+- (a) Divisor `W - 1` (Bessel ponderado). Convención estándar
+  cuando los pesos son frecuencias: SPSS `WEIGHT BY`, R `survey` con
+  divisor muestral, SAS survey procedures. NO es invariante a la
+  escala de pesos: si se multiplican los pesos por `k`, el
+  denominador pasa de `W - 1` a `k·W - 1`, que no es `k·(W - 1)`.
+- (b) Divisor `W` (masa). Es invariante a la escala de pesos: el
+  cociente `(k · S) / (k · W)` = `S / W`. Pero subestima la
+  varianza en muestras pequeñas (no corrige el sesgo de Bessel).
+
+**Decision.** Opción (a) — divisor `W − 1`. Es la convención estándar
+para pesos como frecuencias y da estimaciones insesgadas de la
+varianza.
+
+**Rationale.** La corrección de Bessel existe para que la varianza
+muestral sea un estimador insesgado de la varianza poblacional. El
+mismo razonamiento aplica cuando los pesos son frecuencias. La
+alternativa `W` es matemáticamente más limpia en cuanto a invarianza
+de escala, pero introduce sesgo. Preferimos insesgadez a invarianza
+estricta.
+
+**Consequences.**
+
+- El umbral del QDA de QUEST no es invariante a la escala de pesos.
+  Documentado como hallazgo matemático en la entrada de audit_log
+  del 10/10/2026 (Fase 3.2.d) y en el docstring de `_qda_cutpoint`.
+- Cubierto por el test `test_weighted_quest_qda_variance_uses_w_minus_one`.
+- Este comportamiento coexiste con otras sensibilidades a escala ya
+  documentadas: χ² escala linealmente (§13.2), F es invariante
+  (cociente SSB/SSW). El analista es responsable de elegir la escala
+  de pesos; TreeGov informa pero no decide en silencio.
+
+**Cross-reference.** `backend_v3/quest_engine.py::_qda_cutpoint`;
+`docs/design_decisions.md` §13.2; `docs/audit_log.md` entrada del
+10/10/2026 (Fase 3.2.d).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

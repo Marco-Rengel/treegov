@@ -388,6 +388,294 @@ def test_nominal_high_card_dummies_lda_not_implemented():
 
 
 # ---------------------------------------------------------------------------
+# 3.2.d - Ponderación por muestra (weights keyword-only)
+#
+# Contrato verificado aqui:
+#   * F es invariante a escala (cociente SSB/SSW).
+#   * chi2 de Pearson escala linealmente con la masa total de pesos
+#     (design_decisions.md §13.2; Heeringa et al. 2010 §5.4).
+#   * child_ns y parent_n son siempre conteos FISICOS de filas (enteros).
+#   * La varianza ponderada del QDA usa divisor W - 1 (Bessel ponderado).
+# ---------------------------------------------------------------------------
+
+
+def _fixture_weighted_nominal():
+    # a: y0=2, y1=18 ; b: y0=3, y1=17 ; c: y0=18, y1=2
+    x = pd.Series(["a"] * 20 + ["b"] * 20 + ["c"] * 20)
+    y = pd.Series(
+        [1] * 18 + [0] * 2 + [1] * 17 + [0] * 3 + [1] * 2 + [0] * 18
+    )
+    return pd.DataFrame({"cat": x}), y, {"cat": _NOMINAL}
+
+
+def _fixture_weighted_continuous():
+    X = pd.DataFrame({
+        "fuerte": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0]),
+        "plano1": pd.Series([1.0, 2.0, 3.0, 1.0, 2.0, 3.0]),
+    })
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    return X, y, {"fuerte": _CONTINUOUS, "plano1": _CONTINUOUS}
+
+
+def _assert_configs_iguales(a: SplitConfig, b: SplitConfig) -> None:
+    assert a.predictor == b.predictor
+    assert a.method == b.method
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-12)
+    assert a.statistic_name == b.statistic_name
+    assert a.df == b.df
+    assert math.isclose(a.p_value, b.p_value, rel_tol=1e-12)
+    assert math.isclose(a.p_value_adjusted, b.p_value_adjusted, rel_tol=1e-12)
+    assert a.bonferroni_multiplier == b.bonferroni_multiplier
+    assert a.parent_n == b.parent_n
+    assert a.child_ns == b.child_ns
+    assert a.branches == b.branches
+    if a.threshold is None or b.threshold is None:
+        assert a.threshold is b.threshold
+    else:
+        assert math.isclose(a.threshold, b.threshold, rel_tol=1e-12)
+
+
+def _qda_ponderado_manual(xv, yc, w, divisor_bessel=True):
+    """Replica manual del QDA ponderado (Etapa 2): medias, priors y
+    varianzas ponderadas. divisor_bessel=True -> W - 1; False -> W."""
+    y1 = yc == 1
+    x0, x1 = xv[~y1], xv[y1]
+    w0, w1 = w[~y1], w[y1]
+    W0, W1 = float(w0.sum()), float(w1.sum())
+    m0 = float((w0 * x0).sum()) / W0
+    m1 = float((w1 * x1).sum()) / W1
+    d0 = W0 - 1.0 if divisor_bessel else W0
+    d1 = W1 - 1.0 if divisor_bessel else W1
+    v0 = float((w0 * (x0 - m0) ** 2).sum()) / d0
+    v1 = float((w1 * (x1 - m1) ** 2).sum()) / d1
+    x_bar = (W0 * m0 + W1 * m1) / (W0 + W1)
+    if v0 <= 0.0 or v1 <= 0.0:
+        return x_bar
+    pi0, pi1 = W0 / (W0 + W1), W1 / (W0 + W1)
+    log_odds = math.log(pi1 / pi0)
+    if math.isclose(v0, v1, rel_tol=1e-12):
+        if m0 == m1:
+            return x_bar
+        return (m0 + m1) / 2.0 - v1 * log_odds / (m1 - m0)
+    a = 1.0 / v0 - 1.0 / v1
+    b = 2.0 * (m1 / v1 - m0 / v0)
+    c = m0 * m0 / v0 - m1 * m1 / v1 + 2.0 * log_odds - math.log(v1 / v0)
+    disc = b * b - 4.0 * a * c
+    if disc < 0.0:
+        return x_bar
+    sq = math.sqrt(disc)
+    r1 = (-b + sq) / (2.0 * a)
+    r2 = (-b - sq) / (2.0 * a)
+    lo, hi = (m0, m1) if m0 <= m1 else (m1, m0)
+    dentro = [r for r in (r1, r2) if lo <= r <= hi]
+    if not dentro:
+        return x_bar
+    if len(dentro) == 2 and abs(dentro[1] - x_bar) < abs(dentro[0] - x_bar):
+        return dentro[1]
+    return dentro[0]
+
+
+def test_weighted_quest_parity_nominal():
+    X, y, spec = _fixture_weighted_nominal()
+    eng = _engine()
+    sin = eng.evaluate(X, y, spec)
+    con = eng.evaluate(X, y, spec, weights=np.ones(len(X)))
+    assert sin is not None and con is not None
+    _assert_configs_iguales(sin, con)
+
+
+def test_weighted_quest_parity_continuous():
+    X, y, spec = _fixture_weighted_continuous()
+    eng = _engine()
+    sin = eng.evaluate(X, y, spec)
+    con = eng.evaluate(X, y, spec, weights=np.ones(len(X)))
+    assert sin is not None and con is not None
+    assert con.statistic_name == "f"
+    _assert_configs_iguales(sin, con)
+
+
+def test_weighted_quest_child_ns_physical_continuous():
+    X, y, spec = _fixture_weighted_continuous()
+    rng = np.random.default_rng(2026)
+    w = rng.uniform(0.5, 2.0, len(X))
+    cfg = _engine().evaluate(X, y, spec, weights=w)
+    assert cfg is not None
+    assert cfg.parent_n == len(X)
+    assert sum(cfg.child_ns) == len(X)
+    assert all(isinstance(n, int) for n in cfg.child_ns)
+
+
+def test_weighted_quest_child_ns_physical_nominal():
+    # cubre _subset_cut con el bincount paralelo de conteo fisico
+    X, y, spec = _fixture_weighted_nominal()
+    rng = np.random.default_rng(7)
+    w = rng.uniform(0.5, 2.0, len(X))
+    cfg = _engine().evaluate(X, y, spec, weights=w)
+    assert cfg is not None
+    assert cfg.parent_n == len(X)
+    assert sum(cfg.child_ns) == len(X)
+    assert all(isinstance(n, int) for n in cfg.child_ns)
+
+
+def test_weighted_quest_f_is_scale_invariant():
+    X, y, spec = _fixture_weighted_continuous()
+    rng = np.random.default_rng(3)
+    w = rng.uniform(0.5, 2.0, len(X))
+    eng = _engine()
+    cfg_w = eng.evaluate(X, y, spec, weights=w)
+    cfg_k = eng.evaluate(X, y, spec, weights=w * 7.5)
+    assert cfg_w is not None and cfg_k is not None
+    assert math.isclose(cfg_w.statistic, cfg_k.statistic, rel_tol=1e-12)
+    # campos estrictamente invariantes a escala
+    assert cfg_w.predictor == cfg_k.predictor
+    assert cfg_w.statistic_name == cfg_k.statistic_name
+    assert cfg_w.df == cfg_k.df
+    assert math.isclose(cfg_w.p_value, cfg_k.p_value, rel_tol=1e-12)
+    assert cfg_w.child_ns == cfg_k.child_ns
+    assert cfg_w.parent_n == cfg_k.parent_n
+    assert cfg_w.branches == cfg_k.branches
+    # NOTA: el threshold QDA NO es invariante a escala porque la varianza
+    # ponderada usa divisor W - 1 (Bessel): escalar los pesos cambia el
+    # factor (W - 1)/W. Es la convencion documentada en Fase 3.2.d.
+
+
+def test_weighted_quest_chi2_scales_linearly():
+    # hallazgo documentado en design_decisions.md §13.2: chi2 de Pearson es
+    # sensible a la escala de la masa total de pesos (NO es un bug)
+    X, y, spec = _fixture_weighted_nominal()
+    rng = np.random.default_rng(5)
+    w = rng.uniform(0.5, 2.0, len(X))
+    eng = _engine()
+    cfg_w = eng.evaluate(X, y, spec, weights=w)
+    k = 3.0
+    cfg_k = eng.evaluate(X, y, spec, weights=w * k)
+    assert cfg_w is not None and cfg_k is not None
+    assert cfg_w.statistic_name == "chi2"
+    assert math.isclose(cfg_k.statistic, k * cfg_w.statistic, rel_tol=1e-12)
+    # chi2 crece -> p-value baja (no identico)
+    assert not math.isclose(cfg_k.p_value, cfg_w.p_value, rel_tol=1e-12)
+    assert cfg_k.p_value < cfg_w.p_value
+
+
+def test_weighted_quest_chi2_matches_manual():
+    # tabla ponderada calculada a mano: A -> {y0: 1.0, y1: 5.0};
+    # B -> {y0: 2.0, y1: 2.0}. alpha alto para que la Etapa 1 pase.
+    x = pd.Series(["A", "A", "A", "B", "B", "B"])
+    y = pd.Series([0, 1, 1, 0, 0, 1])
+    w = np.array([1.0, 2.0, 3.0, 1.0, 1.0, 2.0])
+    X = pd.DataFrame({"cat": x})
+    cfg = _engine(alpha=0.9).evaluate(X, y, {"cat": _NOMINAL}, weights=w)
+    assert cfg is not None
+    assert cfg.statistic_name == "chi2"
+    tab = np.array([[1.0, 5.0], [2.0, 2.0]])
+    row = tab.sum(axis=1)
+    col = tab.sum(axis=0)
+    n_tot = float(tab.sum())
+    expected = np.outer(row, col) / n_tot
+    chi2_manual = float(((tab - expected) ** 2 / expected).sum())
+    assert math.isclose(cfg.statistic, chi2_manual, rel_tol=1e-12)
+
+
+def test_weighted_quest_qda_uses_weighted_means_and_priors():
+    # pesos elegidos para que la media ponderada difiera claramente de la
+    # simple: m0_simple = 2.0 vs m0_pond = 1.6 ; m1_simple = 8.0 vs 8.5
+    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0])})
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    w = np.array([3.0, 1.0, 1.0, 1.0, 1.0, 4.0])
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS}, weights=w)
+    assert cfg is not None
+    esperado = _qda_ponderado_manual(
+        X["v"].to_numpy(), y.to_numpy(), w, divisor_bessel=True
+    )
+    assert math.isclose(cfg.threshold, esperado, rel_tol=1e-12)
+    # y difiere del umbral NO ponderado (t = 5.0, ver test_seleccion_anova_f54)
+    assert not math.isclose(cfg.threshold, 5.0, rel_tol=1e-9)
+
+
+def test_weighted_quest_qda_variance_uses_w_minus_one():
+    # Convencion documentada (Fase 3.2.d): la varianza ponderada del QDA
+    # usa divisor W - 1 (generalizacion del n - 1 de Bessel cuando los pesos
+    # actuan como frecuencias), NO el divisor W del estimador de maxima
+    # verosimilitud.
+    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0])})
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    w = np.array([3.0, 1.0, 1.0, 1.0, 1.0, 4.0])  # no todos iguales
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS}, weights=w)
+    assert cfg is not None
+    xv, yc = X["v"].to_numpy(), y.to_numpy()
+    t_wmenos1 = _qda_ponderado_manual(xv, yc, w, divisor_bessel=True)
+    t_w = _qda_ponderado_manual(xv, yc, w, divisor_bessel=False)
+    assert math.isclose(cfg.threshold, t_wmenos1, rel_tol=1e-12)
+    # con pesos no uniformes los dos divisores dan umbrales distintos
+    assert not math.isclose(t_wmenos1, t_w, rel_tol=1e-9)
+    assert not math.isclose(cfg.threshold, t_w, rel_tol=1e-9)
+
+
+def test_weighted_quest_rejects_wrong_length():
+    X, y, spec = _fixture_weighted_continuous()
+    eng = _engine()
+    _assert_raises(
+        ValueError, eng.evaluate, X, y, spec, weights=np.ones(len(X) + 1)
+    )
+    _assert_raises(
+        ValueError, eng.evaluate, X, y, spec, weights=np.ones((len(X), 1))
+    )
+
+
+def test_weighted_quest_rejects_nonpositive():
+    X, y, spec = _fixture_weighted_continuous()
+    eng = _engine()
+    w_cero = np.ones(len(X))
+    w_cero[2] = 0.0
+    _assert_raises(ValueError, eng.evaluate, X, y, spec, weights=w_cero)
+    w_neg = np.ones(len(X))
+    w_neg[4] = -0.5
+    _assert_raises(ValueError, eng.evaluate, X, y, spec, weights=w_neg)
+
+
+def test_weighted_quest_rejects_non_finite():
+    X, y, spec = _fixture_weighted_continuous()
+    eng = _engine()
+    w_nan = np.ones(len(X))
+    w_nan[0] = np.nan
+    _assert_raises(ValueError, eng.evaluate, X, y, spec, weights=w_nan)
+    w_inf = np.ones(len(X))
+    w_inf[1] = np.inf
+    _assert_raises(ValueError, eng.evaluate, X, y, spec, weights=w_inf)
+
+
+def test_weighted_quest_best_split_propagates_weights():
+    # chi2 escala con la masa total y F es invariante a escala: con pesos
+    # uniformes k>1 el nominal gana aunque sin pesos gane el continuo.
+    # (a) weights=ones reproduce exactamente la seleccion sin pesos;
+    # (b) con pesos no triviales el ganador cambia de "cont" a "nom".
+    n0, n1 = 30, 30
+    rng = np.random.default_rng(42)
+    cont = np.concatenate(
+        [rng.normal(0.0, 1.0, n0), rng.normal(0.8, 1.0, n1)]
+    )
+    nom = np.array(
+        ["a"] * (n0 - 9) + ["b"] * 9 + ["a"] * 9 + ["b"] * (n1 - 9),
+        dtype=object,
+    )
+    X = pd.DataFrame({"cont": pd.Series(cont), "nom": pd.Series(nom)})
+    y = pd.Series([0] * n0 + [1] * n1)
+    spec = {"cont": _CONTINUOUS, "nom": _NOMINAL}
+    eng = _engine()
+    sin = eng.best_split(X, y, spec)
+    ones = eng.best_split(X, y, spec, weights=np.ones(len(X)))
+    assert sin is not None and ones is not None
+    # (a) paridad estricta con weights=ones
+    _assert_configs_iguales(sin, ones)
+    assert sin.predictor == "cont"
+    # (b) masa total k=8: chi2 x8 (p baja), F identico -> gana "nom"
+    pesados = eng.best_split(X, y, spec, weights=np.full(len(X), 8.0))
+    assert pesados is not None
+    assert pesados.predictor == "nom"
+    assert pesados.predictor != sin.predictor
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

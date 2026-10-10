@@ -2991,3 +2991,42 @@ El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement
 - `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 — Fase 3.2.d: QUEST con conteos ponderados
+
+**Estado**: ✅ Cerrada.
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+**Revisor**: Marco Rengel.
+**Artefactos**: `backend_v3/quest_engine.py`, `tests/test_quest_engine.py`.
+
+**Motivación**: Cuarta sub-fase de la Fase 3.2. Extiende el motor QUEST para aceptar pesos por muestra. La ponderación toca las dos etapas: Etapa 1 (selección de variable) usa χ² o F ponderado; Etapa 2 (corte) usa QDA con medias ponderadas, varianzas ponderadas con divisor `W − 1` y priors empíricos ponderados. El camino interno se unifica con un vector local `w` (unos si `weights=None`).
+
+**Cambios aplicados**:
+
+- `evaluate`, `best_split`, `_prepare`, `_numeric_cut`, `_subset_cut` y `_qda_cutpoint` ganan `weights` keyword-only, default `None`. Validación: 1D, longitud = `len(X)`, finitos, estrictamente positivos.
+- `_prepare`: la tabla de contingencia para el camino nominal ya no se construye con `pd.crosstab`; se construye con `np.bincount` ponderado. Se guardan `w0`/`w1`/`w` en `info` para reutilizarlos.
+- `f_oneway` y `brown_forsythe` se llaman con `weights=(w0, w1)`.
+- `_qda_cutpoint`: medias ponderadas; varianzas con divisor `W − 1` (Bessel ponderado, documentado); priors empíricos `W_k / W`; midpoint ponderado `(W0·m0 + W1·m1) / (W0 + W1)`.
+- `_subset_cut`: matriz categoría × clase construida con `np.bincount(codes * 2 + yc, weights=w)`. Además, se calcula un vector paralelo de conteos físicos por categoría (`np.bincount(codes, minlength=k_cats)`) para que los `child_ns` devueltos sean enteros físicos.
+- `child_ns` y `parent_n` en el `SplitConfig` final siguen siendo conteos físicos de filas (enteros). `types.py` no se tocó.
+
+**Identidades verificadas**:
+
+- Con `weights=None`: `SplitConfig` idéntico al pre-3.2 (nominal y continuo).
+- Con `weights=ones`: mismo `SplitConfig` que sin pesos.
+- Con pesos no triviales: `sum(child_ns) == len(X)` (filas físicas); `parent_n == len(X)`; enteros.
+- F invariante a escala: multiplicar los pesos por 7.5 deja `statistic` y el `SplitConfig` idénticos.
+- χ² escala lineal: multiplicar los pesos por k multiplica `χ²` por k. p-valor cambia.
+- QDA ponderado verificado contra cálculo manual (medias ponderadas, varianzas con divisor W−1, priors ponderados).
+- χ² manual (tabla ponderada) verificado contra el motor.
+
+**Hallazgo matemático adicional**: El umbral del QDA de QUEST NO es invariante a la escala de pesos, porque la varianza ponderada usa divisor `W − 1` (Bessel ponderado) en lugar de `W`. Con pesos multiplicados por `k`, el denominador pasa de `W − 1` a `k·W − 1`, que no es `k·(W − 1)`. La no-invarianza es matemáticamente inevitable y es la convención estándar cuando los pesos actúan como frecuencias (SPSS WEIGHT BY, R survey con divisor muestral, SAS survey). La alternativa con divisor `W` (varianza poblacional) sí sería invariante a escala, pero subestimaría sistemáticamente en muestras pequeñas. Se mantiene `W − 1`. Documentado en `docs/design_decisions.md` §13.4.
+
+**Tests**: 13 tests nuevos en `tests/test_quest_engine.py`. Suite completa: 290/290 PASSED (277 previos + 13 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.4 (nueva).
+- `docs/methodology.md` §3.7bis (nueva).
+- `docs/roadmap.md` (tabla 3.2).
+
+---

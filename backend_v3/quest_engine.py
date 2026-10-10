@@ -44,6 +44,19 @@ Cita canonica:
   Loh, W.-Y. & Shih, Y.-S. (1997). "Split Selection Methods for
   Classification Trees". Statistica Sinica 7(4), 815-840.
 
+Pesos por muestra (Fase 3.2.d): `evaluate`/`best_split` aceptan
+`weights` keyword-only (1D, finitos, >0). Con pesos, las "cuentas" del
+ANOVA, la chi-cuadrado y el QDA pasan a ser sumas de pesos:
+  * ANOVA ponderado: Heeringa, West & Berglund (2010), "Applied Survey
+    Data Analysis", §5.3.
+  * chi2 de Pearson es sensible a la escala de la masa total de pesos
+    (ibid., §5.4): comportamiento correcto, NO se normaliza.
+  * varianza ponderada con divisor W - 1 (generalizacion natural del
+    n - 1 clasico cuando los pesos actuan como frecuencias).
+Con `weights=None` el comportamiento es identico bit a bit al previo.
+`SplitConfig.child_ns` y `parent_n` siguen siendo CONTEO FISICO DE
+FILAS (enteros).
+
 Dependencias permitidas: numpy, pandas, scipy.stats (via statistics.py).
 """
 
@@ -179,6 +192,8 @@ class QuestEngine:
         X: pd.DataFrame,
         y: pd.Series,
         spec: dict[str, PredictorType],
+        *,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """QUEST completo en un nodo: seleccion de variable + corte.
 
@@ -186,6 +201,14 @@ class QuestEngine:
         el llamador, incluidos los descartados por datos insuficientes
         (criterio conservador: la correccion cubre la familia de tests que se
         INTENTARON, no solo los computados).
+
+        weights (keyword-only, Fase 3.2.d): pesos por muestra 1D, finitos,
+        estrictamente positivos, longitud = len(X). Con pesos, el ANOVA es
+        ponderado (Heeringa, West & Berglund 2010, §5.3) y la chi2 de
+        Pearson recibe una tabla con sumas de pesos (sensible a la escala,
+        ibid. §5.4: comportamiento correcto, no se normaliza). La varianza
+        ponderada del QDA usa divisor W - 1. Con weights=None, el
+        comportamiento es identico bit a bit al previo.
         """
         if not spec:
             raise ValueError("[QUEST] spec vacio: nada que evaluar")
@@ -198,6 +221,19 @@ class QuestEngine:
             raise ValueError(
                 f"[QUEST] X (n={len(X)}) e y (n={len(ys)}) difieren en longitud"
             )
+
+        w_full: np.ndarray | None = None
+        if weights is not None:
+            w_full = np.asarray(weights, dtype=float)
+            if w_full.ndim != 1 or w_full.size != len(X):
+                raise ValueError(
+                    f"[QUEST] weights debe ser 1D de longitud len(X)={len(X)} "
+                    f"(recibido shape={w_full.shape})"
+                )
+            if not np.all(np.isfinite(w_full)) or not np.all(w_full > 0.0):
+                raise ValueError(
+                    "[QUEST] weights deben ser finitos y estrictamente positivos"
+                )
 
         # --- target: EXCLUSIVAMENTE binario (restriccion Fase 0) ---
         yd = ys.dropna()
@@ -237,7 +273,7 @@ class QuestEngine:
         preparado: dict[str, tuple] = {}
         mejor_media: tuple[float, str, str, TestResult] | None = None
         for orden, (nombre, ptype) in enumerate(spec.items()):
-            pre = self._prepare(X[nombre], y_full, ptype, nombre)
+            pre = self._prepare(X[nombre], y_full, ptype, nombre, weights=w_full)
             if pre is None:
                 continue
             xd, yc, info = pre
@@ -259,7 +295,9 @@ class QuestEngine:
                 xd, yc, info = preparado[nombre]
                 if info["x0"].size == 0 or info["x1"].size == 0:
                     continue
-                bf = brown_forsythe(info["x0"], info["x1"])
+                bf = brown_forsythe(
+                    info["x0"], info["x1"], weights=(info["w0"], info["w1"])
+                )
                 if mejor_var is None or bf.p_value < mejor_var[0]:
                     mejor_var = (bf.p_value, nombre, bf)
             if mejor_var is not None and mejor_var[0] < umbral:
@@ -290,7 +328,7 @@ class QuestEngine:
 
         # --- Etapa 2 ---
         if spec[seleccion.predictor] == PredictorType.NOMINAL:
-            corte = self._subset_cut(xd, yc, seleccion.predictor)
+            corte = self._subset_cut(xd, yc, seleccion.predictor, weights=info["w"])
             if corte is None:
                 return None
             (branches, child_ns), threshold = corte, None
@@ -336,23 +374,39 @@ class QuestEngine:
         spec: dict[str, PredictorType],
         *,
         target_type=None,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """Alias de evaluate() para paridad de API con ChaidEngine/CrtEngine.
 
         QUEST siempre exige target binario (Fase 0); target_type se ignora.
+        weights se propaga a evaluate (Fase 3.2.d).
         """
-        return self.evaluate(X, y, spec)
+        return self.evaluate(X, y, spec, weights=weights)
 
     # ------------------------------------------------------------------
     # preparacion por variable (dropna defensivo; imputacion vive fuera)
     # ------------------------------------------------------------------
 
-    def _prepare(self, x: pd.Series, y_full: pd.Series, ptype: PredictorType, nombre: str):
-        """dropna conjunto por variable + TestResult de la Etapa 1."""
+    def _prepare(
+        self,
+        x: pd.Series,
+        y_full: pd.Series,
+        ptype: PredictorType,
+        nombre: str,
+        *,
+        weights: np.ndarray | None = None,
+    ):
+        """dropna conjunto por variable + TestResult de la Etapa 1.
+
+        Con `weights` (Fase 3.2.d), el sub-vector `w` se extrae con la
+        misma mascara dropna; si weights es None, w = np.ones(n): a partir
+        de aqui todo el motor opera sobre `w`, unificando el camino.
+        """
         mask = x.notna().to_numpy() & y_full.notna().to_numpy()
         xd = x[mask]
         yc = y_full[mask].to_numpy(dtype=np.int64)
         n = int(len(xd))
+        w = weights[mask] if weights is not None else np.ones(n)
         n_drop = int((~mask).sum())
         if n_drop:
             self._log.info("[QUEST|%r] %d filas excluidas por NaN", nombre, n_drop)
@@ -366,11 +420,22 @@ class QuestEngine:
             return None
 
         if ptype == PredictorType.NOMINAL:
-            tab = pd.crosstab(xd, yc)
-            if tab.shape[0] < 2 or tab.shape[1] < 2:
+            # tabla (c, K) de contingencia con sumas de pesos (np.bincount
+            # ponderado; sustituye al pd.crosstab original en Fase 3.2.d)
+            try:
+                cat_codes, _uniques = pd.factorize(xd, sort=True)
+            except TypeError as e:
+                raise ValueError(
+                    f"[QUEST|{nombre!r}] categorias no factorizables: {e}"
+                ) from e
+            k_cats = int(cat_codes.max()) + 1
+            if k_cats < 2:
                 return None
+            tab = np.bincount(
+                cat_codes * 2 + yc, weights=w, minlength=2 * k_cats
+            ).reshape(k_cats, 2)
             test = pearson_chi2(tab)
-            return xd, yc, {"source": "chi2", "test": test}
+            return xd, yc, {"source": "chi2", "test": test, "w": w}
 
         # continuo u ordinal: ordinal simbolico se mide sobre los CODIGOS
         # del orden natural (factorize sort=True), que es lo que luego corta
@@ -391,12 +456,14 @@ class QuestEngine:
             raise ValueError(f"[QUEST|{nombre!r}] x contiene no finitos")
         x0 = xv[~y1]
         x1 = xv[y1]
+        w0 = w[~y1]
+        w1 = w[y1]
         if x0.size == 0 or x1.size == 0 or x0.size + x1.size <= 2:
             test = TestResult(0.0, (1, 1), 1.0)
         else:
-            test = f_oneway(x0, x1)
+            test = f_oneway(x0, x1, weights=(w0, w1))
         return xd, yc, {"source": "anova", "test": test, "x0": x0, "x1": x1,
-                        "xv": xv, "labels": labels}
+                        "w0": w0, "w1": w1, "w": w, "xv": xv, "labels": labels}
 
     def _mk_selection(
         self, nombre: str, source: str, res: TestResult, j_total: int
@@ -414,7 +481,14 @@ class QuestEngine:
     # Etapa 2: QDA univariante (continuo / ordinal)
     # ------------------------------------------------------------------
 
-    def _qda_cutpoint(self, xv: np.ndarray, yc: np.ndarray, nombre: str) -> float:
+    def _qda_cutpoint(
+        self,
+        xv: np.ndarray,
+        yc: np.ndarray,
+        nombre: str,
+        *,
+        weights: np.ndarray | None = None,
+    ) -> float:
         """Raiz de las log-verosimilitudes condicionales gaussianas.
 
             A x^2 + B x + C = 0
@@ -426,7 +500,7 @@ class QuestEngine:
           - True (default, documented Fase 0 restriction): only roots inside
             the inter-means range [min(m0, m1), max(m0, m1)] are accepted;
             external roots are discarded and, if none qualifies, the
-            fallback is the WEIGHTED midpoint x_bar = (n0 m0 + n1 m1)/N.
+            fallback is the WEIGHTED midpoint x_bar = (W0 m0 + W1 m1)/(W0+W1).
           - False (canonical): any real root is accepted; with two real
             roots, the one closest to the weighted mean x_bar is returned
             (operational determinism, same tie-break criterion as the
@@ -435,20 +509,38 @@ class QuestEngine:
         Si s0^2 == s1^2: forma lineal (LDA con priors):
             t = (m0+m1)/2 - s^2 ln(pi1/pi0) / (m1 - m0)
         Varianza nula de alguna clase: fallback directo (operativo, no optimo).
+
+        Pesos (Fase 3.2.d): con `weights`, las medias son medias
+        ponderadas, los priors empiricos son pi_k = W_k / (W0 + W1) y las
+        varianzas son ponderadas con correccion de Bessel ponderada
+
+            v_k = sum_k w (x - m_k)^2 / (W_k - 1),
+
+        donde el divisor W_k - 1 es la generalizacion natural del n - 1
+        clasico cuando los pesos actuan como frecuencias. Los checks de
+        tamano ("clase con < 2 obs") se evaluan sobre FILAS FISICAS
+        (n0, n1); el check de varianza nula, sobre las varianzas
+        ponderadas. Con weights=None (equivale a todos unos) el calculo
+        reproduce el original.
         """
         y1 = yc == 1
         x0 = xv[~y1]
         x1 = xv[y1]
         n0, n1 = int(x0.size), int(x1.size)
+        w = weights if weights is not None else np.ones(xv.size)
+        w0 = w[~y1]
+        w1 = w[y1]
         if n0 < 2 or n1 < 2:
             self._log.info("[QUEST|%r] clase con <2 obs: fallback a media", nombre)
-            return float(xv.mean())
-        m0 = float(x0.mean())
-        m1 = float(x1.mean())
-        v0 = float(x0.var(ddof=1))
-        v1 = float(x1.var(ddof=1))
-        n_tot = n0 + n1
-        x_bar = (n0 * m0 + n1 * m1) / n_tot
+            return float(np.average(xv, weights=w))
+        w_tot0 = float(w0.sum())
+        w_tot1 = float(w1.sum())
+        m0 = float((w0 * x0).sum()) / w_tot0
+        m1 = float((w1 * x1).sum()) / w_tot1
+        v0 = float((w0 * (x0 - m0) ** 2).sum()) / (w_tot0 - 1.0)
+        v1 = float((w1 * (x1 - m1) ** 2).sum()) / (w_tot1 - 1.0)
+        w_tot = w_tot0 + w_tot1
+        x_bar = (w_tot0 * m0 + w_tot1 * m1) / w_tot
 
         if v0 <= 0.0 or v1 <= 0.0:
             self._log.info(
@@ -457,8 +549,8 @@ class QuestEngine:
             )
             return float(x_bar)
 
-        pi1 = n1 / n_tot
-        pi0 = n0 / n_tot
+        pi1 = w_tot1 / w_tot
+        pi0 = w_tot0 / w_tot
         log_odds = math.log(pi1 / pi0)
 
         if math.isclose(v0, v1, rel_tol=1e-12):
@@ -513,7 +605,7 @@ class QuestEngine:
         labels = info.get("labels")
         if labels is not None and len(labels) < 2:
             return None, None
-        t = self._qda_cutpoint(xv, yc, nombre)
+        t = self._qda_cutpoint(xv, yc, nombre, weights=info["w"])
         if labels is None:
             return t, None
         k = int(math.floor(t))
@@ -526,11 +618,21 @@ class QuestEngine:
     # ------------------------------------------------------------------
 
     def _subset_cut(
-        self, xd: pd.Series, yc: np.ndarray, nombre: str
+        self,
+        xd: pd.Series,
+        yc: np.ndarray,
+        nombre: str,
+        *,
+        weights: np.ndarray | None = None,
     ) -> tuple[tuple, tuple[int, int]] | None:
         """Particion binaria por ganancia de Gini (K<=10 exhaustiva; K>10 por
         tasa supervisada). NOTA: la via K>10 es estilo Breiman/C&RT, no el
-        trato de dummies+LDA de Loh & Shih 1997 (decision documentada)."""
+        trato de dummies+LDA de Loh & Shih 1997 (decision documentada).
+
+        Con `weights` (Fase 3.2.d) la matriz categoria x clase acumula
+        SUMAS DE PESOS, pero `child_ns` devuelto sigue siendo el CONTEO
+        FISICO de filas por lado.
+        """
         # defense in depth: __init__ already rejects values != "rate", but
         # the public attribute could be mutated at runtime
         if self.nominal_high_card != "rate":
@@ -550,9 +652,11 @@ class QuestEngine:
         k_cats = len(labels)
         if k_cats < 2:
             return None
+        w = weights if weights is not None else np.ones(len(xd))
         counts = np.bincount(
-            codes * 2 + yc, minlength=2 * k_cats
+            codes * 2 + yc, weights=w, minlength=2 * k_cats
         ).reshape(k_cats, 2).astype(float)
+        rows_per_cat = np.bincount(codes, minlength=k_cats)  # conteo FISICO
         n_tot = float(counts.sum())
         p = counts.sum(axis=0) / n_tot
         i_parent = float(1.0 - (p * p).sum())
@@ -578,8 +682,9 @@ class QuestEngine:
 
         izq = tuple(labels[g] for g in range(k_cats) if not mask_der[g])
         der = tuple(labels[g] for g in range(k_cats) if mask_der[g])
-        n_l = int(counts[~mask_der].sum())
-        n_r = int(counts[mask_der].sum())
+        # child_ns = CONTEO FISICO de filas por lado (no suma de pesos)
+        n_l = int(rows_per_cat[~mask_der].sum())
+        n_r = int(rows_per_cat[mask_der].sum())
         return (izq, der), (n_l, n_r)
 
     @staticmethod
