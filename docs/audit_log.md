@@ -3083,3 +3083,46 @@ El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement
 - `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 — Fase 3.2.f: Session y splitting con pesos por muestra
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `backend_v3/splitting.py`, `backend_v3/session_state.py`, `tests/test_splitting.py`, `tests/test_session_state.py`.
+
+**Motivación**: Sexta sub-fase de la Fase 3.2. Conecta la ponderación desde el CSV hasta el árbol: `Session.fix_spec` acepta `weight_col`, `partition` materializa los sub-vectores de pesos por partición, `train` propaga pesos a `TreeBuilder`, `load_oot` materializa los pesos de la cohorte OOT, `reset_to_data_loaded` limpia las cachés. `stratified_split` acepta `weights` para validación pero la estratificación sigue siendo por conteo de filas.
+
+**Cambios aplicados**:
+
+- `stratified_split` gana `weights` keyword-only. Validación: 1D, longitud = `len(y)`, finito, estrictamente positivo. La cuota de filas por clase es `n_k * train_frac` (Hamilton-Hare clásico), INDEPENDIENTE de los pesos. Los pesos viajan con cada fila, no cambian `idx_train`/`idx_test`. Consecuencia: el split con pesos es numéricamente idéntico al split sin pesos (mismo seed).
+- Check B2 (≥2 filas físicas por clase en train y en test) se aplica SOLO cuando `weights is not None`. Con `weights=None`, B2 no se ejecuta, restaurando el invariante C1 ("sin pesos, comportamiento idéntico al pre-3.2").
+- `Session.__init__` gana cuatro atributos de caché: `_w_train`, `_w_test`, `_w_oot`, `_w_col` (todos inicialmente None).
+- `Session.fix_spec` gana `weight_col` keyword-only. Validaciones atómicas: existencia de la columna en `_df`; `weight_col != target`; `weight_col` no incluido en `predictors` (defensa en profundidad); dtype numérico no-bool; sin NaN; estrictamente positivo (con conteo y primer índice infractor). Guarda `self._w_col`.
+- `Session.partition`: si `_w_col` no es None, materializa el vector completo y pasa `weights` a `stratified_split`, luego separa los sub-vectores `_w_train`/`_w_test`. Evento gana `|weighted=true`.
+- `Session.train`: pasa `weights=self._w_train` y `weight_col=self._w_col` a `TreeBuilder`. Evento gana `|weighted=true,weight_col=<name>`.
+- `Session.load_oot`: amplía el conjunto de columnas esperadas para incluir `_w_col` si aplica; materializa `_w_oot` con los pesos del CSV OOT (no los del train); valida finito y >0; evento gana `|weighted=true`.
+- `Session.reset_to_data_loaded`: limpia `_w_train`, `_w_test`, `_w_oot`, `_w_col`.
+- `Session.evaluate_oos` y `Session.evaluate_oot`: NO propagan pesos todavía (dependen de que `compute_oos_metrics` acepte `weights`, que es 3.2.g). Las cachés ya quedan pobladas, listas para 3.2.g.
+
+**Decisiones registradas (dos)**:
+
+1. **Check B2 condicional.** B2 se aplica solo cuando se declara `weight_col`. Motivo: C1 ("sin pesos, idéntico al pre-3.2") es el invariante no negociable; B2 es una defensa específica del modo ponderado. Con Hamilton-Hare sobre conteo de filas, una clase con `n_k >= 2` no puede quedar con 0 filas en ninguna partición, así que B2 no es necesario sin pesos. Documentado en `docs/design_decisions.md` §13.6.1.
+
+2. **Estratificación por filas con pesos.** El parámetro `weights` en `stratified_split` se valida pero no cambia el split. La intención del diseño v2 (que decía "estratificar por peso acumulado") se corrige: traducir cuotas ponderadas a cuotas de filas es idéntico a usar directamente `n_k * train_frac`, porque la masa ponderada ya está adjunta a cada fila y afecta al modelo, no a la partición. Documentado en `docs/design_decisions.md` §13.6.2.
+
+**Incidentes durante la implementación**:
+
+- En la primera implementación de `stratified_split` con pesos, la cuota ponderada `Q_k = W_k * train_frac` se traducía incorrectamente a número de filas, lo que producía `floor(Q_k) > n_k` con pesos extremos. Detectado por el test `test_weighted_splitting_stratifies_by_weight` (fixture original con pesos 2.0). Corregido en un prompt correctivo: Hamilton-Hare clásico sobre conteo de filas; los pesos viajan con las filas pero no cambian el split.
+- El check B2, aplicado incondicionalmente en la primera pasada, rompió `test_largest_remainder` (fixture con clase de 3 filas). Corregido en un prompt correctivo: B2 solo cuando hay pesos.
+
+**Tests**: 7 tests nuevos en `tests/test_splitting.py`, 9 en `tests/test_session_state.py`. Suite completa: 318/318 PASSED (302 previos + 16 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.6 (nueva, dos subsecciones).
+- `docs/roadmap.md` (tabla 3.2).
+
+---

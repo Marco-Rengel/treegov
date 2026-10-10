@@ -210,7 +210,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.2.c | C&RT con Gini/varianza ponderada + surrogates | ✅ 10/10/2026 |
 | 3.2.d | QUEST con Stage 1 + QDA ponderados | ✅ 10/10/2026 |
 | 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ✅ 10/10/2026 |
-| 3.2.f | Session (fix_spec + partition + train + reset) | ⏳ |
+| 3.2.f | Session (fix_spec + partition + train + reset) | ✅ 10/10/2026 |
 | 3.2.g | validation y reporting ponderados | ⏳ |
 | 3.2.h | stability ponderado + wizard + E2E + cierre | ⏳ |
 

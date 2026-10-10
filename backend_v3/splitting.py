@@ -27,11 +27,31 @@ def stratified_split(
     train_frac: float,
     seed: int,
     log: logging.Logger | None = None,
+    *,
+    weights: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Indices posicionales (train, test) con estratificacion exacta.
 
     Devuelve arrays de enteros disjuntos que cubren 0..N-1. La tasa de cada
     clase en train coincide con la global salvo redondeo entero exacto.
+
+    Modo ponderado (Fase 3.2): si `weights` no es None, el vector se
+    VALIDA (1D, longitud = len(y), finito, estrictamente positivo) pero NO
+    se usa para repartir filas. La estratificacion es SIEMPRE Hamilton-Hare
+    clasico sobre el conteo de filas `n_k` por clase: los pesos viajan con
+    cada fila y afectan al modelo, no a la particion. Consecuencia: con
+    `weights` declarado, `idx_train` e `idx_test` son identicos a los del
+    modo sin pesos (paridad total respecto al pre-3.2); el parametro solo
+    permite validar los pesos antes de que el llamador (Session) separe
+    los sub-vectores de train/test.
+
+    Check B2 (SOLO cuando `weights` no es None): cada clase observada en
+    `y` debe quedar con al menos 2 filas fisicas en train Y al menos 2 en
+    test. Es defensa contra fixtures degenerados con pesos declarados. El
+    camino sin pesos NO ejecuta B2: invariante C1 (comportamiento
+    identico al pre-3.2); ademas, con Hamilton-Hare una clase con
+    n_k >= 2 no puede quedar con 0 filas en ninguna particion bajo esta
+    convencion.
     """
     if log is None:
         log = get_logger("splitting")
@@ -52,8 +72,28 @@ def stratified_split(
     n_total = len(yv)
     if n_total == 0:
         raise ValueError("[splitting] y vacio")
-    n_train_obj = int(round(n_total * train_frac))
+
+    w: np.ndarray | None = None
+    if weights is not None:
+        w = np.asarray(weights, dtype=float)
+        if w.ndim != 1:
+            raise ValueError(
+                f"[splitting] weights debe ser 1D: ndim={w.ndim}"
+            )
+        if len(w) != n_total:
+            raise ValueError(
+                f"[splitting] weights longitud {len(w)} != len(y) {n_total}"
+            )
+        if not np.isfinite(w).all():
+            raise ValueError("[splitting] weights contiene valores no finitos")
+        if not (w > 0).all():
+            raise ValueError(
+                "[splitting] weights deben ser estrictamente positivos"
+            )
+
     rng = np.random.default_rng(seed)
+
+    n_train_obj = int(round(n_total * train_frac))
 
     permutadas: list[np.ndarray] = []
     partes: list[np.ndarray] = []
@@ -63,9 +103,10 @@ def stratified_split(
         idx_c = np.flatnonzero(yv == clase)
         idx_c = idx_c[rng.permutation(len(idx_c))]
         permutadas.append(idx_c)
+        # La cuota es siempre por conteo de filas, con o sin pesos.
         q = len(idx_c) * train_frac
         f = int(np.floor(q))
-        partes.append(idx_c[:f])
+        partes.append(idx_c[: min(f, len(idx_c))])
         fracs.append(q - f)
         totals.append(len(idx_c))
 
@@ -85,6 +126,20 @@ def stratified_split(
     mask = np.zeros(n_total, dtype=bool)
     mask[idx_train] = True
     idx_test = np.flatnonzero(~mask)
+
+    # Check B2 (solo modo ponderado): cada clase debe tener >=2 filas
+    # fisicas en train y en test. Sin pesos, C1 exige paridad pre-3.2.
+    if w is not None:
+        for clase in classes:
+            n_tr = int(np.sum(yv[idx_train] == clase))
+            n_te = int(np.sum(yv[idx_test] == clase))
+            if n_tr < 2 or n_te < 2:
+                raise ValueError(
+                    f"[splitting] check B2: clase {clase!r} queda con "
+                    f"{n_tr} filas en train y {n_te} en test "
+                    f"(minimo 2 en cada lado)"
+                )
+
     log.info(
         "[splitting] N=%d -> train=%d (%.2f%%) test=%d (seed=%d, clases=%d)",
         n_total, len(idx_train), 100.0 * len(idx_train) / n_total,

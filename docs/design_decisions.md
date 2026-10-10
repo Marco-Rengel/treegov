@@ -1495,6 +1495,101 @@ entrada del 10/10/2026 (Fase 3.2.e).
 
 ---
 
+### 13.6 Session-level weighting decisions
+
+#### 13.6.1 Check B2 (≥2 rows per class per side) is conditional on weights
+
+**Context.** El diseño original de la Fase 3.2 introdujo un check "B2":
+tras particionar, verificar que cada clase observada tiene al menos 2
+filas físicas en train y en test. La intención era defender contra
+pesos extremos que concentran toda la masa en pocas filas y dejan
+una clase con 0 filas en alguna partición. El diseño v2 §1bis.2
+decía que B2 se aplicaba "siempre, con y sin pesos".
+
+**Alternatives considered.**
+
+- (a) B2 incondicional. Rompe `test_largest_remainder` (fixture con
+  clase de solo 3 filas, 1 en test) y viola el invariante C1 de la
+  Fase 3.2 ("sin pesos, comportamiento idéntico al pre-3.2").
+- (b) B2 solo cuando `weights is not None`. Adoptada. El
+  comportamiento sin pesos se preserva intacto; el modo ponderado
+  gana la defensa específica.
+- (c) B2 como advertencia (warning) en lugar de error. Rechazada: un
+  warning pasa desapercibido en logs ruidosos; el fallo explícito
+  es preferible en modo ponderado.
+
+**Decision.** Opción (b).
+
+**Rationale.** C1 es el invariante prioritario. B2 es una defensa
+específica del modo ponderado, no un comportamiento general. Con
+Hamilton-Hare sobre conteo de filas, una clase con `n_k >= 2` no
+puede quedar con 0 filas en ninguna partición; B2 solo es necesario
+cuando los pesos pueden hacer que la masa de una clase colapse en
+muy pocas filas.
+
+**Consequences.**
+
+- `test_largest_remainder` (fixture histórico con clase pequeña)
+  sigue pasando sin cambios.
+- Los fixtures degenerados en tests existentes no necesitan
+  agrandarse.
+- Test consagra el invariante:
+  `test_weighted_splitting_check_b2_not_applied_without_weights`.
+
+**Cross-reference.** `backend_v3/splitting.py::stratified_split`;
+`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.f).
+
+#### 13.6.2 Stratification with weights: row counts, not weighted quotas
+
+**Context.** El diseño v2 §1bis.2 decía "estratifica por peso acumulado
+de cada clase (Hamilton-Hare sobre W_k en vez de n_k)". La
+implementación literal de esa frase conduce a un bug: la cuota
+`Q_k = W_k * train_frac` es PESO, no filas, y traducirla
+directamente a filas produce `floor(Q_k) > n_k` cuando los pesos son
+extremos.
+
+**Alternatives considered.**
+
+- (a) Traducir la cuota ponderada a filas con
+  `n_k_target = round(n_k * train_frac)`. Es la traducción correcta
+  de "estratificar por peso" a "estratificar en filas": el peso no
+  cambia la proporción de filas que va a train; los pesos viajan con
+  cada fila y afectan al modelo, no a la partición.
+- (b) Normalizar los pesos a suma = n antes de la estratificación.
+  Rechazada: introduce una decisión silenciosa del motor que el
+  analista no pidió.
+- (c) Estratificar sobre el vector de pesos como si fueran
+  frecuencias (sin traducir a filas). Es la implementación que
+  falló; ver contexto.
+
+**Decision.** Opción (a) — Hamilton-Hare clásico sobre `n_k * train_frac`.
+
+**Rationale.** La estratificación sirve para que train y test tengan
+proporciones de clase similares a la población. Con conteo de filas,
+esa proporción se preserva exactamente. La masa ponderada no es una
+propiedad de la partición: es una propiedad de las filas que
+componen cada partición, y viaja con ellas. Introducir el peso en
+la fórmula de la partición duplica su efecto (una vez en la
+estratificación, otra en el entrenamiento) y genera fallos
+degenerados.
+
+**Consequences.**
+
+- El split (idx_train, idx_test) es numéricamente idéntico con pesos
+  y sin pesos, con el mismo seed.
+- Los pesos se separan como sub-vectores después del split
+  (`_w_train`, `_w_test`, `_w_oot`) y viajan con cada fila hasta el
+  `TreeBuilder`.
+- Test consagra el invariante:
+  `test_weighted_splitting_split_unchanged_by_weights`.
+- Corrige la afirmación del diseño v2 §1bis.2; el split no depende
+  de los pesos.
+
+**Cross-reference.** `backend_v3/splitting.py::stratified_split`;
+`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.f).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

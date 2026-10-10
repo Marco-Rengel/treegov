@@ -129,6 +129,11 @@ class Session:
         self._imputer: TrainOnlyImputer | None = None  # fit solo-train (1.3 OOT)
         self._X_oot = None
         self._y_oot = None
+        # Caches de ponderacion por muestra (Fase 3.2)
+        self._w_train: np.ndarray | None = None
+        self._w_test: np.ndarray | None = None
+        self._w_oot: np.ndarray | None = None
+        self._w_col: str | None = None
 
     @property
     def state(self) -> SessionState:
@@ -315,7 +320,8 @@ class Session:
         Uso (GUI, Fase 2.1): rehacer el flujo (nuevo target/predictores o
         nueva particion) tras un modelo ya entrenado o un fallo en una
         transicion posterior, SIN releer el CSV. Los artefactos y caches
-        posteriores a DATA_LOADED se descartan (defensivo).
+        posteriores a DATA_LOADED se descartan (defensivo), incluidas las
+        caches de ponderacion por muestra (_w_train/_w_test/_w_oot/_w_col).
         """
         if self._df is None:
             raise ValueError("[session] reset_to_data_loaded en estado EMPTY")
@@ -323,6 +329,8 @@ class Session:
         self._y_train = self._y_test = None
         self._imputer = None
         self._X_oot = self._y_oot = None
+        self._w_train = self._w_test = self._w_oot = None
+        self._w_col = None
         self._state = SessionState(
             state=FlowState.DATA_LOADED,
             csv_path=self._state.csv_path,
@@ -338,6 +346,7 @@ class Session:
         *, predictors: Sequence[str] | None = None,
         target_class: int | str,
         class_labels: Mapping[int | str, str],
+        weight_col: str | None = None,
     ) -> SessionState:
         """DATA_LOADED -> SPEC_FIXED. Target binario 0/1 o multiclase (3.1.c).
 
@@ -347,6 +356,14 @@ class Session:
         el enum PredictorType).
         `target_class` y `class_labels` son obligatorios: la clase
         de interes y las etiquetas humanas por clase.
+
+        `weight_col` (Fase 3.2, opcional): nombre de la columna de pesos
+        por muestra. Si se declara, se valida ANTES de la transicion
+        (atomicidad): existe en el dataset, no es el target, no es un
+        predictor declarado, es numerica (no bool ni object/string), sin
+        NaN, y todos los valores estrictamente positivos. Si es None, la
+        sesion queda en modo no ponderado (comportamiento identico al
+        pre-3.2).
         """
         self._require(FlowState.DATA_LOADED, "fix_spec")
         assert self._df is not None
@@ -415,9 +432,51 @@ class Session:
             spec = {k: v for k, v in spec.items() if k in sel}
         if not spec:
             raise ValueError("[session] spec vacio")
+        # --- Ponderacion por muestra (Fase 3.2): validacion atomica ---
+        if weight_col is not None:
+            if weight_col not in self._df.columns:
+                raise ValueError(
+                    f"[session] weight_col ausente en el dataset: "
+                    f"{weight_col!r}"
+                )
+            if weight_col == target:
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r} no puede ser "
+                    f"el target"
+                )
+            if predictors is not None and weight_col in {str(p) for p in predictors}:
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r}: la columna de "
+                    f"pesos no puede ser predictor"
+                )
+            col_w = self._df[weight_col]
+            if pd.api.types.is_bool_dtype(col_w) or not pd.api.types.is_numeric_dtype(col_w):
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r} debe ser "
+                    f"numerica (int o float); dtype observado: {col_w.dtype}"
+                )
+            if col_w.isna().any():
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r} contiene NaN"
+                )
+            wvals = col_w.to_numpy(dtype=float)
+            if not (wvals > 0).all():
+                n_bad = int((wvals <= 0).sum())
+                first_bad = int(np.flatnonzero(wvals <= 0)[0])
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r}: {n_bad} valor(es) "
+                    f"<= 0 (primero en la fila {first_bad}); los pesos "
+                    f"deben ser estrictamente positivos"
+                )
+            self._w_col = weight_col
+        else:
+            self._w_col = None
+        evento = f"fix_spec:{target}|predictores={len(spec)}"
+        if self._w_col is not None:
+            evento += f"|weight_col={self._w_col}"
         return self._commit(
             FlowState.SPEC_FIXED,
-            evento=f"fix_spec:{target}|predictores={len(spec)}",
+            evento=evento,
             target=target, target_classes=tuple(valores),
             target_class=target_class,
             class_labels=tuple(sorted(class_labels.items())),
@@ -425,15 +484,27 @@ class Session:
         )
 
     def partition(self, train_frac: float = 0.7, seed: int = 42) -> SessionState:
-        """SPEC_FIXED -> PARTITIONED (Hamilton-Hare + imputer SOLO train)."""
+        """SPEC_FIXED -> PARTITIONED (Hamilton-Hare + imputer SOLO train).
+
+        Fase 3.2: si fix_spec declaro `weight_col`, los pesos se pasan a
+        stratified_split (cuotas por masa ponderada, check B2 activo) y se
+        materializan los sub-vectores `_w_train`/`_w_test`. Sin weight_col,
+        comportamiento identico al pre-3.2.
+        """
         self._require(FlowState.SPEC_FIXED, "partition")
         assert self._df is not None
         st = self._state
         assert st.target is not None and st.spec is not None
         spec_d = dict(st.spec)  # tuple inmutable -> dict para el imputer
+        w: np.ndarray | None = None
+        if self._w_col is not None:
+            w = self._df[self._w_col].to_numpy(dtype=float)
         idx_tr, idx_te = stratified_split(
-            self._df[st.target], train_frac, seed, self._log
+            self._df[st.target], train_frac, seed, self._log, weights=w
         )
+        if w is not None:
+            self._w_train = w[idx_tr]
+            self._w_test = w[idx_te]
         X = self._df[[c for c in self._df.columns if c != st.target]]
         X_train = X.iloc[idx_tr].reset_index(drop=True)
         X_test = X.iloc[idx_te].reset_index(drop=True)
@@ -446,10 +517,13 @@ class Session:
         self._y_train = y_train
         self._y_test = self._df[st.target].iloc[idx_te].astype(int).to_numpy()
         self._imputer = imp                    # retenido: lo usa load_oot (1.3)
+        evento = (f"partition:frac={train_frac}|seed={seed}"
+                  f"|train={len(idx_tr)}|test={len(idx_te)}")
+        if w is not None:
+            evento += "|weighted=true"
         return self._commit(
             FlowState.PARTITIONED,
-            evento=f"partition:frac={train_frac}|seed={seed}"
-                   f"|train={len(idx_tr)}|test={len(idx_te)}",
+            evento=evento,
             train_idx=tuple(int(i) for i in idx_tr),
             test_idx=tuple(int(i) for i in idx_te),
             train_frac=float(train_frac), seed=int(seed),
@@ -480,6 +554,10 @@ class Session:
         de SessionState (fijadas en fix_spec). La clase de interes se lee
         exclusivamente de SessionState (fijada en fix_spec). Solo CHAID /
         CHAID_EXHAUSTIVE admiten K > 2 clases en esta fase.
+
+        Fase 3.2: si la sesion esta ponderada (fix_spec con weight_col),
+        los pesos de train (`_w_train`) se propagan a TreeBuilder junto
+        con `weight_col` para el fingerprint.
         """
         self._require(FlowState.PARTITIONED, "train")
         st = self._state
@@ -535,13 +613,17 @@ class Session:
             max_depth=max_depth,
             min_child_size=min_child_size, pd_floor=pd_floor,
             apply_jeffreys=apply_jeffreys,
+            weights=self._w_train, weight_col=self._w_col,
             seed=st.seed, logger=get_logger("builder"),
         )
         modelo = builder.build(self._X_train, self._y_train, dict(st.spec))
+        evento = (f"train:{modelo.method}|nodos={len(modelo.nodes)}"
+                  f"|fp={modelo.params_fingerprint}")
+        if self._w_col is not None:
+            evento += f"|weighted=true,weight_col={self._w_col}"
         return self._commit(
             FlowState.TRAINED,
-            evento=f"train:{modelo.method}|nodos={len(modelo.nodes)}"
-                   f"|fp={modelo.params_fingerprint}",
+            evento=evento,
             tree=modelo,
         )
 
@@ -600,6 +682,10 @@ class Session:
         se certifica solo si time_col existe en ambos datasets (si no,
         temporal_verified=False con WARNING explicito: es OOS, no OOT).
         La imputacion usa las reglas de train (anti-leakage estricto).
+
+        Fase 3.2: si la sesion esta ponderada (fix_spec con weight_col),
+        el CSV OOT debe incluir esa columna; el vector se materializa en
+        `_w_oot` y se valida (finito, estrictamente positivo).
         """
         self._require(FlowState.TRAINED, "load_oot")
         st = self._state
@@ -612,6 +698,8 @@ class Session:
 
         spec_keys = set(dict(st.spec).keys())
         esperadas = spec_keys | {st.target} | ({time_col} if time_col else set())
+        if self._w_col is not None:
+            esperadas = esperadas | {self._w_col}
         got_keys = set(df_oot.columns)
         if got_keys != esperadas:
             raise ValueError(
@@ -641,6 +729,24 @@ class Session:
         self._X_oot = self._imputer.transform(X_oot)
         self._y_oot = df_oot[st.target].astype(int).to_numpy()
 
+        if self._w_col is not None:
+            w_oot = df_oot[self._w_col].to_numpy(dtype=float)
+            if not np.isfinite(w_oot).all():
+                raise ValueError(
+                    f"[session] weight_col OOT {self._w_col!r} contiene "
+                    f"valores no finitos"
+                )
+            if not (w_oot > 0).all():
+                n_bad = int((w_oot <= 0).sum())
+                first_bad = int(np.flatnonzero(w_oot <= 0)[0])
+                raise ValueError(
+                    f"[session] weight_col OOT {self._w_col!r}: "
+                    f"{n_bad} valor(es) <= 0 (primero en la fila "
+                    f"{first_bad}); los pesos deben ser estrictamente "
+                    f"positivos"
+                )
+            self._w_oot = w_oot
+
         temporal_ok = False
         if time_col is not None:
             if time_col in self._df.columns and time_col in df_oot.columns:
@@ -662,10 +768,13 @@ class Session:
                 "[session] load_oot sin time_col: cohorte no verificada "
                 "temporalmente (OOS, not OOT)"
             )
+        evento = (f"load_oot:{os.path.basename(csv_path)}|n={len(df_oot)}"
+                  f"|temporal_verified={temporal_ok}")
+        if self._w_col is not None:
+            evento += "|weighted=true"
         return self._commit(
             FlowState.OOT_LOADED,
-            evento=f"load_oot:{os.path.basename(csv_path)}|n={len(df_oot)}"
-                   f"|temporal_verified={temporal_ok}",
+            evento=evento,
             n_oot=int(len(df_oot)), temporal_verified=temporal_ok,
             oot_source="external-file",
         )

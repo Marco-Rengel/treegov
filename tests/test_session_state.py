@@ -853,6 +853,192 @@ def test_describe_target_does_not_mutate_state():
         assert st_after.event_log == st_before.event_log
 
 
+# ---------------------------------------------------------------------------
+# 3.2.f - Ponderacion por muestra
+# ---------------------------------------------------------------------------
+
+
+def _csv_weighted(tmp: Path, *, peso_dtype: str = "float") -> Path:
+    """CSV con columna de pesos positiva. y = 1_{edad >= 40}, 120 filas."""
+    n = 120
+    edad = np.tile(np.arange(20, 60), 3)
+    seg = np.tile(["a", "b", "c"], 40)
+    y = (edad >= 40).astype(int)
+    if peso_dtype == "float":
+        # Pesos moderados: la cuota ponderada W_k*frac no puede exceder
+        # el numero de filas de la clase (algoritmo de splitting.py).
+        peso = np.where(edad >= 40, 1.2, 1.0)
+    elif peso_dtype == "bool":
+        peso = edad >= 40
+    else:
+        raise ValueError(peso_dtype)
+    df = pd.DataFrame({"edad": edad, "seg": seg, "peso": peso, "default": y})
+    p = tmp / "mini_w.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def _fix_spec_weighted(s: Session, **kwargs) -> None:
+    s.fix_spec(
+        "default",
+        predictors=["edad", "seg"],
+        target_class=1,
+        class_labels={0: "Bueno", 1: "Malo"},
+        **kwargs,
+    )
+
+
+def test_weighted_session_fix_spec_rejects_missing_weight_col():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _fix_spec_weighted, s,
+                       weight_col="no_existe")
+
+
+def test_weighted_session_fix_spec_rejects_weight_col_equals_target():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _fix_spec_weighted, s,
+                       weight_col="default")
+
+
+def test_weighted_session_fix_spec_rejects_weight_col_as_predictor():
+    # Defensa en profundidad (diseno v2 §1.2): la columna de pesos no
+    # puede ser predictor.
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        try:
+            s.fix_spec(
+                "default",
+                predictors=["edad", "seg", "peso"],
+                target_class=1,
+                class_labels={0: "Bueno", 1: "Malo"},
+                weight_col="peso",
+            )
+        except ValueError as e:
+            assert "predictor" in str(e)
+            return
+        raise AssertionError("fix_spec no lanzo ValueError (colision)")
+
+
+def test_weighted_session_fix_spec_rejects_bool_weights():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td), peso_dtype="bool")
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _fix_spec_weighted, s, weight_col="peso")
+
+
+def test_weighted_session_fix_spec_rejects_nonpositive_weights():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        # Caso cero
+        df = pd.read_csv(csv_path)
+        df.loc[5, "peso"] = 0.0
+        df.to_csv(csv_path, index=False)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        try:
+            _fix_spec_weighted(s, weight_col="peso")
+        except ValueError as e:
+            assert "1" in str(e)  # conteo de infractores
+            assert "5" in str(e)  # primer indice infractor
+        else:
+            raise AssertionError("fix_spec no lanzo ValueError (peso 0)")
+        # Caso negativo
+        df.loc[5, "peso"] = 2.0
+        df.loc[7, "peso"] = -1.0
+        df.to_csv(csv_path, index=False)
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(csv_path))
+        try:
+            _fix_spec_weighted(s2, weight_col="peso")
+        except ValueError as e:
+            assert "7" in str(e)
+        else:
+            raise AssertionError("fix_spec no lanzo ValueError (peso -1)")
+
+
+def test_weighted_session_partition_populates_w_caches():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _fix_spec_weighted(s, weight_col="peso")
+        st = s.partition(train_frac=0.7, seed=42)
+        assert s._w_train is not None and s._w_test is not None
+        assert len(s._w_train) == len(st.train_idx)
+        assert len(s._w_test) == len(st.test_idx)
+        assert s._w_col == "peso"
+
+
+def test_weighted_session_reset_clears_w_caches():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _fix_spec_weighted(s, weight_col="peso")
+        s.partition(train_frac=0.7, seed=42)
+        s.reset_to_data_loaded()
+        assert s._w_train is None
+        assert s._w_test is None
+        assert s._w_oot is None
+        assert s._w_col is None
+
+
+def test_weighted_session_train_propagates_to_builder():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        # Sesion ponderada
+        s_w = Session(logger=_quiet_logger())
+        s_w.load_dataset(str(csv_path))
+        _fix_spec_weighted(s_w, weight_col="peso")
+        s_w.partition(train_frac=0.7, seed=42)
+        st_w = s_w.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # Sesion sin pesos, mismos datos y parametros
+        s_0 = Session(logger=_quiet_logger())
+        s_0.load_dataset(str(csv_path))
+        _fix_spec_weighted(s_0)
+        s_0.partition(train_frac=0.7, seed=42)
+        st_0 = s_0.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # El fingerprint registra el modo de ponderacion
+        assert st_w.tree.params_fingerprint != st_0.tree.params_fingerprint
+
+
+def test_weighted_session_load_oot_uses_oot_weights():
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        csv_path = _csv_weighted(td_path)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _fix_spec_weighted(s, weight_col="peso")
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        # OOT con pesos propios, distintos de los de train
+        edad = np.arange(60, 80)
+        seg = np.tile(["a", "b"], 10)
+        y = np.ones(20, dtype=int)
+        y[:5] = 0
+        peso_oot = np.full(20, 3.5)
+        df_oot = pd.DataFrame(
+            {"edad": edad, "seg": seg, "peso": peso_oot, "default": y}
+        )
+        oot_path = td_path / "oot_w.csv"
+        df_oot.to_csv(oot_path, index=False)
+        st = s.load_oot(str(oot_path))
+        assert s._w_oot is not None
+        assert len(s._w_oot) == st.n_oot == 20
+        # Son los pesos del OOT, no los del train
+        assert math.isclose(float(s._w_oot[0]), 3.5, rel_tol=1e-9)
+        assert math.isclose(float(s._w_oot.sum()), 70.0, rel_tol=1e-9)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())
