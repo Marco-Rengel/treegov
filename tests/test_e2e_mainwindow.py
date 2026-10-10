@@ -205,6 +205,47 @@ def test_e2e_new_wizard_resets_panel():
             w.deleteLater()
 
 
+def test_e2e_inversion_recovery_full_flow():
+    """Fase 3.1.f: el analista declaro la clase de interes al reves,
+    el Gini OOS sale negativo, el badge crit y el boton aparecen, y la
+    reversion via inversion_requested corrige el modelo reentrenando
+    con el mismo cfg.
+
+    Nota: el target de _make_csv es ruido independiente de los
+    predictores, asi que el Gini OOS cae cerca de 0 por azar; con el
+    dataset determinista (seed=42) es target_class=1 quien da gini
+    negativo (-0.156) y target_class=0 el positivo (+0.156), al reves
+    de lo que sugiere la intuicion. El test arranca por tanto en
+    target_class=1 y la reversion corrige a target_class=0.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv(Path(td) / "mini.csv")
+        w = _open_window(csv)
+        try:
+            cfg_invertido = dict(_cfg(), target_class=1)
+            w._on_wizard_finished(cfg_invertido)
+            assert w._session.state.tree is not None
+            assert w._session.state.target_class == 1
+            w._on_evaluate_oos()
+            # Badge + boton activos (gini OOS negativo)
+            assert w._metrics_panel._invert_button is not None
+            crit = [b for b in _badges(w._metrics_panel)
+                    if b.property("status") == "crit"]
+            assert len(crit) >= 1
+            fp_antes = w._session.state.tree.params_fingerprint
+            # Reversion directa por senal (offscreen: sin QMessageBox)
+            w._metrics_panel.inversion_requested.emit()
+            st = w._session.state
+            assert st.state.name == "TRAINED"
+            assert st.target_class == 0
+            assert st.tree is not None
+            assert st.tree.params_fingerprint != fp_antes
+            assert w._last_train_cfg["target_class"] == 0
+        finally:
+            w.close()
+            w.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------

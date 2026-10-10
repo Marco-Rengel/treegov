@@ -193,6 +193,86 @@ def test_status_constants_cover_full_alphabet():
 
 
 # ---------------------------------------------------------------------------
+# Fase 3.1.f: badge de Gini negativo + boton de reversion de clase
+# ---------------------------------------------------------------------------
+
+
+def _dto_gini(gini):
+    """DTO minimo con la seccion OOS y el gini indicado (oot=None)."""
+    return {"oos": {"n_test": 300, "gini": gini, "ks": None,
+                    "brier": None, "brier_skill": None, "hl_p": None},
+            "oot": None}
+
+
+def test_inversion_badge_and_button_visible_when_gini_negative():
+    """Con gini < 0 aparecen el badge crit y el boton de reversion."""
+    _get_app()
+    from frontend_v3.i18n import _STRINGS
+    set_language("en")
+    panel = MetricsPanel()
+    panel.set_report(_dto_gini(-0.15))
+    assert panel._invert_button is not None
+    assert panel._invert_button.objectName() == "metricsInvertButton"
+    assert panel._invert_button.text() == _STRINGS["en"]["inversion_button_label"]
+    crit = [b for b in _badges(panel) if b.property("status") == "crit"]
+    assert len(crit) == 1
+    assert crit[0].text() == _STRINGS["en"]["inversion_badge_title"]
+    panel.close()
+    panel.deleteLater()
+
+
+def test_inversion_badge_absent_when_gini_non_negative():
+    """Sin gini negativo estricto no hay ni boton ni badge crit."""
+    _get_app()
+    set_language("en")
+    panel = MetricsPanel()
+    # Caso A: gini positivo
+    panel.set_report(_dto_gini(0.4))
+    assert panel._invert_button is None
+    assert [b for b in _badges(panel) if b.property("status") == "crit"] == []
+    # Caso B: frontera 0.0 (no negativo estricto)
+    panel.set_report(_dto_gini(0.0))
+    assert panel._invert_button is None
+    assert [b for b in _badges(panel) if b.property("status") == "crit"] == []
+    # Caso C: gini None
+    panel.set_report(_dto_gini(None))
+    assert panel._invert_button is None
+    assert [b for b in _badges(panel) if b.property("status") == "crit"] == []
+    panel.close()
+    panel.deleteLater()
+
+
+def test_inversion_button_emits_signal_on_click():
+    """El click del boton emite inversion_requested exactamente una vez."""
+    _get_app()
+    set_language("en")
+    panel = MetricsPanel()
+    captured: list = []
+    panel.inversion_requested.connect(lambda: captured.append(1))
+    panel.set_report(_dto_gini(-0.15))
+    assert panel._invert_button is not None
+    panel._invert_button.click()
+    assert len(captured) == 1
+    panel.close()
+    panel.deleteLater()
+
+
+def test_clear_content_removes_children_immediately():
+    """Patron setParent(None)+deleteLater: tras set_report(None), y SIN
+    processEvents(), findChildren ya no encuentra el badge crit."""
+    _get_app()
+    set_language("en")
+    panel = MetricsPanel()
+    panel.set_report(_dto_gini(-0.15))
+    assert len(_badges(panel)) >= 1  # panel poblado (badge crit presente)
+    panel.set_report(None)
+    # Sin event loop: la limpieza debe ser inmediata, no diferida
+    assert [b for b in _badges(panel) if b.property("status") == "crit"] == []
+    panel.close()
+    panel.deleteLater()
+
+
+# ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------
 

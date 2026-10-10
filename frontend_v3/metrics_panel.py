@@ -9,8 +9,14 @@ Clean room: no analytical logic. Pure Qt presentation layer.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from frontend_v3.i18n import language_bus, tr
 
@@ -45,11 +51,21 @@ def _fmt(value, digits: int = 4) -> str:
 
 
 class MetricsPanel(QWidget):
-    """Panel de metricas Out-of-Sample / Out-of-Time (consumidor del DTO)."""
+    """Panel de metricas Out-of-Sample / Out-of-Time (consumidor del DTO).
+
+    Fase 3.1.f (K=2): cuando el Gini OOS del DTO es un float estrictamente
+    negativo (casi siempre indica clase de interes invertida), el panel
+    muestra un badge rojo de alerta y un boton que emite la senal
+    `inversion_requested` para que MainWindow invierta la clase y
+    reentrene. Con gini >= 0 no se muestra ni badge ni boton.
+    """
+
+    inversion_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._report: dict | None = None
+        self._invert_button: QPushButton | None = None
         self._layout = QVBoxLayout(self)
         language_bus.language_changed.connect(self.retranslate_ui)
         self.refresh()
@@ -62,6 +78,7 @@ class MetricsPanel(QWidget):
     def refresh(self) -> None:
         """Reconstruye el contenido del panel desde el DTO actual."""
         self._clear_content()
+        self._invert_button = None
         if self._report is None:
             self._add_empty(tr("oos_oot_no_model"))
             return
@@ -88,6 +105,10 @@ class MetricsPanel(QWidget):
             item = self._layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                # setParent(None) antes de deleteLater: sin ello el widget
+                # sigue siendo hijo (y findChildren lo encuentra) hasta que
+                # el event loop procese el borrado diferido.
+                widget.setParent(None)
                 widget.deleteLater()
 
     def _add_empty(self, text: str) -> None:
@@ -137,10 +158,30 @@ class MetricsPanel(QWidget):
         self._add_section_header(tr("oos_section_title"))
         self._add_row("oos_label_sample", _fmt(oos.get("n_test")))
         self._add_row("oos_label_gini", _fmt(oos.get("gini")))
+        self._maybe_add_inversion_row(oos.get("gini"))
         self._add_row("oos_label_ks", _fmt(oos.get("ks")))
         self._add_row("oos_label_brier", _fmt(oos.get("brier")))
         self._add_row("oos_label_brier_skill", _fmt(oos.get("brier_skill")))
         self._add_row("oos_label_hl", _fmt(oos.get("hl_p")))
+
+    def _maybe_add_inversion_row(self, gini) -> None:
+        """Badge rojo + boton de reversion SOLO si gini < 0 (fase 3.1.f)."""
+        if not (isinstance(gini, float) and gini < 0):
+            return
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        badge = QLabel(tr("inversion_badge_title"))
+        badge.setProperty("status", "crit")
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        row_layout.addWidget(badge)
+        row_layout.addStretch(1)
+        button = QPushButton(tr("inversion_button_label"))
+        button.setObjectName("metricsInvertButton")
+        button.clicked.connect(self.inversion_requested.emit)
+        row_layout.addWidget(button)
+        self._invert_button = button
+        self._layout.addWidget(row)
 
     def _build_oot_section(self, oot: dict) -> None:
         self._add_section_header(tr("oot_section_title"))

@@ -74,6 +74,9 @@ class MainWindow(QMainWindow):
         # Phase 2.1: dataset profile (columns, types) and live wizard handle
         self._dataset_info: tuple[tuple[str, ...], dict[str, str]] | None = None
         self._wizard: ModelWizard | None = None
+        # Phase 3.1.f: last successful wizard cfg (needed to retrain after
+        # a class-of-interest inversion without reopening the wizard)
+        self._last_train_cfg: dict | None = None
         self._mode_name: str = "—"
 
         # Language before any widget text is built. QSettings without an
@@ -311,6 +314,9 @@ class MainWindow(QMainWindow):
         self._metrics_panel = MetricsPanel()
         self._metrics_panel.setObjectName("metricsPanel")
         self._tabs.addTab(self._metrics_panel, "")
+        self._metrics_panel.inversion_requested.connect(
+            self._on_inversion_requested
+        )
 
         self._reports_panel = ReportsPanel()
         self._reports_panel.setObjectName("reportsPanel")
@@ -466,6 +472,7 @@ class MainWindow(QMainWindow):
             self._hud_reset()
             return
         st = self._session.state
+        self._last_train_cfg = dict(cfg)  # defensive copy (no aliasing)
         self._mode_name = (
             "Banking" if cfg["governance_mode"] == "BANKING" else "Research"
         )
@@ -490,6 +497,70 @@ class MainWindow(QMainWindow):
         # Phase 2.3.e.5: refresh OOS/OOT panel with current report
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
+
+    def _on_inversion_requested(self) -> None:
+        """Invert the class of interest and retrain with the same cfg (3.1.f).
+
+        Triggered by MetricsPanel.inversion_requested (negative OOS Gini).
+        Reuses the stored wizard cfg; only the binary case (K=2) applies.
+        """
+        if self._session is None or self._last_train_cfg is None:
+            if self._logger is not None:
+                self._logger.warning(
+                    "[gui] inversion_requested ignored: no trained cfg stored"
+                )
+            return
+        tree = self._session.state.tree
+        if tree is None or len(tree.class_labels) != 2:
+            if self._logger is not None:
+                self._logger.warning(
+                    "[gui] inversion_requested ignored: model is not binary"
+                )
+            return
+        old_class = self._last_train_cfg["target_class"]
+        if old_class not in (0, 1):
+            if self._logger is not None:
+                self._logger.warning(
+                    "[gui] inversion_requested ignored: unexpected "
+                    "target_class=%r", old_class,
+                )
+            return
+        new_class = 1 - int(old_class)
+        # confirmation dialog (skipped under offscreen so CI never hangs)
+        app = QApplication.instance()
+        if app is not None and app.platformName() != "offscreen":
+            answer = QMessageBox.question(
+                self,
+                tr("inversion_confirm_title"),
+                tr("inversion_confirm_message"),
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        cfg_inv = dict(self._last_train_cfg)
+        cfg_inv["target_class"] = new_class
+        # class_labels stay as-is: they describe the target VALUES, not
+        # the class of interest
+        self._session.reset_to_data_loaded()
+        ok = self._run_guarded(self._train_pipeline, cfg_inv,
+                               reset_on_error=True)
+        if not ok:
+            # _run_guarded already reset to DATA_LOADED and showed the error
+            return
+        self._last_train_cfg = cfg_inv
+        tree = self._session.state.tree
+        if tree is not None:
+            # transactional consistency: the viewer must not keep showing
+            # the pre-inversion tree (same rule as _on_wizard_finished)
+            self._tree_panel.set_model(tree, cfg_inv["governance_mode"])
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._refresh_reports_panel()
+        self._refresh_session_indicator()
+        if self._logger is not None:
+            self._logger.info(
+                tr("inversion_log_narrative").format(
+                    from_class=old_class, to_class=new_class
+                )
+            )
 
     def _train_pipeline(self, cfg: dict) -> None:
         self._session.fix_spec(

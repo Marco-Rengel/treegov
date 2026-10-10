@@ -1207,6 +1207,57 @@ See `docs/audit_log.md` entry of 04/10/2026 for the implementation log.
 
 ---
 
+## §12. GUI presentation decisions
+
+### 12.1 Clear-content pattern in repaintable panels (`setParent(None)` + `deleteLater()`)
+
+**Context.** `MetricsPanel` and `ReportsPanel` rebuild their entire
+content on every `refresh()` by emptying their layout. In Qt,
+`takeAt()` detaches a widget from the layout but NOT from the widget
+parent tree: the widget remains a child of the panel, and
+`findChildren` still returns it, until the event loop processes the
+pending `deleteLater()`. In headless environments with
+`QT_QPA_PLATFORM=offscreen` and no explicit `processEvents()` calls,
+that interval can be arbitrarily long and produces false positives in
+tests that inspect the panel (for example, `_badges()` in
+`tests/test_e2e_mainwindow.py` found a badge that should already have
+been removed). This surfaced in Phase 3.1.f.2, when the negative-Gini
+badge of `MetricsPanel` — legitimately painted, then cleared by a
+session reset — kept appearing to `findChildren` and broke
+`test_e2e_new_wizard_resets_panel`.
+
+**Alternatives considered.**
+
+- (a) Call `app.processEvents()` in every test after a `refresh()`:
+  discarded. It couples the tests to event-loop details and does not
+  remove the problem in production.
+- (b) Call `widget.hide()` before `deleteLater()`: discarded.
+  `findChildren` would still find the widget (hidden but present).
+- (c) `widget.setParent(None)` + `widget.deleteLater()`: chosen.
+  Detaches the widget from the parent tree immediately and delegates
+  the actual destruction to the event loop — the standard Qt pattern.
+
+**Decision.** Option (c). Applied in `MetricsPanel._clear_content`
+(sub-step 3.1.f.2).
+
+**Consequences.**
+
+- The widget becomes orphaned immediately. Any code holding a
+  reference to a widget after `refresh()` must tolerate its `parent()`
+  being `None` (expected behaviour).
+- `findChildren` over the panel no longer finds deleted widgets.
+  Tests may assume a clean state right after `refresh()`.
+- The pattern MUST be replicated in any future panel that uses the
+  same clear + rebuild mechanism (for example, if `ReportsPanel`
+  follows the same scheme).
+
+**Cross-reference.** This decision was not in the original 3.1.f plan
+and was applied during implementation; it is recorded here per the
+project's "no grey zones" policy (Phase 3.0) and follows the usual
+context / alternatives / decision / consequences structure.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
