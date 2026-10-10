@@ -33,6 +33,17 @@ fusion forzosa ACTIVA de la categoria de menor total cuando la tabla viola
 la regla; si es irreductible (r=2), se reporta cochran_ok=False + WARNING.
 Las fusiones forzadas CUENTAN dentro de c -> r para el multiplicador.
 
+Ponderacion por muestra (Fase 3.2.b): evaluate() y best_split() admiten un
+parametro keyword-only `weights` (vector paralelo a x e y, estrictamente
+positivo y finito). Con pesos, las celdas de la tabla c x K y los
+suficientes (n, sum, sumsq) se pueblan sumando pesos en lugar de contar
+filas; chi2, F, merging y Cochran operan sobre la matriz ponderada sin
+cambios estructurales (sus formulas son identicas con sumas de pesos).
+Los grados de libertad residuales siguen la convencion de muestras
+complejas (N_filas - k, filas fisicas) y SplitConfig.child_ns reporta
+siempre el CONTEO FISICO de filas por rama. Con weights=None el
+comportamiento es identico bit a bit al pre-3.2.
+
 Citas bibliograficas:
   Kass, G.V. (1980). "An Exploratory Technique for Investigating Large
     Quantities of Categorical Data". Applied Statistics 29(2), 119-127.
@@ -41,6 +52,9 @@ Citas bibliograficas:
     Statistics 18(1), 49-62.
   Cochran, W.G. (1954). "Some Methods for Strengthening the Common Chi-2
     Tests". Biometrics 10(4), 417-451.
+  Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
+    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (estadisticos con
+    conteos ponderados; df residual basado en filas fisicas).
 
 Dependencias permitidas: numpy, pandas, scipy.stats (y log_config/statistics/
 types de backend_v3). Datos crudos tocados UNA sola vez O(N) (crosstab /
@@ -151,12 +165,20 @@ class ChaidEngine:
         predictor: str,
         predictor_type: PredictorType,
         target_type: TargetType,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """Evalua UN predictor en UN nodo.
 
         Devuelve el SplitConfig candidato, o None si no procede dividir
         (c < 2, K < 2, N insuficiente, la fusion converge a r = 1,
         p_adj > alpha_split, o separacion perfecta con F global infinito).
+
+        `weights` (keyword-only, default None): vector de pesos paralelo a
+        `x` e `y`; array 1D de la misma longitud, valores finitos y
+        estrictamente positivos. Con pesos, las celdas de las tablas y los
+        suficientes se pueblan sumando pesos (ver docstring del modulo).
+        Con weights=None el comportamiento es identico al pre-3.2.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
         """
         if predictor_type == PredictorType.CONTINUOUS:
             raise ValueError(
@@ -176,11 +198,36 @@ class ChaidEngine:
                 "deben tener la misma longitud"
             )
 
+        # -- validacion de pesos (paralelos a x e y) --
+        if weights is not None:
+            try:
+                w = np.asarray(weights, dtype=float)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] weights no convertible a vector "
+                    f"numerico: {e}"
+                ) from e
+            if w.ndim != 1 or w.size != len(xs):
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] weights debe ser un vector 1D de "
+                    f"longitud {len(xs)} (shape={w.shape})"
+                )
+            if not np.all(np.isfinite(w)):
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] weights contiene NaN o infinitos"
+                )
+            if np.any(w <= 0.0):
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] weights contiene pesos no "
+                    "estrictamente positivos"
+                )
+
         # -- dropna conjunto: la decision sobre MISSING es del llamador (ALG-04) --
         mask = xs.notna().to_numpy() & ys.notna().to_numpy()
         n_dropped = int((~mask).sum())
         xd = xs[mask]
         yd = ys[mask]
+        wd = w[mask] if weights is not None else None
         n_total = int(len(xd))
 
         ordinal = predictor_type == PredictorType.ORDINAL
@@ -188,12 +235,14 @@ class ChaidEngine:
 
         # -- reduccion O(N) unica: tabla (c, K) o sumas suficientes por categoria --
         if continuo:
-            base = self._reduce_continuous(xd, yd, predictor)
+            base = self._reduce_continuous(xd, yd, predictor, wd)
         else:
-            base = self._reduce_categorical(xd, yd, predictor)
+            base = self._reduce_categorical(xd, yd, predictor, wd)
         if base is None:
             return self._finish_none(predictor, 0, 0, 0, True, n_dropped, ())
-        labels, matrix = base  # labels: categorias ordenadas; matrix: (c, K) o (c, 3)
+        # labels: categorias ordenadas; matrix: (c, K) o (c, 3);
+        # counts: conteo FISICO de filas por categoria (para child_ns y df).
+        labels, matrix, counts = base
         c = len(labels)
         self._require_hashable(labels, predictor)
 
@@ -230,6 +279,12 @@ class ChaidEngine:
             predictor, n_total, c, "continuo" if continuo else "categorico",
             self.exhaustive, n_dropped,
         )
+        self._log.debug(
+            "[CHAID|%r] ponderacion: %s",
+            predictor,
+            "sin pesos" if wd is None
+            else f"con pesos (suma total={float(wd.sum()):.6g})",
+        )
 
         # -- bucle de fusion --
         groups: list[tuple[int, ...]] = [(i,) for i in range(c)]
@@ -238,7 +293,7 @@ class ChaidEngine:
         n_forced = 0
 
         if self.exhaustive:
-            steps.append(self._record_step(groups, c, matrix, continuo, ordinal, (), math.nan))
+            steps.append(self._record_step(groups, c, matrix, continuo, ordinal, (), math.nan, counts))
 
         while len(groups) > 1:
             r = len(groups)
@@ -261,13 +316,13 @@ class ChaidEngine:
                     if self.exhaustive:
                         steps.append(
                             self._record_step(groups, c, matrix, continuo, ordinal,
-                                              (i_sel, j_sel), p_forced)
+                                              (i_sel, j_sel), p_forced, counts)
                         )
                         states.append(tuple(groups))
                     continue
 
             # -- paso de significancia: fusionar el par con MAYOR p --
-            pv = self._pair_pvalues(matrix, groups, ordinal, continuo)
+            pv = self._pair_pvalues(matrix, groups, ordinal, continuo, counts)
             idx = int(np.argmax(pv, axis=None))  # -inf en no elegibles
             i_sel, j_sel = np.unravel_index(idx, pv.shape)
             p_max = float(pv[i_sel, j_sel])
@@ -278,7 +333,7 @@ class ChaidEngine:
                 groups = self._fuse(groups, i_sel, j_sel)
                 steps.append(
                     self._record_step(groups, c, matrix, continuo, ordinal,
-                                      (i_sel, j_sel), p_max)
+                                      (i_sel, j_sel), p_max, counts)
                 )
                 states.append(tuple(groups))
                 continue
@@ -304,7 +359,7 @@ class ChaidEngine:
             )
 
         # -- evaluacion global de la particion elegida + ajuste de Kass --
-        res = self._global_test(matrix, groups, continuo)
+        res = self._global_test(matrix, groups, continuo, counts)
         if math.isinf(res.statistic):
             # Separacion perfecta con varianza interna nula: F no es finito y
             # SplitConfig exige statistic finito; se reporta como no split.
@@ -342,7 +397,9 @@ class ChaidEngine:
             )
 
         branches_labels = tuple(tuple(labels[i] for i in g) for g in groups)
-        child_ns = tuple(int(v) for v in self._group_sizes(matrix, groups, continuo))
+        # child_ns es SIEMPRE el conteo fisico de filas por rama (nunca
+        # sumas de pesos): sus valores son enteros y suman N filas del nodo.
+        child_ns = tuple(int(counts[list(g)].sum()) for g in groups)
 
         config = SplitConfig(
             predictor=predictor,
@@ -381,12 +438,14 @@ class ChaidEngine:
         spec: dict[str, PredictorType],
         *,
         target_type: TargetType,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """Mejor predictor del nodo: evaluate() sobre spec y min p_adj.
 
         Criterio deterministico: menor p_value_adjusted; empate -> menor
         p_value crudo; persiste -> mayor statistic; el orden de spec fija
-        el ultimo desempate.
+        el ultimo desempate. `weights` (keyword-only) se propaga a cada
+        llamada a evaluate().
         """
         candidatos: list[SplitConfig] = []
         for nombre, ptype in spec.items():
@@ -394,7 +453,7 @@ class ChaidEngine:
                 raise ValueError(f"[best_split] predictor ausente en X: {nombre!r}")
             cfg = self.evaluate(
                 X[nombre], y, predictor=nombre, predictor_type=ptype,
-                target_type=target_type,
+                target_type=target_type, weights=weights,
             )
             if cfg is not None:
                 candidatos.append(cfg)
@@ -421,21 +480,50 @@ class ChaidEngine:
     # ------------------------------------------------------------------
 
     def _reduce_categorical(
-        self, xd: pd.Series, yd: pd.Series, predictor: str
-    ) -> tuple[tuple, np.ndarray] | None:
-        """pd.crosstab(x, y) -> (etiquetas ordenadas, tabla (c, K) de floats)."""
+        self, xd: pd.Series, yd: pd.Series, predictor: str,
+        weights: np.ndarray | None = None,
+    ) -> tuple[tuple, np.ndarray, np.ndarray] | None:
+        """(etiquetas ordenadas, tabla (c, K) de floats, conteos fisicos (c,)).
+
+        Sin pesos: pd.crosstab(x, y); los conteos fisicos son las sumas de
+        fila de la tabla. Con pesos: la celda (i, j) acumula la SUMA DE
+        PESOS de las filas con esa combinacion (via factorize + bincount
+        ponderado, mismo orden de categorias que pd.factorize(sort=True)),
+        y los conteos fisicos se calculan aparte con bincount sin pesos.
+        """
+        if weights is None:
+            try:
+                tab = pd.crosstab(xd, yd)
+            except TypeError as e:
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] valores no tabulables en x/y: {e}"
+                ) from e
+            matrix = tab.to_numpy(dtype=float)
+            return tuple(tab.index), matrix, matrix.sum(axis=1)
         try:
-            tab = pd.crosstab(xd, yd)
+            codes_x, uniques_x = pd.factorize(xd, sort=True)
+            codes_y, uniques_y = pd.factorize(yd, sort=True)
         except TypeError as e:
             raise ValueError(
                 f"[CHAID|{predictor!r}] valores no tabulables en x/y: {e}"
             ) from e
-        return tuple(tab.index), tab.to_numpy(dtype=float)
+        c, k = len(uniques_x), len(uniques_y)
+        matrix = np.bincount(
+            codes_x * k + codes_y, weights=weights, minlength=c * k
+        ).reshape(c, k)
+        counts = np.bincount(codes_x, minlength=c).astype(float)
+        return tuple(uniques_x), matrix, counts
 
     def _reduce_continuous(
-        self, xd: pd.Series, yd: pd.Series, predictor: str
-    ) -> tuple[tuple, np.ndarray] | None:
-        """Suficientes estadisticos por categoria: matrix[:, 0:3] = (n, sum, sumsq)."""
+        self, xd: pd.Series, yd: pd.Series, predictor: str,
+        weights: np.ndarray | None = None,
+    ) -> tuple[tuple, np.ndarray, np.ndarray] | None:
+        """Suficientes estadisticos por categoria: matrix[:, 0:3] = (n, sum, sumsq).
+
+        Sin pesos: n_i = conteo de filas. Con pesos: n_i = SUMA DE PESOS
+        (W_i), s_i = sum w*y, q_i = sum w*y^2 (Heeringa et al. 2010,
+        sec. 5.3); el conteo fisico de filas viaja aparte en `counts`.
+        """
         yv = yd.to_numpy(dtype=float)
         try:
             codes, uniques = pd.factorize(xd, sort=True)
@@ -444,11 +532,17 @@ class ChaidEngine:
                 f"[CHAID|{predictor!r}] valores no factorizables en x: {e}"
             ) from e
         c = len(uniques)
-        n_i = np.bincount(codes, minlength=c).astype(float)
-        s_i = np.bincount(codes, weights=yv, minlength=c)
-        q_i = np.bincount(codes, weights=yv * yv, minlength=c)
+        counts = np.bincount(codes, minlength=c).astype(float)
+        if weights is None:
+            n_i = counts
+            s_i = np.bincount(codes, weights=yv, minlength=c)
+            q_i = np.bincount(codes, weights=yv * yv, minlength=c)
+        else:
+            n_i = np.bincount(codes, weights=weights, minlength=c)
+            s_i = np.bincount(codes, weights=weights * yv, minlength=c)
+            q_i = np.bincount(codes, weights=weights * yv * yv, minlength=c)
         matrix = np.column_stack([n_i, s_i, q_i])
-        return tuple(uniques), matrix
+        return tuple(uniques), matrix, counts
 
     # ------------------------------------------------------------------
     # algebra sobre grupos (todo opera sobre tabla/suficientes, nunca O(N))
@@ -504,12 +598,13 @@ class ChaidEngine:
     def _pair_pvalues(
         self, matrix: np.ndarray, groups: list[tuple[int, ...]],
         ordinal: bool, continuo: bool,
+        counts: np.ndarray | None = None,
     ) -> np.ndarray:
         """Matriz (r, r) de p-valores de par; -inf donde no elegible."""
         r = len(groups)
         eligible = self._eligible_mask(groups, ordinal)
         if continuo:
-            p = self._pair_pvalues_f(matrix, groups)
+            p = self._pair_pvalues_f(matrix, groups, counts)
         else:
             p = self._pair_pvalues_chi2(matrix, groups)
         return np.where(eligible, p, -np.inf)
@@ -543,7 +638,8 @@ class ChaidEngine:
         return out
 
     def _pair_pvalues_f(
-        self, matrix: np.ndarray, groups: list[tuple[int, ...]]
+        self, matrix: np.ndarray, groups: list[tuple[int, ...]],
+        counts: np.ndarray | None = None,
     ) -> np.ndarray:
         """p del par (i, j) = F-test entre las DOS submuestras (F = t^2).
 
@@ -554,6 +650,10 @@ class ChaidEngine:
         Casos degenerados (misma convencion que statistics._f_ratio):
             SSW=0 & SSB>0 -> F=inf, p=0 ; SSW=0 & SSB=0 -> p=1.
         n_par < 3 (df2 < 1): p = 1  (sin evidencia: el par es infusionable).
+
+        Con `counts` (camino ponderado): n_i/n_j de las formulas son sumas
+        de pesos (W_i, W_j), pero df2 usa el conteo FISICO de filas del
+        par (convencion de muestras complejas, Heeringa et al. 2010).
         """
         st = self._groups_stats(matrix, groups)
         r = st.shape[0]
@@ -569,7 +669,11 @@ class ChaidEngine:
         ss_within = np.maximum(
             (qa - sa * sa / na) + (qb - sb * sb / nb), 0.0
         )
-        df2 = n_par - 2.0
+        if counts is None:
+            df2 = n_par - 2.0
+        else:
+            cnt_g = np.array([counts[list(g)].sum() for g in groups])
+            df2 = cnt_g[i0] + cnt_g[i1] - 2.0
 
         p = np.ones_like(n_par)                    # default: p = 1
         ssw_pos = ss_within > 0.0
@@ -603,16 +707,22 @@ class ChaidEngine:
         return new
 
     def _global_test(
-        self, matrix: np.ndarray, groups: list[tuple[int, ...]], continuo: bool
+        self, matrix: np.ndarray, groups: list[tuple[int, ...]],
+        continuo: bool, counts: np.ndarray | None = None,
     ) -> TestResult:
-        """Evaluacion global de la particion actual (statistics.py)."""
+        """Evaluacion global de la particion actual (statistics.py).
+
+        `counts`: conteos fisicos de filas por categoria; se usan para los
+        grados de libertad cuando la matriz contiene sumas de pesos.
+        """
         if not continuo:
             return pearson_chi2(self._groups_table(matrix, groups))
-        return self._f_from_sufficients(matrix, groups)
+        return self._f_from_sufficients(matrix, groups, counts)
 
     @staticmethod
     def _f_from_sufficients(
-        matrix: np.ndarray, groups: list[tuple[int, ...]]
+        matrix: np.ndarray, groups: list[tuple[int, ...]],
+        counts: np.ndarray | None = None,
     ) -> TestResult:
         """F global one-way desde suficientes (n, sum, sumsq) por grupo.
 
@@ -622,6 +732,10 @@ class ChaidEngine:
         Misma convencion degenerada que statistics._f_ratio:
         SSW=0&SSB>0 -> F=inf, p=0 ; SSW=0&SSB=0 -> F=0, p=1.
         (df2 = N-r > 0 garantizado por la guarda N > c de evaluate().)
+
+        Con `counts` (camino ponderado): n_g/N de las formulas son sumas
+        de pesos (W_g, W_total), pero df2 sigue la convencion de muestras
+        complejas: N_filas - r, con N_filas = suma de conteos fisicos.
         """
         st = ChaidEngine._groups_stats(matrix, groups)
         n_g, s_g, q_g = st[:, 0], st[:, 1], st[:, 2]
@@ -631,7 +745,10 @@ class ChaidEngine:
         ss_between = max(float((s_g * s_g / n_g).sum()) - total * total / n_total, 0.0)
         ss_within = max(float((q_g - s_g * s_g / n_g).sum()), 0.0)
         df1 = r - 1
-        df2 = int(n_total) - r
+        if counts is None:
+            df2 = int(n_total) - r
+        else:
+            df2 = int(float(counts.sum())) - r
         if ss_within <= 0.0:
             if ss_between > 0.0:
                 return TestResult(math.inf, (df1, df2), 0.0)
@@ -648,9 +765,10 @@ class ChaidEngine:
         ordinal: bool,
         merged_pair: tuple[int, ...],
         pair_p: float,
+        counts: np.ndarray | None = None,
     ) -> MergeStep:
         """Evaluacion global + Kass del estado actual (historial exhaustive)."""
-        res = self._global_test(matrix, groups, continuo)
+        res = self._global_test(matrix, groups, continuo, counts)
         stat_inf = math.isinf(res.statistic)
         p_global = res.p_value
         m = kass_multiplier(c, len(groups), ordinal=ordinal)

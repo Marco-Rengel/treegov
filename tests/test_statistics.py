@@ -237,6 +237,201 @@ def test_kass_guards():
 
 
 # ---------------------------------------------------------------------------
+# 3.2.a - Ponderacion por muestra (weights en f_oneway y brown_forsythe)
+# ---------------------------------------------------------------------------
+
+from backend_v3.statistics import _weighted_median  # noqa: E402
+
+
+def test_weighted_f_oneway_parity_without_weights():
+    # Pesos todos iguales a uno -> resultado identico al de la llamada sin
+    # pesos (invariante no negociable de 3.2.a).
+    g1, g2 = [1.0, 2.0, 3.0, 4.0], [2.5, 3.5, 4.5]
+    ref = f_oneway(g1, g2)
+    res = f_oneway(g1, g2, weights=[np.ones(4), np.ones(3)])
+    assert res.statistic == ref.statistic
+    assert res.df == ref.df
+    assert res.p_value == ref.p_value
+
+
+def test_weighted_brown_forsythe_parity_without_weights():
+    # Incluye un grupo de longitud par: la mediana ponderada debe
+    # reproducir exactamente numpy.median por la convencion de
+    # interpolacion cuando el acumulado coincide con la mitad.
+    g1, g2 = [1.0, 2.0, 3.0, 4.0], [2.5, 3.5, 4.5, 9.0]
+    ref = brown_forsythe(g1, g2)
+    res = brown_forsythe(g1, g2, weights=[np.ones(4), np.ones(4)])
+    assert res.statistic == ref.statistic
+    assert res.df == ref.df
+    assert res.p_value == ref.p_value
+
+
+def test_weighted_f_oneway_matches_manual_weighted_anova():
+    # Calculo manual (Heeringa, West & Berglund 2010, sec. 5.3):
+    #   g1 = [1,2,3], w1 = [1,2,1] -> W1 = 4, media1 = (1+4+3)/4 = 2
+    #   g2 = [4,5,6,7], w2 = [1,1,2,2] -> W2 = 6, media2 = 35/6
+    #   grand = (8 + 35)/10 = 4.3
+    #   SSB = 4*(2-4.3)^2 + 6*(35/6-4.3)^2 = 21.16 + 6*(23/15)^2
+    #   SSW = (1*1 + 2*0 + 1*1) + (121+25+2+98)/36 = 2 + 41/6 = 53/6
+    #   df1 = 1, df2 = 7 - 2 = 5
+    g1, w1 = [1.0, 2.0, 3.0], [1.0, 2.0, 1.0]
+    g2, w2 = [4.0, 5.0, 6.0, 7.0], [1.0, 1.0, 2.0, 2.0]
+    ssb = 4 * (2.0 - 4.3) ** 2 + 6 * (35.0 / 6.0 - 4.3) ** 2
+    ssw = 2.0 + 41.0 / 6.0
+    f_manual = (ssb / 1) / (ssw / 5)
+    res = f_oneway(g1, g2, weights=[w1, w2])
+    assert res.df == (1, 5)
+    assert math.isclose(res.statistic, f_manual, rel_tol=1e-12)
+    assert math.isclose(
+        res.p_value, float(f_dist.sf(f_manual, 1, 5)), rel_tol=1e-12
+    )
+
+
+def test_weighted_brown_forsythe_matches_manual_weighted_anova():
+    # Medianas ponderadas: g1 -> 2.0 ; g2 -> 6.0 (cum = [1,2,4,6],
+    # mitad = 3, primera que la alcanza es el valor 6.0).
+    #   z1 = |g1 - 2| = [1,0,1] ; z2 = |g2 - 6| = [2,1,0,1]
+    #   media1^w = 2/4 = 0.5 ; media2^w = 5/6 ; grand = 0.7
+    #   SSB = 4*0.04 + 6*(5/6 - 0.7)^2 ; SSW = 1 + 17/6 = 23/6
+    #   df1 = 1, df2 = 7 - 2 = 5
+    g1, w1 = [1.0, 2.0, 3.0], [1.0, 2.0, 1.0]
+    g2, w2 = [4.0, 5.0, 6.0, 7.0], [1.0, 1.0, 2.0, 2.0]
+    ssb = 4 * (0.5 - 0.7) ** 2 + 6 * (5.0 / 6.0 - 0.7) ** 2
+    ssw = 1.0 + 17.0 / 6.0
+    f_manual = (ssb / 1) / (ssw / 5)
+    res = brown_forsythe(g1, g2, weights=[w1, w2])
+    assert res.df == (1, 5)
+    assert math.isclose(res.statistic, f_manual, rel_tol=1e-12)
+    assert math.isclose(
+        res.p_value, float(f_dist.sf(f_manual, 1, 5)), rel_tol=1e-12
+    )
+
+
+def test_weighted_f_oneway_scale_invariance():
+    # F y p dependen solo de las proporciones relativas de los pesos,
+    # no de su escala global.
+    g1, g2 = [1.0, 2.0, 3.0, 4.0], [2.5, 3.5, 4.5]
+    w = [[1.0, 2.0, 1.0, 3.0], [0.5, 1.5, 2.5]]
+    a = f_oneway(g1, g2, weights=w)
+    b = f_oneway(g1, g2, weights=[[x * 7.5 for x in wi] for wi in w])
+    assert a.df == b.df
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-12)
+    assert math.isclose(a.p_value, b.p_value, rel_tol=1e-12)
+
+
+def test_weighted_brown_forsythe_scale_invariance():
+    g1, g2 = [1.0, 2.0, 3.0, 4.0], [2.5, 3.5, 4.5]
+    w = [[1.0, 2.0, 1.0, 3.0], [0.5, 1.5, 2.5]]
+    a = brown_forsythe(g1, g2, weights=w)
+    b = brown_forsythe(g1, g2, weights=[[x * 7.5 for x in wi] for wi in w])
+    assert a.df == b.df
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-12)
+    assert math.isclose(a.p_value, b.p_value, rel_tol=1e-12)
+
+
+def test_weighted_f_oneway_rejects_wrong_number_of_groups():
+    try:
+        f_oneway([1.0, 2.0], [3.0, 4.0], [5.0, 6.0],
+                 weights=[[1.0, 1.0], [1.0, 1.0]])
+    except ValueError as e:
+        assert "3" in str(e) and "2" in str(e)
+    else:
+        raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_f_oneway_rejects_wrong_length_per_group():
+    try:
+        f_oneway([1.0, 2.0, 3.0], [4.0, 5.0, 6.0],
+                 weights=[[1.0, 1.0, 1.0], [1.0, 1.0]])
+    except ValueError as e:
+        assert "grupo 1" in str(e)
+    else:
+        raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_f_oneway_rejects_nonpositive_weights():
+    for bad in ([1.0, 0.0], [1.0, -2.0]):
+        try:
+            f_oneway([1.0, 2.0], [3.0, 4.0],
+                     weights=[[1.0, 1.0], bad])
+        except ValueError as e:
+            assert "positivos" in str(e)
+        else:
+            raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_f_oneway_rejects_non_finite_weights():
+    for bad in ([1.0, float("nan")], [1.0, float("inf")]):
+        _assert_raises(
+            ValueError, f_oneway, [1.0, 2.0], [3.0, 4.0],
+            weights=[[1.0, 1.0], bad],
+        )
+
+
+def test_weighted_median_equal_weights_odd_length():
+    a = np.array([5.0, 1.0, 3.0, 2.0, 4.0])
+    assert _weighted_median(a, np.ones(5)) == float(np.median(a)) == 3.0
+
+
+def test_weighted_median_equal_weights_even_length():
+    a = np.array([4.0, 1.0, 3.0, 2.0])
+    assert _weighted_median(a, np.ones(4)) == float(np.median(a)) == 2.5
+
+
+def test_weighted_median_concentrated_weight():
+    # Un valor con mas de la mitad del peso total ES la mediana ponderada.
+    a = np.array([1.0, 2.0, 3.0])
+    w = np.array([1.0, 5.0, 1.0])
+    assert _weighted_median(a, w) == 2.0
+
+
+def test_weighted_median_exact_half_tie():
+    # Acumulado exactamente igual a la mitad -> interpola con la siguiente.
+    a = np.array([1.0, 2.0])
+    w = np.array([1.0, 1.0])
+    assert _weighted_median(a, w) == 1.5
+
+
+def test_weighted_brown_forsythe_uses_weighted_median():
+    # La mediana clasica de g1 es 2.0, pero la ponderada es 1.0 (peso
+    # concentrado en el primer valor). El resultado debe coincidir con el
+    # calculo manual que usa la mediana ponderada, no numpy.median.
+    g1, w1 = [1.0, 2.0, 3.0], [4.0, 1.0, 1.0]
+    g2, w2 = [5.0, 6.0, 7.0, 8.0], [1.0, 1.0, 1.0, 1.0]
+    assert float(np.median(g1)) == 2.0
+    assert _weighted_median(np.array(g1), np.array(w1)) == 1.0
+    # z1 = |g1 - 1| = [0,1,2] ; z2 = |g2 - 6.5| = [1.5,0.5,0.5,1.5]
+    # media1^w = 3/6 = 0.5 ; media2^w = 1.0 ; grand = 0.7
+    # SSB = 6*0.04 + 4*0.09 = 0.6 ; SSW = 3.5 + 1.0 = 4.5
+    f_manual = (0.6 / 1) / (4.5 / 5)
+    res = brown_forsythe(g1, g2, weights=[w1, w2])
+    assert res.df == (1, 5)
+    assert math.isclose(res.statistic, f_manual, rel_tol=1e-12)
+    assert math.isclose(
+        res.p_value, float(f_dist.sf(f_manual, 1, 5)), rel_tol=1e-12
+    )
+    # Contrast: con la mediana clasica (2.0) el F seria distinto.
+    z1_classic = [abs(x - 2.0) for x in g1]
+    assert not math.isclose(
+        f_manual,
+        _manual_weighted_anova_f(z1_classic, w1, [1.5, 0.5, 0.5, 1.5], w2),
+        rel_tol=1e-9,
+    )
+
+
+def _manual_weighted_anova_f(z1, w1, z2, w2):
+    """F del ANOVA ponderado sobre dos grupos de desviaciones (auxiliar)."""
+    groups = [(np.asarray(z1), np.asarray(w1)), (np.asarray(z2), np.asarray(w2))]
+    ws = [w.sum() for _, w in groups]
+    means = [(a * w).sum() / w.sum() for a, w in groups]
+    grand = sum(wi * m for wi, m in zip(ws, means)) / sum(ws)
+    ssb = sum(wi * (m - grand) ** 2 for wi, m in zip(ws, means))
+    ssw = sum((w * (a - m) ** 2).sum() for (a, w), m in zip(groups, means))
+    n_rows = sum(a.size for a, _ in groups)
+    return (ssb / (len(groups) - 1)) / (ssw / (n_rows - len(groups)))
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

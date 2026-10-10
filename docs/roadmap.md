@@ -201,6 +201,19 @@ y no-crédito (biología, ciencias sociales).
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
 
+**Desglose de la Fase 3.2:**
+
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.2.a | statistics.py ponderado (f_oneway, brown_forsythe) | ✅ 10/10/2026 |
+| 3.2.b | CHAID con conteos ponderados (χ²/F + merging + Cochran) | ✅ 10/10/2026 |
+| 3.2.c | C&RT con Gini/varianza ponderada + surrogates | ⏳ |
+| 3.2.d | QUEST con Stage 1 + QDA ponderados | ⏳ |
+| 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ⏳ |
+| 3.2.f | Session (fix_spec + partition + train + reset) | ⏳ |
+| 3.2.g | validation y reporting ponderados | ⏳ |
+| 3.2.h | stability ponderado + wizard + E2E + cierre | ⏳ |
+
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
 amplia: mezclaba analítica avanzada (necesaria para uso real en banca) con

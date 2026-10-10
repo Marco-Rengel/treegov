@@ -591,6 +591,165 @@ def test_humo_n200k():
 
 
 # ---------------------------------------------------------------------------
+# 12. 3.2.b - Ponderacion por muestra (weights en evaluate y best_split)
+# ---------------------------------------------------------------------------
+
+
+def test_weighted_chaid_parity_without_weights_nominal():
+    # Pesos todos iguales a uno -> SplitConfig identico campo a campo.
+    x, y = _fixture_binario()
+    eng = _engine()
+    ref = eng.evaluate(
+        x, y, predictor="x_bin", predictor_type=_NOMINAL, target_type=_BINARY
+    )
+    res = eng.evaluate(
+        x, y, predictor="x_bin", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=np.ones(len(x)),
+    )
+    assert res is not None and ref is not None
+    assert res.statistic == ref.statistic
+    assert res.p_value == ref.p_value
+    assert res.p_value_adjusted == ref.p_value_adjusted
+    assert res.bonferroni_multiplier == ref.bonferroni_multiplier
+    assert res.n_merges == ref.n_merges
+    assert res.branches == ref.branches
+    assert res.child_ns == ref.child_ns
+    assert res.parent_n == ref.parent_n
+
+
+def test_weighted_chaid_parity_without_weights_continuous_target():
+    # Misma paridad por la ruta _reduce_continuous + _f_from_sufficients.
+    rng = np.random.default_rng(7)
+    cats = ["a", "b", "c"]
+    x = pd.Series(rng.choice(cats, 300))
+    mu = np.array([{"a": 1.0, "b": 2.0, "c": 3.0}[v] for v in x])
+    y = pd.Series(mu + rng.normal(0.0, 0.5, 300))
+    eng = _engine()
+    ref = eng.evaluate(
+        x, y, predictor="x_cont", predictor_type=_NOMINAL, target_type=_CONTINUOUS
+    )
+    res = eng.evaluate(
+        x, y, predictor="x_cont", predictor_type=_NOMINAL,
+        target_type=_CONTINUOUS, weights=np.ones(len(x)),
+    )
+    assert res is not None and ref is not None
+    assert res.statistic == ref.statistic
+    assert res.p_value == ref.p_value
+    assert res.p_value_adjusted == ref.p_value_adjusted
+    assert res.df == ref.df
+    assert res.branches == ref.branches
+    assert res.child_ns == ref.child_ns
+    assert res.parent_n == ref.parent_n
+
+
+def test_weighted_chaid_child_ns_are_physical_rows():
+    # child_ns y parent_n son CONTEOS FISICOS de filas, nunca sumas de pesos.
+    x, y = _fixture_binario()
+    rng = np.random.default_rng(11)
+    w = rng.uniform(0.5, 2.0, len(x))
+    cfg = _engine().evaluate(
+        x, y, predictor="x_bin", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg is not None
+    assert cfg.parent_n == len(x)
+    assert sum(cfg.child_ns) == len(x)
+    assert all(isinstance(n, int) for n in cfg.child_ns)
+    # la suma de pesos es distinta del conteo fisico en este fixture
+    assert not math.isclose(float(w.sum()), float(len(x)), rel_tol=1e-9)
+
+
+def test_weighted_chaid_scale_invariance():
+    # El F de ANOVA ponderado es invariante a la escala global de los pesos
+    # (SSB y SSW escalan por la misma constante y se cancela en el cociente).
+    rng = np.random.default_rng(13)
+    cats = ["a", "b", "c"]
+    x = pd.Series(rng.choice(cats, 300))
+    mu = np.array([{"a": 1.0, "b": 2.0, "c": 3.0}[v] for v in x])
+    y = pd.Series(mu + rng.normal(0.0, 0.5, 300))
+    w = rng.uniform(0.5, 2.0, 300)
+    eng = _engine()
+    a = eng.evaluate(
+        x, y, predictor="x_cont", predictor_type=_NOMINAL,
+        target_type=_CONTINUOUS, weights=w,
+    )
+    b = eng.evaluate(
+        x, y, predictor="x_cont", predictor_type=_NOMINAL,
+        target_type=_CONTINUOUS, weights=w * 7.5,
+    )
+    assert a is not None and b is not None
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-9)
+    assert math.isclose(a.p_value, b.p_value, rel_tol=1e-9)
+    assert a.child_ns == b.child_ns
+    assert a.parent_n == b.parent_n
+    # Contraste documentado: el chi2 categorico NO es invariante a escala;
+    # crece linealmente con la masa total de pesos (comportamiento esperado
+    # de Pearson con frecuencias ponderadas, no un bug).
+    xb, yb = _fixture_binario()
+    ca = eng.evaluate(
+        xb, yb, predictor="x_bin", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w[:100],
+    )
+    cb = eng.evaluate(
+        xb, yb, predictor="x_bin", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w[:100] * 7.5,
+    )
+    assert ca is not None and cb is not None
+    assert math.isclose(cb.statistic, ca.statistic * 7.5, rel_tol=1e-9)
+
+
+def test_weighted_chaid_rejects_wrong_length():
+    x, y = _fixture_binario()
+    try:
+        _engine().evaluate(
+            x, y, predictor="x_bin", predictor_type=_NOMINAL,
+            target_type=_BINARY, weights=np.ones(len(x) - 1),
+        )
+    except ValueError as e:
+        assert "weights" in str(e) and "longitud" in str(e)
+    else:
+        raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_chaid_rejects_nonpositive_weights():
+    x, y = _fixture_binario()
+    for bad_value in (0.0, -1.0):
+        w = np.ones(len(x))
+        w[3] = bad_value
+        try:
+            _engine().evaluate(
+                x, y, predictor="x_bin", predictor_type=_NOMINAL,
+                target_type=_BINARY, weights=w,
+            )
+        except ValueError as e:
+            assert "positivos" in str(e)
+        else:
+            raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_chaid_best_split_propagates_weights():
+    # Bloque A (80 filas): p2 separa y perfectamente, p1 sin senal.
+    # Bloque B (200 filas): p1 separa y perfectamente, p2 sin senal.
+    # Sin pesos (o con pesos uniformes) gana p1 (bloque mayor); con pesos
+    # que amplifican el bloque A (10.0) y atenuan el B (0.1), gana p2.
+    p2 = pd.Series(["u"] * 40 + ["v"] * 40 + ["u", "v"] * 100)
+    p1 = pd.Series(["a", "b"] * 40 + ["a"] * 100 + ["b"] * 100)
+    y = pd.Series([0] * 40 + [1] * 40 + [0] * 100 + [1] * 100)
+    X = pd.DataFrame({"p1": p1, "p2": p2})
+    spec = {"p1": _NOMINAL, "p2": _NOMINAL}
+    eng = _engine()
+    b0 = eng.best_split(X, y, spec, target_type=_BINARY)
+    b1 = eng.best_split(
+        X, y, spec, target_type=_BINARY, weights=np.ones(len(y))
+    )
+    assert b0 is not None and b0.predictor == "p1"
+    assert b1 == b0  # pesos uniformes: mismo ganador, mismo SplitConfig
+    w = np.r_[np.full(80, 10.0), np.full(200, 0.1)]
+    bw = eng.best_split(X, y, spec, target_type=_BINARY, weights=w)
+    assert bw is not None and bw.predictor == "p2"
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

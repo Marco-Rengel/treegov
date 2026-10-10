@@ -5,6 +5,14 @@ Nucleo inferencial de backend_v3: chi-cuadrado de Pearson, ANOVA unifactorial
 multiplicadores de Bonferroni de Kass (1980) para el control del error de
 tipo I por familia (FWER) en la fusion de categorias de CHAID.
 
+Extension de ponderacion por muestra (Fase 3.2.a): f_oneway y
+brown_forsythe admiten un parametro keyword-only opcional `weights`
+(secuencia paralela de pesos estrictamente positivos por grupo). Con
+`weights=None` el comportamiento es identico bit a bit al original. Con
+pesos, las medias son medias ponderadas, los tamanos de grupo son sumas
+de pesos W_i, y los grados de libertad siguen la convencion de muestras
+complejas: df1 = k - 1 y df2 = N_filas - k (filas fisicas, no pesos).
+
 Politica de caja blanca: las formulas estan escritas explicitamente en el
 cuerpo de cada funcion; scipy.stats se usa SOLO para evaluar las funciones de
 supervivencia (sf) de las distribuciones de referencia (chi2, F). Prohibido
@@ -27,6 +35,10 @@ Referencias:
     Stanford University Press.
   Kass, G.V. (1980). "An Exploratory Technique for Investigating Large
     Quantities of Categorical Data". Applied Statistics 29(2), 119-127.
+  Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
+    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (ANOVA ponderado en
+    muestras complejas: medias ponderadas, W_i = suma de pesos por
+    grupo, df residual basado en filas fisicas).
 """
 
 from __future__ import annotations
@@ -80,8 +92,17 @@ def _as_int(name: str, value: int) -> int:
     return int(value)
 
 
-def _validate_groups(groups: tuple[ArrayLike, ...], who: str) -> list[np.ndarray]:
-    """Convierte y valida los grupos: >= 2 vectores 1D no vacios, finitos, N > k."""
+def _validate_groups(
+    groups: tuple[ArrayLike, ...],
+    who: str,
+    weights: ArrayLike | None = None,
+) -> list[np.ndarray]:
+    """Convierte y valida los grupos: >= 2 vectores 1D no vacios, finitos, N > k.
+
+    Si `weights` no es None, tambien valida que sea una secuencia paralela
+    a `groups`: misma cantidad de arrays, cada uno de la misma longitud que
+    su grupo, con pesos finitos y estrictamente positivos.
+    """
     if len(groups) < 2:
         raise ValueError(
             f"[{who}] se requieren >= 2 grupos (recibidos {len(groups)})"
@@ -101,6 +122,34 @@ def _validate_groups(groups: tuple[ArrayLike, ...], who: str) -> list[np.ndarray
         if not np.all(np.isfinite(a)):
             raise ValueError(f"[{who}] grupo {i} contiene NaN o infinitos")
         arrays.append(a)
+    if weights is not None:
+        if len(weights) != len(arrays):
+            raise ValueError(
+                f"[{who}] weights tiene {len(weights)} arrays pero hay "
+                f"{len(arrays)} grupos"
+            )
+        for i, (a, w) in enumerate(zip(arrays, weights)):
+            try:
+                wa = np.asarray(w, dtype=float)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"[{who}] weights del grupo {i} no convertible a vector "
+                    f"numerico: {e}"
+                ) from e
+            if wa.ndim != 1 or wa.size != a.size:
+                raise ValueError(
+                    f"[{who}] weights del grupo {i} debe ser un vector 1D de "
+                    f"longitud {a.size} (shape={wa.shape})"
+                )
+            if not np.all(np.isfinite(wa)):
+                raise ValueError(
+                    f"[{who}] weights del grupo {i} contiene NaN o infinitos"
+                )
+            if np.any(wa <= 0.0):
+                raise ValueError(
+                    f"[{who}] weights del grupo {i} contiene pesos no "
+                    f"estrictamente positivos"
+                )
     k = len(arrays)
     n_total = sum(a.size for a in arrays)
     if n_total <= k:
@@ -110,21 +159,60 @@ def _validate_groups(groups: tuple[ArrayLike, ...], who: str) -> list[np.ndarray
     return arrays
 
 
-def _anova_summaries(arrays: list[np.ndarray]) -> tuple[float, float, int, int]:
+def _weighted_median(a: np.ndarray, w: np.ndarray) -> float:
+    """Mediana ponderada: primera observacion ordenada cuyo peso acumulado
+    alcanza la mitad del peso total del grupo. Si el peso acumulado coincide
+    exactamente con la mitad, se promedian esa observacion y la siguiente
+    (convencion que reproduce exactamente la mediana clasica cuando todos
+    los pesos son iguales, incluidos los grupos de tamano par)."""
+    order = np.argsort(a, kind="stable")
+    cum_w = np.cumsum(w[order])
+    half = float(w.sum()) / 2.0
+    idx = int(np.searchsorted(cum_w, half, side="left"))
+    if idx + 1 < a.size and cum_w[idx] == half:
+        return float((a[order[idx]] + a[order[idx + 1]]) / 2.0)
+    return float(a[order[idx]])
+
+
+def _anova_summaries(
+    arrays: list[np.ndarray],
+    weights: ArrayLike | None = None,
+) -> tuple[float, float, int, int]:
     """Sumas de cuadrados del ANOVA unifactorial y grados de libertad.
+
+    Sin pesos (weights=None):
 
         SSB = sum_i n_i (media_i - media_global)^2     (entre grupos)
         SSW = sum_i sum_j (x_ij - media_i)^2           (dentro de grupos)
         df1 = k - 1 ;  df2 = N - k
+
+    Con pesos (muestras complejas; Heeringa, West & Berglund 2010, sec. 5.3):
+
+        W_i = sum_j w_ij ;  media_i^w = sum_j w_ij x_ij / W_i
+        SSB = sum_i W_i (media_i^w - media_global^w)^2
+        SSW = sum_i sum_j w_ij (x_ij - media_i^w)^2
+        df1 = k - 1 ;  df2 = N_filas - k   (filas fisicas, no suma de pesos)
     """
     k = len(arrays)
     n_total = sum(a.size for a in arrays)
-    grand = sum(float(a.sum()) for a in arrays) / n_total
+    if weights is None:
+        grand = sum(float(a.sum()) for a in arrays) / n_total
+        ss_between = float(
+            sum(a.size * (float(a.mean()) - grand) ** 2 for a in arrays)
+        )
+        ss_within = float(
+            sum(float(((a - a.mean()) ** 2).sum()) for a in arrays)
+        )
+        return ss_between, ss_within, k - 1, n_total - k
+    w_arrays = [np.asarray(w, dtype=float) for w in weights]
+    w_sums = [float(w.sum()) for w in w_arrays]
+    means = [float((a * w).sum()) / w_i for a, w, w_i in zip(arrays, w_arrays, w_sums)]
+    grand = sum(w_i * m for w_i, m in zip(w_sums, means)) / sum(w_sums)
     ss_between = float(
-        sum(a.size * (float(a.mean()) - grand) ** 2 for a in arrays)
+        sum(w_i * (m - grand) ** 2 for w_i, m in zip(w_sums, means))
     )
     ss_within = float(
-        sum(float(((a - a.mean()) ** 2).sum()) for a in arrays)
+        sum(float((w * (a - m) ** 2).sum()) for a, w, m in zip(arrays, w_arrays, means))
     )
     return ss_between, ss_within, k - 1, n_total - k
 
@@ -201,7 +289,7 @@ def pearson_chi2(table: ArrayLike) -> TestResult:
     return TestResult(stat, (gl,), float(chi2.sf(stat, gl)))
 
 
-def f_oneway(*groups: ArrayLike) -> TestResult:
+def f_oneway(*groups: ArrayLike, weights: ArrayLike | None = None) -> TestResult:
     """ANOVA unifactorial (prueba F de Fisher) sobre k >= 2 grupos.
 
     Formula explicita:
@@ -212,18 +300,27 @@ def f_oneway(*groups: ArrayLike) -> TestResult:
         F   = (SSB / df1) / (SSW / df2)
         p   = P(F_{df1,df2} >= F) = scipy.stats.f.sf(F, df1, df2)
 
+    Con el parametro keyword-only `weights` (secuencia paralela a
+    `groups`, pesos finitos y estrictamente positivos por observacion),
+    las medias son medias ponderadas, los tamanos de grupo son las sumas
+    de pesos W_i, y los grados de libertad siguen la convencion de
+    muestras complejas: df2 = N_filas - k (filas fisicas, no pesos). Con
+    weights=None el calculo es identico al original.
+
     Es la prueba de CHAID con TargetType.CONTINUOUS (ver types.py).
     Casos degenerados (SSW = 0): separacion perfecta -> (inf, p=0);
     todas las observaciones identicas -> (0, p=1). Ver _f_ratio.
 
-    Cita: Fisher (1925), Statistical Methods for Research Workers.
+    Citas: Fisher (1925), Statistical Methods for Research Workers.
+           Heeringa, West & Berglund (2010), Applied Survey Data
+           Analysis, seccion 5.3 (formula ponderada).
     """
-    arrays = _validate_groups(groups, "f_oneway")
-    ss_between, ss_within, df1, df2 = _anova_summaries(arrays)
+    arrays = _validate_groups(groups, "f_oneway", weights)
+    ss_between, ss_within, df1, df2 = _anova_summaries(arrays, weights)
     return _f_ratio(ss_between, ss_within, df1, df2)
 
 
-def brown_forsythe(*groups: ArrayLike) -> TestResult:
+def brown_forsythe(*groups: ArrayLike, weights: ArrayLike | None = None) -> TestResult:
     """Levene con centro en la mediana (Brown-Forsythe) sobre k >= 2 grupos.
 
     Formula explicita: se reemplazan los datos por sus desviaciones
@@ -235,17 +332,33 @@ def brown_forsythe(*groups: ArrayLike) -> TestResult:
                                  / [sum_i sum_j (z_ij - zbar_i)^2]
         p    = scipy.stats.f.sf(W, k - 1, N - k)
 
+    Con el parametro keyword-only `weights`, la mediana de cada grupo es
+    la mediana ponderada (primera observacion ordenada cuyo peso
+    acumulado alcanza la mitad del peso total del grupo) y el ANOVA
+    sobre las desviaciones es el ANOVA ponderado (ver f_oneway), con
+    df2 = N_filas - k. Con weights=None el calculo es identico al
+    original.
+
     Notese que W es exactamente el cociente F de _f_ratio aplicado a los
     z_ij. Robusta ante asimetria y colas pesadas (la mediana, a diferencia
     de la media del Levene original, no exige simetria). Numericamente
     equivalente a scipy.stats.levene(*groups, center="median").
 
     Citas: Brown & Forsythe (1974), JASA 69(346):364-367;
-           Levene (1960), version original con centro en la media.
+           Levene (1960), version original con centro en la media;
+           Heeringa, West & Berglund (2010), Applied Survey Data
+           Analysis, seccion 5.3 (formula ponderada).
     """
-    arrays = _validate_groups(groups, "brown_forsythe")
-    zs = [np.abs(a - float(np.median(a))) for a in arrays]
-    ss_between, ss_within, df1, df2 = _anova_summaries(zs)
+    arrays = _validate_groups(groups, "brown_forsythe", weights)
+    if weights is None:
+        zs = [np.abs(a - float(np.median(a))) for a in arrays]
+    else:
+        w_arrays = [np.asarray(w, dtype=float) for w in weights]
+        zs = [
+            np.abs(a - _weighted_median(a, w))
+            for a, w in zip(arrays, w_arrays)
+        ]
+    ss_between, ss_within, df1, df2 = _anova_summaries(zs, weights)
     return _f_ratio(ss_between, ss_within, df1, df2)
 
 

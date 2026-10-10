@@ -1258,6 +1258,95 @@ context / alternatives / decision / consequences structure.
 
 ---
 
+## §13. Sample weighting decisions (Phase 3.2)
+
+### 13.1 Weighted median — interpolation at exact half-mass
+
+**Context.** `_weighted_median` in `backend_v3/statistics.py` returns
+the weighted median of a group. When the cumulative weight of the
+sorted observations reaches exactly half of the total weight, a
+convention is needed to decide which value to return.
+
+**Alternatives considered.**
+
+- (a) Return the observation where the cumulative weight crosses the
+  half (the first one whose cumulative weight is greater than or equal
+  to the half), without interpolating. The classic SAS/SPSS
+  convention. This was the definition written in the original 3.2.a
+  plan.
+- (b) Average that observation with the next one. The NumPy
+  convention (linear percentile). It coincides exactly with
+  `numpy.median` when all weights are equal, including even-length
+  groups.
+
+**Decision.** Option (b) — interpolation. Implemented in
+`_weighted_median`.
+
+**Rationale.** With uniform weights, `numpy.median` of an even-length
+group averages the two central values. If `_weighted_median` with
+uniform weights returned only the first one, `brown_forsythe` with
+uniform weights would produce a result slightly different from
+`brown_forsythe` without weights, breaking the C1 parity invariant
+(`weights=None` must be bit-identical to pre-3.2 behaviour, and
+all-ones weights must match the unweighted path). Interpolation
+preserves parity.
+
+**Consequences.**
+
+- `brown_forsythe(g1, g2, weights=(ones, ones))` numerically matches
+  `brown_forsythe(g1, g2)`.
+- The convention is documented in the `_weighted_median` docstring
+  and covered by the test
+  `test_weighted_median_equal_weights_even_length`.
+- Users expecting the SAS/SPSS convention can obtain it with their
+  own implementation; it is not offered as a parameter because parity
+  is more important than compatibility with other conventions.
+
+**Cross-reference.** `backend_v3/statistics.py::_weighted_median`;
+`docs/audit_log.md` entry of 10/10/2026 (Fase 3.2.a).
+
+### 13.2 Pearson χ² on weighted tables — scale sensitivity
+
+**Context.** With non-trivial sample weights, the Pearson χ² statistic
+computed over a contingency table whose cells are weight sums scales
+linearly with the total weight mass: if all weights are multiplied by
+k, the χ² is multiplied by k. The F statistic, by contrast, is a ratio
+and is scale-invariant. Consequence: in CHAID with a binary target,
+two analysts with the same sample but rescaled weights would obtain
+different χ² values and different p-values.
+
+**Alternatives considered.**
+
+- (a) Automatically normalize the weights so they sum to n (the number
+  of physical rows) before any computation. Rejected: it hides a
+  decision from the analyst and breaks the parity invariant when the
+  analyst has already normalized on their own.
+- (b) Keep the standard behaviour and document it: the scale is the
+  analyst's responsibility. Adopted.
+- (c) Add a `normalize_weights` parameter in `Session.fix_spec`.
+  Rejected for now: it enlarges the API surface without a clear need.
+  If real usage demands it, it will be added in a later sub-phase.
+
+**Decision.** Option (b). Standard complex-survey behaviour (Heeringa,
+West & Berglund 2010, §5.4). TreeGov reports; it does not decide
+silently.
+
+**Consequences.**
+
+- Documented in `docs/methodology.md` §1.9bis.
+- The analyst may normalize their weights before uploading the CSV if
+  they want χ² to behave as if the effective sample size were n.
+- This behaviour also applies to QUEST with nominal predictors (same
+  Pearson χ²); it will be documented again in 3.2.d.
+- C&RT is unaffected: it uses weighted Gini proportions and weighted
+  variance, both scale-invariant.
+
+**Cross-reference.** `backend_v3/chaid_engine.py`;
+`docs/methodology.md` §1.9bis; `docs/audit_log.md` entry of 10/10/2026
+(Fase 3.2.b).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

@@ -2859,3 +2859,90 @@ Conclusión: la caché de prompt de Moonshot no es una "limitación conocida" si
 - PR #51956 de OpenCode sobre el bug de `setCacheKey` en V2.
 
 ---
+
+### 10/10/2026 — Fase 3.2.a: ponderación por muestra — statistics.py
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel
+
+**Artefactos**: `backend_v3/statistics.py`, `tests/test_statistics.py`.
+
+**Motivación**:
+Primera sub-fase de la Fase 3.2 (ponderación por muestra). Extiende `f_oneway` y `brown_forsythe` para aceptar un vector de pesos paralelo a los datos. Invariante no negociable: con `weights=None`, el comportamiento es idéntico bit a bit al pre-3.2. `pearson_chi2` no se tocó: recibe una tabla ya agregada y la fórmula es idéntica cuando las celdas contienen sumas de pesos en lugar de conteos.
+
+**Cambios aplicados**:
+
+- `f_oneway` y `brown_forsythe` ganan `weights` keyword-only, default `None`. Secuencia paralela a los grupos: mismo número de arrays, cada uno de la misma longitud que su grupo, valores finitos y estrictamente positivos.
+- `_validate_groups` gana `weights=None`; valida longitudes, finitud y positividad estricta cuando no es `None`.
+- `_anova_summaries` gana `weights=None`. Con pesos: medias ponderadas, `W_i = suma de pesos por grupo`, `df2 = N_filas − k`.
+- Nuevo helper `_weighted_median`: mediana ponderada con interpolación cuando el peso acumulado coincide exactamente con la mitad del peso total. Reproduce la mediana clásica con pesos uniformes (incluido tamaño par).
+- `brown_forsythe` con pesos: sustituye cada observación por su desviación absoluta a la mediana ponderada de su grupo; luego aplica el ANOVA ponderado.
+- `_f_ratio`, `pearson_chi2`, `TestResult`, `stirling_second_kind`, `kass_multiplier`, `bonferroni_adjust`: sin cambios.
+- Docstrings actualizados con Heeringa, West & Berglund (2010), §5.3.
+
+**Identidades verificadas**:
+
+- `f_oneway(g1, g2)` sin pesos: `TestResult` idéntico al pre-3.2.
+- `f_oneway(g1, g2, weights=(ones, ones))`: idéntico al caso sin pesos.
+- Invarianza de escala: multiplicar los pesos por una constante positiva deja F y p sin cambios.
+- Caso manual con pesos no triviales: SSB, SSW, F calculados a mano coinciden con el resultado del motor.
+- `_weighted_median` con pesos uniformes coincide con `numpy.median` (longitud impar y longitud par).
+- `_weighted_median` con un valor concentrando más de la mitad del peso devuelve ese valor.
+- `_weighted_median` con empate exacto en la mitad interpola.
+
+**Decisión registrada**:
+La interpolación en `_weighted_median` cuando el peso acumulado coincide exactamente con la mitad es una desviación del plan original (que decía "primera observación cuyo peso acumulado alcance la mitad", convención SAS/SPSS). Se adopta interpolación porque reproduce exactamente `numpy.median` con pesos uniformes y preserva el invariante de paridad C1. Documentada en `docs/design_decisions.md` §13.
+
+**Tests**: 15 tests nuevos en `tests/test_statistics.py`. Suite completa: 258/258 PASSED (243 previos + 15 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13 (nueva).
+- `docs/roadmap.md` (tabla 3.2).
+
+---
+
+### 10/10/2026 — Fase 3.2.b: CHAID con conteos ponderados
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel
+
+**Artefactos**: `backend_v3/chaid_engine.py`, `tests/test_chaid_engine.py`.
+
+**Motivación**:
+Segunda sub-fase de la Fase 3.2. Extiende el motor CHAID para aceptar pesos por muestra. Con pesos, las celdas de la matriz de contingencia y los suficientes (n, sum, sumsq) acumulan sumas de pesos en lugar de conteos. Las decisiones de fusión siguen el mismo criterio (par con mayor p, Kass 1980), y la regla de Cochran opera sobre frecuencias esperadas ponderadas.
+
+**Cambios aplicados**:
+
+- `evaluate` y `best_split` ganan `weights` keyword-only, default `None`. Validación: 1D, longitud = `len(x)`, finitos, estrictamente positivos.
+- `_reduce_categorical` y `_reduce_continuous` aceptan `weights` y devuelven tres objetos: (labels, matrix, counts). `matrix` acumula pesos; `counts` es el conteo físico de filas por categoría.
+- `SplitConfig.child_ns` y `parent_n` siguen siendo conteos físicos de filas (enteros). No se añadió ningún campo nuevo a `SplitConfig`. `types.py` no se tocó.
+- Los df residuales (F global) siguen siendo filas físicas.
+- Los métodos internos de evaluación sobre la matriz agregada (`_groups_table`, `_expected`, `_group_sizes`, `_pair_pvalues_*`, `_global_test`, `_forced_pair`, `_f_from_sufficients`, `_cochran_status`) no cambian: operan sobre la matriz ya ponderada.
+- Línea de log nueva al inicio de `evaluate` indicando el modo (ponderado / sin ponderar) y, si aplica, la suma total de pesos.
+
+**Identidades verificadas**:
+
+- Con `weights=None`, `SplitConfig` idéntico al pre-3.2 (categórico y continuo).
+- Con `weights=ones`, mismo `SplitConfig` que sin pesos.
+- Con pesos no triviales: `sum(child_ns) == N_filas` del nodo (no suma de pesos); `parent_n == N_filas`.
+- Invarianza de escala de F (target continuo).
+- Escalado lineal de χ² (target binario): χ² se multiplica por el mismo factor que la escala de pesos. p-valor cambia.
+- `best_split` propaga pesos. Fixture donde el ganador cambia al ponderar.
+
+**Hallazgo matemático registrado**:
+Con pesos no triviales, χ² de Pearson escala linealmente con la masa total de pesos. F es invariante a escala (cociente). Es comportamiento correcto y estándar (Heeringa, West & Berglund 2010 §5.4). Corrige la afirmación del diseño v2 §B8 ("la escala no afecta"): es cierta para proporciones y F, incorrecta para χ². Documentado en `docs/design_decisions.md` §13.2 y `docs/methodology.md` §1.9bis.
+
+**Tests**: 7 tests nuevos en `tests/test_chaid_engine.py`. Suite completa: 265/265 PASSED (258 previos + 7 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.2 (nueva).
+- `docs/methodology.md` §1.9bis (nueva).
+- `docs/roadmap.md` (tabla 3.2).
+
+---
