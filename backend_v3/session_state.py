@@ -241,6 +241,21 @@ class Session:
             )
         return X, y, unseen_policy
 
+    def _partition_weights(self, partition: str) -> np.ndarray | None:
+        """Vector de pesos de la particion (None si la sesion no es ponderada).
+
+        Fase 3.2.g: longitud completa de la particion (sin filtrar); el
+        filtrado por filas enrutables lo hace el consumidor via su propia
+        mascara `routed`.
+        """
+        if partition == "train":
+            return self._w_train
+        if partition == "oos":
+            return self._w_test
+        if partition == "oot":
+            return self._w_oot
+        return None
+
     def get_oos_oot_report(self) -> dict | None:
         """DTO plain-Python del estado OOS/OOT (None si no hay modelo)."""
         return build_oos_oot_report(self._state)
@@ -260,6 +275,9 @@ class Session:
         of the requested partition through the trained tree and returns the
         result as a plain-Python dict (asdict), so GUI/MCP never touch
         backend dataclasses.
+
+        Fase 3.2.g: si la sesion es ponderada, propaga el vector de pesos
+        de la particion solicitada (longitud completa, sin filtrar).
         """
         if self._state.tree is None:
             return None
@@ -270,6 +288,7 @@ class Session:
         result = build_gains_table(
             self._state.tree, leaf_assignment, y,
             by=by, n_buckets=n_buckets, tie=tie, seed=seed,
+            weights=self._partition_weights(partition),
         )
         self._log.info(
             "[session] get_gains_table: partition=%s by=%s n=%d",
@@ -285,7 +304,11 @@ class Session:
         Read-only consumer of reporting.build_classification_matrix: leaf
         PDs are taken from the trained tree (pd_final per leaf node) and
         the result travels as a plain-Python dict (asdict), so GUI/MCP
-        never touch backend dataclasses.
+        never touch         backend dataclasses.
+
+        Fase 3.2.g: si la sesion es ponderada, propaga el vector de pesos
+        de la particion solicitada (longitud completa; el filtrado por
+        filas enrutables lo hace `_validated_routed` internamente).
         """
         if self._state.tree is None:
             return None
@@ -306,7 +329,8 @@ class Session:
             for nd in self._state.tree.nodes if nd.is_leaf
         }
         result = build_classification_matrix(
-            leaf_assignment, y, pd_per_leaf, threshold=threshold
+            leaf_assignment, y, pd_per_leaf, threshold=threshold,
+            weights=self._partition_weights(partition),
         )
         self._log.info(
             "[session] get_classification_matrix: partition=%s threshold=%.4g",
@@ -633,6 +657,9 @@ class Session:
         X_test se asume imputado con TrainOnlyImputer (hecho en partition);
         el assert de filas sin hoja en predict_pd es defensa, no el caso
         esperado. Nunca toca datos de train.
+
+        Fase 3.2.g: si la sesion es ponderada, propaga `weights=self._w_test`
+        a compute_oos_metrics (metricas ponderadas).
         """
         self._require(FlowState.TRAINED, "evaluate_oos")
         st = self._state
@@ -647,7 +674,9 @@ class Session:
             )
         p_2d = predict_pd(st.tree, self._X_test)
         p = p_2d[:, 0]  # Phase 3.1.d: binary consumers read column 0
-        metrics = compute_oos_metrics(p, self._y_test, n_groups=n_groups)
+        metrics = compute_oos_metrics(
+            p, self._y_test, n_groups=n_groups, weights=self._w_test
+        )
         return self._commit(
             st.state,
             evento=(
@@ -784,6 +813,10 @@ class Session:
 
         unseen_policy="exclude" (transparencia MRM): las filas no enrutables
         cuentan en n_excluded y forman su propio bin en PSI.
+
+        Fase 3.2.g: si la sesion es ponderada, propaga pesos a las metricas:
+        `_w_oot[validas]` para el computo OOT, `_w_train` para el Gini de
+        train y `_w_test` para el gini_oos al vuelo.
         """
         self._require(FlowState.OOT_LOADED, "evaluate_oot")
         st_check = self._state
@@ -817,8 +850,9 @@ class Session:
                 [model.nodes[int(a)].pd_final[0] for a in asign_oot[validas]]
             )
             g_eff = n_groups if n_val >= 5 * n_groups else max(3, n_val // 5)
+            w_val = None if self._w_oot is None else self._w_oot[validas]
             metrics = compute_oos_metrics(p_val, self._y_oot[validas],
-                                          n_groups=g_eff)
+                                          n_groups=g_eff, weights=w_val)
         else:
             self._log.warning(
                 "[session] OOT enrutable demasiado pequeno (%d): sin metricas",
@@ -835,7 +869,7 @@ class Session:
         n_tr = int(len(p_tr))
         g_eff_tr = min(5, max(3, n_tr // 5))
         m_tr = compute_oos_metrics(p_tr, self._y_train.to_numpy(),
-                                   n_groups=g_eff_tr)
+                                   n_groups=g_eff_tr, weights=self._w_train)
         gini_train = m_tr.gini if m_tr.gini is not None else float("nan")
 
         if st.oos_metrics is not None:
@@ -847,7 +881,7 @@ class Session:
             p_te = np.array([model.nodes[int(a)].pd_final[0] for a in asign_te])
             n_te_eff = max(3, int(len(p_te)) // 5)
             gini_oos = compute_oos_metrics(
-                p_te, self._y_test, n_groups=n_te_eff
+                p_te, self._y_test, n_groups=n_te_eff, weights=self._w_test
             ).gini
 
         def _drop(g):

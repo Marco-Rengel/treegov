@@ -1039,6 +1039,100 @@ def test_weighted_session_load_oot_uses_oot_weights():
         assert math.isclose(float(s._w_oot.sum()), 70.0, rel_tol=1e-9)
 
 
+# ---------------------------------------------------------------------------
+# 3.2.g - Ponderacion por muestra (propagacion a metricas y reportes)
+# ---------------------------------------------------------------------------
+
+
+def _oot_pair(td_path: Path) -> tuple[Path, Path]:
+    """Devuelve (oot_con_peso, oot_sin_peso) de 20 filas enrutables."""
+    edad = np.arange(60, 80)
+    seg = np.tile(["a", "b"], 10)
+    y = np.ones(20, dtype=int)
+    y[:5] = 0
+    base = {"edad": edad, "seg": seg, "default": y}
+    p_w = td_path / "oot_g_w.csv"
+    pd.DataFrame({**base, "peso": np.where(edad >= 70, 1.5, 1.0)}).to_csv(
+        p_w, index=False
+    )
+    p_0 = td_path / "oot_g_0.csv"
+    pd.DataFrame(base).to_csv(p_0, index=False)
+    return p_w, p_0
+
+
+def _session_trained(csv_path: Path, weighted: bool) -> Session:
+    s = Session(logger=_quiet_logger())
+    s.load_dataset(str(csv_path))
+    _fix_spec_weighted(s, weight_col="peso" if weighted else None)
+    s.partition(train_frac=0.7, seed=42)
+    s.train(CrtEngine(), max_depth=4, min_child_size=5)
+    return s
+
+
+def test_weighted_session_g_evaluate_oos_propagates_weights():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s_w = _session_trained(csv_path, weighted=True)
+        st_w = s_w.evaluate_oos(n_groups=5)
+        assert st_w.oos_metrics is not None
+        s_0 = _session_trained(csv_path, weighted=False)
+        st_0 = s_0.evaluate_oos(n_groups=5)
+        assert st_0.oos_metrics is not None
+        # Pesos no triviales (1.0/1.2) afectan al resultado
+        assert st_w.oos_metrics != st_0.oos_metrics
+
+
+def test_weighted_session_g_evaluate_oot_propagates_weights():
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        csv_path = _csv_weighted(td_path)
+        oot_w, oot_0 = _oot_pair(td_path)
+        s_w = _session_trained(csv_path, weighted=True)
+        s_w.load_oot(str(oot_w))
+        st_w = s_w.evaluate_oot()
+        assert st_w.oot_report is not None
+        assert st_w.oot_report.metrics is not None
+        s_0 = _session_trained(csv_path, weighted=False)
+        s_0.load_oot(str(oot_0))
+        st_0 = s_0.evaluate_oot()
+        assert st_0.oot_report is not None
+        assert st_0.oot_report.metrics is not None
+        # Las metricas OOT difieren: el flujo ponderado usa pesos
+        assert st_w.oot_report.metrics != st_0.oot_report.metrics
+
+
+def test_weighted_session_g_get_gains_table_propagates_weights():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = _session_trained(csv_path, weighted=True)
+        dto = s.get_gains_table(partition="oos")
+        assert dto is not None
+        assert "w_n" in dto["rows"][0]
+        assert "w_bad" in dto["rows"][0]
+        assert "w_bad_rate_cum" in dto["rows"][0]
+        # Pesos no triviales: la masa total difiere del conteo de filas
+        assert not math.isclose(dto["w_total"], float(dto["n_total"]),
+                                rel_tol=1e-12)
+        assert not math.isclose(
+            dto["w_bad_rate_global"], dto["bad_rate_global"], rel_tol=1e-12
+        )
+
+
+def test_weighted_session_g_get_classification_matrix_propagates_weights():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_weighted(Path(td))
+        s = _session_trained(csv_path, weighted=True)
+        dto = s.get_classification_matrix(partition="oos")
+        assert dto is not None
+        for clave in ("w_tp", "w_tn", "w_fp", "w_fn",
+                      "w_precision", "w_recall", "w_f1",
+                      "w_bad_capture_rate"):
+            assert clave in dto
+        # La suma de las celdas ponderadas difiere del conteo de filas
+        suma_w = dto["w_tp"] + dto["w_tn"] + dto["w_fp"] + dto["w_fn"]
+        assert not math.isclose(suma_w, float(dto["n_total"]), rel_tol=1e-12)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

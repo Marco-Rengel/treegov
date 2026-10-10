@@ -10,12 +10,16 @@ sobre un fixture sintético de 3 hojas (PDs 0.1/0.3/0.6, 250 filas, 95 bads).
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from backend_v3.reporting import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from backend_v3.reporting import (  # noqa: E402
     build_classification_matrix,
     build_gains_table,
     build_oos_oot_report,
@@ -374,3 +378,140 @@ def test_gains_table_multiclass_raises() -> None:
     y = np.array([0] * 10 + [1] * 10 + [2] * 10)
     with pytest.raises(ValueError):
         build_gains_table(model, assign, y)
+
+
+# ---------------------------------------------------------------------------
+# 3.2.g - Ponderacion por muestra
+# ---------------------------------------------------------------------------
+
+
+def test_weighted_reporting_gains_w_star_equals_star_no_weights() -> None:
+    """weights=None: columnas w_* exactamente iguales a las de conteo."""
+    result = build_gains_table(_model_3_leaves(), _standard_assign(), _standard_y())
+    for r in result.rows:
+        assert r.w_n == float(r.n)
+        assert r.w_good == float(r.n_good)
+        assert r.w_bad == float(r.n_bad)
+        assert r.w_bad_rate == r.bad_rate
+        assert r.w_n_cum == float(r.n_cum)
+        assert r.w_bad_cum == float(r.n_bad_cum)
+        assert r.w_bad_rate_cum == r.bad_rate_cum
+        assert r.w_lift_cum == r.lift_cum
+        assert r.w_n_decum == float(r.n_decum)
+        assert r.w_bad_decum == float(r.n_bad_decum)
+        assert r.w_bad_rate_decum == r.bad_rate_decum
+    assert result.w_total == float(result.n_total)
+    assert result.w_bad == float(result.n_bad)
+    assert result.w_bad_rate_global == result.bad_rate_global
+
+
+def test_weighted_reporting_gains_w_star_equals_star_uniform_weights() -> None:
+    """weights=ones: misma igualdad exacta."""
+    result = build_gains_table(
+        _model_3_leaves(), _standard_assign(), _standard_y(),
+        weights=np.ones(250),
+    )
+    for r in result.rows:
+        assert r.w_n == float(r.n)
+        assert r.w_bad == float(r.n_bad)
+        assert r.w_bad_rate_cum == r.bad_rate_cum
+        assert r.w_lift_cum == r.lift_cum
+    assert result.w_total == float(result.n_total)
+    assert result.w_bad_rate_global == result.bad_rate_global
+
+
+def test_weighted_reporting_gains_with_nontrivial_weights() -> None:
+    """Pesos 2.0 en las filas de la hoja 2, 1.0 en el resto.
+
+    w_n por fila: L0=50, L1=100, L2=200. w_bad: 5, 30, 120.
+    w_total = 350, w_bad = 155, w_bad_rate_global = 155/350 = 31/70.
+    """
+    w = np.array([1.0] * 150 + [2.0] * 100)
+    result = build_gains_table(
+        _model_3_leaves(), _standard_assign(), _standard_y(), weights=w,
+    )
+    r0, r1, r2 = result.rows
+    assert r0.w_n == pytest.approx(50.0, rel=1e-12)
+    assert r1.w_n == pytest.approx(100.0, rel=1e-12)
+    assert r2.w_n == pytest.approx(200.0, rel=1e-12)
+    assert r2.w_bad == pytest.approx(120.0, rel=1e-12)
+    assert r2.w_good == pytest.approx(80.0, rel=1e-12)
+    assert r2.w_bad_rate == pytest.approx(0.6, rel=1e-12)
+    assert r2.w_bad_rate_cum == pytest.approx(155.0 / 350.0, rel=1e-12)
+    assert r2.w_n_cum == pytest.approx(350.0, rel=1e-12)
+    assert r2.w_bad_cum == pytest.approx(155.0, rel=1e-12)
+    assert result.w_total == pytest.approx(350.0, rel=1e-12)
+    assert result.w_bad == pytest.approx(155.0, rel=1e-12)
+    assert result.w_bad_rate_global == pytest.approx(31.0 / 70.0, rel=1e-12)
+    # lift_cum de la primera fila: 0.1 / (31/70)
+    assert r0.w_lift_cum == pytest.approx(0.1 / (31.0 / 70.0), rel=1e-12)
+
+
+def test_weighted_reporting_classification_w_star_equals_star_no_weights() -> None:
+    """weights=None: w_tp == tp, etc., con igualdad exacta."""
+    pd_per_leaf = {0: 0.1, 1: 0.3, 2: 0.6}
+    m = build_classification_matrix(
+        _standard_assign(), _standard_y(), pd_per_leaf, threshold=0.5,
+    )
+    assert m.w_tp == float(m.tp)
+    assert m.w_tn == float(m.tn)
+    assert m.w_fp == float(m.fp)
+    assert m.w_fn == float(m.fn)
+    assert m.w_precision == m.precision
+    assert m.w_recall == m.recall
+    assert m.w_f1 == m.f1
+    assert m.w_bad_capture_rate == m.bad_capture_rate
+
+
+def test_weighted_reporting_classification_with_nontrivial_weights() -> None:
+    """Pesos 2.0 en la hoja 2, threshold=0.5 (solo la hoja 2 predice bad).
+
+    w_tp = 60*2 = 120 ; w_fp = 40*2 = 80 ; w_fn = 35 ; w_tn = 115.
+    w_precision = 120/200 = 0.6 ; w_recall = 120/155 = 24/31.
+    """
+    pd_per_leaf = {0: 0.1, 1: 0.3, 2: 0.6}
+    w = np.array([1.0] * 150 + [2.0] * 100)
+    m = build_classification_matrix(
+        _standard_assign(), _standard_y(), pd_per_leaf, threshold=0.5,
+        weights=w,
+    )
+    assert m.w_tp == pytest.approx(120.0, rel=1e-12)
+    assert m.w_fp == pytest.approx(80.0, rel=1e-12)
+    assert m.w_fn == pytest.approx(35.0, rel=1e-12)
+    assert m.w_tn == pytest.approx(115.0, rel=1e-12)
+    assert m.w_precision == pytest.approx(0.6, rel=1e-12)
+    assert m.w_recall == pytest.approx(24.0 / 31.0, rel=1e-12)
+    assert m.w_bad_capture_rate == m.w_recall
+    f1 = 2.0 * 0.6 * (24.0 / 31.0) / (0.6 + 24.0 / 31.0)
+    assert m.w_f1 == pytest.approx(f1, rel=1e-12)
+
+
+def test_weighted_reporting_rejects_wrong_length_weights() -> None:
+    """Pesos de longitud incorrecta -> ValueError en ambas funciones."""
+    pd_per_leaf = {0: 0.1, 1: 0.3, 2: 0.6}
+    w_bad = np.ones(249)
+    with pytest.raises(ValueError):
+        build_gains_table(
+            _model_3_leaves(), _standard_assign(), _standard_y(),
+            weights=w_bad,
+        )
+    with pytest.raises(ValueError):
+        build_classification_matrix(
+            _standard_assign(), _standard_y(), pd_per_leaf, threshold=0.5,
+            weights=w_bad,
+        )
+
+
+# ---------------------------------------------------------------------------
+# ejecucion directa
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    tests = [
+        obj for name, obj in sorted(globals().items())
+        if name.startswith("test_") and callable(obj)
+    ]
+    for t in tests:
+        t()
+        print(f"PASS {t.__name__}")
+    print(f"\nOK - {len(tests)} tests superados")

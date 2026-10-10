@@ -17,6 +17,12 @@ The model's class_labels must have exactly 2 entries; otherwise
 build_gains_table raises ValueError. build_classification_matrix
 delegates the K > 2 check to its caller (Session). Multiclass
 reports are scheduled for Phase 3.5.
+
+Phase 3.2.g (sample weighting): both report builders accept a
+keyword-only ``weights`` vector and expose parallel ``w_*`` columns
+with weighted mass (Heeringa, West & Berglund 2010, §5.3). With
+``weights=None`` the ``w_*`` values match their integer counterparts
+exactly (parity invariant).
 """
 
 from __future__ import annotations
@@ -75,6 +81,19 @@ class GainsRow:
     n_good_decum: int
     n_bad_decum: int
     bad_rate_decum: float
+    # Fase 3.2.g: columnas paralelas ponderadas. Con weights=None,
+    # coinciden exactamente con sus contrapartes de conteo (paridad).
+    w_n: float = 0.0
+    w_good: float = 0.0
+    w_bad: float = 0.0
+    w_bad_rate: float = 0.0
+    w_n_cum: float = 0.0
+    w_bad_cum: float = 0.0
+    w_bad_rate_cum: float = 0.0
+    w_lift_cum: float = 0.0
+    w_n_decum: float = 0.0
+    w_bad_decum: float = 0.0
+    w_bad_rate_decum: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -97,6 +116,10 @@ class GainsTableResult:
     auc: float | None
     gini: float | None
     n_excluded: int
+    # Fase 3.2.g: totales ponderados (paridad con conteos si weights=None).
+    w_total: float = 0.0
+    w_bad: float = 0.0
+    w_bad_rate_global: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -121,6 +144,16 @@ class ClassificationMatrix:
     f1: float | None
     bad_capture_rate: float | None
     n_excluded: int
+    # Fase 3.2.g: celdas y ratios ponderados (paridad con conteos si
+    # weights=None).
+    w_tp: float = 0.0
+    w_tn: float = 0.0
+    w_fp: float = 0.0
+    w_fn: float = 0.0
+    w_precision: float | None = None
+    w_recall: float | None = None
+    w_f1: float | None = None
+    w_bad_capture_rate: float | None = None
 
 
 def _validated_routed(
@@ -138,6 +171,28 @@ def _validated_routed(
         raise ValueError(f"[reporting] {who}: y must be binary (0/1)")
     routed = assign >= 0
     return routed, assign[routed], yv[routed]
+
+
+def _validated_weights(
+    weights: np.ndarray | None, n: int, who: str
+) -> np.ndarray | None:
+    """Validate the optional weight vector (Phase 3.2.g); None passthrough."""
+    if weights is None:
+        return None
+    w = np.asarray(weights, dtype=float)
+    if w.ndim != 1:
+        raise ValueError(f"[reporting] {who}: weights must be 1-D")
+    if len(w) != n:
+        raise ValueError(
+            f"[reporting] {who}: weights length {len(w)} != {n}"
+        )
+    if not np.isfinite(w).all():
+        raise ValueError(f"[reporting] {who}: weights contain non-finite values")
+    if not (w > 0).all():
+        raise ValueError(
+            f"[reporting] {who}: weights must be strictly positive"
+        )
+    return w
 
 
 def _discrimination_metrics(
@@ -187,6 +242,7 @@ def build_gains_table(
     n_buckets: int = 10,
     tie: str = "preserve",
     seed: int | None = None,
+    weights: np.ndarray | None = None,
 ) -> GainsTableResult:
     """Build a gains table by leaf or by PD bucket (deterministic).
 
@@ -204,6 +260,15 @@ def build_gains_table(
 
     Rows with ``leaf_assignment == -1`` join no group; they only count in
     ``n_excluded``. Raises ``ValueError`` when no row is routed.
+
+    Phase 3.2.g: ``weights`` (keyword-only, default None) adds the
+    parallel ``w_*`` columns with weighted mass per row
+    (Heeringa, West & Berglund 2010, §5.3). With ``weights=None`` the
+    ``w_*`` columns match their integer counterparts exactly (parity).
+    Deferred decision: ``ks`` / ``auc`` / ``gini`` of the result remain
+    unweighted (row counts) in this sub-phase; their weighted extension
+    is postponed to a future sub-phase (would require touching
+    ``_discrimination_metrics`` as well).
     """
     if by not in ("leaf", "bucket"):
         raise ValueError(f"[reporting] invalid by={by!r} ('leaf'/'bucket')")
@@ -226,6 +291,8 @@ def build_gains_table(
     n_total = int(leaf_ids.size)
     if n_total == 0:
         raise ValueError("[reporting] gains table undefined: no routed rows")
+    w = _validated_weights(weights, len(np.asarray(leaf_assignment)), "gains_table")
+    w_r = w[routed] if w is not None else np.ones(n_total, dtype=float)
 
     pd_per_node = np.fromiter(
         (nd.pd_final[0] for nd in model.nodes),
@@ -236,6 +303,11 @@ def build_gains_table(
     n_bad = int(y_r.sum())
     n_good = n_total - n_bad
     bad_rate_global = n_bad / n_total
+
+    # Masa ponderada global (con weights=None, w_r son unos: paridad).
+    w_total = float(w_r.sum())
+    w_bad_global = float((w_r * y_r).sum())
+    w_bad_rate_global = w_bad_global / w_total if w_total > 0.0 else 0.0
 
     # ---- grouping: list of (label, pd_value, routed-row indices) ---------
     if by == "leaf":
@@ -269,29 +341,44 @@ def build_gains_table(
             groups.append((f"B{g + 1:02d}", float(pd_row[seg].mean()), seg))
 
     # ---- per-group counts -------------------------------------------------
-    stats: list[tuple[str, float, int, int, int]] = []
+    stats: list[tuple[str, float, int, int, int, float, float]] = []
     for label, pd_val, idx in groups:
         n_g = int(idx.size)
         bad_g = int(y_r[idx].sum())
-        stats.append((label, pd_val, n_g, n_g - bad_g, bad_g))
+        w_n_g = float(w_r[idx].sum())
+        w_bad_g = float((w_r[idx] * y_r[idx]).sum())
+        stats.append((label, pd_val, n_g, n_g - bad_g, bad_g, w_n_g, w_bad_g))
 
     # suffix totals (current row included) for the decumulative columns
     suffix_n = suffix_good = suffix_bad = 0
-    suffixes: list[tuple[int, int, int]] = []
-    for _, _, n_g, good_g, bad_g in reversed(stats):
+    suffix_wn = suffix_wbad = 0.0
+    suffixes: list[tuple[int, int, int, float, float]] = []
+    for _, _, n_g, good_g, bad_g, w_n_g, w_bad_g in reversed(stats):
         suffix_n += n_g
         suffix_good += good_g
         suffix_bad += bad_g
-        suffixes.append((suffix_n, suffix_good, suffix_bad))
+        suffix_wn += w_n_g
+        suffix_wbad += w_bad_g
+        suffixes.append((suffix_n, suffix_good, suffix_bad,
+                         suffix_wn, suffix_wbad))
     suffixes.reverse()
 
     rows: list[GainsRow] = []
     cum_n = cum_good = cum_bad = 0
-    for (label, pd_val, n_g, good_g, bad_g), (dn, dgood, dbad) in zip(stats, suffixes):
+    cum_wn = cum_wbad = 0.0
+    for (label, pd_val, n_g, good_g, bad_g, w_n_g, w_bad_g), (
+        dn, dgood, dbad, dwn, dwbad
+    ) in zip(stats, suffixes):
         cum_n += n_g
         cum_good += good_g
         cum_bad += bad_g
+        cum_wn += w_n_g
+        cum_wbad += w_bad_g
         bad_rate_cum = cum_bad / cum_n
+        w_good_g = w_n_g - w_bad_g
+        w_bad_rate_g = w_bad_g / w_n_g if w_n_g > 0.0 else 0.0
+        w_bad_rate_cum_g = cum_wbad / cum_wn if cum_wn > 0.0 else 0.0
+        w_bad_rate_decum_g = dwbad / dwn if dwn > 0.0 else 0.0
         rows.append(
             GainsRow(
                 label=label,
@@ -313,6 +400,21 @@ def build_gains_table(
                 n_good_decum=dgood,
                 n_bad_decum=dbad,
                 bad_rate_decum=dbad / dn,
+                w_n=w_n_g,
+                w_good=w_good_g,
+                w_bad=w_bad_g,
+                w_bad_rate=w_bad_rate_g,
+                w_n_cum=cum_wn,
+                w_bad_cum=cum_wbad,
+                w_bad_rate_cum=w_bad_rate_cum_g,
+                w_lift_cum=(
+                    w_bad_rate_cum_g / w_bad_rate_global
+                    if w_bad_rate_global > 0.0
+                    else float("nan")
+                ),
+                w_n_decum=dwn,
+                w_bad_decum=dwbad,
+                w_bad_rate_decum=w_bad_rate_decum_g,
             )
         )
 
@@ -329,6 +431,9 @@ def build_gains_table(
         auc=auc,
         gini=gini,
         n_excluded=n_excluded,
+        w_total=w_total,
+        w_bad=w_bad_global,
+        w_bad_rate_global=w_bad_rate_global,
     )
 
 
@@ -338,6 +443,7 @@ def build_classification_matrix(
     pd_per_leaf: dict[int, float],
     *,
     threshold: float = 0.5,
+    weights: np.ndarray | None = None,
 ) -> ClassificationMatrix:
     """Confusion matrix at a fixed PD threshold (deterministic).
 
@@ -348,6 +454,11 @@ def build_classification_matrix(
     tp = pred bad & real bad; tn = pred good & real good;
     fp = pred bad & real good; fn = pred good & real bad.
     ``bad_capture_rate`` mirrors ``recall`` with credit-scoring naming.
+
+    Phase 3.2.g: ``weights`` (keyword-only, default None) adds the
+    parallel ``w_*`` cells and ratios with weighted mass
+    (Heeringa, West & Berglund 2010, §5.3). With ``weights=None`` the
+    ``w_*`` values match their integer counterparts exactly (parity).
 
     Raises ``ValueError`` when ``threshold`` lies outside [0, 1].
     """
@@ -360,6 +471,10 @@ def build_classification_matrix(
         leaf_assignment, y, "classification_matrix"
     )
     n_excluded = int((~routed).sum())
+    w = _validated_weights(
+        weights, len(np.asarray(leaf_assignment)), "classification_matrix"
+    )
+    w_r = w[routed] if w is not None else np.ones(int(leaf_ids.size), dtype=float)
 
     pd_row = np.fromiter(
         (float(pd_per_leaf[int(lid)]) for lid in leaf_ids),
@@ -381,6 +496,20 @@ def build_classification_matrix(
         else 2.0 * precision * recall / (precision + recall)
     )
 
+    # Celdas ponderadas (con weights=None, w_r son unos: paridad exacta).
+    w_tp = float(w_r[pred_bad & real_bad].sum())
+    w_tn = float(w_r[~pred_bad & ~real_bad].sum())
+    w_fp = float(w_r[pred_bad & ~real_bad].sum())
+    w_fn = float(w_r[~pred_bad & real_bad].sum())
+    w_precision = w_tp / (w_tp + w_fp) if (w_tp + w_fp) > 0.0 else None
+    w_recall = w_tp / (w_tp + w_fn) if (w_tp + w_fn) > 0.0 else None
+    w_f1 = (
+        None
+        if w_precision is None or w_recall is None
+        or (w_precision + w_recall) == 0.0
+        else 2.0 * w_precision * w_recall / (w_precision + w_recall)
+    )
+
     return ClassificationMatrix(
         threshold=float(threshold),
         n_total=int(leaf_ids.size),
@@ -395,4 +524,12 @@ def build_classification_matrix(
         f1=f1,
         bad_capture_rate=recall,
         n_excluded=n_excluded,
+        w_tp=w_tp,
+        w_tn=w_tn,
+        w_fp=w_fp,
+        w_fn=w_fn,
+        w_precision=w_precision,
+        w_recall=w_recall,
+        w_f1=w_f1,
+        w_bad_capture_rate=w_recall,
     )

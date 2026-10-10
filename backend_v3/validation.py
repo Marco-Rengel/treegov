@@ -31,6 +31,13 @@ numpy/pandas/scipy.stats):
     inicio implicito en (0, 0, +inf) y cierre en (1, 1, -inf).
   * PR-AUC como Average Precision escalonado (Davis & Goadrich 2006, ICML):
         AP = sum_i (R_i - R_{i-1}) * P_i     (sin trapezoide)
+
+  * Extension ponderada (Fase 3.2.g): compute_oos_metrics acepta `weights`
+    keyword-only. Con pesos, cada formula acumula masa ponderada en lugar
+    de contar filas (Heeringa, West & Berglund 2010, §5.5). El AUC se
+    calcula por formula directa de pares con medio-credito en empates,
+    numericamente equivalente al mid-rank cuando los pesos son uniformes.
+    Con weights=None, resultados identicos al pre-3.2.
 """
 
 from __future__ import annotations
@@ -159,12 +166,40 @@ def predict_pd(
 
 
 def compute_oos_metrics(
-    p: np.ndarray, y: np.ndarray, *, n_groups: int = 10
+    p: np.ndarray, y: np.ndarray, *, n_groups: int = 10,
+    weights: np.ndarray | None = None,
 ) -> OOSMetrics:
-    """Todas las metricas sobre (p, y) de test. Determinista."""
+    """Todas las metricas sobre (p, y) de test. Determinista.
+
+    Fase 3.2.g: `weights` (keyword-only, default None) activa el modo
+    ponderado: cada formula acumula masa ponderada en lugar de contar
+    filas (Heeringa, West & Berglund 2010, §5.5). Con `weights=None`,
+    los resultados son identicos bit a bit al comportamiento pre-3.2.
+    """
     log = get_logger("validation")
     pv = np.asarray(p, dtype=float)
     yv = np.asarray(y, dtype=int)
+    n_pre = int(pv.size)
+    if weights is not None:
+        w = np.asarray(weights, dtype=float)
+        if w.ndim != 1:
+            raise ValueError(
+                f"[validation] weights debe ser 1D: ndim={w.ndim}"
+            )
+        if len(w) != n_pre:
+            raise ValueError(
+                f"[validation] weights longitud {len(w)} != len(p) {n_pre}"
+            )
+        if not np.isfinite(w).all():
+            raise ValueError(
+                "[validation] weights contiene valores no finitos"
+            )
+        if not (w > 0).all():
+            raise ValueError(
+                "[validation] weights deben ser estrictamente positivos"
+            )
+    else:
+        w = np.ones(n_pre, dtype=float)
     if pv.ndim != 1:
         raise ValueError(
             "[validation] compute_oos_metrics recibio una matriz 2D (K "
@@ -191,22 +226,26 @@ def compute_oos_metrics(
     orden = np.argsort(-pv, kind="mergesort")
     ys = yv[orden]
     ps = pv[orden]
+    ws = w[orden]
     n1 = int(ys.sum())
     n0 = n - n1
 
     # ---- ROC por umbrales unicos descendentes (incluye (0,0,+inf)) ----
     # El umbral t cubre TODO el grupo de empate (score >= t): los acumulados
     # se toman al FINAL de cada bloque de valores iguales, no al inicio.
+    # Con pesos, los acumulados son MASA ponderada (no conteos).
     finales = np.flatnonzero(np.r_[ps[1:] != ps[:-1], True])
-    tp = np.cumsum(ys)
-    fp = np.cumsum(1 - ys)
-    tp_t = tp[finales]
-    fp_t = fp[finales]
+    tp_w = np.cumsum(ys * ws)
+    fp_w = np.cumsum((1 - ys) * ws)
+    tp_t = tp_w[finales]
+    fp_t = fp_w[finales]
     thr_t = ps[finales]
+    w_bad = float(tp_t[-1]) if len(tp_t) else 0.0    # masa total de bads
+    w_good = float(fp_t[-1]) if len(fp_t) else 0.0   # masa total de goods
     roc = [(0.0, 0.0, math.inf)]
     roc.extend(
-        (float(fp_t[i] / n0) if n0 else 0.0,
-         float(tp_t[i] / n1) if n1 else 0.0,
+        (float(fp_t[i] / w_good) if w_good else 0.0,
+         float(tp_t[i] / w_bad) if w_bad else 0.0,
          float(thr_t[i]))
         for i in range(len(finales))
     )
@@ -221,35 +260,31 @@ def compute_oos_metrics(
         )
         auc = gini = ks = pr_auc = None
     else:
-        # AUC por Wilcoxon-Mann-Whitney con mid-ranks (vectorizado; los
-        # scores de arbol tienen tantos valores distintos como hojas)
-        pos = np.argsort(pv, kind="mergesort")
-        p_sorted = pv[pos]
-        cambios = np.flatnonzero(np.r_[True, p_sorted[1:] != p_sorted[:-1], True])
-        starts = cambios[:-1]
-        ends = cambios[1:]
-        mids = (starts + ends + 1) / 2.0  # media de rangos 1-based por grupo
-        ranks_sorted = np.repeat(mids, ends - starts)
-        # asignar de vuelta a posiciones originales
-        ranks = np.empty(n, dtype=float)
-        ranks[pos] = ranks_sorted
-        r1 = float(ranks[yv == 1].sum())
-        u = r1 - n1 * (n1 + 1) / 2.0
-        auc = u / (n1 * n0)
+        # AUC ponderado: formula directa de pares con medio-credito en
+        # empates (concordantes=1, empates=0.5, discordantes=0). Con pesos
+        # uniformes es numericamente equivalente al mid-rank de
+        # Wilcoxon-Mann-Whitney (misma suma de pares).
+        w_bad_block = tp_t - np.concatenate([[0.0], tp_t[:-1]])
+        w_good_block = fp_t - np.concatenate([[0.0], fp_t[:-1]])
+        tp_prev = np.concatenate([[0.0], tp_t[:-1]])
+        contrib = tp_prev * w_good_block + 0.5 * w_bad_block * w_good_block
+        auc = float(np.sum(contrib) / (w_bad * w_good))
         gini = 2.0 * auc - 1.0
 
-        # KS: sobre la acumulacion descendente (misma ordenacion)
-        f_bad = tp_t / n1
-        f_good = fp_t / n0
+        # KS: sobre la acumulacion descendente (masa ponderada)
+        f_bad = tp_t / w_bad
+        f_good = fp_t / w_good
         ks = float(np.max(np.abs(f_bad - f_good)))
 
         # PR-AUC (average precision, escalonado; Davis & Goadrich 2006)
-        recall = tp_t / n1
+        recall = tp_t / w_bad
         precision = tp_t / (tp_t + fp_t)
         recall_prev = np.concatenate([[0.0], recall[:-1]])
         pr_auc = float(np.sum((recall - recall_prev) * precision))
 
     # ---- Hosmer-Lemeshow (grupos equitativos por score) ----
+    # Grupos por posicion en el orden descendente (criterio actual); dentro
+    # de cada grupo se acumula masa ponderada.
     bordes = np.floor(np.arange(1, n_groups) * n / n_groups).astype(int)
     hl_h = 0.0
     for g in range(n_groups):
@@ -257,17 +292,19 @@ def compute_oos_metrics(
         fin = n if g == n_groups - 1 else bordes[g]
         sub_p = ps[ini:fin]
         sub_y = ys[ini:fin]
-        n_g = int(len(sub_p))
-        pi_g = float(sub_p.mean())
+        sub_w = ws[ini:fin]
+        n_g_w = max(float(sub_w.sum()), _HL_EPS)
+        pi_g = float((sub_w * sub_p).sum() / n_g_w)
         pi_g = min(max(pi_g, _HL_EPS), 1.0 - _HL_EPS)
-        o_g = float(sub_y.sum())
-        hl_h += (o_g - n_g * pi_g) ** 2 / (n_g * pi_g * (1.0 - pi_g))
+        o_g = float((sub_w * sub_y).sum())
+        hl_h += (o_g - n_g_w * pi_g) ** 2 / (n_g_w * pi_g * (1.0 - pi_g))
     hl_df = n_groups - 2
     hl_p = float(_chi2_dist.sf(hl_h, hl_df))
 
-    # ---- Brier ----
-    bs = float(np.mean((pv - yv) ** 2))
-    y_bar = float(yv.mean())
+    # ---- Brier (ponderado) ----
+    w_tot = float(w.sum())
+    bs = float((w * (pv - yv) ** 2).sum() / w_tot)
+    y_bar = float((w * yv).sum() / w_tot)
     bs_ref = y_bar * (1.0 - y_bar)
     bss = float("nan") if bs_ref == 0.0 else 1.0 - bs / bs_ref
 
