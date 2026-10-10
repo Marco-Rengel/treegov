@@ -273,54 +273,85 @@ fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con
 Se difiere porque ningún test depende hoy de que el Gini sea
 significativo.
 
-### ⏳ OpenCode token consumption anomaly
-**Priority: LOW (investigación pendiente)**
+### ✅ OpenCode token consumption anomaly — RESOLVED (10/10/2026)
+**Priority: LOW (resolved, no longer blocking).**
 
-**Observación.** Durante la sesión documental del 09/10/2026 se detectó
-un consumo anómalo de tokens en OpenCode 1.18.35 + Kimi K3 vía Moonshot.
-Con ~10 tareas mayormente documentales, el gasto acumulado llegó a
-~$7.64, mientras que la estimación histórica era ~$0.60 por tarea con
-Aider y ~$0.09 por tarea con OpenCode en tareas previas. Es un factor
-~8x sobre lo esperado.
+**Causa raíz.** El archivo `opencode.json` tenía el modelo escrito como
+`moonshot/kimi-k3` en lugar de `moonshotai/kimi-k3`. OpenCode no
+reconocía el nombre del proveedor y caía a un modelo de fallback más
+caro en cada llamada al modelo. La evidencia está en los logs de
+OpenCode, que mostraban el error literal `Model not found:
+moonshot/kimi-k3. Did you mean: moonshotai, moonshotai-cn?`.
 
-**Hipótesis a investigar en sesión dedicada.** (a) Verificar contra el
-Product Bill de Moonshot si la flag `setCacheKey: true` de
-`opencode.json` está teniendo efecto real sobre la caché de prompt (el
-`docs/audit_log.md` del 09/10 ya documenta que su efecto no estaba
-verificado); (b) medir el impacto del contexto acumulado en sesiones
-largas (¿conviene cerrar y reabrir OpenCode entre tareas grandes?);
-(c) evaluar si el modo de razonamiento `high` es óptimo para tareas
-documentales o si `medium` es suficiente; (d) evaluar plugins de caché
-alternativos (`oc-plugin-caching` requiere un fork de OpenCode; valorar
-si compensa).
+**Causas contribuyentes.**
 
-**Resultado del experimento (09/10/2026):** durante el cierre documental
-de Fase 3.1 se hizo un experimento controlado comparando los dos
-niveles de razonamiento disponibles en OpenCode 1.18.35 para Kimi K3
-(no existe `medium`: solo `low`, `high`, `max`). Con la sesión abierta
-y contexto acumulado ~200K tokens:
+1. La carpeta `.opencode/` del proyecto contenía un `opencode.json` que
+   declaraba dos plugins fantasma (`opencode-supermemory` roto y
+   `opencode-auto-resume`) que se cargaban en cada arranque, ensuciando
+   el log y añadiendo overhead.
+2. El plugin `@jimmyyen/opencode-context-cache`, que estabiliza la
+   cache key de Moonshot, no estaba instalado. Sin él, la caché de
+   prompt no se activaba y cada llamada pagaba la tarifa completa de
+   input.
+3. La actualización de OpenCode 1.18.32 a 1.18.35 (06/10/2026)
+   probablemente introdujo el bug conocido de la opción `setCacheKey`
+   en V2 (documentado en el PR #51956 de OpenCode).
 
-- Prompt B (`docs/methodology.md` + `docs/roadmap.md`) con nivel
-  `high`: coste $0.68, duración 4m 41s.
-- Prompt C (dos READMEs, cambio más pequeño) con nivel `low`: coste
-  $0.90, duración 1m 49s.
+**Evidencia empírica (Billing Details de la plataforma Moonshot AI).**
 
-Conclusión empírica: el nivel de razonamiento NO es el driver del
-coste. Bajar de `high` a `low` no redujo el gasto, lo aumentó, mientras
-que el tiempo bajó. El driver real es el tamaño del contexto acumulado
-en la sesión: cada tarea sucesiva arrastra todo el historial previo,
-independientemente del tamaño de la tarea. La hipótesis de la caché no
-funcionando (`setCacheKey: true` sin efecto real) queda reforzada por
-este resultado: si la caché funcionara, el coste marginal por tarea
-debería caer o mantenerse, no crecer. Acciones inmediatas para
-investigar en sesión dedicada: (a) medir el coste marginal con sesión
-fresca (cerrar OpenCode entre tareas grandes); (b) verificar contra el
-Product Bill si `setCacheKey` está teniendo efecto; (c) evaluar plugins
-alternativos de caché (`oc-plugin-caching` requiere fork); (d) reportar
-como issue a OpenCode la ausencia del nivel `medium` para Kimi K3.
+- 2026-10-03: $3.07 (configuración inicial + migración NVIDIA NIM →
+  Moonshot directo)
+- 2026-10-04: $4.05 (Fase 3.0 + 3.1.a)
+- 2026-10-05: $5.14 (endurecimiento Fase 3.1.c, 7 commits)
+- 2026-10-06: $13.75 (49% del gasto histórico total; incluye la
+  actualización de OpenCode)
+- 2026-10-07: $2.16
+- Total histórico: $28.12 en Model Inference
 
-Referencia: `docs/audit_log.md` entrada del 09/10/2026 (migración
-OpenCode).
+Comparación antes/después de la corrección: el 10/10/2026, con la
+configuración correcta (`moonshotai` + plugin de caché + plugins
+fantasma eliminados), el coste fue $0.68 por 5 tareas más varios
+arranques; con la configuración mala (días 05-06/10), el coste era de
+~$1.50-2.00 por tarea similar.
+
+**Verificación de gasto fantasma.** Se monitorizó el saldo durante 34
+minutos sin actividad (13:15 a 13:49 del 10/10/2026). El saldo
+permaneció idéntico ($30.76662) y el Today's Consumption también
+($0.68236). No hay gasto fantasma por pings, sesiones latentes ni
+procesos huérfanos. Los cargos que aparecían "retrasados" eran
+liquidación diferida estándar de Moonshot (10 minutos de retraso del
+panel).
+
+**Solución aplicada.**
+
+1. `opencode.json`: cambiado `moonshot/kimi-k3` a `moonshotai/kimi-k3`
+   en los campos `model` y `small_model`.
+2. Eliminada la carpeta `.opencode/` del proyecto (contenía los plugins
+   fantasma).
+3. Añadido el plugin `@jimmyyen/opencode-context-cache` al array
+   `plugin` del `opencode.json` de la raíz.
+4. Eliminada la opción `provider.moonshot.options.setCacheKey` (no
+   funcionaba en V2).
+
+**Reglas operativas derivadas.**
+
+- Antes de arrancar cualquier cliente CLI (OpenCode, Kimi Code, etc.),
+  verificar que el nombre del modelo en la configuración coincide con
+  el nombre exacto que espera el cliente. Un typo produce fallback
+  silencioso a modelos más caros.
+- Evitar arrancar el cliente múltiples veces durante una sesión de
+  trabajo. Cada arranque carga el repo-map completo del proyecto
+  (~50-100K tokens) y genera el título de sesión automáticamente, con
+  coste no despreciable. Preferir mantener una sesión abierta durante
+  toda la sesión de trabajo.
+- Documentar el coste por tarea y comparar con la expectativa. Si una
+  tarea pequeña cuesta >$0.10, hay algo mal (modelo, caché, o
+  configuración).
+
+**Pendiente (no bloqueante).** Investigar cómo configurar el TTL de la
+caché a 1 hora en OpenCode (actualmente el TTL efectivo es de 5 minutos
+por defecto, lo que penaliza las pausas largas entre tareas). Es una
+limitación conocida pero no bloqueante.
 
 ## Recorded architectural decisions
 

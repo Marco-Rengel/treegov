@@ -56,3 +56,7 @@ archive/
 
 # Archivos temporales de sesión (borradores de diff, estado parcial)
 tmp_*
+# npm (instalado por plugin de cache de OpenCode)
+node_modules/
+package.json
+package-lock.json

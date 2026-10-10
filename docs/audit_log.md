@@ -2789,3 +2789,73 @@ Actualización sincronizada de 10 documentos tras el cierre funcional de la fase
 - `docs/audit_log.md` entradas del 04/10/2026 (3.1.a, diseño), 05/10/2026 (3.1.c paso 4), 09/10/2026 (migración OpenCode, 3.1.e).
 
 ---
+
+### 10/10/2026 — Anomalía de consumo de tokens (09-10/10): diagnóstico y resolución
+
+**Estado**: Aprobado. Anomalía resuelta tras diagnóstico empírico. Lección estructural registrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel
+
+**Motivación**:
+Entre el 03 y el 09 de octubre el gasto acumulado con distintos clientes CLI (Aider 0.86.2, OpenCode 1.18.32→1.18.35, Kimi Code CLI 2.1.1) fue de aproximadamente $28 en Model Inference frente a $0.06 en Context Caching. Es decir, la caché de prompt nunca se activaba. Los días más afectados fueron el 05/10 ($5.14) y sobre todo el 06/10 ($13.75, 49% del gasto histórico). El 10/10 se completó el diagnóstico y se aplicaron las soluciones.
+
+**Causa raíz identificada**:
+El archivo `opencode.json` del proyecto tenía el modelo escrito como `moonshot/kimi-k3` en lugar de `moonshotai/kimi-k3`. OpenCode no reconocía el nombre del proveedor y caía a un modelo de fallback más caro en cada llamada. La evidencia literal del log era: `Model not found: moonshot/kimi-k3. Did you mean: moonshotai, moonshotai-cn?`.
+
+**Causas contribuyentes**:
+- La carpeta `.opencode/` del proyecto contenía un `opencode.json` con dos plugins fantasma (`opencode-supermemory` roto, `opencode-auto-resume`) que se cargaban en cada arranque.
+- El plugin `@jimmyyen/opencode-context-cache` (que estabiliza la cache key) no estaba instalado.
+- La actualización de OpenCode 1.18.32 a 1.18.35 (06/10) probablemente introdujo el bug conocido de la opción `setCacheKey` en V2 (PR #51956 de OpenCode).
+
+**Evidencia empírica (Billing Details de Moonshot)**:
+- 2026-10-03: $3.07 (configuración inicial + migración NVIDIA NIM → Moonshot directo).
+- 2026-10-04: $4.05 (Fase 3.0 + 3.1.a).
+- 2026-10-05: $5.14 (endurecimiento Fase 3.1.c, 7 commits).
+- 2026-10-06: $13.75 (pico, 49% del gasto histórico total; incluye la actualización de OpenCode).
+- 2026-10-07: $2.16.
+- Total histórico: $28.12 en Model Inference, $0.06 en Context Caching.
+
+**Verificación de gasto fantasma**:
+Durante 34 minutos sin actividad (13:15 a 13:49 del 10/10), el saldo permaneció idéntico ($30.76662) y el Today's Consumption también ($0.68236). Se descarta la hipótesis de pings, sesiones latentes o procesos huérfanos. Los cargos que parecían "retrasados" eran liquidación diferida estándar de Moonshot (10 minutos de retraso del panel).
+
+**Solución aplicada** (4 cambios + gitignore):
+- `opencode.json`: cambiado `moonshot/kimi-k3` a `moonshotai/kimi-k3` en `model` y `small_model`.
+- Eliminada la carpeta `.opencode/` del proyecto (contenía los plugins fantasma).
+- Añadido el plugin `@jimmyyen/opencode-context-cache` al array `plugin`.
+- Eliminada la opción `provider.moonshot.options.setCacheKey` (no funciona en V2).
+- Añadidos `node_modules/`, `package.json`, `package-lock.json` al `.gitignore` (residuos del plugin de caché).
+
+**Experimento paralelo con Kimi Code CLI 2.1.1**:
+Se instaló el cliente oficial de Kimi Code CLI 2.1.1 y se probó con la misma API key internacional. Resultados: leer `README.md` (217 líneas) con thinking=high costó $0.22; con thinking=low costó ~$0.12. Copilot (razonamiento profundo) y Gemini Pro 3.1 Max coincidieron en el diagnóstico: Kimi Code CLI inyecta metadatos dinámicos (paths absolutos, telemetría, timestamps) al inicio del array de mensajes, lo cual rompe el prefix matching de la caché. Decisión: mantener OpenCode como cliente principal (con el plugin de caché, sí activa el prefix matching); Kimi Code CLI queda como alternativa para tareas puntuales.
+
+**Lección estructural registrada (crítica para el futuro)**:
+La caché de prompt de Moonshot es automática y no requiere configuración en la cuenta. Solo se activa si se cumplen tres condiciones: (a) el prefijo de la petición es idéntico al de la petición anterior, (b) el prefijo tiene al menos 256 tokens, (c) la petición llega dentro del TTL (5 minutos por defecto). La documentación oficial dice textualmente: "Kimi K3 自动支持前缀缓存，无需额外参数" (Kimi K3 soporta caché de prefijos automáticamente, sin parámetros adicionales). El patrón de uso de Aider, OpenCode y Kimi Code CLI que consiste en entrar y salir del cliente después de cada tarea destruye el prefijo entre peticiones y desactiva la caché. Por tanto, la regla operativa del proyecto es: mantener el cliente abierto durante toda la jornada de trabajo, hacer todas las tareas en la misma sesión, evitar reinicios innecesarios. Si hay que reiniciar por cambio de configuración, asumir que el coste de la sesión será mayor ese día.
+
+**Reglas operativas derivadas**:
+- Antes de arrancar cualquier cliente CLI, verificar que el nombre del modelo en la configuración coincide exactamente con el nombre que espera el cliente. Un typo produce fallback silencioso a modelos más caros.
+- Mantener el cliente abierto durante toda la jornada. Cada reinicio destruye el prefijo y desactiva la caché.
+- Documentar el coste por tarea y comparar con la expectativa. Si una tarea pequeña cuesta >$0.10, revisar si la caché se está activando.
+- Mantener el `.gitignore` actualizado con los residuos de herramientas locales (`node_modules/`, `package.json`, `package-lock.json`).
+
+**Pendiente no bloqueante**:
+Investigar cómo configurar el TTL de la caché a 1 hora (actualmente 5 minutos por defecto). Ninguno de los clientes probados expone una opción documentada para cambiarlo. Mientras siga en 5 minutos, las tareas deben hacerse en ráfagas cortas para aprovechar la caché, tal como confirma la verificación empírica del párrafo siguiente.
+
+**Verificación empírica adicional (10/10/2026, misma sesión)**:
+
+Tres tareas consecutivas en la misma sesión de OpenCode, con el mismo contexto acumulado, midiendo el saldo de Moonshot antes y después de cada una:
+
+- Tarea 1 (actualizar `roadmap.md`): coste $0.113. Primera tarea, sin prefijo previo en la caché.
+- Tarea 2 (actualizar `audit_log.md`): coste $0.155. Ejecutada ~10 minutos después de la tarea 1. El TTL de 5 minutos había expirado, el prefijo no era reutilizable, el contexto acumulado (27.6K tokens) se pagó a precio completo.
+- Tarea 3 (pregunta trivial de conteo, sin leer archivos nuevos): coste $0.000. Ejecutada ~2 minutos después de la tarea 2, dentro del TTL. La caché se activó, el prefijo idéntico se reutilizó íntegramente.
+
+Conclusión: la caché de prompt de Moonshot no es una "limitación conocida" sino el factor determinante del coste real. La diferencia entre una pausa menor a 5 minutos y una pausa mayor es de prácticamente el 100% del coste de la tarea. El TTL por defecto (5 minutos) impone un ritmo de trabajo: las tareas deben hacerse en ráfagas cortas dentro de la misma sesión. Cualquier pausa superior a 5 minutos destruye la caché y la siguiente tarea paga el prefijo completo. Este hallazgo refuerza la regla operativa "mantener la sesión viva y trabajar en ráfagas" y la eleva de recomendación a requisito.
+
+**Referencias cruzadas**:
+- `docs/roadmap.md` — subsección "✅ OpenCode token consumption anomaly — RESOLVED (10/10/2026)".
+- `docs/audit_log.md` — entradas del 03/10 (migración Moonshot) y 09/10 (migración OpenCode).
+- Documentación oficial de Moonshot AI sobre prompt caching: https://platform.moonshot.ai/docs/guide/use-kimi-api#prompt-caching
+- PR #51956 de OpenCode sobre el bug de `setCacheKey` en V2.
+
+---

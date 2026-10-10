@@ -1,14 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "moonshot/kimi-k3",
-  "small_model": "moonshot/kimi-k3",
-  "provider": {
-    "moonshot": {
-      "options": {
-        "setCacheKey": true
-      }
-    }
-  },
+  "model": "moonshotai/kimi-k3",
+  "small_model": "moonshotai/kimi-k3",
+  "plugin": [
+    "@jimmyyen/opencode-context-cache"
+  ],
   "autoupdate": false,
   "share": "disabled"
 }
