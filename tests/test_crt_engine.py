@@ -520,6 +520,255 @@ def test_humo_n200k():
 
 
 # ---------------------------------------------------------------------------
+# 10. 3.2.c - Ponderacion por muestra (weights en evaluate/best_split/
+#     surrogate_splits/_embedded_split)
+# ---------------------------------------------------------------------------
+
+
+def _gini_dI_manual(izq: np.ndarray, y: np.ndarray, w: np.ndarray,
+                    k_cls: int = 2) -> float:
+    """Ganancia de Gini ponderada de una asignacion izq/der (manual)."""
+    w_total = float(w.sum())
+    counts = np.array([w[y == k].sum() for k in range(k_cls)])
+    p = counts / w_total
+    i_parent = 1.0 - float((p * p).sum())
+    d_i = i_parent
+    for lado in (izq, ~izq):
+        wl = w[lado]
+        wl_total = float(wl.sum())
+        cl = np.array([wl[y[lado] == k].sum() for k in range(k_cls)])
+        pl = cl / wl_total
+        d_i -= (wl_total / w_total) * (1.0 - float((pl * pl).sum()))
+    return d_i
+
+
+def _fixture_cls_ponderable(n=400, seed=3):
+    rng = np.random.default_rng(seed)
+    x = pd.Series(rng.normal(0.0, 1.0, n))
+    score = 1.0 / (1.0 + np.exp(-x.to_numpy()))
+    y = pd.Series((rng.random(n) < score).astype(int))
+    w = rng.uniform(0.5, 2.0, n)
+    return x, y, w
+
+
+def test_weighted_crt_parity_classification():
+    x, y, _ = _fixture_cls_ponderable()
+    eng = _engine()
+    ref = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS, target_type=_BINARY
+    )
+    res = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=np.ones(len(x)),
+    )
+    assert ref is not None and res is not None
+    assert res.statistic == ref.statistic
+    assert res.statistic_name == ref.statistic_name == "gini_gain"
+    assert res.threshold == ref.threshold
+    assert res.branches == ref.branches
+    assert res.child_ns == ref.child_ns
+    assert res.parent_n == ref.parent_n
+    assert res.impurity_gain == ref.impurity_gain
+
+
+def test_weighted_crt_parity_regression():
+    rng = np.random.default_rng(5)
+    x = pd.Series(rng.normal(0.0, 1.0, 400))
+    y = pd.Series(x.to_numpy() * 2.0 + rng.normal(0.0, 0.5, 400))
+    eng = _engine()
+    ref = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS, target_type=_T_CONT
+    )
+    res = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_T_CONT, weights=np.ones(len(x)),
+    )
+    assert ref is not None and res is not None
+    assert res.statistic == ref.statistic
+    assert res.statistic_name == ref.statistic_name == "variance_gain"
+    assert res.threshold == ref.threshold
+    assert res.child_ns == ref.child_ns
+    assert res.parent_n == ref.parent_n
+    assert res.impurity_gain == ref.impurity_gain
+
+
+def test_weighted_crt_child_ns_physical_continuous():
+    x, y, w = _fixture_cls_ponderable()
+    cfg = _engine().evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg is not None
+    assert cfg.parent_n == len(y)
+    assert sum(cfg.child_ns) == len(y)
+    assert all(isinstance(n, int) for n in cfg.child_ns)
+
+
+def test_weighted_crt_child_ns_physical_nominal():
+    rng = np.random.default_rng(9)
+    n = 300
+    x = pd.Series(rng.choice(["a", "b", "c", "d"], n))
+    rate = np.array([{"a": 0.1, "b": 0.3, "c": 0.7, "d": 0.9}[v] for v in x])
+    y = pd.Series((rng.random(n) < rate).astype(int))
+    w = rng.uniform(0.5, 2.0, n)
+    cfg = _engine().evaluate(
+        x, y, predictor="x", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg is not None
+    assert cfg.parent_n == len(y)
+    assert sum(cfg.child_ns) == len(y)
+    assert all(isinstance(nn, int) for nn in cfg.child_ns)
+
+
+def test_weighted_crt_scale_invariance():
+    x, y, w = _fixture_cls_ponderable()
+    eng = _engine()
+    a = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w,
+    )
+    b = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w * 7.5,
+    )
+    assert a is not None and b is not None
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-9)
+    assert math.isclose(a.impurity_gain, b.impurity_gain, rel_tol=1e-9)
+    assert a.threshold == b.threshold
+    assert a.child_ns == b.child_ns
+
+
+def test_weighted_crt_regression_scale_invariance():
+    rng = np.random.default_rng(17)
+    x = pd.Series(rng.normal(0.0, 1.0, 400))
+    y = pd.Series(x.to_numpy() * 2.0 + rng.normal(0.0, 0.5, 400))
+    w = rng.uniform(0.5, 2.0, 400)
+    eng = _engine()
+    a = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_T_CONT, weights=w,
+    )
+    b = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_T_CONT, weights=w * 7.5,
+    )
+    assert a is not None and b is not None
+    assert math.isclose(a.statistic, b.statistic, rel_tol=1e-9)
+    assert a.threshold == b.threshold
+    assert a.child_ns == b.child_ns
+
+
+def test_weighted_crt_continuous_matches_manual_gini():
+    x = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
+    y = pd.Series([0, 0, 1, 0, 1, 1, 0, 1])
+    w = np.array([1.0, 1.0, 2.0, 1.0, 2.0, 1.0, 1.0, 3.0])
+    cfg = _engine().evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg is not None and cfg.threshold is not None
+    izq = x.to_numpy() <= float(cfg.threshold)
+    manual = _gini_dI_manual(izq, y.to_numpy(), w)
+    assert math.isclose(cfg.impurity_gain, manual, rel_tol=1e-12)
+    assert math.isclose(cfg.statistic, manual, rel_tol=1e-12)
+    # sin pesos la ganancia en ese mismo umbral seria distinta
+    manual_sin = _gini_dI_manual(izq, y.to_numpy(), np.ones(8))
+    assert not math.isclose(manual, manual_sin, rel_tol=1e-9)
+
+
+def test_weighted_crt_nominal_matches_manual_gini():
+    x = pd.Series(["a", "a", "b", "b", "c", "c", "a", "c"])
+    y = pd.Series([0, 1, 0, 0, 1, 1, 0, 1])
+    w = np.array([1.0, 2.0, 1.0, 3.0, 1.0, 1.0, 2.0, 2.0])
+    cfg = _engine().evaluate(
+        x, y, predictor="x", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg is not None and cfg.branches is not None
+    izq = x.isin(list(cfg.branches[0])).to_numpy()
+    manual = _gini_dI_manual(izq, y.to_numpy(), w)
+    assert math.isclose(cfg.impurity_gain, manual, rel_tol=1e-12)
+    assert sum(cfg.child_ns) == len(y)
+
+
+def test_weighted_crt_rejects_wrong_length():
+    x, y, _ = _fixture_cls_ponderable()
+    try:
+        _engine().evaluate(
+            x, y, predictor="x", predictor_type=_CONTINUOUS,
+            target_type=_BINARY, weights=np.ones(len(x) - 1),
+        )
+    except ValueError as e:
+        assert "weights" in str(e) and "longitud" in str(e)
+    else:
+        raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_crt_rejects_nonpositive():
+    x, y, _ = _fixture_cls_ponderable()
+    for bad_value in (0.0, -1.0):
+        w = np.ones(len(x))
+        w[2] = bad_value
+        try:
+            _engine().evaluate(
+                x, y, predictor="x", predictor_type=_CONTINUOUS,
+                target_type=_BINARY, weights=w,
+            )
+        except ValueError as e:
+            assert "positivos" in str(e)
+        else:
+            raise AssertionError("no lanzo ValueError")
+
+
+def test_weighted_crt_surrogate_parity_with_uniform_weights():
+    rng = np.random.default_rng(21)
+    n = 500
+    x1 = pd.Series(rng.normal(0.0, 1.0, n))
+    x2 = pd.Series(x1.to_numpy() + rng.normal(0.0, 0.3, n))
+    y = pd.Series(
+        (rng.random(n) < 1.0 / (1.0 + np.exp(-x1.to_numpy()))).astype(int)
+    )
+    X = pd.DataFrame({"x1": x1, "x2": x2})
+    spec = {"x1": _CONTINUOUS, "x2": _CONTINUOUS}
+    eng = _engine()
+    prim = eng.best_split(X, y, spec, target_type=_BINARY)
+    assert prim is not None
+    s0 = eng.surrogate_splits(prim, X, y, spec, target_type=_BINARY)
+    s1 = eng.surrogate_splits(
+        prim, X, y, spec, target_type=_BINARY, weights=np.ones(n)
+    )
+    assert len(s0) == len(s1) > 0
+    assert s0 == s1
+
+
+def test_weighted_crt_surrogate_embedded_child_ns_physical():
+    rng = np.random.default_rng(23)
+    n = 500
+    x1 = pd.Series(rng.normal(0.0, 1.0, n))
+    x2 = pd.Series(x1.to_numpy() + rng.normal(0.0, 0.3, n))
+    y = pd.Series(
+        (rng.random(n) < 1.0 / (1.0 + np.exp(-x1.to_numpy()))).astype(int)
+    )
+    w = rng.uniform(0.5, 2.0, n)
+    X = pd.DataFrame({"x1": x1, "x2": x2})
+    spec = {"x1": _CONTINUOUS, "x2": _CONTINUOUS}
+    eng = _engine()
+    prim = eng.best_split(X, y, spec, target_type=_BINARY)
+    assert prim is not None
+    surrogates = eng.surrogate_splits(
+        prim, X, y, spec, target_type=_BINARY, weights=w
+    )
+    assert len(surrogates) > 0
+    for sur in surrogates:
+        cfg = sur.split
+        n_no_nulos = int((X[cfg.predictor].notna() & y.notna()).sum())
+        assert cfg.parent_n == n_no_nulos
+        assert sum(cfg.child_ns) == cfg.parent_n
+        assert all(isinstance(nn, int) for nn in cfg.child_ns)
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

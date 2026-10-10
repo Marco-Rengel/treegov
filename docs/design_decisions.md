@@ -1345,6 +1345,53 @@ silently.
 `docs/methodology.md` §1.9bis; `docs/audit_log.md` entry of 10/10/2026
 (Fase 3.2.b).
 
+### 13.3 C&RT surrogates — agreement is not weighted
+
+**Context.** In C&RT, surrogates are secondary splits that replicate
+the left/right assignment of the primary split. Phase 3.2 introduces
+sample weights. The question is whether the agreement computation
+(proportion of coincidences between the primary's assignment and the
+candidate's) should be weighted.
+
+**Alternatives considered.**
+
+- (a) Weight the agreement using the same weights as the gain.
+  Rejected: agreement counts binary label coincidences (each row goes
+  left or right in both splits; coincidence is yes or no). There is no
+  statistical quantity to accumulate per row; weighting it would
+  produce a number with no clear interpretation.
+- (b) Do not weight the agreement. The embedded `SplitConfig` does
+  evaluate the genuine gain with weights. Adopted.
+
+**Decision.** Option (b). `_best_agreement` and `_agreement_nominal`
+are untouched. `_embedded_split` does compute the weighted gain,
+because that gain is an impurity and impurities are weighted.
+
+**Rationale.** The general principle of 3.2: what gets weighted is
+the mass contributing to a statistical quantity (impurities, χ², F,
+proportions). What stays untouched is structure (branch orientation,
+label coincidence, number of merges in CHAID). This separation is
+consistent with the CHAID decision to weight the cells but not the
+Kass multiplier.
+
+**Consequences.**
+
+- The surrogate ranking by agreement is identical without weights and
+  with uniform weights.
+- With non-trivial weights, the ranking may differ from the unweighted
+  ranking only through the set of accepted surrogates, never through
+  the agreement values themselves: both the agreement and the
+  `majority_to_beat` threshold are computed on physical row counts
+  (label coincidences), so neither is weighted. The retention
+  criterion (`agreement > majority_to_beat`) is therefore entirely
+  weight-free; weights only affect the embedded split's gain.
+- Covered by the tests
+  `test_weighted_crt_surrogate_parity_with_uniform_weights` and
+  `test_weighted_crt_surrogate_embedded_child_ns_physical`.
+
+**Cross-reference.** `backend_v3/crt_engine.py`; `docs/audit_log.md`
+entry of 10/10/2026 (Fase 3.2.c).
+
 ---
 
 ## Maintenance

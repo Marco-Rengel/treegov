@@ -2946,3 +2946,48 @@ Con pesos no triviales, χ² de Pearson escala linealmente con la masa total de 
 - `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 — Fase 3.2.c: C&RT con conteos ponderados
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel
+
+**Artefactos**: `backend_v3/crt_engine.py`, `tests/test_crt_engine.py`.
+
+**Motivación**:
+Tercera sub-fase de la Fase 3.2. Extiende el motor C&RT para aceptar pesos por muestra. Aplica la ponderación a las dos impurezas (Gini para clasificación, varianza para regresión), al barrido de umbrales continuos, a la búsqueda de subconjuntos nominales y a la ganancia genuina del SplitConfig embebido en los surrogates. El agreement entre dos asignaciones binarias no se pondera: es coincidencia de etiquetas, no una impureza.
+
+**Cambios aplicados**:
+
+- `evaluate` y `best_split` ganan `weights` keyword-only, default `None`. Validación: 1D, longitud = `len(x)`, finitos, estrictamente positivos.
+- Tras el dropna conjunto, el motor construye un vector local `w` (unos si `weights=None`) que unifica el camino interno.
+- Impureza del padre (Gini o varianza) ponderada. Para Gini: `p_k = W_k / W`. Para varianza: media y varianza ponderadas.
+- `_sweep_values` recibe `w` y devuelve por separado los conteos físicos de filas a cada lado (`n_l`, `n_r`) y las sumas de pesos a cada lado (`W_l`, `W_r`). `_var_dI` y `_gini_dI` no cambian: reciben los vectores ponderados como antes recibían conteos.
+- `_best_threshold_split` y `_best_subset_split` construyen `SplitConfig` con `child_ns` = conteos físicos de filas, calculados por separado del barrido ponderado.
+- `_best_subset_split` construye la matriz categoría × clase con `bincount(codes * k_cls + yvals, weights=w)`. Exhaustivo y heurística por tasa operan sobre la matriz ya ponderada sin cambios.
+- `surrogate_splits` gana `weights` keyword-only. `_best_agreement` y `_agreement_nominal` NO se tocan: el agreement es coincidencia de etiquetas, no de masas.
+- `_embedded_split` gana `weights`. Tras el dropna, calcula la ganancia genuina ponderada. `child_ns` del SplitConfig embebido sigue siendo entero físico.
+
+**Identidades verificadas**:
+
+- Con `weights=None`, SplitConfig idéntico al pre-3.2 en clasificación y regresión.
+- Con `weights=ones`, mismo SplitConfig que sin pesos.
+- Con pesos no triviales: `sum(child_ns) == N_filas` (no suma de pesos), `parent_n == N_filas`, ambos enteros.
+- Invarianza de escala de dI y threshold (Gini y varianza).
+- Ganancia de Gini ponderada verificada contra cálculo manual en fixture continuo y fixture nominal.
+- `surrogate_splits` sin pesos vs con `ones`: tuplas SurrogateSplit idénticas.
+- Con pesos no triviales: `sum(surrogate.split.child_ns)` coincide con el conteo físico del nodo embedido (500/500 en el fixture de test).
+
+**Decisión registrada**:
+El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement cuenta coincidencias de etiqueta, no acumula masa; ponderarlo no tendría interpretación estadística. Documentado en `docs/design_decisions.md` §13.3.
+
+**Tests**: 12 tests nuevos en `tests/test_crt_engine.py`. Suite completa: 277/277 PASSED (265 previos + 12 nuevos). Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.3 (nueva).
+- `docs/roadmap.md` (tabla 3.2).
+
+---

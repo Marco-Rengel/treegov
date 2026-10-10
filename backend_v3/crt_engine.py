@@ -29,6 +29,19 @@ Cita canonica:
   Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984).
   "Classification and Regression Trees". Wadsworth & Brooks/Cole,
   Monterey, CA. (Impurezas: caps. 2-4; surrogates: §5.3.)
+  Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
+    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (estadisticos con
+    conteos ponderados; proporciones y varianzas ponderadas).
+
+Ponderacion por muestra (Fase 3.2.c): evaluate() y best_split() admiten un
+parametro keyword-only `weights` (vector paralelo a x e y, estrictamente
+positivo y finito). Internamente, con weights=None el motor trabaja con un
+vector local de unos, de modo que el camino es unico: los "conteos" por
+clase y los suficientes (n, sum, sumsq) se acumulan ponderando por el
+vector local. Gini y varianza son invariantes a escala (proporciones y
+cocientes), por lo que la escala global de los pesos no afecta al corte.
+SplitConfig.child_ns y parent_n siguen siendo conteos FISICOS de filas.
+Con weights=None el comportamiento es identico bit a bit al pre-3.2.
 
 Politica NaN: x con NaN se EXCLUYE del calculo del corte (C&RT puro; los
 NaN se enrutan en operacion via surrogates). parent_n = casos no nulos de
@@ -182,11 +195,18 @@ class CrtEngine:
         predictor: str,
         predictor_type: PredictorType,
         target_type: TargetType,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """Mejor corte binario de UN predictor en UN nodo (o None).
 
         Convencion de hijos: izquierda = x <= threshold (o branches[0]);
         derecha = el resto.
+
+        `weights` (keyword-only, default None): vector de pesos paralelo a
+        `x` e `y`; array 1D de la misma longitud, valores finitos y
+        estrictamente positivos. Con weights=None el motor usa un vector
+        local de unos y el comportamiento es identico al pre-3.2.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
         """
         if not isinstance(predictor_type, PredictorType):
             raise TypeError(f"predictor_type invalido: {predictor_type!r}")
@@ -200,6 +220,30 @@ class CrtEngine:
                 f"[CRT|{predictor!r}] x (n={len(xs)}) e y (n={len(ys)}) "
                 "deben tener la misma longitud"
             )
+
+        # -- validacion de pesos (paralelos a x e y) --
+        if weights is not None:
+            try:
+                w_in = np.asarray(weights, dtype=float)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"[CRT|{predictor!r}] weights no convertible a vector "
+                    f"numerico: {e}"
+                ) from e
+            if w_in.ndim != 1 or w_in.size != len(xs):
+                raise ValueError(
+                    f"[CRT|{predictor!r}] weights debe ser un vector 1D de "
+                    f"longitud {len(xs)} (shape={w_in.shape})"
+                )
+            if not np.all(np.isfinite(w_in)):
+                raise ValueError(
+                    f"[CRT|{predictor!r}] weights contiene NaN o infinitos"
+                )
+            if np.any(w_in <= 0.0):
+                raise ValueError(
+                    f"[CRT|{predictor!r}] weights contiene pesos no "
+                    "estrictamente positivos"
+                )
 
         mask = (xs.notna() & ys.notna()).to_numpy()
         n_dropped = int((~mask).sum())
@@ -215,14 +259,26 @@ class CrtEngine:
             self._log.warning("[CRT|%r] 0 casos validos tras dropna", predictor)
             return None
 
+        # -- vector local de pesos (unos si weights=None): camino interno unico --
+        w = w_in[mask] if weights is not None else np.ones(n_total)
+        w_total = float(w.sum())
+        self._log.debug(
+            "[CRT|%r] ponderacion: %s",
+            predictor,
+            "sin pesos" if weights is None
+            else f"con pesos (suma total={w_total:.6g})",
+        )
+
         # -- impureza del padre y estructura del target --
         continuo_y = target_type == TargetType.CONTINUOUS
         if continuo_y:
             yv = yd.to_numpy(dtype=float)
             if not np.all(np.isfinite(yv)):
                 raise ValueError(f"[CRT|{predictor!r}] y contiene no finitos")
-            mean = float(yv.sum()) / n_total
-            i_parent = max(float((yv * yv).sum()) / n_total - mean * mean, 0.0)
+            mean = float((w * yv).sum()) / w_total
+            i_parent = max(
+                float((w * yv * yv).sum()) / w_total - mean * mean, 0.0
+            )
             ydata: tuple = ("reg", yv, 0, i_parent, n_total)
         else:
             codes, classes = pd.factorize(yd, sort=True)
@@ -234,8 +290,8 @@ class CrtEngine:
                 )
                 return None
             yint = codes.astype(np.int64)
-            counts = np.bincount(yint, minlength=k_classes).astype(float)
-            p = counts / n_total
+            counts = np.bincount(yint, weights=w, minlength=k_classes)
+            p = counts / w_total
             i_parent = max(float(1.0 - (p * p).sum()), 0.0)
             ydata = ("cls", yint, k_classes, i_parent, n_total)
 
@@ -245,9 +301,9 @@ class CrtEngine:
 
         # -- mejor corte segun escala del predictor --
         if predictor_type == PredictorType.NOMINAL:
-            cut = self._best_subset_split(xd, ydata, predictor)
+            cut = self._best_subset_split(xd, ydata, predictor, w)
         else:
-            cut = self._best_threshold_split(xd, ydata, predictor)
+            cut = self._best_threshold_split(xd, ydata, predictor, w)
 
         if cut is None:
             self._log.info("[CRT|%r] sin corte valido (constante o trivial)",
@@ -289,15 +345,19 @@ class CrtEngine:
         spec: dict[str, PredictorType],
         *,
         target_type: TargetType,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
-        """Maximo impurity_gain entre predictores; empate -> primero de spec."""
+        """Maximo impurity_gain entre predictores; empate -> primero de spec.
+
+        `weights` (keyword-only) se propaga a cada llamada a evaluate().
+        """
         best: SplitConfig | None = None
         for nombre, ptype in spec.items():
             if nombre not in X.columns:
                 raise ValueError(f"[best_split] predictor ausente en X: {nombre!r}")
             cfg = self.evaluate(
                 X[nombre], y, predictor=nombre, predictor_type=ptype,
-                target_type=target_type,
+                target_type=target_type, weights=weights,
             )
             if cfg is not None and (
                 best is None or float(cfg.statistic) > float(best.statistic)
@@ -315,6 +375,7 @@ class CrtEngine:
         spec: dict[str, PredictorType],
         *,
         target_type: TargetType,
+        weights: np.ndarray | None = None,
     ) -> tuple[SurrogateSplit, ...]:
         """Hasta max_surrogates replicas del primario sobre otros predictores.
 
@@ -324,10 +385,42 @@ class CrtEngine:
         mayor que la regla trivial "todo al hijo mayoritario" del primario.
         El SplitConfig embebido evalua el MISMO corte fisico sobre y real
         (ganancia de impureza genuina; los invariantes de types.py intactos).
+
+        `weights` (keyword-only, default None): vector de pesos paralelo a
+        las filas de X / y. El agreement NO se pondera (es coincidencia
+        pura de etiquetas binarias izquierda/derecha); solo la ganancia de
+        impureza del SplitConfig embebido se calcula con pesos.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
         """
         if primary.predictor not in X.columns:
             raise ValueError(
                 f"[surrogates] predictor del primario ausente: {primary.predictor!r}"
+            )
+        if weights is not None:
+            try:
+                w_in = np.asarray(weights, dtype=float)
+            except (TypeError, ValueError) as e:
+                raise ValueError(
+                    f"[surrogates] weights no convertible a vector "
+                    f"numerico: {e}"
+                ) from e
+            if w_in.ndim != 1 or w_in.size != len(y):
+                raise ValueError(
+                    f"[surrogates] weights debe ser un vector 1D de "
+                    f"longitud {len(y)} (shape={w_in.shape})"
+                )
+            if not np.all(np.isfinite(w_in)):
+                raise ValueError(
+                    "[surrogates] weights contiene NaN o infinitos"
+                )
+            if np.any(w_in <= 0.0):
+                raise ValueError(
+                    "[surrogates] weights contiene pesos no "
+                    "estrictamente positivos"
+                )
+            self._log.debug(
+                "[surrogates|%r] ponderacion: con pesos (suma total=%.6g)",
+                primary.predictor, float(w_in.sum()),
             )
         xp = X[primary.predictor]
         mask_p = xp.notna().to_numpy()
@@ -370,7 +463,8 @@ class CrtEngine:
                 )
                 continue
             embebido = self._embedded_split(
-                nombre, cand, y, ptype, target_type, thr_c, br_c
+                nombre, cand, y, ptype, target_type, thr_c, br_c,
+                weights=weights,
             )
             if embebido is None:
                 continue
@@ -396,13 +490,18 @@ class CrtEngine:
     # ------------------------------------------------------------------
 
     def _best_threshold_split(
-        self, xd: pd.Series, ydata: tuple, predictor: str
+        self, xd: pd.Series, ydata: tuple, predictor: str,
+        weights: np.ndarray,
     ) -> tuple[float | None, tuple | None, float, int, int] | None:
         """Barrido vectorizado de puntos medios entre valores distintos.
 
         Ordinal simbolico: se trabaja sobre los codigos del orden natural
         (factorize sort=True) y el corte se traduce a branches de etiquetas.
         Umbral: t = v_i + (v_{i+1} - v_i)/2 (forma estable ante overflow).
+
+        `weights`: vector local de pesos (unos si el llamador no paso
+        pesos); alimenta los acumulados de la formula de dI. Los n por
+        lado devueltos son CONTEOS FISICOS de filas.
         """
         etiquetas: tuple | None = None
         if pd.api.types.is_numeric_dtype(xd):
@@ -427,7 +526,7 @@ class CrtEngine:
         if bordes.size == 0:
             return None  # x constante
 
-        d_i, n_l, n_r = self._sweep_values(xs, bordes, orden, ydata)
+        d_i, n_l, n_r = self._sweep_values(xs, bordes, orden, ydata, weights)
         bpos = int(np.argmax(d_i))  # primer maximo -> determinista
         n_left = int(n_l[bpos])
         n_right = int(n_r[bpos])
@@ -446,36 +545,52 @@ class CrtEngine:
         return None, (izq, der), float(d_i[bpos]), n_left, n_right
 
     def _sweep_values(
-        self, xs: np.ndarray, bordes: np.ndarray, orden: np.ndarray, ydata: tuple
+        self, xs: np.ndarray, bordes: np.ndarray, orden: np.ndarray,
+        ydata: tuple, weights: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """dI de todos los bordes sobre valores ya ordenados."""
+        """dI de todos los bordes sobre valores ya ordenados.
+
+        Los acumulados de la formula (conteos por clase / suficientes) se
+        ponderan por `weights`; los vectores n_l / n_r devueltos son
+        CONTEOS FISICOS de filas a cada lado del corte. Las firmas de
+        _gini_dI / _var_dI no cambian: reciben sumas de pesos como
+        "conteos" y el total de pesos W como n_total.
+        """
         kind, yvals, k_cls, i_parent, n = ydata
+        w_sorted = weights[orden]
+        w_total = float(w_sorted.sum())
+        n_l = (bordes + 1).astype(float)
+        n_r = n - n_l
         if kind == "cls":
             y_sorted = yvals[orden]
             one_hot = (
                 y_sorted[:, None] == np.arange(k_cls)[None, :]
             ).astype(np.float64)
-            cum = np.cumsum(one_hot, axis=0)
+            cum = np.cumsum(one_hot * w_sorted[:, None], axis=0)
             c_l = cum[bordes]
             c_r = cum[-1][None, :] - c_l
-            return _gini_dI(c_l, c_r, i_parent, n)
+            d_i, _, _ = _gini_dI(c_l, c_r, i_parent, w_total)
+            return d_i, n_l, n_r
         y_sorted = yvals[orden]
-        cum1 = np.cumsum(y_sorted)
-        cum2 = np.cumsum(y_sorted * y_sorted)
-        n_l = (bordes + 1).astype(float)
+        wys = w_sorted * y_sorted
+        cumw = np.cumsum(w_sorted)
+        cum1 = np.cumsum(wys)
+        cum2 = np.cumsum(wys * y_sorted)
+        w_l = cumw[bordes]
         d_i = _var_dI(
-            n_l, cum1[bordes], cum2[bordes],
-            n - n_l, cum1[-1] - cum1[bordes], cum2[-1] - cum2[bordes],
-            i_parent, n,
+            w_l, cum1[bordes], cum2[bordes],
+            w_total - w_l, cum1[-1] - cum1[bordes], cum2[-1] - cum2[bordes],
+            i_parent, w_total,
         )
-        return d_i, n_l, n - n_l
+        return d_i, n_l, n_r
 
     # ------------------------------------------------------------------
     # cortes nominales (subconjuntos)
     # ------------------------------------------------------------------
 
     def _best_subset_split(
-        self, xd: pd.Series, ydata: tuple, predictor: str
+        self, xd: pd.Series, ydata: tuple, predictor: str,
+        weights: np.ndarray,
     ) -> tuple | None:
         """Exhaustivo (K <= max) o heuristico por tasa (K > max).
 
@@ -483,6 +598,10 @@ class CrtEngine:
         continuo, izquierda = x <= t): ordenadas por tasa DESCendente y
         cortadas en el borde optimo, el tramo de TASAS ALTAS va a la
         DERECHA (branches[1]) y el de tasas bajas a la IZQUIERDA (branches[0]).
+
+        `weights`: vector local de pesos (unos si el llamador no paso
+        pesos). La matriz categoria x clase (o los suficientes) acumula
+        sumas de pesos; los n por lado devueltos son CONTEOS FISICOS.
         """
         try:
             codes, uniques = pd.factorize(xd, sort=True)
@@ -497,15 +616,19 @@ class CrtEngine:
             return None
 
         kind, yvals, k_cls, i_parent, n = ydata
+        cnt_fis = np.bincount(codes, minlength=k_cats).astype(float)
+        w_total = float(weights.sum())
         if kind == "cls":
             idx = codes.astype(np.int64) * k_cls + yvals
-            counts = np.bincount(idx, minlength=k_cats * k_cls)
-            counts = counts.reshape(k_cats, k_cls).astype(float)
+            counts = np.bincount(idx, weights=weights,
+                                 minlength=k_cats * k_cls)
+            counts = counts.reshape(k_cats, k_cls)
             tasas, aviso = self._rates_cls(counts, predictor, k_cats)
         else:
-            n_i = np.bincount(codes, minlength=k_cats).astype(float)
-            s_i = np.bincount(codes, weights=yvals, minlength=k_cats)
-            q_i = np.bincount(codes, weights=yvals * yvals, minlength=k_cats)
+            n_i = np.bincount(codes, weights=weights, minlength=k_cats)
+            s_i = np.bincount(codes, weights=weights * yvals, minlength=k_cats)
+            q_i = np.bincount(codes, weights=weights * yvals * yvals,
+                              minlength=k_cats)
             counts = np.column_stack([n_i, s_i, q_i])
             tasas, aviso = s_i / n_i, False
 
@@ -516,16 +639,21 @@ class CrtEngine:
                 predictor,
             )
 
+        # el "n" que alimenta las formulas de dI es la masa de pesos W;
+        # los conteos fisicos por lado se derivan de cnt_fis y la mascara
         if k_cats <= self.max_exhaustive_cardinality:
-            mejor = self._subset_exhaustivo(counts, kind, i_parent, n, k_cls)
+            mejor = self._subset_exhaustivo(counts, kind, i_parent, w_total, k_cls)
         else:
-            mejor = self._subset_por_tasa(counts, tasas, kind, i_parent, n, k_cls)
+            mejor = self._subset_por_tasa(counts, tasas, kind, i_parent,
+                                          w_total, k_cls)
         if mejor is None:
             return None
-        mask_der, d_imax, n_left, n_right = mejor
+        mask_der, d_imax, _, _ = mejor
         izq = tuple(labels[g] for g in range(k_cats) if not mask_der[g])
         der = tuple(labels[g] for g in range(k_cats) if mask_der[g])
-        return None, (izq, der), float(d_imax), int(n_left), int(n_right)
+        n_left = int(cnt_fis[~mask_der].sum())
+        n_right = int(cnt_fis[mask_der].sum())
+        return None, (izq, der), float(d_imax), n_left, n_right
 
     def _rates_cls(
         self, counts: np.ndarray, predictor: str, k_cats: int
@@ -749,10 +877,20 @@ class CrtEngine:
         target_type: TargetType,
         threshold: float | None,
         branches: tuple | None,
+        weights: np.ndarray | None = None,
     ) -> SplitConfig | None:
         """SplitConfig CRT del surrogate: el MISMO corte fisico detectado por
         agreement, evaluado sobre y real en los casos no nulos del surrogate
-        (statistic = impurity_gain genuino)."""
+        (statistic = impurity_gain genuino).
+
+        `weights` (keyword-only, default None): vector de pesos paralelo a
+        las filas originales de `cand` / `y`; se enmascara con el mismo
+        dropna conjunto. La ganancia se calcula con pesos (medias,
+        varianzas y proporciones ponderadas); `child_ns` sigue siendo el
+        conteo FISICO de filas a cada lado. Con weights=None el
+        comportamiento es identico al pre-3.2.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+        """
         ys = y if isinstance(y, pd.Series) else pd.Series(y)
         mask = (cand.notna() & ys.notna()).to_numpy()
         xd = cand[mask]
@@ -760,6 +898,12 @@ class CrtEngine:
         n = int(len(xd))
         if n == 0:
             return None
+        # vector local de pesos (unos si weights=None)
+        if weights is not None:
+            w = np.asarray(weights, dtype=float)[mask]
+        else:
+            w = np.ones(n)
+        w_total = float(w.sum())
         if threshold is not None:
             izq = xd.to_numpy(dtype=float) <= float(threshold)
         else:
@@ -772,17 +916,20 @@ class CrtEngine:
         continuo_y = target_type == TargetType.CONTINUOUS
         if continuo_y:
             yv = yd.to_numpy(dtype=float)
-            s_l = float(yv[izq].sum())
-            q_l = float((yv[izq] * yv[izq]).sum())
-            s_all = float(yv.sum())
-            q_all = float((yv * yv).sum())
-            mean = s_all / n
-            i_parent = max(q_all / n - mean * mean, 0.0)
+            wl = w[izq]
+            yl = yv[izq]
+            w_l = float(wl.sum())
+            s_l = float((wl * yl).sum())
+            q_l = float((wl * yl * yl).sum())
+            s_all = float((w * yv).sum())
+            q_all = float((w * yv * yv).sum())
+            mean = s_all / w_total
+            i_parent = max(q_all / w_total - mean * mean, 0.0)
             d_i = float(_var_dI(
-                np.array([float(n_l)]), np.array([s_l]), np.array([q_l]),
-                np.array([float(n_r)]), np.array([s_all - s_l]),
+                np.array([w_l]), np.array([s_l]), np.array([q_l]),
+                np.array([w_total - w_l]), np.array([s_all - s_l]),
                 np.array([q_all - q_l]),
-                i_parent, n,
+                i_parent, w_total,
             )[0])
             stat_name: str = "variance_gain"
         else:
@@ -790,14 +937,14 @@ class CrtEngine:
             k_cls = len(classes)
             if k_cls < 2:
                 return None
-            counts = np.bincount(codes, minlength=k_cls).astype(float)
-            p = counts / n
+            counts = np.bincount(codes, weights=w, minlength=k_cls)
+            p = counts / w_total
             i_parent = float(1.0 - (p * p).sum())
             c_l = np.bincount(
-                codes[izq], minlength=k_cls
-            ).astype(float)[None, :]
+                codes[izq], weights=w[izq], minlength=k_cls
+            )[None, :]
             c_r = (counts - c_l[0])[None, :]
-            d_i = float(_gini_dI(c_l, c_r, i_parent, n)[0][0])
+            d_i = float(_gini_dI(c_l, c_r, i_parent, w_total)[0][0])
             stat_name = "gini_gain"
 
         d_i = max(d_i, 0.0)
