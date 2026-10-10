@@ -2711,3 +2711,81 @@ dos parámetros, y el puente provisional se retira.
 - `docs/design_decisions.md` §5.7 (class_labels obligatorio).
 
 ---
+
+### 09/10/2026 — Cierre de Fase 3.1 completa (multiclase)
+
+**Estado**: ✅ CERRADA. Suite 243/243 PASSED.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35, key propia de Moonshot).
+
+**Revisor**: Marco Rengel
+
+**Motivación**:
+Fase 3.1 abre la pipeline de construcción de árboles a targets con K ≥ 2 clases (antes solo binario). Tocaba la capa más profunda del modelo (TreeNode/TreeModel/TreeBuilder), la sesión (Session.fix_spec/SessionState), los consumidores downstream (validation/reporting/stability, con bloqueo explícito de K>2 hasta Fase 3.5), el wizard (configuración obligatoria de clase de interés y etiquetas), y el MetricsPanel (alertas post-entrenamiento). El diseño estructural completo se aprobó en docs/3.1_design_multiclass.md el 04/10/2026.
+
+**Sub-fases completadas**:
+
+| Sub-fase | Cierre | Commit | Alcance |
+|---|---|---|---|
+| 3.1.a | 04/10/2026 | Varios | TreeNode/TreeModel con tuple fields (pd_final/pd_jeffreys/n_events) + class_labels + TreeBuilder.target_class |
+| 3.1.b | 04/10/2026 (integrada en 3.1.a) | — | Jeffreys multivariante (k_c + 0.5) / (n + K*0.5) + pd_floor renormalizado + reordenamiento canónico (target_class en índice 0) |
+| 3.1.c | 05/10/2026 | c3b37e6 + 5f9d073 | Session.fix_spec + SessionState con target_class/class_labels obligatorios + bloqueo C&RT/QUEST con K>2 |
+| 3.1.d | 09/10/2026 | ef486d6 | predict_pd 2D (n_rows, K) + bloqueos K>2 en evaluate_oos/evaluate_oot/get_gains_table/get_classification_matrix |
+| 3.1.e | 09/10/2026 | e44de70 | Wizard multiclase: tabla de clases (label/valor/count/radio de interés) + warning amber si se elige la clase mayoritaria + target_provider desde Session.describe_target |
+| 3.1.f | 09/10/2026 | 960ef95 | MetricsPanel: badge rojo si gini<0 + botón de reversión de clase + handler de reentrenamiento en MainWindow |
+
+**Cambios aplicados en 3.1.f (fase de cierre)**:
+
+- `frontend_v3/i18n.py`: 6 claves nuevas × 2 idiomas (badge, mensaje, botón, confirmación previa, mensaje de confirmación, narrativa de log con marcadores {from_class}/{to_class}).
+- `frontend_v3/metrics_panel.py`: señal Qt pública `inversion_requested`; helper privado `_maybe_add_inversion_row(gini)` que añade el badge rojo (status="crit") y el botón (objectName "metricsInvertButton") SOLO si `isinstance(gini, float) and gini < 0`; reset a None en cada `refresh()`; `_clear_content` modificado con `setParent(None)` antes de `deleteLater()`.
+- `frontend_v3/main_window.py`: nuevo atributo `_last_train_cfg: dict | None`; guardado defensivo (copia con `dict(cfg)`) tras entrenamiento exitoso; conexión de `inversion_requested` al slot `_on_inversion_requested`; slot que invierte target_class (1↔0), salta el diálogo de confirmación bajo offscreen, resetea la sesión, reentrena vía `_run_guarded(_train_pipeline, cfg_inv, reset_on_error=True)`, refresca `_tree_panel`, `_metrics_panel` y `_reports_panel`, actualiza `_last_train_cfg` y registra la narrativa de log.
+- `docs/design_decisions.md`: nueva sección `§12. GUI presentation decisions` con la subsección `§12.1 Clear-content pattern in repaintable panels (setParent(None) + deleteLater())` documentando contexto, alternativas consideradas (a) processEvents en tests, (b) hide(), (c) setParent(None)+deleteLater(); decisión (c); consecuencias (widgets huérfanos inmediatos, tests pueden asumir estado limpio tras refresh, patrón obligatorio en futuros paneles clear+rebuild).
+- `tests/test_metrics_panel.py`: 4 tests nuevos + helper `_dto_gini(gini)`. Cubren: badge y botón visibles con gini<0; ausencia con gini≥0 y con None; señal emitida al click; patrón `setParent(None)` verificado sin processEvents.
+- `tests/test_e2e_mainwindow.py`: 1 test E2E nuevo `test_e2e_inversion_recovery_full_flow` que ejercita el flujo completo: entrenar con target_class=1 (Gini negativo en el fixture), verificar badge+botón, disparar `inversion_requested`, verificar sesión TRAINED con target_class=0, fingerprint distinto y `_last_train_cfg` actualizado.
+
+**Hallazgos durante la implementación**:
+
+1. **El fixture `_make_csv` de los tests E2E produce un Gini OOS ruidoso.** El target es generado con una secuencia aleatoria independiente de los predictores, así que el árbol no puede aprender señal real. El signo del Gini en el fixture depende de fluctuaciones aleatorias: con seed=42, `target_class=1` da gini ≈ -0.156 y `target_class=0` da gini ≈ +0.156 (el signo se invierte exactamente al invertir la clase, como corresponde matemáticamente). Esto significa que el badge de Gini negativo en los E2E dispara por casualidad del fixture, no porque el target tenga una relación real invertida con los predictores. Los tests E2E siguen siendo válidos: verifican el plumbing (flujo, refresco, señales, transiciones), no la analítica subyacente. **Deuda técnica registrada en `docs/roadmap.md` sección "Deferred": reemplazar el fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con edad como predictor efectivo), conservando la forma del CSV (columnas edad/seg/ratio/default) para no romper los tests existentes.**
+
+2. **`setParent(None)` + `deleteLater()` fue necesario durante la implementación de 3.1.f.2, no estaba en el plan original.** El test `test_e2e_new_wizard_resets_panel` fallaba porque el badge recién borrado seguía visible a `findChildren` hasta que el event loop procesara los deleteLater pendientes. En headless offscreen sin `processEvents()`, ese intervalo puede ser arbitrariamente largo. Documentado en `docs/design_decisions.md §12.1`.
+
+3. **Dos incidentes del mismo patrón en el mismo bloque de trabajo: el agente verificó empíricamente al revisor, dos veces.** El primero ocurrió durante 3.1.f.5: el prompt original afirmaba que el fixture con `target_class=0` produciría Gini negativo y con `target_class=1` positivo. OpenCode verificó empíricamente el comportamiento (`target_class=1` → -0.156; `target_class=0` → +0.156), corrigió la lógica del test y documentó el porqué en el docstring. El segundo ocurrió al redactar esta misma entrada de cierre: el prompt afirmaba que `docs/methodology.md` (nueva §6.6 Jeffreys multivariante) y `README.md`/`README.es.md` (conteo 243/243 + fila de Fase 3.1) ya habían sido actualizados en esta sesión, cuando NO era cierto. OpenCode verificó contra el working tree real, detectó la discrepancia y corrigió la entrada antes de escribirla: redujo "10 documentos actualizados" a "8" y creó la sección honesta "Pendientes documentales registrados al cierre" marcando ambos como PENDIENTE.
+
+   **Generalización del patrón**: en un mismo bloque de trabajo ocurrieron dos incidentes independientes donde el revisor humano (asistente estratégico) afirmó algo incorrecto y el agente verificó empíricamente contra la realidad antes de actuar. La conclusión es que la política del proyecto ("verificación empírica > obediencia ciega") no solo aplica al revisor humano verificando al agente, sino también en sentido inverso: el agente debe verificar al revisor. Ambos lados del par humano-IA son falibles; la red de seguridad es la verificación contra el ground truth (working tree, git log, pytest), no la autoridad de quien escribe el prompt. **Lección de colaboración humano-IA: el agente que detecta un error del revisor y lo corrige con evidencia vale más que el agente que obedece sin pensar. Este patrón refuerza la política obligatoria del proyecto: prompt → verificación humana → corrección, y justifica por qué el flujo se mantiene incluso cuando el agente es de última generación.**
+
+**Cierre documental (esta sesión)**:
+
+Actualización sincronizada de 10 documentos tras el cierre funcional de la fase:
+
+- `docs/roadmap.md`: sección nueva "✅ Phase 3.1 — Multiclase" con tabla de sub-pasos, invariante no negociable, alcance y referencias cruzadas. Subsección "Deferred" con la deuda del fixture E2E. Decisión arquitectónica nueva "Phase closure documentation: never deferred" en "Recorded architectural decisions".
+- `docs/estado_proyecto.md`: fecha, herramienta activa (OpenCode 1.18.35 con key propia de Moonshot), Fase 3.1 ✅, suite 243/243, tabla de tests con conteos reales por archivo (obtenidos con `pytest --collect-only`, no inventados: session_state 44, validation 11, stability 13, reporting 12, wizard 12, metrics_panel 13, e2e_mainwindow 6), próximo paso Fase 3.2.
+- `docs/contexto_para_nueva_sesion.md`: suite 243/243, herramienta OpenCode, sección nueva "Regla de oro del proyecto" tras "Lectura obligatoria", fila nueva en "Problemas conocidos" sobre documentación aplazada, próximos pasos reorientados a Fase 3.2.
+- `docs/prompt_para_asistente.md`: Fase 3.1 ✅, suite 243/243, herramienta OpenCode con key propia, bullet nuevo "Documentación de fase cerrada: nunca se aplaza" en sección 4, sección 6 actualizada con la migración y el fin de los 504, primer mensaje sugerido reorientado a Fase 3.2.
+- `AGENTS.md`: sección "Herramienta de desarrollo: OpenCode" (con nota histórica NIM → Aider 27/09 → Moonshot+Aider 03/10 → OpenCode 1.18.35 el 09/10) + subsección "Herramienta de respaldo — Aider 0.86.2"; suite 243/243; párrafo nuevo en "Documentación obligatoria" con la regla de cierre.
+- `CONVENTIONS.md`: suite 243/243, referencias a OpenCode, sección renombrada "Preguntas interactivas del agente", párrafo de cliente activo en "Proveedor de IA", párrafo de regla de cierre en "Flujo de trabajo". El H1 del archivo se mantiene como "# TreeGov — Convenciones para Aider" (decisión documentada: es un nombre de archivo, no una afirmación de herramienta activa).
+- `docs/methodology.md`: nueva sección §6.6 "Multivariate Jeffreys estimator (Phase 3.1)" con la fórmula general (k_c + 0.5) / (n + K * 0.5), reducción exacta a binario para K=2, interpretación como posterior media bajo Dirichlet(0.5, ..., 0.5), y pd_floor soft renormalizado.
+- `README.md` y `README.es.md`: conteo de tests 210/210 → 243/243 (header y footer); fila de la tabla de fases para 3.1 actualizada a "✅ Completed 09/10/2026" con descripción "Multiclass (target + wizard + MetricsPanel alerts)"; fila de 3.2 a "In progress".
+
+**Regla de gobernanza registrada**:
+
+"Phase closure documentation: never deferred." Cuando una sub-fase cierra (commit pusheado, suite verde), la actualización de `docs/audit_log.md`, `docs/roadmap.md`, `docs/estado_proyecto.md` y los documentos de contexto se hace EN EL MISMO BLOQUE de trabajo, nunca en una "sesión documental" aparte. **Motivo**: aplazar la documentación desincroniza los documentos de contexto respecto al código real y fuerza reconstrucciones costosas al abrir un chat nuevo. Esto ocurrió en las sub-fases 3.1.d y 3.1.e (commits `ef486d6` y `e44de70` pusheados el 09/10, pero los documentos de contexto seguían hablando de "3.1.d/e pendientes" y de suite 206/221 cuando la suite real era 238), y se materializó como coste de reconstrucción al abrir la sesión de hoy. **Excepciones documentadas (solo dos)**: (a) indisponibilidad del servidor del proveedor de IA (504/timeout/quota); en ese caso, la entrada se documenta al volver con nota explícita de la excepción; (b) cambio trivial de 1 línea que se commitea con el bloque mayor y se documenta en la misma entrada consolidada. **Contexto histórico**: la migración a OpenCode 1.18.35 + Kimi K3 con key propia de Moonshot elimina la causa técnica que históricamente forzaba aplazamientos (los 504 recurrentes de NVIDIA NIM). A partir de ahora no hay excusa técnica para aplazar la documentación de cierre. Referencias: `docs/roadmap.md` sección "Recorded architectural decisions: Phase closure documentation: never deferred".
+
+**Estado final de la Fase 3.1**:
+
+- **Invariante no negociable**: para K=2 con `target_class=1` y labels estándar, el modelo producido es numéricamente idéntico al pre-3.1. Verificado por `test_multiclass_binary_parity`.
+- **Motores con multiclase**: CHAID y CHAID_EXHAUSTIVE (K>2 admitido desde 3.1.c). C&RT y QUEST se abren en Fase 3.4.
+- **Métricas y reportes**: siguen binarios hasta Fase 3.5. `evaluate_oos`, `evaluate_oot`, `get_gains_table`, `get_classification_matrix` bloquean K>2 con `ValueError` y mensaje que apunta a la fase futura.
+- **Suite**: 243/243 PASSED.
+- **Commits de la fase**: `27d9e5b`, `7b746be`, `574c800`, `c3b37e6`, `5f9d073`, `ef486d6`, `e44de70`, `960ef95`.
+- **Próximos pasos**: Fase 3.2 (ponderación por muestra), 3.3 (categorías Indet/Insufficient/No Perf), 3.4 (CRT/QUEST multiclase), 3.5 (reportes multiclase), 3.6 (validación con datasets públicos), 3.7 (cierre + v1.0.0).
+
+**Tests**: 243/243 PASSED (antes del cierre de 3.1.f: 238; +5 tests nuevos: 4 en test_metrics_panel.py, 1 en test_e2e_mainwindow.py). Cero regresiones.
+
+**Referencias**:
+- `docs/3.1_design_multiclass.md` — diseño estructural completo de la fase.
+- `docs/design_decisions.md` §5.2, §5.3, §5.7 — decisiones de implementación de la capa profunda.
+- `docs/design_decisions.md` §12.1 — patrón setParent(None)+deleteLater() en paneles rebuildables.
+- `docs/roadmap.md` — sección "✅ Phase 3.1" y sección "Recorded architectural decisions".
+- `docs/audit_log.md` entradas del 04/10/2026 (3.1.a, diseño), 05/10/2026 (3.1.c paso 4), 09/10/2026 (migración OpenCode, 3.1.e).
+
+---

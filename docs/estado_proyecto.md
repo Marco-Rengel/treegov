@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 04/10/2026
+**Fecha de última actualización:** 09/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (plataforma internacional). Instalado vía pipx con Python 3.11.9. Migración de NVIDIA NIM el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
+| Modelo de IA en desarrollo | OpenCode 1.18.35 (cliente activo desde 09/10/2026) + Kimi K3 vía Moonshot AI directo con key propia de Moonshot (NO vía NVIDIA NIM). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Migración de NVIDIA NIM a Moonshot el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
 
 ---
 
@@ -158,7 +158,7 @@ Módulos y documentos:
 - `docs/roadmap.md` — redefinición de las fases 3-7 (la Fase 3 original
   mezclaba tres familias de trabajo).
 
-### Fase 3.1 — Multiclase 🔵 En curso
+### Fase 3.1 — Multiclase ✅ Cerrada 09/10/2026
 
 **Diseño estructural completado** (04/10/2026):
 - `docs/3.1_design_multiclass.md` (nuevo, ~40 KB, 13 secciones).
@@ -177,13 +177,19 @@ binarios hasta Fase 3.5.
 - Wizard con validación pre-entrenamiento (3 checks) y alertas
   post-entrenamiento (badge de Gini negativo + botón de reversión).
 
-**Sub-fases planificadas** (6 sesiones):
+**Sub-fases** (6, todas cerradas):
 - 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` ✅ (04/10/2026)
 - 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento ✅ (integrado en 3.1.a)
-- 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST
-- 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability
-- 3.1.e — Wizard: selección obligatoria + counts + warning minoritaria
-- 3.1.f — MetricsPanel: badge Gini negativo + botón de reversión
+- 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST ✅ (05/10/2026)
+- 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability ✅ (09/10/2026)
+- 3.1.e — Wizard multiclase: tabla de clases + counts + warning minoritaria ✅ (09/10/2026)
+- 3.1.f — MetricsPanel: badge Gini negativo + botón de reversión ✅ (09/10/2026)
+
+CHAID y CHAID_EXHAUSTIVE son los únicos motores que admiten K>2 en 3.1;
+C&RT y QUEST se abren en Fase 3.4. Las métricas y reportes siguen
+binarios hasta Fase 3.5. Invariante no negociable: para K=2 con
+target_class=1 y labels estándar, el modelo es numéricamente idéntico
+al pre-3.1.
 
 ### Fases pendientes
 
@@ -217,7 +223,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (206 tests)
+├── tests/ # Suite de tests (243 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -262,6 +268,7 @@ TreeGov/
 | **Proveedor de IA: Moonshot AI directo** | Migrado de NVIDIA NIM el 03/10/2026 por 504 recurrentes. Endpoint `https://api.moonshot.ai/v1`, costes $3/$15 por millón de tokens. Requiere `~/.aider.model.settings.yml` con `use_temperature: false` (Kimi K3 exige temperature=1). Cliente sigue siendo Aider (no OpenCode, no Kimi Code Desktop) |
 | **`.gitattributes` con `-text`** | Previene mezcla de line endings (CRLF/LF) que genera diffs ruidosos (1218/1151 en lugar de 68 líneas reales). `-text` le dice a git "no normalices este archivo". Ver commit `7040046` |
 | **Sala limpia de i18n** | Claves nombradas por estado (no por color). Tokens QSS semánticos en `theme.py` |
+| **Documentación de fase cerrada: no se aplaza** | Regla de gobernanza (09/10/2026): al cerrar una sub-fase, audit_log + roadmap + estado_proyecto + documentos de contexto se actualizan en el mismo bloque de trabajo. Detalle en `docs/roadmap.md`, sección "Recorded architectural decisions" |
 
 ---
 
@@ -330,21 +337,21 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 4 |
 | profiling.py | 3 |
 | tree_builder.py | 20 |
-| session_state.py | 24 |
-| validation.py | 8 |
+| session_state.py | 44 |
+| validation.py | 11 |
 | pruning.py | 6 |
-| stability.py | 12 |
-| reporting.py | 11 |
+| stability.py | 13 |
+| reporting.py | 12 |
 | gui_smoke (frontend) | 9 |
-| wizard (frontend) | 9 |
+| wizard (frontend) | 12 |
 | tree_view (frontend) | 10 |
-| metrics_panel (frontend) | 9 |
-| e2e_mainwindow (frontend) | 5 |
+| metrics_panel (frontend) | 13 |
+| e2e_mainwindow (frontend) | 6 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **210** |
+| **Total** | **243** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 210/210 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 243/243 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -386,7 +393,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ### Pendientes técnicos
 
 - [x] **Decisión de proveedor de IA** — migrado a Moonshot AI directo el 03/10/2026. Ver `audit_log.md`.
-- [ ] **Fase 2.4** — Reportes + integración. Diseño cerrado 30/09/2026.
+- [x] **Herramienta activa de desarrollo** — OpenCode 1.18.35 desde el 09/10/2026 (Aider 0.86.2 queda como respaldo documentado). Ver `audit_log.md`.
+- [x] **Fase 2.4** — Reportes + integración. Completada el 03/10/2026.
+- [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
+- [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
+- [ ] **Fase 3.2** — Ponderación por muestra (transversal al backend). **Próximo paso.**
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
@@ -434,27 +445,26 @@ Si se inicia una conversación nueva (con un agente de IA o con un colaborador):
    - `docs/audit_log.md` (histórico de decisiones)
    - `docs/contexto_para_nueva_sesion.md` (bootstrap)
 
-2. Comando para retomar el desarrollo:
+2. Comando para retomar el desarrollo (OpenCode, herramienta activa):
 
 ```
 cd "C:\Riesgos - copia\DecisionTree_Modeler"
 .\.venv\Scripts\activate
 git status
 python -m pytest tests -q
-
-$key = Read-Host "Pega tu Moonshot API key" -AsSecureString
-$env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
-Remove-Variable key
-aider
+opencode
 ```
+
+(La autenticación con Moonshot AI ya está configurada vía
+`opencode auth login`; no requiere variables de entorno. Para el
+respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4, 3.0 cerradas.
-> Fase 3.1 (multiclase) en curso: 3.1.a completada (código multiclase
-> en `tree_builder.py` + tests adaptados).
-> Suite 210/210. Próximo paso: 3.1.c (Session.fix_spec + SessionState +
-> bloqueo C&RT/QUEST) con Aider 0.86.2 + Kimi K3 vía Moonshot AI directo."
+> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
+> 3.0 y 3.1 (multiclase) cerradas. Suite 243/243. Próximo paso: Fase 3.2
+> (ponderación por muestra) con OpenCode 1.18.35 + Kimi K3 vía Moonshot
+> AI directo (key propia)."
 
 ---
 

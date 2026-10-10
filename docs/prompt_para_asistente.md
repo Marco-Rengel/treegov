@@ -51,13 +51,14 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 - **Yo decido, tú guías.** No asumas el cierre de una sesión ni tomes decisiones por mí. Si consideras que es buen momento para parar, sugiérelo, pero espera mi confirmación.
 - **Paso a paso, comandos exactos.** Especialmente en terminal. Yo pego, tú explicas qué esperar.
-- **Verificación antes de celebrar.** La herramienta de turno (hoy Aider) puede reportar éxito sin haber ejecutado. Siempre verificamos con `python -m pytest tests -q`, `git status` y `git diff` del archivo tocado antes de cantar victoria.
+- **Verificación antes de celebrar.** La herramienta de turno (hoy OpenCode) puede reportar éxito sin haber ejecutado. Siempre verificamos con `python -m pytest tests -q`, `git status` y `git diff` del archivo tocado antes de cantar victoria.
 - **Crítica honesta.** Si un diseño tiene problemas, dilo claro. No valides por complacer.
 - **Análisis antes de actuar.** Cuando algo falla, primero diagnosticar. No dar soluciones a ciegas.
 - **Documentación obligatoria.** Cada decisión arquitectónica, hallazgo o cambio va al `audit_log.md` con formato (fecha, estado, artefactos, hallazgos, tests).
 - **Nada fuera de la herramienta elegida.** Si decidimos trabajar con Aider, no proponer "hazlo tú manualmente" salvo excepciones explícitamente aprobadas.
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
 - **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
+- **Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase cierra, la actualización de audit_log + roadmap + estado_proyecto + documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo desincroniza el contexto y cuesta tiempo de reconstrucción en el siguiente chat (esto ya ocurrió en 3.1.d/e). Excepciones: solo 504/timeout del proveedor o cambio trivial de 1 línea consolidado.
 
 ---
 
@@ -76,13 +77,15 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Fase 2.4 (Reportes + integración):** completa y cerrada (03/10/2026).
 - **Fase 3.0 (cierre de zona gris documental + 4 parámetros canónicos):**
   completa y cerrada (04/10/2026).
-- **Fase 3.1 (multiclase):** en curso. Diseño estructural completado
-  (04/10/2026, `docs/3.1_design_multiclass.md`). Implementación
-  dividida en 6 sub-fases (3.1.a a 3.1.f).
-- **Suite de tests:** 206/206 PASSED.
-- **Herramienta:** Aider 0.86.2 + Kimi K3 vía Moonshot AI directo (pipx).
-- **Próximo paso:** implementación 3.1.a — adaptar `TreeNode`/`TreeModel`
-  a tuple fields + `TreeBuilder.target_class`.
+- **Fase 3.1 (multiclase):** ✅ completa y cerrada (09/10/2026). Las 6
+  sub-fases (3.1.a a 3.1.f) implementadas y testeadas: capa profunda,
+  sesión, bloqueos downstream, wizard multiclase y badge/botón de
+  reversión en MetricsPanel.
+- **Suite de tests:** 243/243 PASSED.
+- **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
+  (key propia de Moonshot). Aider 0.86.2 como respaldo documentado.
+- **Próximo paso:** Fase 3.2 — ponderación por muestra (pesos
+  transversales al backend para muestras sesgadas de buró).
 
 ---
 
@@ -101,8 +104,11 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Instalación:** global vía `npm` (`opencode-ai@1.18.35`).
   Ubicación: `C:\Users\maren\AppData\Roaming\npm\opencode.ps1`.
 - **Autenticación:** `opencode auth login` con provider `Moonshot AI`
-  (internacional, endpoint `https://api.moonshot.ai/v1`). La
-  credencial se guarda en `~/.local/share/opencode/auth.json`.
+  (internacional, endpoint `https://api.moonshot.ai/v1`, key propia
+  de Moonshot — conexión directa, NO vía NVIDIA NIM). La credencial
+  se guarda en `~/.local/share/opencode/auth.json`. Esta migración
+  eliminó los 504 recurrentes de NIM que históricamente forzaban
+  aplazamientos (incluidos los de documentación de cierre).
 - **Modelo:** `moonshot/kimi-k3` (Kimi K3, contexto 1M).
 - **Nivel de razonamiento:** `high` por defecto. Reservar `max` para
   tareas complejas (refactorización estructural, depuración de bugs).
@@ -200,7 +206,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.0 cerradas, Fase 3.1 (multiclase) en curso con diseño estructural completado (`docs/3.1_design_multiclass.md`). Suite 206/206. Herramienta: Aider 0.86.2 vía pipx + Kimi K3 vía Moonshot AI directo. Próximo paso: implementación 3.1.a. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.1 cerradas, Fase 3.2 (ponderación) es el próximo paso. Suite 243/243. Herramienta: OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo (key propia). ¿Qué necesitas para darme contexto?"
 
 ---
 

@@ -143,6 +143,42 @@ clasificación y exportación HTML autocontenido.
   `No Perf` como metadatos de población (no entran al modelo). Relevante
   cuando se integre con sistemas de buró.
 
+### ✅ Phase 3.1 — Multiclase (target + TreeNode + TreeBuilder + wizard + MetricsPanel)
+**Priority: HIGH** · **Cerrada el 09/10/2026**
+
+**Motivación.** Extiende la pipeline de construcción de árboles a targets
+con K ≥ 2 clases (antes solo binario). Cubre la capa profunda
+(TreeNode/TreeModel/TreeBuilder), la sesión (fix_spec/SessionState), los
+consumidores downstream (validation/reporting/stability con bloqueo
+explícito hasta Fase 3.5), el wizard multiclase y las alertas
+post-entrenamiento en MetricsPanel (badge de Gini negativo + botón de
+reversión).
+
+**Sub-pasos:**
+
+| Sub-paso | Estado | Alcance |
+|---|---|---|
+| 3.1.a | ✅ | TreeNode/TreeModel con tuple fields (pd_final/pd_jeffreys/n_events) + class_labels + TreeBuilder.target_class |
+| 3.1.b | ✅ | Jeffreys multivariante (k_c + 0.5) / (n + K*0.5) + pd_floor renormalizado + reordenamiento canónico (target_class en índice 0) |
+| 3.1.c | ✅ | Session.fix_spec + SessionState con target_class/class_labels obligatorios + bloqueo C&RT/QUEST con K>2 |
+| 3.1.d | ✅ | predict_pd devuelve 2D (n_rows, K) + bloqueos K>2 en evaluate_oos/evaluate_oot/get_gains_table/get_classification_matrix |
+| 3.1.e | ✅ | Wizard multiclase: tabla de clases (label/valor/count/radio de interés) + warning amber si se elige la clase mayoritaria |
+| 3.1.f | ✅ | MetricsPanel: badge rojo si gini<0 + botón de reversión de clase + handler de reentrenamiento en MainWindow |
+
+**Invariante no negociable.** Para K=2 con target_class=1 y labels
+estándar, el modelo producido es numéricamente idéntico al pre-3.1.
+Verificado por `test_multiclass_binary_parity`.
+
+**Alcance.** CHAID y CHAID_EXHAUSTIVE son los únicos motores que admiten
+K>2 en 3.1; C&RT y QUEST se abren en Fase 3.4. Las métricas y reportes
+siguen binarios hasta Fase 3.5.
+
+**Suite: 243/243 PASSED.**
+
+**Referencias:** `docs/3.1_design_multiclass.md`,
+`docs/design_decisions.md` §5.2, §5.3, §5.7, §12.1,
+`docs/audit_log.md` entradas del 09/10/2026.
+
 ### ⏳ Phase 3 — Advanced analytics + documentation closure
 **Priority: HIGH**
 
@@ -156,7 +192,7 @@ y no-crédito (biología, ciencias sociales).
 | Sub-fase | Alcance | Prioridad |
 |---|---|---|
 | 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada 04/10/2026 |
-| 3.1 | Multiclase en el árbol (target + TreeNode + TreeBuilder) | Alta |
+| 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
 | 3.2 | Ponderación por muestra (transversal al backend) | Alta |
 | 3.3 | Categorías Indet / Insufficient / No Perf | Alta |
 | 3.4 | CRT y QUEST multiclase | Media |
@@ -223,6 +259,69 @@ para las fases 2.4, 3, 4 o 5. Se retomarán si aparece una necesidad
 concreta (por ejemplo, auditoría externa que requiera CV formal, o
 incidente que exponga la ausencia del guardrail runtime).
 
+### ⏳ E2E test fixture: target con señal real
+**Priority: LOW (deferred)**
+
+El helper `_make_csv` de `tests/test_e2e_mainwindow.py` y
+`tests/test_e2e_reports.py` genera un target con relación aleatoria a los
+predictores, por lo que el Gini OOS es ruido de pequeña magnitud. Esto
+hace que los tests E2E verifiquen el plumbing (flujo, refresco, señales,
+transiciones) pero no la analítica real. Mejora pendiente: reemplazar el
+fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con
+`edad` como predictor real), conservando la misma forma del CSV
+(columnas edad/seg/ratio/default) para no romper los tests existentes.
+Se difiere porque ningún test depende hoy de que el Gini sea
+significativo.
+
+### ⏳ OpenCode token consumption anomaly
+**Priority: LOW (investigación pendiente)**
+
+**Observación.** Durante la sesión documental del 09/10/2026 se detectó
+un consumo anómalo de tokens en OpenCode 1.18.35 + Kimi K3 vía Moonshot.
+Con ~10 tareas mayormente documentales, el gasto acumulado llegó a
+~$7.64, mientras que la estimación histórica era ~$0.60 por tarea con
+Aider y ~$0.09 por tarea con OpenCode en tareas previas. Es un factor
+~8x sobre lo esperado.
+
+**Hipótesis a investigar en sesión dedicada.** (a) Verificar contra el
+Product Bill de Moonshot si la flag `setCacheKey: true` de
+`opencode.json` está teniendo efecto real sobre la caché de prompt (el
+`docs/audit_log.md` del 09/10 ya documenta que su efecto no estaba
+verificado); (b) medir el impacto del contexto acumulado en sesiones
+largas (¿conviene cerrar y reabrir OpenCode entre tareas grandes?);
+(c) evaluar si el modo de razonamiento `high` es óptimo para tareas
+documentales o si `medium` es suficiente; (d) evaluar plugins de caché
+alternativos (`oc-plugin-caching` requiere un fork de OpenCode; valorar
+si compensa).
+
+**Resultado del experimento (09/10/2026):** durante el cierre documental
+de Fase 3.1 se hizo un experimento controlado comparando los dos
+niveles de razonamiento disponibles en OpenCode 1.18.35 para Kimi K3
+(no existe `medium`: solo `low`, `high`, `max`). Con la sesión abierta
+y contexto acumulado ~200K tokens:
+
+- Prompt B (`docs/methodology.md` + `docs/roadmap.md`) con nivel
+  `high`: coste $0.68, duración 4m 41s.
+- Prompt C (dos READMEs, cambio más pequeño) con nivel `low`: coste
+  $0.90, duración 1m 49s.
+
+Conclusión empírica: el nivel de razonamiento NO es el driver del
+coste. Bajar de `high` a `low` no redujo el gasto, lo aumentó, mientras
+que el tiempo bajó. El driver real es el tamaño del contexto acumulado
+en la sesión: cada tarea sucesiva arrastra todo el historial previo,
+independientemente del tamaño de la tarea. La hipótesis de la caché no
+funcionando (`setCacheKey: true` sin efecto real) queda reforzada por
+este resultado: si la caché funcionara, el coste marginal por tarea
+debería caer o mantenerse, no crecer. Acciones inmediatas para
+investigar en sesión dedicada: (a) medir el coste marginal con sesión
+fresca (cerrar OpenCode entre tareas grandes); (b) verificar contra el
+Product Bill si `setCacheKey` está teniendo efecto; (c) evaluar plugins
+alternativos de caché (`oc-plugin-caching` requiere fork); (d) reportar
+como issue a OpenCode la ausencia del nivel `medium` para Kimi K3.
+
+Referencia: `docs/audit_log.md` entrada del 09/10/2026 (migración
+OpenCode).
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality
@@ -234,6 +333,42 @@ incidente que exponga la ausencia del guardrail runtime).
 - **AI provider (dev-time only)**: Moonshot AI directo (Kimi K3) desde
   el 03/10/2026. No afecta al producto ni al runtime; es exclusivamente
   la herramienta de asistencia durante el desarrollo. Ver `AGENTS.md`.
+- **Phase closure documentation: never deferred** (registrada el
+  09/10/2026):
+  - **Regla**: cuando una sub-fase cierra (commit pusheado, suite
+    verde), la actualización de `docs/audit_log.md`, `docs/roadmap.md`
+    y `docs/estado_proyecto.md` se hace EN EL MISMO BLOQUE de trabajo,
+    no en una "sesión documental" aparte.
+  - **Motivo**: aplazar la documentación desincroniza los documentos de
+    contexto (`docs/contexto_para_nueva_sesion.md`,
+    `docs/prompt_para_asistente.md`) respecto al estado real. Esto ya
+    ocurrió en las sub-fases 3.1.d y 3.1.e: los commits `ef486d6` y
+    `e44de70` se pushearon el 09/10, pero los documentos de contexto
+    seguían hablando de "3.1.d/e pendientes" y de suite 206/221 cuando
+    la suite real era 238. El coste se materializó al abrir un chat
+    nuevo: hubo que reconstruir el estado cruzando git log + audit_log
+    + salidas de PowerShell, consumiendo tiempo de trabajo técnico.
+  - **Excepciones documentadas (solo dos)**: (a) indisponibilidad del
+    servidor del proveedor de IA (504/timeout/quota); en ese caso, la
+    entrada de audit_log y el sync de documentos se hace en cuanto el
+    servicio vuelva, con nota explícita de la excepción; (b) cambios
+    triviales de una línea que se commitean con el bloque mayor y se
+    documentan en la misma entrada consolidada.
+  - **Verificación obligatoria**: al cerrar cada sub-fase, además de
+    pytest, `git status` y `git diff --stat`, se ejecuta un checklist de
+    sincronización: `roadmap.md` refleja el estado,
+    `estado_proyecto.md` refleja la suite real,
+    `contexto_para_nueva_sesion.md` refleja el próximo paso,
+    `prompt_para_asistente.md` refleja la herramienta activa. Si alguno
+    no refleja el estado real, la sub-fase NO se considera cerrada.
+  - **Contexto histórico**: la migración a OpenCode + Kimi K3 con key
+    propia (sin la capa intermedia de NVIDIA NIM) elimina la causa
+    técnica que históricamente forzaba aplazamientos (los 504
+    recurrentes de NIM). A partir de ahora no hay excusa técnica para
+    aplazar la documentación de cierre.
+  - **Referencias cruzadas**: `docs/audit_log.md` entradas del
+    09/10/2026 (migración OpenCode, hallazgo de caché), `.treegovrules`
+    (política "no dejar cabos sueltos").
 
 ## Releases
 

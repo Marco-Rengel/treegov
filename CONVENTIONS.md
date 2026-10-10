@@ -1,6 +1,8 @@
 # TreeGov — Convenciones para Aider
 
-Reglas operativas que Aider lee automáticamente en cada tarea. NO duplica
+Reglas operativas del proyecto. Aider (hoy respaldo) las lee
+automáticamente en cada tarea; OpenCode (herramienta activa) las aplica
+como convenciones del repo junto con `AGENTS.md`. NO duplica
 filosofía completa (ver `.treegovrules`); son recordatorios operativos.
 
 ## Sala limpia (inviolable)
@@ -20,7 +22,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de 178/178 tests, no se commitea.
+Si la suite baja de 243/243 tests, no se commitea.
 
 ## Comentarios y docs
 
@@ -45,7 +47,7 @@ Toda fórmula estadística con cita bibliográfica explícita.
 aprendizajes de las sesiones del 03 y 04/10/2026:**
 
 1. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
-   hacer N sesiones separadas de Aider. Se mantiene por claridad de diffs y
+   hacer N sesiones separadas de OpenCode. Se mantiene por claridad de diffs y
    auditoría, no por limitación técnica.
 
 2. **Prosa sin código literal (recomendado, no obligatorio).** Describir la
@@ -58,17 +60,17 @@ aprendizajes de las sesiones del 03 y 04/10/2026:**
    archivo: permitidos.
 
 4. **Si el cambio es buscar-y-reemplazar trivial (<10 líneas):** evaluar
-   hacerlo manualmente en VS Code en lugar de invocar Aider. Aider rinde
+   hacerlo manualmente en VS Code en lugar de invocar OpenCode. OpenCode rinde
    cuando hay síntesis o análisis; el reemplazo mecánico es más rápido a mano.
 
-5. **Sin archivos innecesarios en contexto.** Al arrancar `aider archivo.py`,
-   no aceptar "Add file to the chat?" salvo que el archivo aporte contexto
-   esencial. Cada archivo extra suma tokens.
+5. **Sin archivos innecesarios en contexto.** Al arrancar el agente con
+   archivos explícitos, no añadir más archivos al contexto salvo que
+   aporten contexto esencial. Cada archivo extra suma tokens.
 
-6. **Verificar SIEMPRE el diff antes de aceptar el edit.** Aider ocasionalmente
-   "conversa" en lugar de aplicar (patrón documentado en `audit_log.md`
-   el 03/10/2026). Si falla 2-3 veces seguidas sobre el mismo archivo,
-   hacer la edición manual y documentar la excepción.
+6. **Verificar SIEMPRE el diff antes de aceptar el edit.** El agente puede
+   ocasionalmente "conversar" en lugar de aplicar (patrón documentado en
+   `audit_log.md` el 03/10/2026, con Aider). Si falla 2-3 veces seguidas
+   sobre el mismo archivo, hacer la edición manual y documentar la excepción.
 
 7. **Nombres de funciones y parámetros en prompts.** Al escribir prompts
    con llamadas a funciones (por ejemplo, `math.isclose(..., abs_tol=1e-3)`),
@@ -81,7 +83,7 @@ aprendizajes de las sesiones del 03 y 04/10/2026:**
    punto), re-verificar la aritmética antes de fijar el valor. Es más
    rápido re-verificar que corregir el test después.
 
-## Preguntas interactivas de Aider
+## Preguntas interactivas del agente
 
 - `Add file to the chat? (Y)es/(N)o`: normalmente `n` — el prompt ya describe
   lo necesario. Aceptar solo si el archivo aporta información no descrita.
@@ -100,7 +102,22 @@ el archivo (whole edit format).
 Diseñar → Auditar diseño → Implementar → Testear → Documentar.
 Cada cambio de código va acompañado de una entrada en `docs/audit_log.md`.
 
+**Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase
+cierra, la actualización de audit_log + roadmap + estado_proyecto +
+documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo
+desincroniza el contexto y cuesta tiempo de reconstrucción en el
+siguiente chat. Excepciones: solo 504/timeout del proveedor o cambio
+trivial de 1 línea consolidado en la entrada de bloque.
+
 ## Proveedor de IA: Moonshot AI directo (desde 03/10/2026)
+
+Cliente activo desde 09/10/2026: OpenCode 1.18.35, autenticado con key
+propia de Moonshot (conexión directa al endpoint `api.moonshot.ai`,
+sin la capa intermedia de NVIDIA NIM). Aider 0.86.2 queda como respaldo
+documentado. La migración eliminó los 504 recurrentes de NIM que
+históricamente forzaban aplazamientos, y el consumo de tokens con
+OpenCode 1.18.35 + Moonshot directo es sustancialmente menor que con
+Aider.
 
 - **Modelo:** `moonshot/kimi-k3`.
 - **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).

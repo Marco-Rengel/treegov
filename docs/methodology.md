@@ -587,6 +587,52 @@ and `docs/design_decisions.md` §0.3 for the design rationale.
 > See `docs/design_decisions.md` §5.2 and §5.3 for the related
 > `pd_final` scalar decision.
 
+### 6.6 Multivariate Jeffreys estimator (Phase 3.1)
+
+In Phase 3.1 the Jeffreys estimator was generalised to the multiclass
+case (K ≥ 2). The class of interest always sits at index 0 of the
+per-class probability vector (canonical reordering, see
+`docs/3.1_design_multiclass.md` §3.3).
+
+**Formula (multivariate Jeffreys).**
+
+    pd_jeffreys[c] = (k_c + 0.5) / (n + K * 0.5)
+
+where `k_c` is the count of class `c` in the node, `n` is the node
+population, and `K` is the total number of classes.
+
+**Properties.**
+
+- **Sum invariant.** `sum(pd_jeffreys) = (sum(k_c) + K*0.5) / (n + K*0.5) = 1`
+  exactly, since `sum(k_c) = n`.
+- **Exact reduction to the binary case.** For K = 2:
+  `pd_jeffreys[c] = (k_c + 0.5) / (n + 1.0)`. Zero numerical change
+  with respect to the pre-3.1 binary estimator (§6.2).
+- **Prior.** It is the posterior mean under a symmetric
+  Dirichlet(0.5, 0.5, ..., 0.5) prior — the natural extension of the
+  Jeffreys prior to categorical distributions.
+
+**pd_floor in the multivariate case.** For K > 2 the floor is applied
+component-wise and the vector is renormalised to preserve the invariant
+`sum(pd_final) == 1`:
+
+    pd_temp[c] = max(pd_floor, pd_jeffreys[c])
+    pd_final[c] = pd_temp[c] / sum(pd_temp)
+
+This is a **soft floor**: each component is guaranteed a minimum of
+`pd_floor / sum(pd_temp)`, not exactly `pd_floor`. For K = 2 it reduces
+to the standard binary floor: the class of interest receives
+`max(pd_floor, pd_jeffreys[0])` and the other class one minus that
+value (§6.3).
+
+**Citation:** Jeffreys, H. (1946). An invariant form for the prior
+probability in estimation problems. *Proceedings of the Royal Society
+of London A*, 186(1007), 453-461.
+
+**Cross-reference:** `docs/3.1_design_multiclass.md` §3.2 and §3.3 for
+the phase design; `docs/design_decisions.md` §5.2 for the tuple-fields
+decision.
+
 ---
 
 ## 7. Hamilton-Hare partition (Largest Remainder)

@@ -14,6 +14,19 @@
 7. `docs/roadmap.md` — Plan de fases
 8. `docs/prompt_para_asistente.md` — Brief para asistentes IA nuevos
 
+## Regla de oro del proyecto
+
+Cada sub-fase cerrada dispara una actualización documental en el MISMO
+bloque de trabajo: `docs/audit_log.md` (entrada consolidada),
+`docs/roadmap.md` (estado), `docs/estado_proyecto.md` (suite real y
+próximo paso), y los documentos de contexto
+(`contexto_para_nueva_sesion`, `prompt_para_asistente`). Nunca se
+aplaza a una sesión aparte. Aplazar la documentación desincroniza los
+documentos de contexto respecto al código real y fuerza
+reconstrucciones costosas al abrir un chat nuevo. Excepciones:
+504/timeout del proveedor de IA (se documenta al volver), o cambio
+trivial de 1 línea consolidado en la entrada de bloque.
+
 ## Estado actual del proyecto
 
 | Fase | Descripción | Estado |
@@ -43,9 +56,12 @@
 | 3.0 | Cierre de zona gris documental + 4 parámetros canónicos | ✅ (04/10/2026) |
 | 3.1.a | TreeNode/TreeModel tuple fields + TreeBuilder.target_class | ✅ (04/10/2026) |
 | 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento | ✅ (integrado en 3.1.a) |
-| 3.1.c | Session.fix_spec + SessionState + bloqueo C&RT/QUEST | ✅ (pasos 1-4.6 cerrados; 4.7 pendiente) |
-| 3.1.d-f | predict_pd 2D + wizard + MetricsPanel | ⏳ Próxima |
-| 3.2 | Ponderación por muestra | ⏳ |
+| 3.1.c | Session.fix_spec + SessionState + bloqueo C&RT/QUEST | ✅ (05/10/2026) |
+| 3.1.d | predict_pd 2D + bloqueos en validation/reporting/stability | ✅ (09/10/2026) |
+| 3.1.e | Wizard multiclase: tabla de clases + warning minoritaria | ✅ (09/10/2026) |
+| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ✅ (09/10/2026) |
+| **3.1** | **Multiclase (fase completa)** | **✅ Cerrada 09/10/2026** |
+| 3.2 | Ponderación por muestra | ⏳ Próxima |
 | 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ |
 | 3.4 | CRT/QUEST multiclase | ⏳ |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ |
@@ -53,7 +69,7 @@
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 221/221 PASSED
+**Suite de tests:** 243/243 PASSED
 
 ## Entorno de desarrollo
 
@@ -86,7 +102,8 @@ WSL (bash):
 - **OpenCode 1.18.35** — **herramienta activa** desde el 09/10/2026.
   Cliente de desarrollo con Kimi K3. Instalación global vía `npm`.
   Autenticación: `opencode auth login` con provider `Moonshot AI`
-  (internacional, endpoint `https://api.moonshot.ai/v1`).
+  (internacional, endpoint `https://api.moonshot.ai/v1`, key propia
+  de Moonshot; sin la capa intermedia de NVIDIA NIM).
   Configuración de proyecto: `opencode.json` en la raíz (versionado).
   Nivel de razonamiento: `high` por defecto (`max` reservado para
   tareas complejas).
@@ -136,6 +153,7 @@ WSL (bash):
 | **Aider no aplica el edit (conversa)** | Con Moonshot, ocasionalmente Aider responde en prosa sin aplicar el cambio. Solución: prompt más directo ("TAREA: ... Aplica AHORA") o edición manual en VS Code con excepción documentada en `audit_log.md`. |
 | **PowerShell muestra mal UTF-8 en consola** | Al verificar archivos con caracteres no-ASCII (`—`, acentos, `§`, `≥`), `git diff` en PowerShell muestra caracteres corruptos aunque el archivo esté bien. Solución: verificar en VS Code, o redirigir el diff a archivo con `Out-File -Encoding utf8` antes de leerlo. |
 | **OpenCode no soporta caché explícita en V1** | El plugin `oc-plugin-caching` requiere un fork; la V1 estándar solo tiene caché implícita vía `setCacheKey: true`. Ver `audit_log.md` 09/10/2026. |
+| **Documentación de cierre aplazada** | Regla de oro desde 09/10/2026: la documentación de cierre de sub-fase se hace en el mismo bloque de trabajo (roadmap + estado_proyecto + contexto + audit_log), nunca en sesión aparte. Excepciones: 504 del proveedor de IA, o cambio trivial de 1 línea consolidado en la entrada de bloque. Ver `docs/roadmap.md` "Recorded architectural decisions: Phase closure documentation: never deferred". |
 
 ## Cómo retomar el trabajo
 
@@ -184,32 +202,34 @@ URL: https://pypi.org/project/treegov/1.0.0a1/
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-## Próximos pasos (Fase 3.1)
+## Próximos pasos (Fase 3.2 — Ponderación por muestra)
 
-**Fase 3.1 — Multiclase (en curso).**
+**Fase 3.1 — Multiclase: ✅ Cerrada 09/10/2026** (6 sub-fases a-f,
+suite 243/243). Ver `docs/roadmap.md` sección "Phase 3.1" para el
+detalle del alcance.
 
-El diseño estructural está completado (`docs/3.1_design_multiclass.md`).
-La implementación está dividida en 6 sub-fases:
+**Fase 3.2 — Ponderación por muestra (próxima).**
 
-| Sub-fase | Alcance | Estado |
+Qué es: soporte de pesos por muestra (frecuencia o importancia) de forma
+transversal al backend, para trabajar con muestras sesgadas de buró
+donde la población se reajusta por pesos en lugar de disponer del
+dataset completo.
+
+Sub-fases previstas (a detallar en el diseño de la fase):
+
+| Sub-fase | Alcance (previsto) | Estado |
 |---|---|---|
-| 3.1.a | `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` | ✅ (04/10/2026) |
-| 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento canónico | ✅ (integrado en 3.1.a) |
-| 3.1.c | `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST | ✅ pasos 1-4.6 (4.7 pendiente) |
-| 3.1.d | `predict_pd` 2D + bloqueos en validation/reporting/stability | ⏳ |
-| 3.1.e | Wizard: selección obligatoria + counts + warning minoritaria | ⏳ |
-| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ⏳ |
-
-**Decisiones clave de Fase 3.1:**
-- `pd_final`, `pd_jeffreys`, `n_events` pasan a `tuple[...]`.
-- Nuevo campo `TreeNode.class_labels`.
-- `target_class` y `class_labels` **obligatorios** en `Session.fix_spec`.
-- Jeffreys multivariante: `(k_c + 0.5) / (n + K * 0.5)`.
-- Reordenamiento canónico: clase de interés siempre en índice 0.
-- Solo CHAID multiclase en 3.1 (C&RT y QUEST en 3.4).
-- Métricas y reportes siguen binarios hasta 3.5.
+| 3.2.a | Diseño estructural (dónde entran los pesos: splitting, impurezas, counts de nodo) | ⏳ |
+| 3.2.b | Motores (CHAID/CRT/QUEST) con counts ponderados | ⏳ |
+| 3.2.c | Session + TreeBuilder transversales | ⏳ |
+| 3.2.d | Métricas y estabilidad ponderadas | ⏳ |
+| 3.2.e | Wizard/GUI + tests E2E | ⏳ |
 
 **Deudas diferidas:**
+- Fixture de tests E2E con señal real (el `_make_csv` actual genera
+  target aleatorio respecto a los predictores; los E2E verifican
+  plumbing, no analítica). Documentado en `docs/roadmap.md` sección
+  "Deferred (no blocking current work)".
 - Fase 2.4.e — screenshot automatizado de la GUI.
 - Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
 

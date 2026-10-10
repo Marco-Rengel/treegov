@@ -40,20 +40,67 @@ doble verificación.
 Los line endings del repo están normalizados vía `.gitattributes`
 (ver commit 7040046). No tocar esa configuración sin motivo documentado.
 
+Cuando una sub-fase cierra (commit pusheado, suite verde), la
+actualización de `docs/audit_log.md`, `docs/roadmap.md`,
+`docs/estado_proyecto.md` y los documentos de contexto se hace EN EL
+MISMO BLOQUE de trabajo, nunca en una sesión aparte. Aplazar la
+documentación desincroniza los documentos de contexto respecto al
+código real y fuerza reconstrucciones costosas al abrir un chat nuevo.
+Excepciones: solo 504/timeout del proveedor de IA (se documenta al
+volver), o cambio trivial de 1 línea consolidado en la entrada de
+bloque. Ver `docs/roadmap.md` sección "Recorded architectural
+decisions: Phase closure documentation: never deferred".
+
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 04/10/2026: 206/206 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 09/10/2026: 243/243 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
 
-## Herramienta de desarrollo: Aider
+## Herramienta de desarrollo: OpenCode
+
+- **Versión:** 1.18.35 (global vía `npm`).
+- **Modelo:** `moonshot/kimi-k3` (Kimi K3).
+- **Autenticación:** `opencode auth login` con provider `Moonshot AI`
+  (internacional, endpoint `https://api.moonshot.ai/v1`). La key es
+  propia de Moonshot, NO se pasa por NVIDIA NIM.
+- **Configuración del proyecto:** `opencode.json` en la raíz
+  (versionado), con `model`, `small_model`, `setCacheKey: true`,
+  `autoupdate: false`, `share: "disabled"`.
+- **Sin variables de entorno:** OpenCode gestiona la key internamente
+  en `~/.local/share/opencode/auth.json`.
+
+**Arranque (Windows PowerShell):**
+
+    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    .\.venv\Scripts\activate
+    opencode
+
+**Reglas para OpenCode en este proyecto:**
+
+- Un prompt = un archivo (por claridad de diffs y auditoría).
+- Prosa sin código literal (recomendado, no obligatorio).
+- Hasta ~150 líneas de prosa por prompt.
+- Cada commit es decisión humana (sin auto-commits).
+- Verificación obligatoria tras cada tarea: `python -m pytest tests -q`,
+  `git status` y `git diff` del archivo tocado.
+
+**Nota histórica:** OpenCode se usó al inicio con NVIDIA NIM (key
+gratuita) y dio problemas de tool calls. Aider lo sustituyó el
+27/09/2026. El 03/10/2026 se migró a Moonshot directo con Aider. El
+09/10/2026 se volvió a OpenCode, ahora con la versión 1.18.35 y key
+propia de Moonshot; con esta combinación (OpenCode 1.18.35 + Moonshot
+directo) los problemas anteriores no se reproducen y el consumo de
+tokens es sustancialmente menor.
+
+### Herramienta de respaldo — Aider 0.86.2
+
+Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
 
 - **Versión:** 0.86.2 (global vía `pipx`, Python 3.11.9).
-- **Modelo:** `moonshot/kimi-k3` (Moonshot AI directo, plataforma
-  internacional).
-- **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).
+- **Modelo:** `moonshot/kimi-k3` (endpoint `https://api.moonshot.ai/v1`).
 - **Configuración local:** `.aider.conf.yml` (no versionado; ver `.gitignore`).
 - **Plantilla versionada:** `.aider.conf.example.yml`.
 - **Metadata de modelos (en el home del usuario):**
@@ -63,7 +110,7 @@ Los line endings del repo están normalizados vía `.gitattributes`
     (`use_temperature: false` y `edit_format: whole` para Kimi K3).
 - **Variable de entorno:** `$env:MOONSHOT_API_KEY`.
 
-**Arranque (Windows PowerShell):**
+**Arranque del respaldo (Windows PowerShell):**
 
     cd "C:\Riesgos - copia\DecisionTree_Modeler"
     .\.venv\Scripts\activate
@@ -71,21 +118,6 @@ Los line endings del repo están normalizados vía `.gitattributes`
     $env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
     Remove-Variable key
     aider <archivo1> <archivo2>
-
-**Reglas para Aider en este proyecto:**
-
-- `auto-commits: false` — cada commit es decisión humana.
-- Un cambio atómico por prompt; revisar el diff antes de aplicarlo.
-- Verificación obligatoria tras cada tarea: `python -m pytest tests -q`,
-  `git status` y `git diff` del archivo tocado.
-- Migrado de OpenCode 1.18.32 el 27/09/2026 y de NVIDIA NIM el 03/10/2026
-  (ver `docs/audit_log.md`).
-- **Reglas de prompts (suavizadas respecto a NIM):**
-  - Un prompt = un archivo (se mantiene por claridad de diffs y auditoría).
-  - Prosa sin código literal (recomendado, no obligatorio).
-  - Hasta ~150 líneas de prosa por prompt (antes ~30-100 con NIM).
-  - Cambios multi-bloque dentro del mismo archivo: permitido.
-  - Si Aider falla 2-3 veces seguidas sobre el mismo archivo (conversa en lugar de aplicar), hacer la edición manual en VS Code y documentar la excepción en el audit_log (regla 29/09/2026).
 
 ## Gobernanza
 
