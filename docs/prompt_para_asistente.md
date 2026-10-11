@@ -59,7 +59,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
 - **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
 - **Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase cierra, la actualización de audit_log + roadmap + estado_proyecto + documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo desincroniza el contexto y cuesta tiempo de reconstrucción en el siguiente chat (esto ya ocurrió en 3.1.d/e). Excepciones: solo 504/timeout del proveedor o cambio trivial de 1 línea consolidado.
-- **Trabajo en ráfaga con el cliente CLI.** La caché de prompt de Moonshot solo funciona si las tareas se hacen con menos de 5 minutos de separación dentro de la misma sesión. Regla operativa: mantener OpenCode abierto durante toda la jornada, no cerrarlo entre tareas, no verificar en PowerShell entre cada tarea. Acumular varias tareas y verificar en bloque al final. Verificado empíricamente: tareas con pausas largas cuestan ~$0.15, tareas inmediatas cuestan ~$0.00.
+- **Trabajo en ráfaga refinado el 10/10/2026.** La regla anterior (no cerrar OpenCode nunca, mantener siempre la misma sesión) se refina a "cerrar en fronteras naturales". Dentro de una sub-fase: OpenCode abierto, los prompts de código, tests y documentación van seguidos. Al cerrar una sub-fase (commit pusheado): cerrar OpenCode; el prefijo vuelve a ser pequeño al reabrir. El cierre documental de una fase se trata como una unidad. Evitar salidas accidentales al copiar un prompt.
 - **Nunca aplazar la documentación de cierre.** Ya estaba en el brief, pero se refuerza: cuando una sub-fase cierra, la actualización de `audit_log` + `roadmap` + `estado_proyecto` + documentos de contexto se hace en el mismo bloque. Si se aplaza, el coste de reconstruir el contexto en el siguiente chat es más alto que hacerlo bien la primera vez.
 
 ---
@@ -147,9 +147,32 @@ fallback carísimo. Verificado el 10/10/2026: el gasto de los días
 
 La caché es automática y solo se activa si el prefijo es idéntico
 entre peticiones y hay menos de 5 minutos entre ellas. Trabajar en
-ráfagas cortas. No reiniciar el cliente entre tareas. Ver
-`docs/contexto_para_nueva_sesion.md` sección "Regla de oro de la caché
-de Moonshot".
+ráfagas cortas dentro de cada sub-fase y cerrar el cliente al cerrar
+la sub-fase. Ver `docs/contexto_para_nueva_sesion.md` sección "Regla
+de oro de la caché de Moonshot (refinada el 10/10/2026)".
+
+Datos del bloque 3.2 (10/10/2026). Coste total: dieciocho dólares
+treinta y cuatro centavos (Model Inference +$7.20, Context Caching
++$8.17). Ratio real de caché en el bloque: cincuenta y tres por
+ciento — no diecinueve; el panel de Moonshot divide sobre acumulados
+históricos que diluyen. Coste por sub-fase: dos dólares veintinueve.
+Coste por prompt: treinta y dos centavos. Con la regla refinada,
+ahorro estimado del treinta por ciento. El input y output frescos no
+se reducen con la regla; se reducen con prompts quirúrgicos y
+respuestas cortas.
+
+Levers por orden de impacto (10/10/2026). Primero: output del modelo
+(quince dólares por millón, cinco veces el input); instruir respuestas
+cortas. Segundo: input fresco (tres dólares por millón); prompts que
+nombran líneas exactas evitan lecturas de archivos enteros. Tercero:
+prefijo cacheado; cierre de OpenCode por sub-fase. Cuarto: TTL de una
+hora (pendiente; requiere plugin custom; ahorro estimado entre uno
+cincuenta y tres dólares).
+
+Pendientes abiertos. Investigar el hueco de dos dólares noventa y
+siete centavos del bloque 3.2 con Export Records. Analizar logs de
+OpenCode del 10/10 por tarea. Evaluar TTL de una hora. Evaluar Kimi
+K2.6 o K2.7-code para tareas simples.
 
 **Herramienta de respaldo — Aider 0.86.2:**
 

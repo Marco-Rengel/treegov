@@ -40,19 +40,33 @@ costaron $0.113, $0.155 y $0.000. Las dos primeras tuvieron pausas
 largas (TTL expirado, caché muerta). La tercera fue inmediata (caché
 activa, coste cero).
 
+**Trabajo en ráfaga, refinado el 10/10/2026.** Dentro de una sub-fase,
+OpenCode abierto: prompts de código, tests y documentación seguidos.
+Al cerrar una sub-fase (commit pusheado): cerrar OpenCode. El cierre
+documental de una fase es una unidad: prompts seguidos sin cerrar.
+Evitar salidas accidentales al copiar. Prompts quirúrgicos con líneas
+exactas. Respuestas cortas: el output cuesta cinco veces el input.
+Presupuesto de referencia: $2.29 por sub-fase (medido en la Fase 3.2).
+Análisis completo en `docs/audit_log.md`, entrada del 10/10/2026
+(tarde).
+
 Reglas operativas derivadas:
 
-- **No cerrar OpenCode entre tareas.** Cada cierre destruye el
-  prefijo y la siguiente tarea paga el contexto completo.
+- **Dentro de una sub-fase: no cerrar OpenCode entre tareas.** Cada
+  cierre destruye el prefijo y la siguiente tarea paga el contexto
+  completo.
+- **Al cerrar una sub-fase (commit pusheado, suite verde): cerrar
+  OpenCode.** Al reabrir, el prefijo vuelve a ser pequeño (~5-15K
+  tokens) y no arrastra contexto de sub-fases anteriores.
 - **No verificar en PowerShell entre tareas.** Solo al final del
-  bloque, cuando ya estén hechas todas las tareas del día.
+  bloque de la sub-fase, cuando ya estén hechas todas sus tareas.
 - **No verificar con `git status` ni `git diff` entre tareas.**
   Acumular y verificar en bloque.
 - **Si hay que hacer una pausa larga (>5 min), asumirlo.** La
   siguiente tarea pagará el prefijo completo. No es un error, es el
   comportamiento esperado.
-- **Tareas en ráfaga**: 4-6 tareas seguidas sin pausa, luego
-  verificación + commit. Repetir.
+- **Tareas en ráfaga**: 4-6 tareas seguidas sin pausa dentro de la
+  sub-fase, luego verificación + commit + cierre del cliente.
 
 ## Comentarios y docs
 
@@ -139,15 +153,15 @@ desincroniza el contexto y cuesta tiempo de reconstrucción en el
 siguiente chat. Excepciones: solo 504/timeout del proveedor o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
 
-**Disciplina de ráfaga en la práctica.** Un bloque de trabajo típico:
-abrir OpenCode, hacer 4-6 tareas seguidas (prompts que el asistente
-estratégico diseña, el agente aplica, no hay verificación intermedia),
-al terminar el bloque ejecutar `git status` + `git diff --stat` +
+**Disciplina de ráfaga en la práctica (refinada 10/10/2026).** Un
+bloque de trabajo típico: abrir OpenCode, hacer las tareas de la
+sub-fase seguidas (prompts que el asistente estratégico diseña, el
+agente aplica, no hay verificación intermedia), al terminar la
+sub-fase ejecutar `git status` + `git diff --stat` +
 `python -m pytest tests -q` en PowerShell, revisar el diff, commit,
-push. Luego si se necesita otra ronda, mantener OpenCode abierto y
-empezar la siguiente ráfaga. La única razón para cerrar y reabrir
-OpenCode es un cambio en `opencode.json` que requiera recarga de
-configuración.
+push, y cerrar OpenCode. La siguiente sub-fase arranca con un cliente
+nuevo y prefijo pequeño. Otras razones para cerrar y reabrir OpenCode:
+un cambio en `opencode.json` que requiera recarga de configuración.
 
 ## Proveedor de IA: Moonshot AI directo (desde 03/10/2026)
 

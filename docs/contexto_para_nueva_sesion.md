@@ -27,24 +27,46 @@ reconstrucciones costosas al abrir un chat nuevo. Excepciones:
 504/timeout del proveedor de IA (se documenta al volver), o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
 
-## Regla de oro de la caché de Moonshot
+## Regla de oro de la caché de Moonshot (refinada el 10/10/2026)
 
-La caché de prompt de Moonshot es automática y no requiere
-configuración en la cuenta. Solo se activa si se cumplen tres
-condiciones simultáneas: (a) el prefijo de la petición es idéntico al
-de la petición anterior (mismo system prompt, mismo repo-map, mismos
-archivos leídos), (b) el prefijo tiene al menos 256 tokens, (c) la
-petición llega dentro del TTL, que por defecto es de 5 minutos.
-Verificado empíricamente el 10/10/2026: tres tareas consecutivas
-costaron $0.113, $0.155 y $0.000. Las dos primeras tuvieron pausas
-largas (>5 min) y expiraron la caché. La tercera fue inmediata y se
-facturó a $0.00. Consecuencia operativa obligatoria: mantener la
-sesión de OpenCode abierta durante toda la jornada y hacer las tareas
-en ráfagas cortas (menos de 5 minutos entre una tarea y la
-siguiente). Si hay que hacer una pausa larga, la siguiente tarea paga
-el prefijo completo. La regla es no verificar en PowerShell entre
-cada tarea, sino acumular varias tareas y verificar en bloque al
-final.
+La caché de prompt de Moonshot es automática. Solo se activa si se
+cumplen tres condiciones: el prefijo de la petición es idéntico al de
+la petición anterior, el prefijo tiene al menos 256 tokens, y la
+petición llega dentro del TTL de cinco minutos por defecto. Verificado
+empíricamente el 10/10/2026: tres tareas consecutivas costaron once
+punto tres, quince punto cinco y cero centavos. Las dos primeras
+tuvieron pausas largas (más de cinco minutos) y expiraron la caché.
+La tercera fue inmediata y se facturó a cero.
+
+Regla operativa refinada el 10/10/2026 (tarde), tras el análisis del
+bloque de la Fase 3.2. La regla anterior ("no cerrar OpenCode nunca,
+mantener siempre la misma sesión") se refina a **"cerrar en fronteras
+naturales"**. Dentro de una sub-fase: mantener OpenCode abierto; los
+prompts de código, tests y documentación de la misma sub-fase van
+seguidos, sin cerrar. Al cerrar una sub-fase (commit pusheado): cerrar
+OpenCode. Al reabrir, el prefijo vuelve a ser pequeño (entre cinco y
+quince mil tokens) y no arrastra el contexto acumulado de sub-fases
+anteriores. El cierre documental de una fase se trata como una unidad:
+los prompts de cierre van seguidos sin cerrar entre ellos. Evitar
+salidas accidentales al copiar un prompt: es la palanca más simple y
+más rentable.
+
+Justificación. El bloque de la Fase 3.2 costó dieciocho dólares
+treinta y cuatro centavos (Model Inference +$7.20, Context Caching
++$8.17). El ratio real de caché en el bloque fue del cincuenta y tres
+por ciento. Bajo la regla anterior, el contexto acumulado crece a
+doscientos mil tokens y cada tarea paga ese prefijo gigante en la
+caché, además del input y output frescos. La regla refinada reduce ese
+prefijo reutilizado, con un ahorro estimado del treinta por ciento.
+El input y output frescos no se reducen con esta regla; requieren
+prompts quirúrgicos que nombran líneas exactas y respuestas cortas,
+ya que el output cuesta cinco veces el input.
+
+Levers por orden de impacto. Primero: output del modelo (quince
+dólares por millón). Segundo: input fresco (tres dólares por millón).
+Tercero: prefijo cacheado. Cuarto: TTL de una hora (pendiente; ahorro
+adicional estimado entre uno cincuenta y tres dólares). Análisis
+completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 
 ## Estado actual del proyecto
 
@@ -184,7 +206,7 @@ WSL (bash):
 | **PowerShell muestra mal UTF-8 en consola** | Al verificar archivos con caracteres no-ASCII (`—`, acentos, `§`, `≥`), `git diff` en PowerShell muestra caracteres corruptos aunque el archivo esté bien. Solución: verificar en VS Code, o redirigir el diff a archivo con `Out-File -Encoding utf8` antes de leerlo. |
 | **OpenCode no soporta caché explícita en V1** | El plugin `oc-plugin-caching` requiere un fork; la V1 estándar solo tiene caché implícita vía `setCacheKey: true`. Ver `audit_log.md` 09/10/2026. |
 | **Documentación de cierre aplazada** | Regla de oro desde 09/10/2026: la documentación de cierre de sub-fase se hace en el mismo bloque de trabajo (roadmap + estado_proyecto + contexto + audit_log), nunca en sesión aparte. Excepciones: 504 del proveedor de IA, o cambio trivial de 1 línea consolidado en la entrada de bloque. Ver `docs/roadmap.md` "Recorded architectural decisions: Phase closure documentation: never deferred". |
-| **Consumo excesivo de tokens en OpenCode/Kimi Code CLI/Aider** | Causa raíz el 10/10/2026: modelo mal escrito (`moonshot` en lugar de `moonshotai`) + plugins fantasma + TTL de caché expirado por pausas largas. Ver `docs/roadmap.md` subsección RESOLVED. Regla: mantener sesión viva, trabajar en ráfagas. |
+| **Consumo excesivo de tokens en OpenCode/Kimi Code CLI/Aider** | Causa raíz el 10/10/2026: modelo mal escrito (`moonshot` en lugar de `moonshotai`) + plugins fantasma + TTL de caché expirado por pausas largas. Ver `docs/roadmap.md` subsección "OpenCode token consumption — learning from Fase 3.2 block". Regla refinada (10/10/2026 tarde): ráfaga dentro de cada sub-fase, cierre del cliente al cerrar la sub-fase; ver "Regla de oro de la caché de Moonshot" más arriba. |
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
 | **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |

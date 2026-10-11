@@ -291,8 +291,10 @@ fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con
 Se difiere porque ningún test depende hoy de que el Gini sea
 significativo.
 
-### ✅ OpenCode token consumption anomaly — RESOLVED (10/10/2026)
+### ✅ OpenCode token consumption — learning from Fase 3.2 block (10/10/2026)
 **Priority: LOW (resolved, no longer blocking).**
+
+Refinamiento del 10/10/2026, tarde. El bloque de trabajo de la Fase 3.2 (seis horas veinte minutos, cincuenta y siete prompts, ocho commits, ciento tres tests nuevos) permitió medir el consumo real con caché operativa. Los datos del panel de Moonshot y el análisis completo están en `docs/audit_log.md` entrada del 10/10/2026 (tarde). Resumen: coste del bloque dieciocho dólares treinta y cuatro centavos; ratio real de caché cincuenta y tres por ciento (no diecinueve); regla refinada de cierre por sub-fase con ráfaga dentro de cada sub-fase. Ahorro estimado de la regla refinada: treinta por ciento del coste. El input y output frescos no se reducen con esta regla; requieren prompts quirúrgicos y respuestas cortas.
 
 **Causa raíz.** El archivo `opencode.json` tenía el modelo escrito como
 `moonshot/kimi-k3` en lugar de `moonshotai/kimi-k3`. OpenCode no
@@ -351,25 +353,18 @@ panel).
 4. Eliminada la opción `provider.moonshot.options.setCacheKey` (no
    funcionaba en V2).
 
-**Reglas operativas derivadas.**
+**Reglas operativas derivadas (versión refinada 10/10/2026, tarde).**
 
-- Antes de arrancar cualquier cliente CLI (OpenCode, Kimi Code, etc.),
-  verificar que el nombre del modelo en la configuración coincide con
-  el nombre exacto que espera el cliente. Un typo produce fallback
-  silencioso a modelos más caros.
-- Evitar arrancar el cliente múltiples veces durante una sesión de
-  trabajo. Cada arranque carga el repo-map completo del proyecto
-  (~50-100K tokens) y genera el título de sesión automáticamente, con
-  coste no despreciable. Preferir mantener una sesión abierta durante
-  toda la sesión de trabajo.
-- Documentar el coste por tarea y comparar con la expectativa. Si una
-  tarea pequeña cuesta >$0.10, hay algo mal (modelo, caché, o
-  configuración).
+- Antes de arrancar cualquier cliente CLI, verificar que el nombre del modelo en la configuración coincide exactamente con el nombre que espera el cliente. Un typo produce fallback silencioso a modelos más caros.
+- Dentro de cada sub-fase: mantener el cliente abierto, ráfaga sin cerrar entre prompts de código, tests y documentación.
+- Al cerrar una sub-fase (commit pusheado): cerrar el cliente. El prefijo vuelve a ser pequeño al reabrir y no arrastra contexto de sub-fases anteriores.
+- El cierre documental de una fase se trata como una unidad: los prompts de documentación de cierre van seguidos sin cerrar entre ellos.
+- Prompts quirúrgicos: nombrar líneas exactas cuando se edita código. Evitar que el agente lea archivos enteros.
+- Instrucciones de respuesta corta: el output del modelo cuesta cinco veces más que el input nuevo.
+- Documentar el coste por sub-fase. Referencia de Fase 3.2: dos dólares veintinueve centavos por sub-fase. Si una sub-fase futura excede tres dólares, diagnosticar.
+- Evaluar modelos más baratos para tareas de bajo razonamiento (documentación, formateo).
 
-**Pendiente (no bloqueante).** Investigar cómo configurar el TTL de la
-caché a 1 hora en OpenCode (actualmente el TTL efectivo es de 5 minutos
-por defecto, lo que penaliza las pausas largas entre tareas). Es una
-limitación conocida pero no bloqueante.
+**Pendientes abiertos.** Investigar el hueco de dos dólares noventa y siete centavos del bloque 3.2 con la pestaña Export Records del panel de Moonshot. Analizar los logs de OpenCode del 10/10 para desglose por tarea. Evaluar el TTL de una hora de caché (requiere plugin custom). Evaluar Kimi K2.6 o K2.7-code para tareas simples.
 
 ## Recorded architectural decisions
 

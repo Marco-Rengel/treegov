@@ -51,16 +51,20 @@ volver), o cambio trivial de 1 línea consolidado en la entrada de
 bloque. Ver `docs/roadmap.md` sección "Recorded architectural
 decisions: Phase closure documentation: never deferred".
 
-**Regla de ráfaga.** La caché de prompt de Moonshot solo se activa si
-el prefijo entre peticiones es idéntico y han pasado menos de 5
-minutos desde la anterior. Trabajar en ráfagas cortas: varias tareas
-seguidas sin pausas largas, luego verificar todo junto en PowerShell,
-luego commit. No cerrar OpenCode entre tareas. No verificar en PS
-entre cada tarea. Verificado empíricamente el 10/10/2026: tareas con
-pausa >5 min cuestan ~$0.15, tareas inmediatas cuestan ~$0.00. Ver
-`docs/audit_log.md` entrada del 10/10/2026 y
-`docs/contexto_para_nueva_sesion.md` sección "Regla de oro de la caché
-de Moonshot".
+**Regla de ráfaga (refinada el 10/10/2026).** Dentro de una sub-fase:
+OpenCode abierto, los prompts de código, tests y documentación van
+seguidos, sin cerrar el cliente. Al cerrar una sub-fase (commit
+pusheado y suite verde): cerrar OpenCode. Al reabrir, el prefijo
+vuelve a ser pequeño (entre cinco y quince mil tokens) y no arrastra
+el contexto acumulado de sub-fases anteriores. El cierre documental
+de una fase se trata como una unidad: los prompts de documentación
+van seguidos sin cerrar entre ellos. Evitar salidas accidentales al
+copiar un prompt. Prompts quirúrgicos: nombrar líneas exactas cuando
+se edita código. Instrucciones de respuesta corta: el output del
+modelo cuesta cinco veces más que el input nuevo. Presupuesto por
+sub-fase de referencia: $2.29 (medido en la Fase 3.2). Si una
+sub-fase futura excede $3, diagnosticar. Análisis completo en
+`docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 
 ## Entorno
 

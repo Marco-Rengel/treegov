@@ -3192,3 +3192,79 @@ El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement
 **Referencias**: `docs/design_decisions.md` §13.6 a §13.10, `docs/methodology.md` §8.5bis, `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 (tarde) — Análisis de consumo de tokens del bloque Fase 3.2 (10/10/2026)
+
+**Estado**: ✅ Aprobado. Lección operativa registrada. Regla refinada adoptada.
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+**Revisor**: Marco Rengel.
+**Artefactos**: ninguno de código. Solo documentación (esta entrada más los 5 documentos actualizados con la regla refinada).
+
+**Motivación**: Cerrar la Fase 3.2 con un análisis cuantitativo del consumo de tokens del bloque, corregir una lectura previa del panel de Moonshot que sobreestimaba el ahorro de la caché, y registrar una regla operativa refinada.
+
+**Datos del panel de Moonshot**:
+
+- **Snapshot inicio (14:49 del 10/10/2026)**: Available Balance $30.30. Today's Consumption $1.15. Model Inference acumulado $28.12. Context Caching acumulado $0.06.
+- **Snapshot fin (21:20 del 10/10/2026)**: Available Balance $11.95537. Today's Consumption $19.49361. Model Inference acumulado $35.32. Context Caching acumulado $8.23.
+
+**Reconciliación del bloque**:
+
+- Δ Model Inference: +$7.20.
+- Δ Context Caching: +$8.17.
+- Suma de productos (MI + CC): $15.37.
+- Coste real del bloque (por balance y por Today's Consumption): $18.34.
+- Hueco sin atribuir: $2.97. A investigar en el próximo chat con la pestaña Export Records del panel.
+
+**Ratio real de caché en el bloque**:
+
+Cálculo correcto: CC / (MI + CC) usando los **deltas del bloque**, no los acumulados: 8.17 / 15.37 = **53.2%**.
+
+Corrección importante: el panel de Moonshot muestra un ratio del 19% porque divide sobre los acumulados históricos, que incluyen $28.12 de Model Inference de días anteriores cuando la caché no funcionaba. Ese cálculo diluye el ratio. El ratio real del 10/10, primer día con caché operativa, es 53%, no 19%. La mejora respecto a los días malos (03-09/10, CC del 0.2%) es de un factor ~250×, no 100×.
+
+**Descomposición del coste del bloque**:
+
+- Prefijo cacheado reutilizado (Context Caching): $8.17 (53% del coste de productos).
+- Contenido nuevo — input fresco + output (Model Inference): $7.20 (47% restante).
+
+**Corrección a la estimación previa de ahorro**:
+
+La propuesta inicial de cerrar OpenCode por sub-fase estimaba una bajada del coste por jornada de $18 a $2-4. La estimación era optimista porque asumía que casi todo el gasto viene del prefijo cacheado. Los datos del bloque lo contradicen: el 47% del coste es input fresco + output, y ese componente no se reduce cerrando OpenCode. Recálculo: con la regla refinada, el coste del bloque bajaría de $18.34 a ~$13 (un 30%). No a $2-4.
+
+**Levers reales (por orden de impacto)**:
+
+1. **Output del modelo.** Kimi K3 cobra $15/M tokens de salida, 5× el input. Un prompt con respuesta mediana (500-1000 tokens) cuesta $0.008-0.015 solo en salida. La instrucción de responder en 2-3 líneas reduce este coste directamente.
+2. **Input fresco.** Leer un archivo entero antes de editar cuesta $3/M tokens por todos sus tokens. Prompts que nombran líneas exactas evitan que el agente lea archivos completos.
+3. **Prefijo cacheado.** Cerrar OpenCode al final de cada sub-fase reduce el prefijo reutilizado en las siguientes sub-fases. Ahorro estimado: 30% del coste total del bloque.
+4. **TTL de la caché (5 min → 1 h).** Ahorro adicional estimado $1.50-3/jornada, si se implementa. Requiere plugin custom o parche local.
+
+**Regla operativa refinada**:
+
+La regla anterior ("no cerrar OpenCode nunca, mantener siempre la misma sesión") se refina a **"cerrar en fronteras naturales"**:
+
+- **Dentro de una sub-fase**: mantener OpenCode abierto. Los prompts de código, tests y documentación de la misma sub-fase van seguidos, sin cerrar.
+- **Al cerrar una sub-fase (commit pusheado)**: cerrar OpenCode. Al reabrir, el prefijo vuelve a ser pequeño (~5-15K tokens) y no se arrastra el contexto acumulado de las sub-fases anteriores.
+- **El cierre documental de una fase se trata como una unidad**: los 7-8 prompts de cierre documental de una fase van seguidos, sin cerrar entre ellos.
+- **Evitar salidas accidentales** al copiar un prompt: es la palanca más simple y más rentable. Dos incidentes en este bloque costaron $0.20-0.30 en reaperturas en frío.
+
+Sobre el bloque 3.2 en concreto: hubo ~8 reaperturas no planificadas de OpenCode. 4 por copiar mal el prompt, 1 por pausa larga (~4 h), varias por verificación en PowerShell entre prompts. Cada reapertura destruye la caché y la siguiente tarea paga el prefijo completo. Sobrecoste estimado: $0.80-1.20.
+
+**Recomendaciones operativas**:
+
+1. **Prompts quirúrgicos.** Decir siempre al agente qué líneas exactas tocar, no "abre el archivo y mira". Reduce el input fresco.
+2. **Bundling inteligente.** Ráfaga dentro de cada sub-fase. Cierre en la frontera entre sub-fases.
+3. **Verificación agrupada.** Verificar al final de cada sub-fase (código, tests, docs en bloque), no después de cada prompt de código.
+4. **Presupuesto por fase.** Fijar un techo de gasto por sub-fase. Referencia: la Fase 3.2 gastó $2.29/sub-fase, $0.32/prompt. Si una sub-fase futura excede $3, parar y diagnosticar.
+5. **Modelo distinto para tareas simples.** Kimi K3 cobra $3/M input y $15/M output. Para documentación, ediciones triviales y formateo, evaluar Kimi K2.6 o K2.7-code, de menor coste.
+
+**Pendientes abiertos**:
+
+- Investigar el hueco de $2.97 con la pestaña Export Records del panel de Moonshot (CSV por request).
+- Analizar los logs de OpenCode del 10/10 para desglose por tarea.
+- Evaluar el TTL de 1 hora (requiere plugin custom).
+- Evaluar Kimi K2.6 o K2.7-code para tareas simples.
+
+**Tests**: 346/346 PASSED (sin cambios en código).
+
+**Referencias**: `docs/roadmap.md` (subsección OpenCode token consumption), `docs/contexto_para_nueva_sesion.md` (Regla de oro refinada), `docs/prompt_para_asistente.md` (sección 6), `AGENTS.md` y `CONVENTIONS.md` (Trabajo en ráfaga refinado).
+
+---
