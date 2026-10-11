@@ -435,6 +435,7 @@ class MainWindow(QMainWindow):
         wiz = ModelWizard(
             columns, types,
             target_provider=lambda col: self._session.describe_target(col),
+            weight_validator=self._weight_validator,
             parent=self,
         )
         wiz.finished_with_config.connect(self._on_wizard_finished)
@@ -562,12 +563,26 @@ class MainWindow(QMainWindow):
                 )
             )
 
+    def _weight_validator(self, col: str) -> bool:
+        """True si la columna de pesos es utilizable (existe, todos sus
+        valores son finitos, estrictamente positivos y sin NaN).
+        False en cualquier otro caso."""
+        if self._session is None:
+            return False
+        info = self._session.describe_weight_column(col)
+        return bool(
+            info["exists"] is True
+            and info["n_nonpositive"] == 0
+            and info["n_nan"] == 0
+        )
+
     def _train_pipeline(self, cfg: dict) -> None:
         self._session.fix_spec(
             cfg["target"],
             predictors=cfg["predictors"],
             target_class=cfg["target_class"],
             class_labels=cfg["class_labels"],
+            weight_col=cfg["weight_col"],
         )
         self._session.partition(cfg["train_frac"], cfg["seed"])
         self._session.train(

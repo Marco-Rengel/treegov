@@ -119,6 +119,13 @@ class PredictorsPage(QWizardPage):
     CHAID mirror rule (backend contract, chaid_engine.py): CHAID engines
     reject CONTINUOUS predictors, so [CONT] items are disabled here when a
     CHAID engine was selected in Step 1.
+
+    Phase 3.2.h: weight-column combo. Mirror rule: the column chosen as
+    weight column disappears from the available predictor list (and is
+    moved back if deselected). A non-blocking amber warning is shown when
+    the chosen column has invalid values (zero, negative or missing);
+    validity is delegated to the optional `weight_validator` callback
+    (clean-room: the wizard never touches the DataFrame).
     """
 
     def __init__(
@@ -127,6 +134,7 @@ class PredictorsPage(QWizardPage):
         types: dict[str, str],
         *,
         target_provider: Callable[[str], dict] | None = None,
+        weight_validator: Callable[[str], bool] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -135,6 +143,7 @@ class PredictorsPage(QWizardPage):
         self._columns = columns
         self._types = types
         self._target_provider = target_provider
+        self._weight_validator = weight_validator
 
         layout = QVBoxLayout(self)
 
@@ -147,6 +156,28 @@ class PredictorsPage(QWizardPage):
         target_row.addWidget(self._lbl_target)
         target_row.addWidget(self._combo_target, 1)
         layout.addLayout(target_row)
+
+        # --- Phase 3.2.h: weight column row (debajo del target) ---
+        weight_row = QHBoxLayout()
+        self._lbl_weight = QLabel()
+        self._combo_weight = QComboBox()
+        self._combo_weight.setObjectName("comboWeight")
+        self._combo_weight.addItem("", userData=None)  # retraducido
+        for col in columns:
+            self._combo_weight.addItem(col, userData=col)
+        weight_row.addWidget(self._lbl_weight)
+        weight_row.addWidget(self._combo_weight, 1)
+        layout.addLayout(weight_row)
+
+        self._lbl_weight_warning = QLabel()
+        self._lbl_weight_warning.setObjectName("lblWeightWarning")
+        self._lbl_weight_warning.setWordWrap(True)
+        self._lbl_weight_warning.setVisible(False)
+        layout.addWidget(self._lbl_weight_warning)
+
+        self._lbl_weight_hint = QLabel()
+        self._lbl_weight_hint.setWordWrap(True)
+        layout.addWidget(self._lbl_weight_hint)
 
         self._group_class = QGroupBox()
         self._group_class.setObjectName("groupClassOfInterest")
@@ -222,13 +253,19 @@ class PredictorsPage(QWizardPage):
         self._btn_add_all.clicked.connect(lambda: self._move(False, True))
         self._btn_remove_all.clicked.connect(lambda: self._move(True, True))
         self._combo_target.currentIndexChanged.connect(self._on_target_change)
+        self._combo_weight.currentIndexChanged.connect(self._on_weight_change)
 
-        self._on_target_change(0)  # initial fill of the available list
+        self._on_weight_change(0)  # incluye el fill inicial de disponibles
 
     # --- data access -----------------------------------------------------
 
     def target(self) -> str:
         return str(self._combo_target.currentData())
+
+    def weight_col(self) -> str | None:
+        """Columna de pesos seleccionada, o None (Phase 3.2.h)."""
+        data = self._combo_weight.currentData()
+        return None if data is None else str(data)
 
     def selected_predictors(self) -> list[str]:
         return [
@@ -271,22 +308,58 @@ class PredictorsPage(QWizardPage):
 
     def _on_target_change(self, _index: int) -> None:
         target = self.target()
+        weight = self.weight_col()
         # if the new target was selected as predictor, move it back first
         for i in range(self._lst_selected.count() - 1, -1, -1):
             item = self._lst_selected.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == target:
                 self._lst_selected.takeItem(i)
                 self._lst_available.addItem(item)
-        # available = columns - target - selected (order of self._columns)
+        # available = columns - target - selected - weight_col
         in_selected = set(self.selected_predictors())
         self._lst_available.clear()
         for col in self._columns:
-            if col == target or col in in_selected:
+            if col == target or col == weight or col in in_selected:
                 continue
             disabled = self._is_chaid() and self._types[col] == "CONTINUOUS"
             self._lst_available.addItem(self._make_item(col, not disabled))
         self._refresh_class_table()
         self.completeChanged.emit()
+
+    def _on_weight_change(self, _index: int) -> None:
+        """Regla espejo (3.2.h): la columna de pesos sale de predictores."""
+        weight = self.weight_col()
+        if weight is not None:
+            # Si era predictor seleccionado, devolverla a disponibles antes
+            # de recomputar (el filtro de _on_target_change la excluye).
+            for i in range(self._lst_selected.count() - 1, -1, -1):
+                item = self._lst_selected.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == weight:
+                    self._lst_selected.takeItem(i)
+                    self._lst_available.addItem(item)
+        self._on_target_change(self._combo_target.currentIndex())
+        self._validate_weight_column()
+        self.completeChanged.emit()
+
+    def _validate_weight_column(self) -> bool:
+        """Aviso ambar NO bloqueante si la columna tiene valores invalidos.
+
+        Sin callback `weight_validator` la columna se asume valida (sala
+        limpia: el wizard no toca el DataFrame; MainWindow inyecta la
+        validacion contra el dataset real).
+        """
+        weight = self.weight_col()
+        if weight is None:
+            self._lbl_weight_warning.setVisible(False)
+            return True
+        valido = True
+        if self._weight_validator is not None:
+            try:
+                valido = bool(self._weight_validator(weight))
+            except (ValueError, RuntimeError, KeyError):
+                valido = False
+        self._lbl_weight_warning.setVisible(not valido)
+        return valido
 
     def _refresh_class_table(self) -> None:
         """Repobla la tabla de clases desde el target_provider.
@@ -449,6 +522,10 @@ class PredictorsPage(QWizardPage):
             tr("step2_class_col_interest"),
         ])
         self._lbl_warning.setText(tr("step2_class_warning_majority"))
+        self._lbl_weight.setText(tr("wizard_weight_label"))
+        self._combo_weight.setItemText(0, tr("wizard_weight_none"))
+        self._lbl_weight_warning.setText(tr("wizard_weight_warning"))
+        self._lbl_weight_hint.setText(tr("wizard_weight_hint"))
 
 
 # ---------------------------------------------------------------------------
@@ -684,6 +761,7 @@ class ModelWizard(QWizard):
         types: dict[str, str],
         *,
         target_provider: Callable[[str], dict] | None = None,
+        weight_validator: Callable[[str], bool] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -694,7 +772,8 @@ class ModelWizard(QWizard):
 
         self.page_engine = EnginePage(self)
         self.page_predictors = PredictorsPage(
-            columns, types, target_provider=target_provider, parent=self
+            columns, types, target_provider=target_provider,
+            weight_validator=weight_validator, parent=self
         )
         self.page_validation = ValidationPage(self)
         self.page_governance = GovernancePage(self)
@@ -719,6 +798,7 @@ class ModelWizard(QWizard):
             "predictors": self.page_predictors.selected_predictors(),
             "target_class": self.page_predictors.target_class(),
             "class_labels": self.page_predictors.class_labels(),
+            "weight_col": self.page_predictors.weight_col(),
             "train_frac": self.page_validation.train_frac(),
             "seed": self.page_validation.seed(),
             "max_depth": self.page_governance.max_depth(),

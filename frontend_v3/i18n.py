@@ -98,6 +98,17 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_class_warning_majority": (
             "Warning: the selected class of interest is the majority class."
         ),
+        # --- Phase 3.2.h: sample weighting in wizard ---
+        "wizard_weight_label": "Weight column:",
+        "wizard_weight_none": "(no weights)",
+        "wizard_weight_warning": (
+            "Warning: the selected column has zero, negative or missing "
+            "values. All weights must be strictly positive and non-null."
+        ),
+        "wizard_weight_hint": (
+            "Sample weights adjust the model to the target population. "
+            "Rows with zero weight should be excluded before loading."
+        ),
         "step3_title": "Step 3 — Validation scheme",
         "step3_subtitle": "Stratified holdout partition (Hamilton-Hare).",
         "step3_scheme_label": "Scheme",
@@ -340,6 +351,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_class_col_interest": "Interés",
         "step2_class_warning_majority": (
             "Aviso: la clase de interés seleccionada es la clase mayoritaria."
+        ),
+        # --- Phase 3.2.h: sample weighting in wizard ---
+        "wizard_weight_label": "Columna de pesos:",
+        "wizard_weight_none": "(sin pesos)",
+        "wizard_weight_warning": (
+            "Aviso: la columna seleccionada tiene valores cero, negativos "
+            "o faltantes. Todos los pesos deben ser estrictamente positivos "
+            "y sin nulos."
+        ),
+        "wizard_weight_hint": (
+            "Los pesos por muestra ajustan el modelo a la población "
+            "objetivo. Las filas con peso cero deben excluirse antes de "
+            "cargar."
         ),
         "step3_title": "Paso 3 — Esquema de validación",
         "step3_subtitle": "Partición holdout estratificada (Hamilton-Hare).",

@@ -71,6 +71,7 @@ def _cfg() -> dict:
         "predictors": ["edad", "seg", "ratio"],
         "target_class": 1,
         "class_labels": {0: "Non-event", 1: "Event"},
+        "weight_col": None,
         "train_frac": 0.7,
         "seed": 42,
         "max_depth": 3,
@@ -244,6 +245,63 @@ def test_e2e_inversion_recovery_full_flow():
         finally:
             w.close()
             w.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# 3.2.h - Ponderación por muestra
+# ---------------------------------------------------------------------------
+
+
+def test_e2e_weighted_full_flow():
+    """Flujo completo con weight_col: _train_pipeline lo propaga a fix_spec
+    y el fingerprint registra el modo de ponderación."""
+    with tempfile.TemporaryDirectory() as td:
+        rng = np.random.default_rng(42)
+        n = 300
+        edad = rng.integers(20, 60, size=n)
+        df = pd.DataFrame({
+            "edad": edad,
+            "seg": rng.choice(["a", "b", "c"], size=n),
+            "ratio": rng.uniform(0.1, 0.9, size=n),
+            "peso": np.where(edad >= 40, 1.5, 1.0),
+            "default": (rng.integers(20, 60, size=n) >= 40).astype(int),
+        })
+        csv = Path(td) / "mini_w.csv"
+        df.to_csv(csv, index=False)
+
+        cfg_base = {
+            "engine": "CRT",
+            "target": "default",
+            "predictors": ["edad", "seg", "ratio"],
+            "target_class": 1,
+            "class_labels": {0: "Non-event", 1: "Event"},
+            "train_frac": 0.7,
+            "seed": 42,
+            "max_depth": 3,
+            "min_child_size": 20,
+            "governance_mode": "BANKING",
+            "apply_jeffreys": True,
+            "pd_floor": 0.0003,
+        }
+
+        w0 = _open_window(csv)
+        try:
+            w0._train_pipeline({**cfg_base, "weight_col": None})
+            fp0 = w0._session.state.tree.params_fingerprint
+        finally:
+            w0.close()
+            w0.deleteLater()
+
+        w1 = _open_window(csv)
+        try:
+            w1._train_pipeline({**cfg_base, "weight_col": "peso"})
+            tree1 = w1._session.state.tree
+            assert tree1 is not None
+            assert w1._session._w_col == "peso"
+            assert tree1.params_fingerprint != fp0
+        finally:
+            w1.close()
+            w1.deleteLater()
 
 
 # ---------------------------------------------------------------------------

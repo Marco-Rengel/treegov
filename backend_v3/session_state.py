@@ -213,6 +213,46 @@ class Session:
         ordenado = sorted(vc.items(), key=lambda kv: kv[0])
         return {k: int(v) for k, v in ordenado}
 
+    def describe_weight_column(self, col: str) -> dict:
+        """Diagnostico de una columna candidata a pesos (lectura pura,
+        sin transicion de estado).
+
+        Pensado para GUI/MCP (Fase 3.2.h): permite al wizard mostrar el
+        aviso ambar de columna de pesos invalida sin exponer el
+        DataFrame ni pandas. Replica los criterios de fix_spec (valores
+        finitos, estrictamente positivos, sin NaN) en modo solo-lectura.
+
+        Returns:
+            dict con claves:
+                "exists" (bool): la columna esta en el dataset.
+                "n" (int): nº de filas (0 si la columna no existe).
+                "n_nonpositive" (int): nº de valores <= 0 o no finitos.
+                "n_nan" (int): nº de valores NaN.
+
+        Raises:
+            RuntimeError: sin dataset cargado.
+        """
+        if self._df is None:
+            raise RuntimeError(
+                "[session] describe_weight_column sin dataset cargado"
+            )
+        if col not in self._df.columns:
+            return {"exists": False, "n": 0, "n_nonpositive": 0, "n_nan": 0}
+        serie = self._df[col]
+        n_nan = int(serie.isna().sum())
+        if pd.api.types.is_numeric_dtype(serie):
+            vals = serie.dropna().to_numpy(dtype=float)
+            n_nonpositive = int((~(vals > 0)).sum())
+        else:
+            # no numerica: todo valor no-NaN es invalido como peso
+            n_nonpositive = int(serie.notna().sum())
+        return {
+            "exists": True,
+            "n": int(len(serie)),
+            "n_nonpositive": n_nonpositive,
+            "n_nan": n_nan,
+        }
+
     def _routed_partition(self, partition: str) -> tuple[Any, Any, str]:
         """Resolve a partition name to its cached (X, y) and unseen policy.
 
@@ -808,7 +848,9 @@ class Session:
             oot_source="external-file",
         )
 
-    def evaluate_oot(self, *, n_groups: int = 10) -> SessionState:
+    def evaluate_oot(
+        self, *, n_groups: int = 10, weight_oot: bool = True
+    ) -> SessionState:
         """OOT_LOADED -> OOT_EVALUATED: metricas OOT + Gini Drop + PSI/CSI.
 
         unseen_policy="exclude" (transparencia MRM): las filas no enrutables
@@ -817,6 +859,11 @@ class Session:
         Fase 3.2.g: si la sesion es ponderada, propaga pesos a las metricas:
         `_w_oot[validas]` para el computo OOT, `_w_train` para el Gini de
         train y `_w_test` para el gini_oos al vuelo.
+
+        Fase 3.2.h: `weight_oot` (default True) controla si la cohorte OOT
+        usa sus propios pesos en PSI/CSI (convencion por defecto: cada
+        cohorte con sus pesos, diseno v2 §5.3 B4 opcion 1). Con
+        `weight_oot=False`, el OOT usa pesos uniformes en PSI/CSI.
         """
         self._require(FlowState.OOT_LOADED, "evaluate_oot")
         st_check = self._state
@@ -907,8 +954,10 @@ class Session:
         )
 
         monitor = StabilityMonitor(logger=get_logger("stability"))
+        w_actual = self._w_oot if (weight_oot and self._w_oot is not None) else None
         psi, csi = monitor.report(
-            model, self._X_train, self._X_oot, asign_tr, asign_oot, spec_d
+            model, self._X_train, self._X_oot, asign_tr, asign_oot, spec_d,
+            weights_train=self._w_train, weights_actual=w_actual,
         )
 
         reporte = OOTReport(
@@ -916,13 +965,18 @@ class Session:
             n_oot=int(st.n_oot or 0), n_excluded=n_exc,
         )
         narrativa = "OOT" if st.temporal_verified else "OOS-no-verificado"
+        evento = (
+            f"evaluate_oot:{narrativa}|n={n_val}|excluidas={n_exc}"
+            f"|drop_oot={'nan' if drop_oot is None else format(drop_oot, '.4g')}"
+            f"|psi={psi.psi:.4g}({psi.flag})"
+        )
+        if self._w_col is not None:
+            evento += f"|weighted=true,weight_col={self._w_col}"
+            if not weight_oot:
+                evento += "|weight_oot=false"
         return self._commit(
             FlowState.OOT_EVALUATED,
-            evento=(
-                f"evaluate_oot:{narrativa}|n={n_val}|excluidas={n_exc}"
-                f"|drop_oot={'nan' if drop_oot is None else format(drop_oot, '.4g')}"
-                f"|psi={psi.psi:.4g}({psi.flag})"
-            ),
+            evento=evento,
             oot_report=reporte,
         )
 

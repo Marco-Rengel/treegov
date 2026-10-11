@@ -1133,6 +1133,60 @@ def test_weighted_session_g_get_classification_matrix_propagates_weights():
         assert not math.isclose(suma_w, float(dto["n_total"]), rel_tol=1e-12)
 
 
+# ---------------------------------------------------------------------------
+# 3.2.h - Ponderacion por muestra
+# ---------------------------------------------------------------------------
+
+
+def test_weighted_session_h_evaluate_oot_with_weights():
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        csv_path = _csv_weighted(td_path)
+        oot_w, oot_0 = _oot_pair(td_path)
+        s_w = _session_trained(csv_path, weighted=True)
+        s_w.load_oot(str(oot_w))
+        st_w = s_w.evaluate_oot()  # weight_oot=True (default)
+        assert st_w.oot_report is not None
+        assert "weighted=true,weight_col=" in st_w.event_log[-1]
+        s_0 = _session_trained(csv_path, weighted=False)
+        s_0.load_oot(str(oot_0))
+        st_0 = s_0.evaluate_oot()
+        assert st_0.oot_report is not None
+        # Las metricas del modelo ponderado difieren de las del no ponderado
+        assert st_w.oot_report.metrics != st_0.oot_report.metrics
+
+
+def test_weighted_session_h_weight_oot_false_uses_uniform_oot_weights():
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        csv_path = _csv_weighted(td_path)
+        # OOT que cae en AMBAS hojas (edad 30-49 cruza el corte ~40), con
+        # pesos dependientes de la hoja: el PSI ponderado difiere del
+        # uniforme (con _oot_pair todo cae en una hoja y el PSI no
+        # cambiaria).
+        edad = np.arange(30, 50)
+        seg = np.tile(["a", "b"], 10)
+        y = (edad >= 40).astype(int)
+        peso = np.where(edad >= 40, 3.0, 1.0)
+        oot_w = td_path / "oot_h.csv"
+        pd.DataFrame(
+            {"edad": edad, "seg": seg, "peso": peso, "default": y}
+        ).to_csv(oot_w, index=False)
+        s_t = _session_trained(csv_path, weighted=True)
+        s_t.load_oot(str(oot_w))
+        st_t = s_t.evaluate_oot(weight_oot=True)
+        s_f = _session_trained(csv_path, weighted=True)
+        s_f.load_oot(str(oot_w))
+        st_f = s_f.evaluate_oot(weight_oot=False)
+        assert "weight_oot=false" in st_f.event_log[-1]
+        assert "weight_oot=false" not in st_t.event_log[-1]
+        # El PSI difiere: con weight_oot=True el OOT pesa con sus propios
+        # pesos; con False usa pesos uniformes (mide solo drift del modelo)
+        assert not math.isclose(
+            st_t.oot_report.psi.psi, st_f.oot_report.psi.psi, rel_tol=1e-12
+        )
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

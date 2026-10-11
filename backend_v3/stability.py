@@ -22,6 +22,12 @@ el primer y ultimo decil absorben valores fuera del rango de train).
 Categorias nominales: las observadas en train; las nuevas en OOT se agrupan
 en <OTHER> con p_expected = eps (la novedad se registra con ese rango).
 
+Extension ponderada (Fase 3.2.h): leaf_psi, covariate_csi y report aceptan
+pesos por fila. Convencion (diseno v2 §5.3 B4, opcion 1, default): cada
+cohorte usa SUS PROPIOS pesos para representar su propia poblacion — la
+distribucion de cada cohorte es la suma de pesos por bin, no el conteo de
+filas. Con pesos None, comportamiento identico al pre-3.2.
+
 Citas:
   Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing
     Intelligent Credit Scoring. Wiley. (PSI/CSI como herramienta de
@@ -60,6 +66,34 @@ __all__ = [
 ]
 
 _EPS_DEFAULT: float = 1e-4
+
+
+def _validated_weights(
+    weights: np.ndarray | None, n: int, who: str
+) -> np.ndarray | None:
+    """Valida un vector de pesos opcional (Fase 3.2.h); None pasa tal cual.
+
+    Exige: 1D, longitud == n, finito, estrictamente positivo. Devuelve el
+    array en float64 o None.
+    """
+    if weights is None:
+        return None
+    w = np.asarray(weights, dtype=float)
+    if w.ndim != 1:
+        raise ValueError(f"[stability] {who}: weights debe ser 1D")
+    if len(w) != n:
+        raise ValueError(
+            f"[stability] {who}: weights longitud {len(w)} != {n}"
+        )
+    if not np.isfinite(w).all():
+        raise ValueError(
+            f"[stability] {who}: weights contiene valores no finitos"
+        )
+    if not (w > 0).all():
+        raise ValueError(
+            f"[stability] {who}: weights deben ser estrictamente positivos"
+        )
+    return w
 
 
 def traffic_light(value: float) -> str:
@@ -217,24 +251,53 @@ class StabilityMonitor:
         model: TreeModel,
         leaf_counts_train: np.ndarray,
         leaf_assign_oot: np.ndarray,
+        *,
+        leaf_weights_train: np.ndarray | None = None,
+        weights_oot: np.ndarray | None = None,
     ) -> PSIReport:
         """PSI sobre la distribucion de hojas del arbol.
 
         leaf_counts_train: tamanios de las hojas en train (orden node_id).
         leaf_assign_oot: node_id de hoja por fila OOT; -1 = no asignable
         (va a un bin extra "<UNSEEN>" con p_expected=eps).
+
+        Fase 3.2.h (ponderacion): convencion "cada cohorte con sus propios
+        pesos" (diseno v2 §5.3 B4, opcion 1). Con `leaf_weights_train`,
+        p_exp = masa ponderada por hoja / masa total train. Con
+        `weights_oot`, los conteos por hoja pasan a ser sumas de pesos OOT
+        (el bin <UNSEEN> acumula la suma de pesos de las filas no
+        asignables). Con ambos None, comportamiento identico al pre-3.2.
         """
+        w_tr = _validated_weights(
+            leaf_weights_train, len(leaf_counts_train), "leaf_psi/train"
+        )
+        w_oot = _validated_weights(
+            weights_oot, len(leaf_assign_oot), "leaf_psi/oot"
+        )
         hojas = [nd for nd in model.nodes if nd.is_leaf]
         leaf_ids = [nd.node_id for nd in hojas]
-        n_train = int(leaf_counts_train.sum())
-        p_exp = leaf_counts_train.astype(float) / n_train
+        if w_tr is None:
+            n_train = int(leaf_counts_train.sum())
+            p_exp = leaf_counts_train.astype(float) / n_train
+        else:
+            p_exp = w_tr / w_tr.sum()
 
         n_oot_total = int(leaf_assign_oot.size)
-        asignadas = leaf_assign_oot[leaf_assign_oot >= 0]
+        mask_ok = leaf_assign_oot >= 0
+        asignadas = leaf_assign_oot[mask_ok]
         counts = np.zeros(len(hojas), dtype=float)
-        for i, nid in enumerate(leaf_ids):
-            counts[i] = float((asignadas == nid).sum())
-        n_excluidas = n_oot_total - int(asignadas.size)
+        if w_oot is None:
+            for i, nid in enumerate(leaf_ids):
+                counts[i] = float((asignadas == nid).sum())
+            n_excluidas = n_oot_total - int(asignadas.size)
+            masa_excluidas = float(n_excluidas)
+            total_act = float(n_oot_total)
+        else:
+            for i, nid in enumerate(leaf_ids):
+                counts[i] = float(w_oot[mask_ok][asignadas == nid].sum())
+            n_excluidas = n_oot_total - int(asignadas.size)
+            masa_excluidas = float(w_oot[~mask_ok].sum())
+            total_act = float(w_oot.sum())
 
         etiquetas = [f"leaf_{nid}" for nid in leaf_ids]
         if n_excluidas > 0:
@@ -244,8 +307,8 @@ class StabilityMonitor:
             )
             etiquetas.append("<UNSEEN>")
             p_exp = np.concatenate([p_exp, [0.0]])
-            counts = np.concatenate([counts, [float(n_excluidas)]])
-        p_act = counts / max(n_oot_total, 1)
+            counts = np.concatenate([counts, [masa_excluidas]])
+        p_act = counts / max(total_act, 1)
 
         psi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
         per_bin = tuple(
@@ -267,6 +330,9 @@ class StabilityMonitor:
         X_actual: pd.DataFrame,
         predictor: str,
         ptype: PredictorType,
+        *,
+        weights_train: np.ndarray | None = None,
+        weights_actual: np.ndarray | None = None,
     ) -> CSIReport:
         """CSI por covariable (train = referencia).
 
@@ -274,6 +340,12 @@ class StabilityMonitor:
         (primer y ultimo bin abiertos: -inf / +inf absorven desbordes).
         Nominal u ordinal simbolico: categorias observadas en train;
         las nuevas en OOT se agrupan en <OTHER> con p_expected=eps.
+
+        Fase 3.2.h (ponderacion): convencion "cada cohorte con sus propios
+        pesos". La asignacion a bins NO cambia; los conteos por bin pasan
+        a ser sumas de pesos cuando hay pesos (el bin <OTHER> acumula la
+        suma de pesos de las filas con categoria nueva). Con ambos None,
+        comportamiento identico al pre-3.2.
         """
         x_tr = X_train[predictor]
         x_ac = X_actual[predictor]
@@ -281,6 +353,8 @@ class StabilityMonitor:
         n_ac = int(len(x_ac))
         if n_tr == 0 or n_ac == 0:
             raise ValueError(f"[stability] CSI {predictor!r}: columna vacia")
+        w_tr = _validated_weights(weights_train, n_tr, f"csi/{predictor}/train")
+        w_ac = _validated_weights(weights_actual, n_ac, f"csi/{predictor}/actual")
 
         if ptype in (PredictorType.CONTINUOUS, PredictorType.ORDINAL) and \
                 pd.api.types.is_numeric_dtype(x_tr):
@@ -292,27 +366,49 @@ class StabilityMonitor:
             etiquetas = [f"D{i}" for i in range(len(bordes) - 1)]
             bins_tr = np.digitize(x_tr.to_numpy(dtype=float), bordes[1:-1])
             bins_ac = np.digitize(x_ac.to_numpy(dtype=float), bordes[1:-1])
-            p_exp = np.array(
-                [float((bins_tr == i).sum()) for i in range(len(etiquetas))],
-                dtype=float,
-            ) / n_tr
-            p_act = np.array(
-                [float((bins_ac == i).sum()) for i in range(len(etiquetas))],
-                dtype=float,
-            ) / n_ac
+            if w_tr is None:
+                p_exp = np.array(
+                    [float((bins_tr == i).sum()) for i in range(len(etiquetas))],
+                    dtype=float,
+                ) / n_tr
+            else:
+                p_exp = np.array(
+                    [float(w_tr[bins_tr == i].sum()) for i in range(len(etiquetas))],
+                    dtype=float,
+                ) / w_tr.sum()
+            if w_ac is None:
+                p_act = np.array(
+                    [float((bins_ac == i).sum()) for i in range(len(etiquetas))],
+                    dtype=float,
+                ) / n_ac
+            else:
+                p_act = np.array(
+                    [float(w_ac[bins_ac == i].sum()) for i in range(len(etiquetas))],
+                    dtype=float,
+                ) / w_ac.sum()
         else:
             clases_tr = list(dict.fromkeys(x_tr.dropna().tolist()))
-            p_exp = np.array(
-                [float((x_tr == c).sum()) for c in clases_tr], dtype=float
-            ) / n_tr
+            if w_tr is None:
+                p_exp = np.array(
+                    [float((x_tr == c).sum()) for c in clases_tr], dtype=float
+                ) / n_tr
+            else:
+                p_exp = np.array(
+                    [float(w_tr[(x_tr == c).to_numpy()].sum()) for c in clases_tr],
+                    dtype=float,
+                ) / w_tr.sum()
             p_act_parts = []
             # numpy puro (booleano): evita el dtype mixto Series |= ndarray
             visto = np.zeros(len(x_ac), dtype=bool)
             for c in clases_tr:
                 m = (x_ac == c).to_numpy()
-                p_act_parts.append(float(m.sum()))
+                if w_ac is None:
+                    p_act_parts.append(float(m.sum()))
+                else:
+                    p_act_parts.append(float(w_ac[m].sum()))
                 visto |= m
-            p_act = np.array(p_act_parts, dtype=float) / n_ac
+            total_act = float(n_ac) if w_ac is None else float(w_ac.sum())
+            p_act = np.array(p_act_parts, dtype=float) / total_act
             etiquetas = [str(c) for c in clases_tr]
             n_otros = int((~visto).sum())
             if n_otros > 0:
@@ -322,7 +418,11 @@ class StabilityMonitor:
                 )
                 etiquetas.append("<OTHER>")
                 p_exp = np.concatenate([p_exp, [0.0]])
-                p_act = np.concatenate([p_act, [n_otros / n_ac]])
+                if w_ac is None:
+                    masa_otros = float(n_otros)
+                else:
+                    masa_otros = float(w_ac[~visto].sum())
+                p_act = np.concatenate([p_act, [masa_otros / total_act]])
 
         csi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
         per_bin = tuple(
@@ -342,16 +442,44 @@ class StabilityMonitor:
         leaf_assign_train: np.ndarray,
         leaf_assign_actual: np.ndarray,
         spec: dict[str, PredictorType],
+        *,
+        weights_train: np.ndarray | None = None,
+        weights_actual: np.ndarray | None = None,
     ) -> tuple[PSIReport, tuple[CSIReport, ...]]:
-        """PSI de hojas + CSI de todas las covariables."""
+        """PSI de hojas + CSI de todas las covariables.
+
+        Fase 3.2.h: con `weights_train`/`weights_actual`, propaga la
+        ponderacion a leaf_psi (calculando la masa por hoja de train
+        internamente) y a cada covariate_csi. Convencion: cada cohorte
+        usa sus propios pesos.
+        """
+        w_tr = _validated_weights(
+            weights_train, len(leaf_assign_train), "report/train"
+        )
+        w_ac = _validated_weights(
+            weights_actual, len(leaf_assign_actual), "report/actual"
+        )
         hojas = [nd for nd in model.nodes if nd.is_leaf]
         leaf_ids = [nd.node_id for nd in hojas]
         counts = np.array(
             [float((leaf_assign_train == nid).sum()) for nid in leaf_ids]
         )
-        psi = self.leaf_psi(model, counts, leaf_assign_actual)
+        if w_tr is None:
+            leaf_weights_train = None
+        else:
+            leaf_weights_train = np.array(
+                [float(w_tr[leaf_assign_train == nid].sum()) for nid in leaf_ids]
+            )
+        psi = self.leaf_psi(
+            model, counts, leaf_assign_actual,
+            leaf_weights_train=leaf_weights_train,
+            weights_oot=w_ac,
+        )
         csi = tuple(
-            self.covariate_csi(X_train, X_actual, name, ptype)
+            self.covariate_csi(
+                X_train, X_actual, name, ptype,
+                weights_train=w_tr, weights_actual=w_ac,
+            )
             for name, ptype in spec.items()
         )
         return psi, csi

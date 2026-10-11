@@ -70,6 +70,7 @@ def _cfg() -> dict:
         "predictors": ["edad", "seg", "ratio"],
         "target_class": 1,
         "class_labels": {0: "Non-event", 1: "Event"},
+        "weight_col": None,
         "train_frac": 0.7,
         "seed": 42,
         "max_depth": 3,

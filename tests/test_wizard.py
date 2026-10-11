@@ -233,7 +233,7 @@ def test_wizard_finish_emits_config():
     assert set(cfg) == {
         "engine", "target", "predictors", "target_class", "class_labels",
         "train_frac", "seed", "max_depth", "min_child_size",
-        "governance_mode", "apply_jeffreys", "pd_floor",
+        "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
     }
     assert cfg["engine"] == "CRT"
     assert cfg["target"] == "default"
@@ -245,6 +245,7 @@ def test_wizard_finish_emits_config():
     assert cfg["max_depth"] == 4 and cfg["min_child_size"] == 50
     assert cfg["governance_mode"] == "BANKING"
     assert cfg["apply_jeffreys"] is True and cfg["pd_floor"] == 0.0003
+    assert cfg["weight_col"] is None  # default del wizard: sin pesos
 
 
 def test_wizard_research_mode_disables_governance():
@@ -336,6 +337,7 @@ def test_mainwindow_wizard_config_trains():
             "predictors": ["edad", "seg"],
             "target_class": 1,
             "class_labels": {0: "Non-event", 1: "Event"},
+            "weight_col": None,
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
             "governance_mode": "BANKING",
@@ -416,6 +418,85 @@ def test_wizard_minority_warning_shown():
     # warning.
     page._class_rows[0]["radio"].setChecked(True)
     assert page._lbl_warning.isHidden() is True
+    wiz.close()
+    wiz.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# 3.2.h - Ponderación por muestra
+# ---------------------------------------------------------------------------
+
+_COLS_W = _COLS + ("peso",)
+_TYPES_W = {**_TYPES, "peso": "CONTINUOUS"}
+
+
+def _available_cols(page) -> list:
+    return [
+        page._lst_available.item(i).data(_USER)
+        for i in range(page._lst_available.count())
+    ]
+
+
+def test_wizard_weight_combo_default_is_none():
+    wiz = ModelWizard(_COLS_W, _TYPES_W)
+    page = wiz.page_predictors
+    assert page.weight_col() is None
+    # La primera opción del combo es la de "sin pesos" (userData=None)
+    assert page._combo_weight.itemData(0) is None
+    assert page._combo_weight.currentIndex() == 0
+    # El resto de opciones son las columnas del dataset
+    assert page._combo_weight.count() == 1 + len(_COLS_W)
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_weight_mirror_rule():
+    wiz = ModelWizard(_COLS_W, _TYPES_W)
+    page = wiz.page_predictors
+    assert "ingreso" in _available_cols(page)
+    idx = page._combo_weight.findData("ingreso")
+    assert idx > 0
+    page._combo_weight.setCurrentIndex(idx)
+    assert page.weight_col() == "ingreso"
+    # Regla espejo: la columna de pesos sale de predictores disponibles
+    assert "ingreso" not in _available_cols(page)
+    # Volver a "(sin pesos)": la columna reaparece
+    page._combo_weight.setCurrentIndex(0)
+    assert page.weight_col() is None
+    assert "ingreso" in _available_cols(page)
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_weight_in_current_config():
+    wiz = ModelWizard(_COLS_W, _TYPES_W)
+    page = wiz.page_predictors
+    cfg0 = wiz.current_config()
+    assert "weight_col" in cfg0
+    assert cfg0["weight_col"] is None
+    idx = page._combo_weight.findData("peso")
+    page._combo_weight.setCurrentIndex(idx)
+    cfg1 = wiz.current_config()
+    assert cfg1["weight_col"] == "peso"
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_weight_warning_when_validator_returns_false():
+    wiz = ModelWizard(
+        _COLS_W, _TYPES_W,
+        weight_validator=lambda col: col != "peso",
+    )
+    page = wiz.page_predictors
+    assert page._lbl_weight_warning.isHidden() is True
+    idx = page._combo_weight.findData("peso")
+    page._combo_weight.setCurrentIndex(idx)
+    # El validador rechaza "peso": aviso ámbar visible (isHidden == False)
+    assert page._lbl_weight_warning.isHidden() is False
+    # Columna válida: el aviso se oculta
+    idx_ok = page._combo_weight.findData("ingreso")
+    page._combo_weight.setCurrentIndex(idx_ok)
+    assert page._lbl_weight_warning.isHidden() is True
     wiz.close()
     wiz.deleteLater()
 
