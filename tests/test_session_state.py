@@ -1517,6 +1517,69 @@ def test_describe_population_column_does_not_mutate_state():
         assert before is after
 
 
+def test_get_oos_oot_report_renames_n_excluded_to_n_excluded_routing():
+    """Fase 3.3.c: el DTO plano del OOT expone n_excluded_routing, no
+    n_excluded. Y añade n_excluded_population + population_breakdown."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_population(tmp)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        edad = np.arange(60, 80)
+        seg = np.tile(["a", "b"], 10)
+        y = np.array([0] * 4 + [1] * 16, dtype=int)
+        pop = np.array(["OK"] * 8 + ["INDET"] * 7 + ["INSUF"] * 5)
+        df_oot = pd.DataFrame(
+            {"edad": edad, "seg": seg, "pop": pop, "default": y}
+        )
+        oot_path = tmp / "oot_pop.csv"
+        df_oot.to_csv(oot_path, index=False)
+        s.load_oot(str(oot_path))
+        s.evaluate_oot()
+        dto = s.get_oos_oot_report()
+        assert dto is not None
+        oot = dto["oot"]
+        assert "n_excluded_routing" in oot
+        assert "n_excluded" not in oot
+        assert oot["n_excluded_population"] == 12
+        assert oot["population_breakdown"] == (("INDET", 7), ("INSUF", 5))
+
+
+def test_get_oos_oot_report_includes_population_counts():
+    """Fase 3.3.c: cuando el filtro de poblacion esta declarado, el DTO
+    siempre expone los dos contadores y el breakdown, aunque el OOT no
+    tenga filas excluidas."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_population(tmp)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK", "INDET", "INSUF"))
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        edad = np.arange(60, 80)
+        seg = np.tile(["a", "b"], 10)
+        y = np.array([0] * 4 + [1] * 16, dtype=int)
+        pop = np.full(20, "OK")
+        df_oot = pd.DataFrame(
+            {"edad": edad, "seg": seg, "pop": pop, "default": y}
+        )
+        oot_path = tmp / "oot_all_ok.csv"
+        df_oot.to_csv(oot_path, index=False)
+        s.load_oot(str(oot_path))
+        s.evaluate_oot()
+        dto = s.get_oos_oot_report()
+        assert dto is not None
+        oot = dto["oot"]
+        assert oot["n_excluded_population"] == 0
+        assert oot["population_breakdown"] == ()
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

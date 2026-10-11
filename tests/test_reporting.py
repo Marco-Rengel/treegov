@@ -159,7 +159,7 @@ def test_with_oot_only() -> None:
     assert dto["oos"] is None
     assert dto["oot"] is not None
     assert dto["oot"]["n_oot"] == 200
-    assert dto["oot"]["n_excluded"] == 0
+    assert dto["oot"]["n_excluded_routing"] == 0
 
 
 def test_with_all_filled() -> None:

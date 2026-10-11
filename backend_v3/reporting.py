@@ -47,12 +47,30 @@ __all__ = [
 
 
 def build_oos_oot_report(st: SessionState) -> dict[str, Any] | None:
-    """Devuelve None si no hay modelo; si no, DTO con claves 'oos'/'oot' (None o asdict)."""
+    """Devuelve None si no hay modelo; si no, DTO con claves 'oos'/'oot'.
+
+    Fase 3.3.c: el sub-dict 'oot' ahora distingue los dos tipos de
+    exclusion posibles en la cohorte OOT:
+      - 'n_excluded_routing' (antes 'n_excluded'): filas que no se
+        pudieron enrutar por el arbol (categorias no vistas en train).
+      - 'n_excluded_population': filas excluidas por la columna de
+        poblacion declarada en fix_spec.
+    Tambien expone 'population_breakdown', el desglose por valor no-OK
+    de esas filas excluidas por poblacion.
+    """
     if st.tree is None:
         return None
+    oot_dto: dict[str, Any] | None = None
+    if st.oot_report is not None:
+        oot_dto = asdict(st.oot_report)
+        # Fase 3.3.c: rename n_excluded -> n_excluded_routing
+        oot_dto["n_excluded_routing"] = oot_dto.pop("n_excluded")
+        # Fase 3.3.c: contadores de filtro de poblacion
+        oot_dto["n_excluded_population"] = st.n_excluded_population_oot
+        oot_dto["population_breakdown"] = st.population_breakdown_oot
     return {
         "oos": None if st.oos_metrics is None else asdict(st.oos_metrics),
-        "oot": None if st.oot_report is None else asdict(st.oot_report),
+        "oot": oot_dto,
     }
 
 
