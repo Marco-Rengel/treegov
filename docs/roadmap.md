@@ -291,10 +291,21 @@ fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con
 Se difiere porque ningún test depende hoy de que el Gini sea
 significativo.
 
+### ⏳ PyPI refresh: publish 1.0.0a2
+**Priority: MEDIUM (deferred, target: after Phase 3.3 closes)**
+
+The PyPI page for treegov 1.0.0a1 still shows the README frozen at the
+03/10/2026 publication: 199/199 tests and the pre-reframing regulatory
+notice. The repo README already reflects 346/346 and the opt-in
+governance framing. To update PyPI, publish 1.0.0a2: bump version in
+pyproject.toml and frontend_v3/__init__.py, rebuild, twine check, twine
+upload, verify with a clean install in an isolated venv. Target: after
+Phase 3.3 closes, before Phase 3.4 starts. Not a blocker for 3.3.a.
+
 ### ✅ OpenCode token consumption — learning from Fase 3.2 block (10/10/2026)
 **Priority: LOW (resolved, no longer blocking).**
 
-Refinamiento del 10/10/2026, tarde. El bloque de trabajo de la Fase 3.2 (seis horas veinte minutos, cincuenta y siete prompts, ocho commits, ciento tres tests nuevos) permitió medir el consumo real con caché operativa. Los datos del panel de Moonshot y el análisis completo están en `docs/audit_log.md` entrada del 10/10/2026 (tarde). Resumen: coste del bloque dieciocho dólares treinta y cuatro centavos; ratio real de caché cincuenta y tres por ciento (no diecinueve); regla refinada de cierre por sub-fase con ráfaga dentro de cada sub-fase. Ahorro estimado de la regla refinada: treinta por ciento del coste. El input y output frescos no se reducen con esta regla; requieren prompts quirúrgicos y respuestas cortas.
+Refinamiento del 11/10/2026. El análisis del bloque de la Fase 3.2 (10/10/2026) se completa con las métricas del Caching Overview y el Product Bill de la consola de Moonshot, capturadas el 11/10/2026. Dos lecturas correctas que miden cosas distintas: (a) 93.8 por ciento de los tokens de input vienen de caché (métrica operativamente relevante: mide eficiencia del prefijo cacheado); (b) el peso del Context Caching sobre el coste total del bloque fue 53 por ciento (métrica de coste: mide cuánto del gasto se fue en la capa de caché). La primera es la que importa para decidir política operativa: el caché está prácticamente al techo, y reducir el tamaño del prefijo ya no aporta ahorro significativo. El desglose por producto del rango 04/10 a 10/10 (Beijing) muestra la estructura real del coste: completion (output) 55 por ciento del total, Cache Write 5m 24 por ciento, auto-caching (read) 19 por ciento, Cache Write 1h 1 por ciento, prompt (input fresco) 0.4 por ciento. Los tres levers reales, en orden de impacto: (1) respuestas cortas del modelo, porque el output cuesta cinco veces el input; (2) prompts quirúrgicos que eviten lecturas de archivos enteros, porque el input fresco, aunque barato, se acumula; (3) no romper el TTL de 5 minutos dentro de una sub-fase, porque cada expiración paga write premium. El tier de caché de 1 hora ya está operando sin plugin custom (0.48 USD facturados en el rango). Pendiente diferido: analizar los logs de OpenCode del 10/10 para desglose por tarea con la pestaña Export Records, y evaluar Kimi K2.6 o K2.7-code para tareas simples.
 
 **Causa raíz.** El archivo `opencode.json` tenía el modelo escrito como
 `moonshot/kimi-k3` en lugar de `moonshotai/kimi-k3`. OpenCode no
