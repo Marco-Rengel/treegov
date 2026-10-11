@@ -29,6 +29,9 @@
   deterministic Reingold-Tilford layout, idempotent zoom (Ctrl + +/-),
   exclusive node selection, live retranslation, theme recolor.
   - Test suite: 158/158.
+- ✅ **Phase 3.2** (sample weighting): weights transversal al backend
+  (statistics, motores, tree_builder, session, validation, reporting,
+  stability, wizard). 346/346 PASSED.
 
 ## Upcoming phases
 
@@ -193,7 +196,7 @@ y no-crédito (biología, ciencias sociales).
 |---|---|---|
 | 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada 04/10/2026 |
 | 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
-| 3.2 | Ponderación por muestra (transversal al backend) | Alta |
+| 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
 | 3.3 | Categorías Indet / Insufficient / No Perf | Alta |
 | 3.4 | CRT y QUEST multiclase | Media |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
@@ -211,8 +214,10 @@ y no-crédito (biología, ciencias sociales).
 | 3.2.d | QUEST con Stage 1 + QDA ponderados | ✅ 10/10/2026 |
 | 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ✅ 10/10/2026 |
 | 3.2.f | Session (fix_spec + partition + train + reset) | ✅ 10/10/2026 |
-| 3.2.g | validation y reporting ponderados | ⏳ |
-| 3.2.h | stability ponderado + wizard + E2E + cierre | ⏳ |
+| 3.2.g | validation y reporting ponderados | ✅ 10/10/2026 |
+| 3.2.h | stability ponderado + wizard + E2E + cierre | ✅ 10/10/2026 |
+
+**Cierre de la Fase 3.2.** Las 8 sub-fases (a-h) quedan cerradas el 10/10/2026. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard. Invariante C1: sin pesos, comportamiento idéntico al pre-3.2. Tres parámetros nuevos en el fingerprint: weighted, weight_col, min_child_weight. Tres decisiones diferidas registradas en design_decisions.md §13.7 (KS/AUC/Gini del gains table sin ponderar), §13.8 (HL escala con la masa), §13.9 (nombre del parámetro weight_oot). Suite: 346/346 PASSED.
 
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado

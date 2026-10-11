@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 09/10/2026
+**Fecha de última actualización:** 10/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -191,10 +191,29 @@ binarios hasta Fase 3.5. Invariante no negociable: para K=2 con
 target_class=1 y labels estándar, el modelo es numéricamente idéntico
 al pre-3.1.
 
+### Fase 3.2 — Ponderación por muestra ✅ Cerrada 10/10/2026
+
+**Alcance**: ponderación por muestra transversal al backend (motores,
+árbol, sesión, métricas, reportes, monitoreo y wizard). Invariante C1:
+sin pesos, comportamiento idéntico al pre-3.2.
+
+**Sub-fases** (8, todas cerradas el 10/10/2026):
+- 3.2.a — statistics.py ponderado (f_oneway, brown_forsythe) ✅
+- 3.2.b — CHAID con conteos ponderados (χ²/F + merging + Cochran) ✅
+- 3.2.c — C&RT con Gini/varianza ponderada + surrogates ✅
+- 3.2.d — QUEST con Stage 1 + QDA ponderados ✅
+- 3.2.e — TreeBuilder (weights + min_child_weight + fingerprint) ✅
+- 3.2.f — Session (fix_spec + partition + train + reset) ✅
+- 3.2.g — validation y reporting ponderados ✅
+- 3.2.h — stability ponderado + wizard + E2E + cierre ✅
+
+Tres parámetros nuevos en el fingerprint: `weighted`, `weight_col`,
+`min_child_weight`. Tres decisiones diferidas en `design_decisions.md`
+(§13.7, §13.8, §13.9). Suite: 346/346.
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3.2** — Ponderación por muestra (transversal al backend)
 - **Fase 3.3** — Categorías Indet / Insufficient / No Perf
 - **Fase 3.4** — CRT y QUEST multiclase
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación)
@@ -223,7 +242,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (243 tests)
+├── tests/ # Suite de tests (346 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -329,29 +348,29 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 | Módulo | Tests |
 |---|---|
-| statistics.py | 13 |
-| chaid_engine.py | 19 |
-| crt_engine.py | 15 |
-| quest_engine.py | 17 |
+| statistics.py | 28 |
+| chaid_engine.py | 26 |
+| crt_engine.py | 27 |
+| quest_engine.py | 30 |
 | imputation.py | 5 |
-| splitting.py | 4 |
+| splitting.py | 11 |
 | profiling.py | 3 |
-| tree_builder.py | 20 |
-| session_state.py | 44 |
-| validation.py | 11 |
+| tree_builder.py | 32 |
+| session_state.py | 59 |
+| validation.py | 17 |
 | pruning.py | 6 |
-| stability.py | 13 |
-| reporting.py | 12 |
+| stability.py | 18 |
+| reporting.py | 18 |
 | gui_smoke (frontend) | 9 |
-| wizard (frontend) | 12 |
+| wizard (frontend) | 16 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
-| e2e_mainwindow (frontend) | 6 |
+| e2e_mainwindow (frontend) | 7 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **243** |
+| **Total** | **346** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 243/243 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 346/346 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -397,7 +416,8 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Fase 2.4** — Reportes + integración. Completada el 03/10/2026.
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
-- [ ] **Fase 3.2** — Ponderación por muestra (transversal al backend). **Próximo paso.**
+- [x] **Fase 3.2** — Ponderación por muestra: Cerrada 10/10/2026 (8 sub-fases a-h, suite 346/346).
+- [ ] **Fase 3.3** — Categorías Indet / Insufficient / No Perf. **Próximo paso.**
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
@@ -462,9 +482,10 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 3. Primer mensaje sugerido al agente:
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
-> 3.0 y 3.1 (multiclase) cerradas. Suite 243/243. Próximo paso: Fase 3.2
-> (ponderación por muestra) con OpenCode 1.18.35 + Kimi K3 vía Moonshot
-> AI directo (key propia)."
+> 3.0, 3.1 (multiclase) y 3.2 (ponderación por muestra) cerradas. Suite
+> 346/346. Próximo paso: Fase 3.3 (categorías Indet / Insufficient /
+> No Perf) con OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
+> (key propia)."
 
 ---
 

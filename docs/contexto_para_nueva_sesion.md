@@ -80,15 +80,15 @@ final.
 | 3.1.e | Wizard multiclase: tabla de clases + warning minoritaria | ✅ (09/10/2026) |
 | 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ✅ (09/10/2026) |
 | **3.1** | **Multiclase (fase completa)** | **✅ Cerrada 09/10/2026** |
-| 3.2 | Ponderación por muestra | ⏳ Próxima |
-| 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ |
+| **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada 10/10/2026** |
+| 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ Próxima |
 | 3.4 | CRT/QUEST multiclase | ⏳ |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 243/243 PASSED
+**Suite de tests:** 346/346 PASSED
 
 ## Entorno de desarrollo
 
@@ -186,6 +186,8 @@ WSL (bash):
 | **Documentación de cierre aplazada** | Regla de oro desde 09/10/2026: la documentación de cierre de sub-fase se hace en el mismo bloque de trabajo (roadmap + estado_proyecto + contexto + audit_log), nunca en sesión aparte. Excepciones: 504 del proveedor de IA, o cambio trivial de 1 línea consolidado en la entrada de bloque. Ver `docs/roadmap.md` "Recorded architectural decisions: Phase closure documentation: never deferred". |
 | **Consumo excesivo de tokens en OpenCode/Kimi Code CLI/Aider** | Causa raíz el 10/10/2026: modelo mal escrito (`moonshot` en lugar de `moonshotai`) + plugins fantasma + TTL de caché expirado por pausas largas. Ver `docs/roadmap.md` subsección RESOLVED. Regla: mantener sesión viva, trabajar en ráfagas. |
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
+| **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
+| **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
 
 ## Cómo retomar el trabajo
 
@@ -234,28 +236,21 @@ URL: https://pypi.org/project/treegov/1.0.0a1/
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-## Próximos pasos (Fase 3.2 — Ponderación por muestra)
+## Próximos pasos (Fase 3.3 — Categorías Indet / Insufficient / No Perf)
 
-**Fase 3.1 — Multiclase: ✅ Cerrada 09/10/2026** (6 sub-fases a-f,
-suite 243/243). Ver `docs/roadmap.md` sección "Phase 3.1" para el
+**Fase 3.2 — Ponderación por muestra: Cerrada 10/10/2026.** 8 sub-fases
+(a-h). Invariante C1: sin pesos, comportamiento idéntico al pre-3.2.
+Suite 346/346. Ver `docs/roadmap.md` sección "Desglose de la Fase 3.2"
+y `docs/audit_log.md` entradas del 10/10/2026 (3.2.a a 3.2.h) para el
 detalle del alcance.
 
-**Fase 3.2 — Ponderación por muestra (próxima).**
+**Fase 3.3 — Categorías Indet / Insufficient / No Perf (próxima).**
 
-Qué es: soporte de pesos por muestra (frecuencia o importancia) de forma
-transversal al backend, para trabajar con muestras sesgadas de buró
-donde la población se reajusta por pesos en lugar de disponer del
-dataset completo.
-
-Sub-fases previstas (a detallar en el diseño de la fase):
-
-| Sub-fase | Alcance (previsto) | Estado |
-|---|---|---|
-| 3.2.a | Diseño estructural (dónde entran los pesos: splitting, impurezas, counts de nodo) | ⏳ |
-| 3.2.b | Motores (CHAID/CRT/QUEST) con counts ponderados | ⏳ |
-| 3.2.c | Session + TreeBuilder transversales | ⏳ |
-| 3.2.d | Métricas y estabilidad ponderadas | ⏳ |
-| 3.2.e | Wizard/GUI + tests E2E | ⏳ |
+Qué es: categorías especiales en los predictores para valores
+indeterminados, insuficientes o sin performance, con tratamiento
+explícito en los motores y gobernanza en el wizard. Alcance a detallar
+en el diseño de la fase (ver `docs/roadmap.md`, tabla principal de
+Fase 3).
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

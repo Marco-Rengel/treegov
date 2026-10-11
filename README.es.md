@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 243/243 passing
+**Suite de tests**: 346/346 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier despliegue en producción requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -164,8 +164,8 @@ TreeGov/
 | **2.4** | Reportes + integración | Completada |
 | **3.0** | Cierre documental + parámetros canónicos configurables | Completada |
 | **3.1** | Multiclase (target + wizard + alertas en MetricsPanel) | ✅ Completada 09/10/2026 |
-| **3.2** | Ponderación por muestra | En progreso |
-| **3.3** | Categorías Indet / Insufficient / No Perf | Planificada |
+| **3.2** | Ponderación por muestra | ✅ Completada 10/10/2026 |
+| **3.3** | Categorías Indet / Insufficient / No Perf | Planificada (siguiente) |
 | **3.4** | Soporte multiclase en C&RT y QUEST | Planificada |
 | **3.5** | Reportes adaptados para multiclase y ponderación | Planificada |
 | **3.6** | Validación con datasets públicos | Planificada |
@@ -176,7 +176,7 @@ TreeGov/
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 243/243 passing.**
+**Suite de tests: 346/346 passing.**
 
 ---
 

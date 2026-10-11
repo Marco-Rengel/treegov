@@ -3126,3 +3126,69 @@ El agreement entre dos asignaciones binarias no se pondera. Motivo: el agreement
 - `docs/roadmap.md` (tabla 3.2).
 
 ---
+
+### 10/10/2026 — Fase 3.2.g: ponderación en validation, reporting y propagación desde Session
+
+**Estado**: ✅ Cerrada.
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+**Revisor**: Marco Rengel.
+**Artefactos**: `backend_v3/validation.py`, `backend_v3/reporting.py`, `backend_v3/session_state.py`, `tests/test_validation.py`, `tests/test_reporting.py`, `tests/test_session_state.py`.
+
+**Motivación**: Séptima sub-fase de la Fase 3.2. Extiende `compute_oos_metrics`, `build_gains_table` y `build_classification_matrix` para aceptar `weights` keyword-only, y conecta desde `Session.evaluate_oos/evaluate_oot/get_gains_table/get_classification_matrix` con las cachés `_w_train`/`_w_test`/`_w_oot` ya pobladas desde 3.2.f.
+
+**Cambios aplicados**:
+
+- `validation.compute_oos_metrics` gana `weights`. AUC por fórmula directa de pares con medio crédito en empates, equivalente al mid-rank cuando los pesos son uniformes. KS por acumuladas ponderadas. HL por grupos con masa `N_g_w`, `O_g_w`, `π_g_w`. Brier/BSS ponderados. PR-AUC escalonado ponderado.
+- `reporting.GainsRow` gana 11 campos `w_*` al final (`w_n`, `w_good`, `w_bad`, `w_bad_rate`, `w_n_cum`, `w_bad_cum`, `w_bad_rate_cum`, `w_lift_cum`, `w_n_decum`, `w_bad_decum`, `w_bad_rate_decum`). `GainsTableResult` gana `w_total`, `w_bad`, `w_bad_rate_global`. `ClassificationMatrix` gana 8 campos `w_*`.
+- `reporting.build_gains_table` y `build_classification_matrix` aceptan `weights`. Con `None`, los `w_*` coinciden EXACTAMENTE con sus contrapartes de conteo.
+- `Session.evaluate_oos` propaga `_w_test`; `evaluate_oot` propaga `_w_oot[validas]` (OOT), `_w_train` (Gini train) y `_w_test` (gini_oos al vuelo); `get_gains_table` y `get_classification_matrix` propagan el vector de pesos de la partición vía helper nuevo `_partition_weights`.
+
+**Hallazgos**:
+
+1. **HL escala linealmente con Σw** (mismo patrón que χ² ponderado de 3.2.b). El test `test_weighted_validation_scale_invariance` se ajustó a consagrar el escalado, no la invarianza. Documentado en `design_decisions.md` §13.8.
+2. **KS/AUC/Gini del GainsTableResult quedan sin ponderar** en 3.2.g. Decisión diferida explícita: tocar `_discrimination_metrics` duplicaría la lógica ya ponderada en `validation.py`. Documentado en `design_decisions.md` §13.7.
+
+**Tests**: 16 tests nuevos (6 en validation, 6 en reporting, 4 en session_state). Suite completa en ese momento: 334/334.
+
+**Referencias**: `docs/design_decisions.md` §13.7, §13.8, `docs/methodology.md` §8.5bis.
+
+---
+
+### 10/10/2026 — Fase 3.2.h: ponderación en stability, wizard y cierre de fase 3.2
+
+**Estado**: ✅ Cerrada. Fase 3.2 completa.
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+**Revisor**: Marco Rengel.
+**Artefactos**: `backend_v3/stability.py`, `backend_v3/session_state.py`, `frontend_v3/wizard.py`, `frontend_v3/main_window.py`, `frontend_v3/i18n.py`, y los tests `test_stability.py`, `test_session_state.py`, `test_wizard.py`, `test_e2e_mainwindow.py`.
+
+**Motivación**: Octava y última sub-fase de 3.2. Conecta la ponderación hasta el monitoreo OOT (PSI de hojas y CSI por covariable), extiende el wizard para permitir elegir la columna de pesos con regla espejo, añade el aviso ámbar si la columna tiene valores inválidos, y propaga `weight_col` desde `_train_pipeline` a `fix_spec`.
+
+**Cambios aplicados**:
+
+- `stability.leaf_psi`, `covariate_csi` y `report` ganan pesos. Función auxiliar privada `_validated_weights` reutilizable. Convención por defecto (diseño v2 §5.3 B4 opción 1): cada cohorte con sus propios pesos.
+- `Session.evaluate_oot` gana `weight_oot: bool = True` (keyword-only). True = OOT con sus pesos; False = OOT con pesos uniformes.
+- `Session.describe_weight_column(col)` — lectura pura, análoga a `describe_target`. Devuelve `{"exists", "n", "n_nonpositive", "n_nan"}`. NO refactoriza `fix_spec` (duplicación deliberada para no arriesgar C1).
+- `PredictorsPage` gana combo de pesos con objectName `comboWeight`. Regla espejo: columna seleccionada como peso desaparece de la lista de disponibles. Callback inyectable `weight_validator` (mismo patrón que `target_provider`).
+- `ModelWizard.current_config()` emite `"weight_col"`.
+- `MainWindow._train_pipeline` pasa `weight_col=cfg["weight_col"]` a `fix_spec`. `MainWindow._weight_validator` consulta `describe_weight_column` y devuelve True solo si `exists and n_nonpositive == 0 and n_nan == 0`.
+- `i18n.py` gana 4 claves × 2 idiomas (label, none, warning, hint).
+
+**Incidentes y decisiones**:
+
+1. **B2 condicional** (registrado en `design_decisions.md` §13.6.1).
+2. **Estratificación por filas, no por peso** (§13.6.2).
+3. **Guardián del cfg del wizard** actualizado para incluir `weight_col` (mismo patrón que 3.1.e).
+4. **Fail-fast de `_train_pipeline`** detectó 11 tests E2E que construían cfg sin `weight_col`. Todos adaptados.
+
+**Tests**: 12 tests nuevos (5 stability, 2 session_state, 4 wizard, 1 e2e). Suite completa: 346/346.
+
+**Cierre de Fase 3.2**. Las 8 sub-fases (a-h) quedan cerradas. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard.
+
+- Invariante C1: sin pesos, comportamiento idéntico al pre-3.2.
+- 3 parámetros nuevos en el fingerprint: `weighted`, `weight_col`, `min_child_weight`.
+- 3 decisiones diferidas registradas en `design_decisions.md`: §13.7 (KS/AUC/Gini del GainsTable), §13.8 (HL escala), §13.9 (`weight_oot` naming).
+- Duplicación deliberada entre `describe_weight_column` y la validación embebida en `fix_spec` (evitar tocar C1).
+
+**Referencias**: `docs/design_decisions.md` §13.6 a §13.10, `docs/methodology.md` §8.5bis, `docs/roadmap.md` (tabla 3.2).
+
+---

@@ -83,17 +83,20 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   sub-fases (3.1.a a 3.1.f) implementadas y testeadas: capa profunda,
   sesión, bloqueos downstream, wizard multiclase y badge/botón de
   reversión en MetricsPanel.
-- **Suite de tests:** 243/243 PASSED.
+- **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
+  sub-fases (a-h). Suite 346/346.
+- **Suite de tests:** 346/346 PASSED.
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
   Aider 0.86.2 como respaldo documentado.
 - **Anomalía de consumo de tokens:** resuelta el 10/10/2026 (causa
   raíz: typo `moonshot` → fallback caro; agravantes: plugins fantasma
-  y TTL de caché de 5 min). Ver `docs/audit_log.md` entrada del
-  10/10/2026.
-- **Próximo paso:** Fase 3.2 — ponderación por muestra (pesos
-  transversales al backend para muestras sesgadas de buró).
+  y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
+  (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
+  entrada del 10/10/2026.
+- **Próximo paso:** Fase 3.3 — Categorías Indet / Insufficient / No
+  Perf.
 
 ---
 
@@ -173,6 +176,14 @@ si OpenCode falla en un caso concreto.
 - Cambios multi-bloque dentro del mismo archivo: permitido.
 - **Verificar SIEMPRE el diff antes de aceptar el edit.**
 - **Un prompt = un archivo**, incluso cuando el cambio toca varios.
+- **Regla operativa 2026 (bloques anidados).** Nunca incluir bloques de
+  código anidados (triple backtick) dentro de un prompt enviado al
+  chat. El cliente (DeepSeek, ChatGPT, etc.) cierra el bloque externo
+  al encontrar la primera triple comilla invertida interna, y el
+  prompt se entrega cortado. Las fórmulas y fragmentos de código deben
+  ir en prosa dentro del prompt. Los prompts van siempre en un único
+  bloque copiable, sin sub-bloques. Esta regla se descubrió durante la
+  Fase 3.2 (10/10/2026) tras múltiples incidentes de prompts cortados.
 
 **Verificación obligatoria tras cada edición:**
 
@@ -245,7 +256,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Te adjunto el brief (este documento). Estado: Fases 0-3.1 cerradas, Fase 3.2 (ponderación) es el próximo paso. Suite 243/243. Herramienta: OpenCode 1.18.35 con configuración corregida (moonshotai + plugin de caché). El 10/10/2026 se resolvió la anomalía de consumo de tokens. Regla operativa: trabajar en ráfagas cortas para mantener la caché. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.2 cerradas, Fase 3.3 (categorías Indet/Insufficient/No Perf) es el próximo paso. Suite 346/346. Herramienta: OpenCode 1.18.35 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

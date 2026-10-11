@@ -1590,6 +1590,167 @@ degenerados.
 
 ---
 
+### 13.7 Deferred: KS / AUC / Gini of the gains table are not weighted
+
+**Context.** `build_gains_table` en `backend_v3/reporting.py` devuelve
+`ks`, `auc` y `gini` calculados sobre PD por fila de las filas
+enrutables. En 3.2.g se añadieron columnas `w_*` ponderadas a las
+filas de la tabla, pero los tres estadísticos agregados quedaron
+sin ponderar. La razón es que `_discrimination_metrics` es una
+reimplementación local de las fórmulas ya presentes (y ya
+ponderadas) en `backend_v3/validation.py`.
+
+**Alternatives considered.**
+
+- (a) Ponderar `_discrimination_metrics` en 3.2.g. Rechazada:
+  duplicaría la lógica ponderada de `validation.compute_oos_metrics`
+  en un módulo distinto, con riesgo de divergencia.
+- (b) Reemplazar `_discrimination_metrics` por una llamada a
+  `validation.compute_oos_metrics`. Rechazada en 3.2.g: cambiaría
+  el diseño de `reporting.py` (hoy autocontenido) y afectaría a un
+  módulo no previsto en la fase.
+- (c) Diferir la ponderación de KS/AUC/Gini a una sub-fase futura.
+  Adoptada.
+
+**Decision.** Opción (c). En 3.2.g los estadísticos agregados del
+`GainsTableResult` siguen calculándose sin ponderar. Las columnas
+`w_*` de las filas de la tabla SÍ están ponderadas; el resumen
+agregado (KS/AUC/Gini) no.
+
+**Consequences.**
+
+- Con `weights=None`: comportamiento idéntico al pre-3.2. La
+  paridad se preserva.
+- Con pesos no triviales: las columnas `w_bad_rate_cum`, `w_lift_cum`,
+  etc. reflejan la masa ponderada, pero `ks`/`auc`/`gini` del
+  resultado siguen siendo los de conteo de filas.
+- Documentado como decisión diferida explícita: la futura sub-fase
+  que aborde reportes ponderados completos (probablemente dentro de
+  Fase 3.5, reportes multiclase + ponderados) deberá decidir si
+  reutiliza `validation.compute_oos_metrics` o reimplementa la
+  ponderación localmente.
+
+**Cross-reference.** `backend_v3/reporting.py::_discrimination_metrics`;
+`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.g).
+
+---
+
+### 13.8 Hosmer-Lemeshow scales linearly with total weight mass
+
+**Context.** La fórmula del HL es
+`H = Σ_g (O_g − N_g π_g)² / [N_g π_g (1 − π_g)]`. Con pesos, los
+tres agregados por grupo (`O_g`, `N_g`, `π_g`) pasan a calcularse
+como sumas ponderadas. Bajo un cambio de escala uniforme de los
+pesos (multiplicar todos por k), tanto el numerador como el
+denominador escalan linealmente con k, por lo que H escala
+linealmente con k. Es el mismo comportamiento que el χ² de Pearson
+ponderado documentado en §13.2.
+
+**Alternatives considered.**
+
+- (a) Normalizar los pesos para que Σw = n antes de HL. Rechazada
+  por coherencia con §13.2: la decisión general de la Fase 3.2 es no
+  normalizar en silencio.
+- (b) Documentar el escalado y dejar la decisión al analista.
+  Adoptada.
+
+**Decision.** Opción (b). HL no es invariante a escala; escala
+linealmente con la masa total de pesos. Test
+`test_weighted_validation_scale_invariance` (3.2.g) consagra el
+escalado, no la invarianza.
+
+**Rationale.** Es comportamiento matemáticamente inevitable cuando los
+pesos entran como masa (sumas ponderadas) y no como conteos. La
+alternativa (normalizar) escondería una decisión del analista.
+
+**Consequences.**
+
+- Con pesos uniformes (todos 1) y sin pesos: HL idéntico (paridad
+  C1).
+- Con pesos no triviales: HL puede crecer mucho si Σw es grande.
+  El p-valor del test baja artificialmente. El analista debe saber
+  que HL pondera masa, no filas.
+- Documentado también en `docs/methodology.md` §8.9bis.
+
+**Cross-reference.** `backend_v3/validation.py::compute_oos_metrics`;
+`docs/design_decisions.md` §13.2 (χ² escala); `docs/audit_log.md`
+entrada del 10/10/2026 (Fase 3.2.g).
+
+---
+
+### 13.9 evaluate_oot parameter is `weight_oot`, not `use_train_weights`
+
+**Context.** El diseño v2 §5.3 propuso el nombre `use_train_weights`
+para el parámetro de `Session.evaluate_oot` que controla el modo de
+ponderación de la cohorte OOT. Durante la implementación de 3.2.h se
+detectó que el nombre es ambiguo: sugiere "aplicar los pesos de
+train al OOT", lo cual no tiene sentido operativo porque train y OOT
+tienen distinto tamaño y distintas filas.
+
+**Alternatives considered.**
+
+- (a) Mantener `use_train_weights`. Rechazada: ambiguo.
+- (b) Renombrar a `weight_oot: bool = True`. Adoptada. Semántica:
+  True = el OOT usa sus propios pesos; False = el OOT usa pesos
+  uniformes.
+
+**Decision.** Opción (b).
+
+**Rationale.** El nombre describe la pregunta operativa real ("¿pondera
+el OOT con sus propios pesos?"), no un mecanismo de propagación
+imposible.
+
+**Consequences.**
+
+- `Session.evaluate_oot(*, n_groups=10, weight_oot=True)`.
+- El evento de `_commit` registra `weight_oot=false` cuando aplica.
+- Documentado también en el docstring del método.
+
+**Cross-reference.** `backend_v3/session_state.py::evaluate_oot`;
+`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.h).
+
+---
+
+### 13.10 PSI / CSI weighting: each cohort carries its own weights
+
+**Context.** El monitoreo OOT (`stability.py`) compara la distribución
+de hojas del árbol y de cada covariable entre train (referencia) y
+la cohorte OOT. Bajo ponderación por muestra, la pregunta es qué
+pesos usar en cada cohorte.
+
+**Alternatives considered.**
+
+- (a) Usar los pesos del train para ambas cohortes. Mide solo el
+  drift del modelo, ignorando el cambio poblacional del OOT.
+  Disponible vía `weight_oot=False`.
+- (b) Usar los pesos propios de cada cohorte: train con pesos de
+  train, OOT con pesos del OOT. Mide ambos cambios: el poblacional
+  y el del modelo. Adoptada como default.
+
+**Decision.** Opción (b). Default `weight_oot=True`.
+
+**Rationale.** El diseño v2 §5.3 B4 opción 1 aprobó esta convención. La
+intención es que PSI/CSI capten el drift completo, no solo la parte
+que le toca al modelo. La opción (a) sigue disponible para el
+analista que quiera aislar el drift del modelo.
+
+**Consequences.**
+
+- Si train y OOT tienen la misma composición poblacional, los pesos
+  coinciden y PSI refleja solo el cambio en la distribución del
+  modelo.
+- Si difieren (drift poblacional real), PSI captura ambos cambios.
+- `weight_oot=False` fuerza pesos uniformes en OOT (equivalente a
+  ignorar el sesgo de la cohorte OOT).
+- Test `test_weighted_stability_parity_uniform_weights` consagra
+  la paridad con pesos uniformes.
+
+**Cross-reference.** `backend_v3/stability.py::StabilityMonitor.report`;
+`docs/design_decisions.md` §13.9; `docs/audit_log.md` entrada del
+10/10/2026 (Fase 3.2.h).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

@@ -153,6 +153,33 @@ step 0.
 
 > See `docs/design_decisions.md` §2.3 for the full decision rationale.
 
+### 1.9bis Pearson χ² on weighted tables — linear in weight mass
+
+With per-sample weights, contingency-table cells hold **sums of weights**
+instead of row counts. Pearson's formula is identical:
+
+    E_ij = R_i · C_j / W          (W = total weighted mass)
+    χ²   = Σ_ij (O_ij − E_ij)² / E_ij
+    df   = (I − 1) · (J − 1)
+
+Under a uniform rescaling of the weights (multiply all by k), the cells,
+the marginals and W all scale by k. Each quotient term scales by k.
+Therefore **χ² scales linearly with the total weight mass**.
+
+Contrast with F (weighted ANOVA, see §3.7bis): F is a quotient SSB / SSW
+and is therefore **scale-invariant** in the weights.
+
+Practical consequence: in CHAID with a binary target, the p-value depends
+on the scale chosen by the analyst. An analyst loading weights that sum to
+n gets the same behavior as with counts; one loading weights that sum to a
+million gets a much larger χ² (smaller p-value) for the same distribution.
+TreeGov does **not** normalize: the decision stays with the analyst.
+
+**Citation:** Pearson (1900); Heeringa, West & Berglund (2010), §5.4
+(weighted tables under complex survey designs).
+
+> See `docs/design_decisions.md` §13.2 for the full decision rationale.
+
 ---
 
 ## 2. C&RT (Classification and Regression Trees)
@@ -453,6 +480,40 @@ consistent with the empirical prior. Documented in `quest_engine.py`.
 7(4), 815-840.
 
 > See `docs/design_decisions.md` §4.4 for the full decision rationale.
+
+### 3.7bis Weighted QUEST — QDA split and weighted variance
+
+Weighting affects both QUEST stages.
+
+**Stage 1 (variable selection).** Weighted F over the groups defined by the
+target class: weighted means, effective sizes `W_i = Σ weights in group`.
+Weighted χ² for nominal predictors, same scheme as §1.9bis.
+
+**Stage 2 (QDA cut).**
+
+    Weighted class means:      m_k = Σ_i w_i x_i / W_k
+    Weighted variances:        v_k = Σ_i w_i (x_i − m_k)² / (W_k − 1)
+    Weighted empirical priors: π_k = W_k / W
+    Weighted midpoint (fallback when no real root lies between the means):
+                               x̄ = (W_0 m_0 + W_1 m_1) / (W_0 + W_1)
+
+**Divisor convention (W − 1).** The divisor W − 1 (instead of W) is the
+natural generalization of the classic n − 1 when weights act as
+frequencies. It matches SPSS `WEIGHT BY`, R `survey` with the sample
+divisor, and SAS survey procedures.
+
+**Non-intuitive consequence.** With divisor W − 1, the weighted variance
+is **not** scale-invariant: multiplying the weights by k turns the
+denominator from W − 1 into kW − 1, which is not k·(W − 1). The QUEST QDA
+threshold therefore depends on the scale chosen by the analyst. The
+alternative with divisor W (population variance) would be scale-invariant
+but would systematically underestimate. W − 1 is kept for consistency with
+standard practice.
+
+**Citation:** Loh & Shih (1997); Heeringa, West & Berglund (2010), §5.3
+(weighted variance in complex surveys).
+
+> See `docs/design_decisions.md` §13.4 for the full decision rationale.
 
 ---
 
@@ -777,6 +838,35 @@ flagged `temporal_verified=False`: "OOS, not OOT").
 
 **Citation:** Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and
 Implementing Intelligent Credit Scoring*. Wiley.
+
+### 8.5bis Weighted PSI and CSI — each cohort carries its own weights
+
+OOT monitoring compares the tree-leaf distribution (PSI) and each
+covariate (CSI) between train (reference) and the OOT cohort. With
+per-sample weights, **each cohort uses its own weights** to represent its
+own population:
+
+    p_exp,k = Σ weights_train in bin k / Σ all weights_train
+    p_act,k = Σ weights_oot   in bin k / Σ all weights_oot
+    PSI     = Σ_k (p_act,k − p_exp,k) · ln(p_act,k / p_exp,k)
+
+The bins are unchanged: leaves for PSI, train-learned deciles for
+continuous CSI, train-observed categories for nominal CSI. The `<UNSEEN>`
+bin (PSI) and `<OTHER>` bin (CSI) accumulate the **sum of weights** of the
+non-assignable / unseen rows, not their count.
+
+**Convention.** If train and OOT share the same population composition,
+the weights coincide and PSI reflects only the change in the model
+distribution. If they differ (real population drift), PSI captures both
+changes.
+
+**Alternative mode.** With `weight_oot=False` in `Session.evaluate_oot`,
+the OOT cohort uses uniform weights (measures only the model drift,
+ignoring the OOT cohort bias).
+
+**Citation:** Siddiqi (2006), §8.5 (PSI/CSI with weights in scorecards).
+
+> See `docs/design_decisions.md` §13.10 for the full decision rationale.
 
 ### 8.6. Asymmetric cut optimization (IFRS 9)
 
