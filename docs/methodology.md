@@ -499,8 +499,7 @@ Weighted χ² for nominal predictors, same scheme as §1.9bis.
 
 **Divisor convention (W − 1).** The divisor W − 1 (instead of W) is the
 natural generalization of the classic n − 1 when weights act as
-frequencies. It matches SPSS `WEIGHT BY`, R `survey` with the sample
-divisor, and SAS survey procedures.
+frequencies. It matches the standard weighted-variance convention used in complex survey analysis (Heeringa, West & Berglund 2010, §5.3).
 
 **Non-intuitive consequence.** With divisor W − 1, the weighted variance
 is **not** scale-invariant: multiplying the weights by k turns the

@@ -138,7 +138,7 @@ clasificación y exportación HTML autocontenido.
   (CHAID, CRT) ya lo soportan; `TreeBuilder`, `TreeNode.pd_final` y
   `Session.fix_spec` están restringidos a binario. Requeriría cambiar
   el tipo de `pd_final` a vector de K clases. Aplicable a salud,
-  ciencias sociales (referente: SPSS).
+  ciencias sociales (referente: herramientas estadísticas clásicas de árboles de decisión, hoy descontinuadas).
 - **Fase 3.x — Ponderación por muestra.** Para replicar flujo de buró
   (Equifax, Experian) donde la muestra está sesgada y se reajusta por
   pesos. No aplica a TreeGov hoy (datasets completos).

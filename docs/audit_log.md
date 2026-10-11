@@ -3308,3 +3308,37 @@ Hallazgos procedentes de las capturas de la consola platform.kimi.ai del 11/10/2
 **Referencias**: entrada de `docs/audit_log.md` del 10/10/2026 (tarde) para el análisis previo de caché; capturas de platform.kimi.ai (Caching Overview y Product Bill) del 11/10/2026; `docs/prompt_para_asistente.md` para la regla de ráfaga; `README.md` y `README.es.md` para la reformulación de la gobernanza; `.treegovrules` para la actualización de cuatro puntos.
 
 ---
+
+### 11/10/2026 — Auditoría de referencias a software privativo en docs activos
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**:
+
+Auditoría de mantenimiento posterior al cierre del bloque documental del mismo día, para verificar el cumplimiento de la regla "cero referencias a software privativo" en docs activos y código.
+
+**Alcance y método**:
+
+Se auditó con Select-String sobre backend_v3/*.py, frontend_v3/*.py, tests/*.py, docs/*.md, README.md, README.es.md, .treegovrules, AGENTS.md y CONVENTIONS.md. Cuatro patrones buscados: "SPSS|Answer.?Tree", "\bSAS\b|\bStata\b|Clementine", "\bIBM\b", "IBM Modeler|IBM SPSS|SPSS Modeler". archive/ quedó excluido por política (exento).
+
+**Resultado**:
+
+12 hits en total, clasificados en tres grupos:
+
+- **Grupo A (3 hits, legítimos, no tocados)**: las tres menciones que aparecen en la propia regla ("Cero referencias a software privativo (SPSS, Answer Tree, Stata, SAS, IBM)") en docs/contexto_para_nueva_sesion.md:300, docs/prompt_para_asistente.md:44 y CONVENTIONS.md:75. La regla necesita nombrar lo que prohíbe para ser operativa.
+- **Grupo B (8 hits, reformulados en este mismo bloque)**: docs/3.1_design_multiclass.md:187, docs/design_decisions.md:1274, 1301, 1413, 1414, docs/methodology.md:502, 503, docs/roadmap.md:141. Todos reformulados para eliminar el nombre del producto y anclar la referencia en cita académica neutra (Heeringa, West & Berglund 2010, §5.3) o en descripción general ("herramientas estadísticas clásicas de árboles de decisión, hoy descontinuadas").
+- **Grupo C (3 hits, no tocados)**: docs/audit_log.md:2118, 2897 y 3023. Son entradas históricas del propio audit_log. Se mantienen por la regla de append-only: la trazabilidad es más valiosa que la limpieza cosmética. El histórico es evidencia; editarlo rompería la cadena de custodia.
+
+**Decisión y consecuencias**:
+
+Se refuerza la regla: los nombres de producto privativo no deben aparecer en docs activos ni en código. Las citas técnicas que necesiten anclaje se apoyan en fuente académica (Heeringa, West & Berglund 2010, §5.3). El histórico del audit_log queda exento explícitamente, con nota en esta entrada. Futuras auditorías pueden repetirse con los mismos cuatro patrones.
+
+**Tests**: 346/346 PASSED. Sin cambios de código en este bloque; solo documentación.
+
+**Referencias**: `docs/audit_log.md` entradas del 10/10/2026 (tarde) y del 11/10/2026; capturas de la consola platform.kimi.ai del 11/10/2026 (búsquedas con Select-String); `docs/prompt_para_asistente.md` y `CONVENTIONS.md` para la regla de cero referencias a software privativo.
+
+---

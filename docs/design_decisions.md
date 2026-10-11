@@ -1271,8 +1271,8 @@ convention is needed to decide which value to return.
 
 - (a) Return the observation where the cumulative weight crosses the
   half (the first one whose cumulative weight is greater than or equal
-  to the half), without interpolating. The classic SAS/SPSS
-  convention. This was the definition written in the original 3.2.a
+  to the half), without interpolating. The classic survey-analysis
+  convention (Heeringa, West & Berglund 2010, §5.3). This was the definition written in the original 3.2.a
   plan.
 - (b) Average that observation with the next one. The NumPy
   convention (linear percentile). It coincides exactly with
@@ -1298,7 +1298,7 @@ preserves parity.
 - The convention is documented in the `_weighted_median` docstring
   and covered by the test
   `test_weighted_median_equal_weights_even_length`.
-- Users expecting the SAS/SPSS convention can obtain it with their
+- Users expecting the alternative first-crossing convention can obtain it with their
   own implementation; it is not offered as a parameter because parity
   is more important than compatibility with other conventions.
 
@@ -1409,9 +1409,9 @@ las varianzas entran en los coeficientes de la ecuación cuadrática.
 
 **Alternatives considered.**
 
-- (a) Divisor `W - 1` (Bessel ponderado). Convención estándar
-  cuando los pesos son frecuencias: SPSS `WEIGHT BY`, R `survey` con
-  divisor muestral, SAS survey procedures. NO es invariante a la
+- (a) Divisor `W - 1` (Bessel ponderado). La convención estándar
+  cuando los pesos son frecuencias en el análisis de encuestas
+  complejas (Heeringa, West & Berglund 2010, §5.3). NO es invariante a la
   escala de pesos: si se multiplican los pesos por `k`, el
   denominador pasa de `W - 1` a `k·W - 1`, que no es `k·(W - 1)`.
 - (b) Divisor `W` (masa). Es invariante a la escala de pesos: el
