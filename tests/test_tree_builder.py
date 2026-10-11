@@ -697,6 +697,41 @@ def test_weighted_builder_w_events_wrong_length_rejected():
     _assert_raises(ValueError, TreeModel, 0, (malo,), "CRT", "fp", labels, 1, 0)
 
 
+def test_fingerprint_includes_population_col():
+    """Fase 3.3.b: population_col entra en el fingerprint."""
+    X, y, spec = _fixture_weighted_a()
+    tb = _builder_weighted(population_col="pop",
+                           population_ok_values=("OK",))
+    fp = tb.build(X, y, spec).params_fingerprint
+    tb_sin = _builder_weighted()
+    fp_sin = tb_sin.build(X, y, spec).params_fingerprint
+    assert fp != fp_sin
+
+
+def test_fingerprint_differs_by_population_col():
+    """Fase 3.3.b: dos population_col distintos -> fingerprints distintos."""
+    X, y, spec = _fixture_weighted_a()
+    fp_a = _builder_weighted(
+        population_col="pop_a", population_ok_values=("OK",),
+    ).build(X, y, spec).params_fingerprint
+    fp_b = _builder_weighted(
+        population_col="pop_b", population_ok_values=("OK",),
+    ).build(X, y, spec).params_fingerprint
+    assert fp_a != fp_b
+
+
+def test_fingerprint_differs_by_population_ok_values():
+    """Fase 3.3.b: dos whitelists distintas -> fingerprints distintos."""
+    X, y, spec = _fixture_weighted_a()
+    fp_a = _builder_weighted(
+        population_col="pop", population_ok_values=("OK",),
+    ).build(X, y, spec).params_fingerprint
+    fp_b = _builder_weighted(
+        population_col="pop", population_ok_values=("OK", "INDET"),
+    ).build(X, y, spec).params_fingerprint
+    assert fp_a != fp_b
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

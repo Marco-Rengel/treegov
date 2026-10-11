@@ -231,6 +231,8 @@ class TreeBuilder:
         weights: np.ndarray | None = None,
         min_child_weight: float | None = None,
         weight_col: str | None = None,
+        population_col: str | None = None,
+        population_ok_values: tuple[str, ...] = (),
     ) -> None:
         """max_depth=None -> modo grow_full (crece hasta min_child_size).
 
@@ -268,6 +270,15 @@ class TreeBuilder:
         weight_col (keyword-only): name of the weight column in the CSV,
         recorded in the fingerprint for traceability only; not used
         numerically.
+
+        population_col (keyword-only): nombre de la columna de poblacion
+        en el CSV (Fase 3.3). Solo se registra en el fingerprint para
+        trazabilidad; no se usa numericamente aqui. El filtrado de filas
+        se hace aguas arriba, en Session.
+
+        population_ok_values (keyword-only): whitelist de valores OK de
+        la columna de poblacion. Solo se registra en el fingerprint; no
+        se usa numericamente aqui.
         """
         if not hasattr(engine, "best_split"):
             raise TypeError("engine debe exponer best_split(X, y, spec, ...)")
@@ -331,6 +342,33 @@ class TreeBuilder:
             raise ValueError(
                 f"weight_col debe ser None o un string no vacio: {weight_col!r}"
             )
+        if population_col is None:
+            if population_ok_values:
+                raise ValueError(
+                    "population_ok_values debe estar vacio cuando "
+                    "population_col es None"
+                )
+            pop_col_norm: str | None = None
+            pop_ok_norm: tuple[str, ...] = ()
+        else:
+            if not isinstance(population_col, str) or not population_col:
+                raise ValueError(
+                    f"population_col debe ser None o un string no vacio: "
+                    f"{population_col!r}"
+                )
+            if not population_ok_values:
+                raise ValueError(
+                    "population_ok_values no puede estar vacio si "
+                    "population_col esta declarado"
+                )
+            for v in population_ok_values:
+                if not isinstance(v, str) or not v:
+                    raise ValueError(
+                        f"population_ok_values debe contener strings no "
+                        f"vacios; recibido {v!r}"
+                    )
+            pop_col_norm = population_col
+            pop_ok_norm = tuple(population_ok_values)
         self._engine = engine
         self._target_type = target_type
         self._target_class = target_class
@@ -347,6 +385,8 @@ class TreeBuilder:
             None if min_child_weight is None else float(min_child_weight)
         )
         self._weight_col = weight_col
+        self._population_col = pop_col_norm
+        self._population_ok_values = pop_ok_norm
         self._log = logger if logger is not None else get_logger("builder")
 
     # ------------------------------------------------------------------
@@ -630,6 +670,8 @@ class TreeBuilder:
             "weighted": self._weights is not None,
             "weight_col": self._weight_col,
             "min_child_weight": self._min_child_weight,
+            "population_col": self._population_col,
+            "population_ok_values": list(self._population_ok_values),
         }
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:16]
