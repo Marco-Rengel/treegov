@@ -7,13 +7,15 @@
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
 **Test suite**: 346/346 passing
 
-> ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any production deployment requires independent validation, formal approval, and integration with the institution's model governance framework.
+> ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
 ---
 
 ## Executive summary
 
-TreeGov is an analytical workbench for **credit risk segmentation** with **native model governance (MRM)** and **IFRS 9** alignment. It implements the three classic decision-tree algorithms — CHAID (with its Exhaustive variant), C&RT, QUEST — with **white-box mathematics**: every statistical formula is written explicitly in the source code and cited to its original publication.
+TreeGov is an analytical workbench for **decision-tree segmentation** with **optional native model governance (MRM)** and **IFRS 9** alignment. It implements the three classic decision-tree algorithms — CHAID (with its Exhaustive variant), C&RT, QUEST — with **white-box mathematics**: every statistical formula is written explicitly in the source code and cited to its original publication.
+
+Governance is opt-in, not the product's identity. TreeGov ships with two explicit modes. **Banking mode** (the default, and the natural choice for regulated credit-risk work) applies the full MRM layer: Jeffreys estimator on node probabilities, PD floor per Basel (BCBS CRE 20.39), and fingerprints that record the governance choice. **Research mode** turns both off, producing raw empirical probabilities with no regulatory constraints — opening TreeGov to non-banking domains (health, social sciences, marketing, biology) without sacrificing the white-box, auditable core. The choice is explicit, recorded in the model fingerprint, and never silent.
 
 Unlike general-purpose libraries (scikit-learn, statsmodels, R packages) that require programming, TreeGov provides a **graphical environment** where the analyst focuses on analysis rather than code. Unlike discontinued GUI tools, it is open source, actively maintained, and built from the ground up with regulatory traceability (SR 11-7, Basel, IFRS 9) as a first-class design principle.
 
@@ -163,8 +165,8 @@ TreeGov/
 | **2.3** | OOS/OOT metrics panel | Completed |
 | **2.4** | Reports + integration | Completed |
 | **3.0** | Documentation closure + configurable canonical parameters | Completed |
-| **3.1** | Multiclass (target + wizard + MetricsPanel alerts) | ✅ Completed 09/10/2026 |
-| **3.2** | Sample weighting | ✅ Completed 10/10/2026 |
+| **3.1** | Multiclass (target + wizard + MetricsPanel alerts) | Completed |
+| **3.2** | Sample weighting | Completed |
 | **3.3** | Indet / Insufficient / No Perf categories | Planned (next) |
 | **3.4** | Multiclass support in C&RT and QUEST | Planned |
 | **3.5** | Reports adapted for multiclass and weighting | Planned |

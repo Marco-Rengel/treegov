@@ -23,7 +23,7 @@
 
 ## MRM / IFRS 9 governance
 
-1. Any PD calculation must include the Jeffreys estimator and the PD Floor.
+1. In Banking mode (default), any PD calculation must include the Jeffreys estimator and the PD Floor (BCBS CRE 20.39). In Research mode, PD is raw (k/n), with no Bayesian smoothing and no floor — see backend_v3.types.GovernanceMode. The choice of mode is explicit and is recorded in the model's params_fingerprint (BANKING / RESEARCH / CUSTOM). A model trained under one mode must never be silently reused under another.
 2. Every model decision must be auditable: transactional DEBUG log per run.
 3. Tests must include reference values verified by hand (not just self-references).
 
@@ -39,11 +39,14 @@
 1. Every architectural decision is recorded in docs/audit_log.md.
 2. Every bug fix is recorded with its numerical trace.
 3. Obsolete documents are moved to archive/legacy_docs/ with a historical header, never deleted.
+4. Phase closure documentation is never deferred. When a sub-phase closes (commit pushed, suite green), the update of docs/audit_log.md, docs/roadmap.md, docs/estado_proyecto.md and the context documents (docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md) happens IN THE SAME work block, never in a later session. Exceptions: provider outage (504/timeout, documented on return) or a one-line trivial change consolidated into the block entry. A synchronization checklist is mandatory at closure: roadmap reflects status, estado_proyecto reflects the real suite, contexto reflects the next step, prompt_para_asistente reflects the active tool. If any of the four is out of sync, the sub-phase is NOT closed.
+
+Synchronization checklist (mandatory at every sub-phase closure): (a) docs/roadmap.md reflects the new status; (b) docs/estado_proyecto.md reflects the real test count; (c) docs/contexto_para_nueva_sesion.md reflects the next step; (d) docs/prompt_para_asistente.md reflects the active tool and current phase. Any sub-phase whose closure leaves any of the four out of sync is not considered closed.
 
 ## Language
 
 - Code: English.
-- Documentation: English (default).
+- Documentation: English for technical and reference documents (README, docs/methodology.md, docs/design_decisions.md, docs/api.md, docs/roadmap.md, docs/3.x_design_*.md). Spanish for operational and traceability documents (docs/audit_log.md, docs/estado_proyecto.md, docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md). Bilingual: README.md / README.es.md and docs/philosophy.md / docs/philosophy.es.md.
 - Bilingual documents: README and philosophy (both English and Spanish).
 - Historical document: audit_log.md (kept in Spanish for traceability).
 - File and module names: English.

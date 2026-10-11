@@ -3268,3 +3268,43 @@ Sobre el bloque 3.2 en concreto: hubo ~8 reaperturas no planificadas de OpenCode
 **Referencias**: `docs/roadmap.md` (subsección OpenCode token consumption), `docs/contexto_para_nueva_sesion.md` (Regla de oro refinada), `docs/prompt_para_asistente.md` (sección 6), `AGENTS.md` y `CONVENTIONS.md` (Trabajo en ráfaga refinado).
 
 ---
+
+### 11/10/2026 — Mantenimiento documental post-cierre 3.2 e investigación de consumo Moonshot
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.18.35).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**:
+
+Sesión de mantenimiento entre la Fase 3.2 (cerrada el 10/10/2026) y la Fase 3.3 (diseño, no iniciada). Consolida tres ítems pequeños en una sola entrada: la investigación del consumo de tokens de Moonshot (cierre del análisis iniciado el 10/10), dos ajustes a los README (inglés y español) y una actualización de cuatro puntos a `.treegovrules`. Sin cambios de código.
+
+**Investigación de consumo Moonshot (cierre)**:
+
+Hallazgos procedentes de las capturas de la consola platform.kimi.ai del 11/10/2026:
+
+- **Caching Overview (7 días)**: el 93.8% de los tokens de entrada se sirvieron desde caché, con un Write Amortization de 15.35x. La estimación previa del 53% de ratio de caché (entrada del 10/10/2026, tarde) se refería a la participación en coste de Context Caching sobre Model Inference + Context Caching en el bloque 3.2, no a la participación en tokens. Ambas cifras son correctas; el 93.8% es la operativamente relevante para decisiones de política.
+- **Product Bill (ventana Beijing 04/10 a 10/10)**: completion (Model Inference, output) $24.18; Cache Write 5m $10.50; auto-caching (lectura) $8.23; Cache Write 1h $0.48; prompt (input fresco) $0.16. Total de la ventana: $43.55.
+- **Tres hallazgos**: (a) el output es el 55% del coste total, la palanca dominante; (b) Cache Write 5m es el 24%, impulsado por expiraciones del TTL durante pausas superiores a cinco minutos; (c) el input fresco es el 0.4%, efectivamente gratis. Un cuarto hallazgo sorprendente: el tier Cache Write 1h ya se está facturando ($0.48), operando sin ningún plugin custom.
+- **El "hueco de $2.97"** registrado en la entrada del 10/10/2026 (tarde) queda explicado: es consumo atribuido a productos fuera del top list de Model Inference + Context Caching, no un cargo fantasma. Confirmación pendiente de la liquidación de la ventana Beijing del 11/10, que aún no estaba cerrada al momento de esta entrada (zona horaria: Beijing es UTC+8, Ecuador es UTC-5, 13 horas de diferencia). Se añadirá una nota al pie una vez liquidada la ventana, si los números aportan algo nuevo.
+- **Consecuencia para la regla operativa**: la regla de "ráfaga" se mantiene sin cambios. Cerrar OpenCode en los límites de sub-fase, mantenerlo abierto dentro de una sub-fase. Las palancas dominantes, en orden: respuestas cortas (output), prompts quirúrgicos (input fresco) y no romper el TTL de 5 minutos dentro de una sub-fase (cache write). La idea de "reducir el tamaño del prefijo" de la regla refinada anterior queda degradada: la caché ya cubre el 93.8% del input; no hay margen significativo ahí.
+
+**Ajustes a README.md y README.es.md**:
+
+- La gobernanza se reformula como opt-in, no como identidad del proyecto. Resumen ejecutivo y aviso regulatorio actualizados para mencionar los dos modos (Banking, Research) y para abrir la puerta a dominios no bancarios. Tres fragmentos reemplazados por archivo.
+- Tabla de fases: filas 3.1 y 3.2 normalizadas a "Completed" / "Completada", eliminando la marca de verificación y la fecha para coincidir con el resto de la tabla.
+
+**Actualización de .treegovrules**:
+
+- Jeffreys y PD Floor reformulados como condicionales al GovernanceMode (Banking por defecto con Jeffreys + PD floor BCBS CRE 20.39; Research con PD cruda k/n; elección registrada en el params_fingerprint; prohibida la reutilización silenciosa entre modos).
+- Nueva regla: la documentación de cierre de fase nunca se aplaza, con checklist de sincronización obligatorio.
+- Sección Language aclarada: inglés para documentos técnicos, español para documentos operativos, bilingüe para README y philosophy.
+- Checklist de sincronización añadido explícitamente a nivel de sección (roadmap, estado_proyecto, contexto, prompt_para_asistente; si alguno queda desincronizado, la sub-fase no se considera cerrada).
+
+**Tests**: 346/346 PASSED. Sin cambios de código en este bloque, solo documentación.
+
+**Referencias**: entrada de `docs/audit_log.md` del 10/10/2026 (tarde) para el análisis previo de caché; capturas de platform.kimi.ai (Caching Overview y Product Bill) del 11/10/2026; `docs/prompt_para_asistente.md` para la regla de ráfaga; `README.md` y `README.es.md` para la reformulación de la gobernanza; `.treegovrules` para la actualización de cuatro puntos.
+
+---
