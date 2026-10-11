@@ -107,6 +107,18 @@ class SessionState:
     oot_source: str | None = None            # origen declarado ('external-file')
     target_class: int | str | None = None    # Fase 3.1.c: clase de interes
     class_labels: tuple[tuple[int | str, str], ...] = ()  # (valor, etiqueta)
+    # Fase 3.3: columna de poblacion (segmento/categoria)
+    population_col: str | None = None
+    # Fase 3.3: whitelist de valores OK en la columna de poblacion
+    population_ok_values: tuple[str, ...] = ()
+    # Fase 3.3: filas excluidas por poblacion en el dataset de desarrollo
+    n_excluded_population: int = 0
+    # Fase 3.3: desglose por motivo de exclusion (desarrollo)
+    population_breakdown: tuple[tuple[str, int], ...] = ()
+    # Fase 3.3: filas excluidas por poblacion en la cohorte OOT
+    n_excluded_population_oot: int = 0
+    # Fase 3.3: desglose por motivo de exclusion (OOT)
+    population_breakdown_oot: tuple[tuple[str, int], ...] = ()
     event_log: tuple[str, ...] = ("init/state=EMPTY",)
 
 
@@ -134,6 +146,9 @@ class Session:
         self._w_test: np.ndarray | None = None
         self._w_oot: np.ndarray | None = None
         self._w_col: str | None = None
+        # Caches de categorias de poblacion (Fase 3.3)
+        self._pop_col: str | None = None
+        self._pop_ok_values: tuple[str, ...] | None = None
 
     @property
     def state(self) -> SessionState:
@@ -252,6 +267,45 @@ class Session:
             "n_nonpositive": n_nonpositive,
             "n_nan": n_nan,
         }
+
+    def describe_population_column(self, col: str) -> dict:
+        """Perfil de solo lectura de una columna candidata a poblacion
+        (Fase 3.3, sin transicion de estado).
+
+        Pensado para GUI/MCP: permite al wizard poblar la tabla de
+        categorias observadas y sus conteos, sin exponer el DataFrame.
+
+        Returns:
+            dict con claves:
+                "exists" (bool): la columna esta en el dataset.
+                "n" (int): nº de filas (0 si la columna no existe).
+                "values" (tuple[tuple[str, int], ...]): pares
+                    (valor, conteo) ordenados por conteo descendente y
+                    luego por valor ascendente (determinista). Los NaN
+                    se representan con el sentinel "<NaN>". Tupla vacia
+                    si la columna no existe o esta vacia.
+
+        Raises:
+            RuntimeError: sin dataset cargado.
+        """
+        if self._df is None:
+            raise RuntimeError(
+                "[session] describe_population_column sin dataset cargado"
+            )
+        if col not in self._df.columns:
+            return {"exists": False, "n": 0, "values": ()}
+        serie = self._df[col]
+        n = int(len(serie))
+        vc = serie.value_counts(dropna=False)
+        items: list[tuple[str, int]] = []
+        for v, c in vc.items():
+            if pd.isna(v):
+                v_str = "<NaN>"
+            else:
+                v_str = str(v)
+            items.append((v_str, int(c)))
+        items.sort(key=lambda kv: (-kv[1], kv[0]))
+        return {"exists": True, "n": n, "values": tuple(items)}
 
     def _routed_partition(self, partition: str) -> tuple[Any, Any, str]:
         """Resolve a partition name to its cached (X, y) and unseen policy.
@@ -395,6 +449,8 @@ class Session:
         self._X_oot = self._y_oot = None
         self._w_train = self._w_test = self._w_oot = None
         self._w_col = None
+        self._pop_col = None
+        self._pop_ok_values = None
         self._state = SessionState(
             state=FlowState.DATA_LOADED,
             csv_path=self._state.csv_path,
@@ -411,6 +467,8 @@ class Session:
         target_class: int | str,
         class_labels: Mapping[int | str, str],
         weight_col: str | None = None,
+        population_col: str | None = None,
+        population_ok_values: tuple[str, ...] | None = None,
     ) -> SessionState:
         """DATA_LOADED -> SPEC_FIXED. Target binario 0/1 o multiclase (3.1.c).
 
@@ -535,9 +593,83 @@ class Session:
             self._w_col = weight_col
         else:
             self._w_col = None
+        # --- Fase 3.3: categorias de poblacion ---
+        if population_col is None:
+            if population_ok_values is not None:
+                raise ValueError(
+                    "[session] population_ok_values requiere population_col "
+                    "(no se puede declarar whitelist sin columna)"
+                )
+            self._pop_col = None
+            self._pop_ok_values = None
+        else:
+            if population_col not in self._df.columns:
+                raise ValueError(
+                    f"[session] population_col ausente en el dataset: "
+                    f"{population_col!r}"
+                )
+            if population_col == target:
+                raise ValueError(
+                    f"[session] population_col {population_col!r} no puede "
+                    f"ser el target"
+                )
+            if predictors is not None and population_col in {str(p) for p in predictors}:
+                raise ValueError(
+                    f"[session] population_col {population_col!r}: la "
+                    f"columna de poblacion no puede ser predictor"
+                )
+            if population_ok_values is None or len(population_ok_values) == 0:
+                raise ValueError(
+                    "[session] population_col declarado pero "
+                    "population_ok_values esta vacio; se exige una whitelist "
+                    "no vacia de valores OK"
+                )
+            for v in population_ok_values:
+                if not isinstance(v, str) or not v:
+                    raise ValueError(
+                        f"[session] population_ok_values debe contener "
+                        f"strings no vacios; recibido {v!r}"
+                    )
+            col_p = self._df[population_col]
+            if col_p.isna().any():
+                first_nan = int(np.flatnonzero(col_p.isna().to_numpy())[0])
+                raise ValueError(
+                    f"[session] population_col {population_col!r} contiene "
+                    f"NaN (primera fila: {first_nan}); codifique el valor "
+                    f"faltante como string en el CSV"
+                )
+            ok_mask = col_p.isin(population_ok_values).to_numpy()
+            K_full = len(pd.unique(self._df[target].dropna()))
+            K_ok = len(pd.unique(self._df.loc[ok_mask, target].dropna()))
+            # WARNING por cada clase del completo que no sobrevive al filtro.
+            # Se loguea SIEMPRE (evidencia MRM), antes de la posible
+            # excepcion por K_ok < 2.
+            clases_full = set(pd.unique(self._df[target].dropna()))
+            clases_ok = set(pd.unique(self._df.loc[ok_mask, target].dropna()))
+            perdidas = sorted(clases_full - clases_ok)
+            for c in perdidas:
+                n_c = int((self._df[target] == c).sum())
+                self._log.warning(
+                    "[session] clase %r (n=%d en el dataset completo) NO "
+                    "aparece tras el filtro de poblacion",
+                    c, n_c,
+                )
+            if K_ok < 2:
+                raise ValueError(
+                    f"[session] el filtro de poblacion deja K_ok={K_ok} "
+                    f"clases del target (dataset completo: K={K_full}); se "
+                    f"exigen >= 2 clases para entrenar"
+                )
+            self._pop_col = population_col
+            self._pop_ok_values = tuple(population_ok_values)
         evento = f"fix_spec:{target}|predictores={len(spec)}"
         if self._w_col is not None:
             evento += f"|weight_col={self._w_col}"
+        if self._pop_col is not None:
+            evento += (
+                f"|population_col={self._pop_col}"
+                f",ok={len(self._pop_ok_values or ())}"
+            )
         return self._commit(
             FlowState.SPEC_FIXED,
             evento=evento,
@@ -545,6 +677,8 @@ class Session:
             target_class=target_class,
             class_labels=tuple(sorted(class_labels.items())),
             spec=tuple(spec.items()),
+            population_col=self._pop_col,
+            population_ok_values=self._pop_ok_values or (),
         )
 
     def partition(self, train_frac: float = 0.7, seed: int = 42) -> SessionState:
@@ -560,15 +694,46 @@ class Session:
         st = self._state
         assert st.target is not None and st.spec is not None
         spec_d = dict(st.spec)  # tuple inmutable -> dict para el imputer
+        # Fase 3.3: aplicar filtro de poblacion si esta declarado.
+        if self._pop_col is not None:
+            ok_mask = (
+                self._df[self._pop_col]
+                .isin(self._pop_ok_values or ())
+                .to_numpy()
+            )
+            n_excluded = int((~ok_mask).sum())
+            non_ok = self._df.loc[~ok_mask, self._pop_col]
+            vc = non_ok.value_counts()
+            breakdown = tuple(
+                (str(v), int(c))
+                for v, c in sorted(
+                    vc.items(), key=lambda kv: (-int(kv[1]), str(kv[0]))
+                )
+            )
+        else:
+            ok_mask = np.ones(len(self._df), dtype=bool)
+            n_excluded = 0
+            breakdown = ()
+        ok_indices = np.flatnonzero(ok_mask)
+
         w: np.ndarray | None = None
         if self._w_col is not None:
-            w = self._df[self._w_col].to_numpy(dtype=float)
-        idx_tr, idx_te = stratified_split(
-            self._df[st.target], train_frac, seed, self._log, weights=w
+            w_full = self._df[self._w_col].to_numpy(dtype=float)
+            w_ok = w_full[ok_indices]
+        else:
+            w_full = None
+            w_ok = None
+
+        y_ok = self._df[st.target].iloc[ok_indices]
+        idx_tr_rel, idx_te_rel = stratified_split(
+            y_ok, train_frac, seed, self._log, weights=w_ok
         )
-        if w is not None:
-            self._w_train = w[idx_tr]
-            self._w_test = w[idx_te]
+        idx_tr = ok_indices[idx_tr_rel]
+        idx_te = ok_indices[idx_te_rel]
+
+        if w_full is not None:
+            self._w_train = w_full[idx_tr]
+            self._w_test = w_full[idx_te]
         X = self._df[[c for c in self._df.columns if c != st.target]]
         X_train = X.iloc[idx_tr].reset_index(drop=True)
         X_test = X.iloc[idx_te].reset_index(drop=True)
@@ -583,14 +748,20 @@ class Session:
         self._imputer = imp                    # retenido: lo usa load_oot (1.3)
         evento = (f"partition:frac={train_frac}|seed={seed}"
                   f"|train={len(idx_tr)}|test={len(idx_te)}")
-        if w is not None:
+        if self._w_col is not None:
             evento += "|weighted=true"
+        if self._pop_col is not None:
+            evento += (
+                f"|population_col={self._pop_col}|excluded={n_excluded}"
+            )
         return self._commit(
             FlowState.PARTITIONED,
             evento=evento,
             train_idx=tuple(int(i) for i in idx_tr),
             test_idx=tuple(int(i) for i in idx_te),
             train_frac=float(train_frac), seed=int(seed),
+            n_excluded_population=n_excluded,
+            population_breakdown=breakdown,
         )
 
     def train(
@@ -769,6 +940,8 @@ class Session:
         esperadas = spec_keys | {st.target} | ({time_col} if time_col else set())
         if self._w_col is not None:
             esperadas = esperadas | {self._w_col}
+        if self._pop_col is not None:
+            esperadas = esperadas | {self._pop_col}
         got_keys = set(df_oot.columns)
         if got_keys != esperadas:
             raise ValueError(
@@ -791,6 +964,26 @@ class Session:
             raise RuntimeError(
                 "[session] load_oot sin imputer: partition() no ejecutado"
             )
+        # Fase 3.3: filtrar por poblacion ANTES de materializar X/y.
+        if self._pop_col is not None:
+            pop_ok_mask = (
+                df_oot[self._pop_col]
+                .isin(self._pop_ok_values or ())
+                .to_numpy()
+            )
+            n_excl_oot = int((~pop_ok_mask).sum())
+            non_ok_oot = df_oot.loc[~pop_ok_mask, self._pop_col]
+            vc_oot = non_ok_oot.value_counts()
+            breakdown_oot = tuple(
+                (str(v), int(c))
+                for v, c in sorted(
+                    vc_oot.items(), key=lambda kv: (-int(kv[1]), str(kv[0]))
+                )
+            )
+            df_oot = df_oot.loc[pop_ok_mask].reset_index(drop=True)
+        else:
+            n_excl_oot = 0
+            breakdown_oot = ()
         # time_col es metadato temporal, NUNCA predictor: el X de OOT lleva
         # exactamente las columnas del spec (orden del spec, no alfabetico).
         spec_order = list(dict(st.spec).keys())
@@ -841,11 +1034,17 @@ class Session:
                   f"|temporal_verified={temporal_ok}")
         if self._w_col is not None:
             evento += "|weighted=true"
+        if self._pop_col is not None:
+            evento += (
+                f"|population_col={self._pop_col}|excluded_oot={n_excl_oot}"
+            )
         return self._commit(
             FlowState.OOT_LOADED,
             evento=evento,
             n_oot=int(len(df_oot)), temporal_verified=temporal_ok,
             oot_source="external-file",
+            n_excluded_population_oot=n_excl_oot,
+            population_breakdown_oot=breakdown_oot,
         )
 
     def evaluate_oot(

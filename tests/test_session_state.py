@@ -1187,6 +1187,336 @@ def test_weighted_session_h_weight_oot_false_uses_uniform_oot_weights():
         )
 
 
+def _csv_population(tmp: Path) -> Path:
+    """CSV con columna de poblacion. y = 1_{edad >= 40}, 120 filas.
+    Distribucion de la columna pop: 70 OK, 30 INDET, 20 INSUF.
+    """
+    n = 120
+    edad = np.tile(np.arange(20, 60), 3)
+    seg = np.tile(["a", "b", "c"], 40)
+    y = (edad >= 40).astype(int)
+    pop = np.array(["OK"] * 70 + ["INDET"] * 30 + ["INSUF"] * 20)
+    df = pd.DataFrame(
+        {"edad": edad, "seg": seg, "pop": pop, "default": y}
+    )
+    p = tmp / "mini_pop.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def _pop_fix_spec(s: Session, **kwargs) -> None:
+    s.fix_spec(
+        "default",
+        predictors=["edad", "seg"],
+        target_class=1,
+        class_labels={0: "Bueno", 1: "Malo"},
+        **kwargs,
+    )
+
+
+def test_population_fix_spec_rejects_missing_column():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _pop_fix_spec, s,
+                       population_col="no_existe",
+                       population_ok_values=("OK",))
+
+
+def test_population_fix_spec_rejects_col_equals_target():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _pop_fix_spec, s,
+                       population_col="default",
+                       population_ok_values=("OK",))
+
+
+def test_population_fix_spec_rejects_col_as_predictor():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        try:
+            s.fix_spec(
+                "default",
+                predictors=["edad", "seg", "pop"],
+                target_class=1,
+                class_labels={0: "Bueno", 1: "Malo"},
+                population_col="pop",
+                population_ok_values=("OK",),
+            )
+        except ValueError as e:
+            assert "predictor" in str(e)
+            return
+        raise AssertionError("fix_spec no lanzo ValueError")
+
+
+def test_population_fix_spec_rejects_nan_in_column():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        df = pd.read_csv(csv_path)
+        df.loc[5, "pop"] = np.nan
+        df.to_csv(csv_path, index=False)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        try:
+            _pop_fix_spec(s, population_col="pop",
+                          population_ok_values=("OK",))
+        except ValueError as e:
+            assert "NaN" in str(e)
+            return
+        raise AssertionError("fix_spec no lanzo ValueError (NaN)")
+
+
+def test_population_fix_spec_rejects_empty_ok_values():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(ValueError, _pop_fix_spec, s,
+                       population_col="pop",
+                       population_ok_values=())
+
+
+def test_population_fix_spec_rejects_k_ok_below_2():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        # whitelist con solo "NOEXISTE": deja 0 filas -> K_ok = 0
+        try:
+            _pop_fix_spec(s, population_col="pop",
+                          population_ok_values=("NOEXISTE",))
+        except ValueError as e:
+            assert "K_ok" in str(e) or "clases" in str(e)
+            return
+        raise AssertionError("fix_spec no lanzo ValueError (K_ok=0)")
+
+
+def test_population_fix_spec_persists_col_and_ok_values():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        assert s.state.population_col == "pop"
+        assert s.state.population_ok_values == ("OK",)
+        assert s._pop_col == "pop"
+        assert s._pop_ok_values == ("OK",)
+
+
+def test_population_fix_spec_logs_warning_when_class_dropped():
+    """Caso: whitelist deja fuera una clase entera del target."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        # Clase 1 (y=1) es edad>=40. Filas con edad>=40 y pop=OK: 40-59
+        # (20 filas). Clase 0 (y=0) es edad<40. Con OK tenemos ambas.
+        # Ahora forzamos que OK solo contenga filas con y=1: creamos un
+        # dataset donde pop="OK" SOLO en y=1.
+        df = pd.read_csv(csv_path)
+        df["pop"] = np.where(df["default"] == 1, "OK", "INDET")
+        df.to_csv(csv_path, index=False)
+        captura = []
+
+        class _H(logging.Handler):
+            def emit(self, r):
+                captura.append(r.getMessage())
+
+        lg = logging.getLogger("treegov.session.pop.warn")
+        lg.handlers = [_H()]
+        lg.propagate = False
+        lg.setLevel(logging.DEBUG)
+        s = Session(logger=lg)
+        s.load_dataset(str(csv_path))
+        try:
+            _pop_fix_spec(s, population_col="pop",
+                          population_ok_values=("OK",))
+        except ValueError:
+            # K_ok = 1 -> rechazado (correcto). Verificamos el warning.
+            pass
+        mensajes = "\n".join(captura)
+        assert ("no aparece tras el filtro" in mensajes.lower()
+                or "k_ok" in mensajes.lower())
+
+
+def test_population_partition_excludes_rows_and_reports_counts():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        st = s.partition(train_frac=0.7, seed=42)
+        assert st.n_excluded_population == 50
+        # breakdown: INSUF=20, INDET=30 (orden por count desc)
+        assert st.population_breakdown == (("INDET", 30), ("INSUF", 20))
+
+
+def test_population_partition_train_test_idx_relative_to_original_df():
+    """Los indices siguen siendo posiciones relativas al _df original."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        st = s.partition(train_frac=0.7, seed=42)
+        n_total = s.state.n_rows
+        assert n_total is not None
+        # La suma de train + test + excluidos == n_total
+        assert (len(st.train_idx) + len(st.test_idx)
+                + st.n_excluded_population) == n_total
+        # Todos los indices son < n_total (relativos al original)
+        assert all(0 <= i < n_total for i in st.train_idx)
+        assert all(0 <= i < n_total for i in st.test_idx)
+
+
+def test_population_partition_breakdown_ordered_deterministically():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        st = s.partition(train_frac=0.7, seed=42)
+        # Verificar orden: por count descendente, empate por valor ascendente
+        bs = st.population_breakdown
+        for i in range(len(bs) - 1):
+            c_i = bs[i][1]
+            c_n = bs[i + 1][1]
+            assert c_i > c_n or (c_i == c_n and bs[i][0] < bs[i + 1][0])
+
+
+def test_population_partition_without_filter_c1_parity():
+    """Invariante C1: sin filtro, el split es identico al pre-3.3."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        # Sesion sin filtro
+        s0 = Session(logger=_quiet_logger())
+        s0.load_dataset(str(csv_path))
+        _pop_fix_spec(s0)
+        st0 = s0.partition(train_frac=0.7, seed=42)
+        # Sesion con filtro declarado pero excluyendo cero filas
+        s1 = Session(logger=_quiet_logger())
+        s1.load_dataset(str(csv_path))
+        _pop_fix_spec(s1, population_col="pop",
+                      population_ok_values=("OK", "INDET", "INSUF"))
+        st1 = s1.partition(train_frac=0.7, seed=42)
+        assert st0.train_idx == st1.train_idx
+        assert st0.test_idx == st1.test_idx
+        assert st1.n_excluded_population == 0
+
+
+def test_population_load_oot_requires_column_in_oot_csv():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_population(tmp)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        # OOT sin columna pop
+        df_oot = pd.DataFrame(
+            {"edad": np.arange(60, 80), "seg": ["a", "b"] * 10,
+             "default": np.ones(20, dtype=int)}
+        )
+        oot_path = tmp / "oot_sin_pop.csv"
+        df_oot.to_csv(oot_path, index=False)
+        try:
+            s.load_oot(str(oot_path))
+        except ValueError as e:
+            assert "pop" in str(e)
+            return
+        raise AssertionError("load_oot no lanzo ValueError")
+
+
+def test_population_load_oot_excludes_rows_and_reports_counts():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_population(tmp)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        # OOT con 10 OK, 6 INDET, 4 INSUF
+        edad = np.arange(60, 80)
+        seg = np.tile(["a", "b"], 10)
+        y = np.array([0] * 5 + [1] * 15, dtype=int)
+        pop = np.array(["OK"] * 10 + ["INDET"] * 6 + ["INSUF"] * 4)
+        df_oot = pd.DataFrame(
+            {"edad": edad, "seg": seg, "pop": pop, "default": y}
+        )
+        oot_path = tmp / "oot_pop.csv"
+        df_oot.to_csv(oot_path, index=False)
+        st = s.load_oot(str(oot_path))
+        assert st.n_excluded_population_oot == 10
+        assert st.population_breakdown_oot == (("INDET", 6), ("INSUF", 4))
+
+
+def test_population_reset_to_data_loaded_clears_caches():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        s.partition(train_frac=0.7, seed=42)
+        s.reset_to_data_loaded()
+        assert s._pop_col is None
+        assert s._pop_ok_values is None
+        assert s.state.population_col is None
+        assert s.state.population_ok_values == ()
+
+
+def test_describe_population_column_returns_values_with_counts():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        dto = s.describe_population_column("pop")
+        assert dto["exists"] is True
+        assert dto["n"] == 120
+        # Orden: count desc, valor asc -> INDET(30), INSUF(20), OK(70)
+        # 70 > 30, 30 > 20, orden real: OK(70), INDET(30), INSUF(20)
+        vals = dto["values"]
+        assert vals[0] == ("OK", 70)
+        assert vals[1] == ("INDET", 30)
+        assert vals[2] == ("INSUF", 20)
+
+
+def test_describe_population_column_missing_column_returns_exists_false():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        dto = s.describe_population_column("no_existe")
+        assert dto == {"exists": False, "n": 0, "values": ()}
+
+
+def test_describe_population_column_without_dataset_raises():
+    s = Session(logger=_quiet_logger())
+    _assert_raises(RuntimeError, s.describe_population_column, "pop")
+
+
+def test_describe_population_column_does_not_mutate_state():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        before = s.state
+        s.describe_population_column("pop")
+        after = s.state
+        assert before is after
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())
