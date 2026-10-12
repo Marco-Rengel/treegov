@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 10/10/2026
+**Última actualización:** 11/10/2026
 
 ---
 
@@ -85,7 +85,13 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 346/346 PASSED.
+- **Suite de tests:** 377/377 PASSED.
+
+**Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
+Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro opt-in
+declarado en `fix_spec`, propagación por toda la pipeline, wizard con
+combo y tabla de valores OK, tests E2E. Invariante C1: sin
+`population_col`, comportamiento idéntico al pre-3.3. Suite 377/377.
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -95,8 +101,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.3 — Categorías Indet / Insufficient / No
-  Perf.
+- **Próximo paso:** Fase 3.4 — CRT y QUEST multiclase.
 
 ---
 
@@ -107,12 +112,12 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
 - **Trabajo actual:** Windows nativo.
 
-### Herramienta activa — OpenCode 1.18.35 (actualizado 09/10/2026)
+### Herramienta activa — OpenCode 1.19.0 (actualizado 11/10/2026)
 
-- **OpenCode 1.18.35** con `moonshotai/kimi-k3`.
-- **Cliente:** OpenCode 1.18.35 (V1, no V2). Actualizado desde
+- **OpenCode 1.19.0** con `moonshotai/kimi-k3`.
+- **Cliente:** OpenCode 1.19.0 (V1, no V2). Actualizado desde
   1.18.32 el 06/10/2026.
-- **Instalación:** global vía `npm` (`opencode-ai@1.18.35`).
+- **Instalación:** global vía `npm` (`opencode-ai@1.19.0`).
   Ubicación: `C:\Users\maren\AppData\Roaming\npm\opencode.ps1`.
 - **Autenticación:** `opencode auth login` con provider `Moonshot AI`
   (internacional, endpoint `https://api.moonshot.ai/v1`, key propia
@@ -239,6 +244,30 @@ rompen el prefix matching de la caché ($0.22 con thinking=high, $0.12
 con thinking=low para una tarea de ~25K de contexto). Se mantiene
 OpenCode como herramienta principal; Kimi Code CLI queda como
 alternativa para tareas puntuales.
+
+### Nivel de razonamiento del agente — política (11/10/2026)
+
+OpenCode permite elegir el nivel de razonamiento del modelo con el
+comando `/variants`. La política del proyecto es:
+
+| Tipo de tarea | Nivel |
+|---|---|
+| Documentación pura (audit_log, roadmap, README) | `high` |
+| Ediciones quirúrgicas simples (< 20 líneas) | `high` |
+| Sub-fases de código con múltiples archivos | `max` |
+| Refactors estructurales, depuración de bugs | `max` |
+| Cambios de firma de funciones públicas | `max` |
+
+El criterio central: **si el cambio puede romper consumidores en
+cascada, `max`**. El nivel `low` NO es válido para trabajo técnico.
+
+Evidencia del 11/10/2026: durante la Fase 3.3.d el nivel quedó en `low`
+tras una actualización de OpenCode (la configuración por defecto se
+reseteó), y produjo 15 fallos evitables en la suite: firmas
+desalineadas, cfgs de test sin actualizar, `()` vs `None` en
+whitelist vacía. Al subir a `max`, los errores se detectaron antes de
+escribir el código. El coste por prompt sube de ~$0.15 a ~$0.37, pero
+el ahorro en correcciones y en tokens de diagnóstico lo compensa.
 
 ### Privacidad
 - Moonshot AI es servicio de pago (NOVASCENT/Singapur), pero sigue siendo

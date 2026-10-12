@@ -76,7 +76,7 @@ sub-fase futura excede $3, diagnosticar. Análisis completo en
 
 ## Herramienta de desarrollo: OpenCode
 
-- **Versión:** 1.18.35 (global vía `npm`).
+- **Versión:** 1.19.0 (global vía `npm`).
 - **Modelo:** `moonshotai/kimi-k3` (Kimi K3).
 - **Autenticación:** `opencode auth login` con provider `Moonshot AI`
   (internacional, endpoint `https://api.moonshot.ai/v1`). La key es
@@ -106,10 +106,10 @@ sub-fase futura excede $3, diagnosticar. Análisis completo en
 **Nota histórica:** OpenCode se usó al inicio con NVIDIA NIM (key
 gratuita) y dio problemas de tool calls. Aider lo sustituyó el
 27/09/2026. El 03/10/2026 se migró a Moonshot directo con Aider. El
-09/10/2026 se volvió a OpenCode, ahora con la versión 1.18.35 y key
-propia de Moonshot; con esta combinación (OpenCode 1.18.35 + Moonshot
+09/10/2026 se volvió a OpenCode, ahora con la versión 1.19.0 y key
+propia de Moonshot; con esta combinación (OpenCode 1.19.0 + Moonshot
 directo) los problemas anteriores no se reproducen y el consumo de
-tokens es sustancialmente menor.
+tokens es sustancialmente menor. Actualizado a 1.19.0 el 11/10/2026.
 
 ### Herramienta de respaldo — Aider 0.86.2
 
@@ -160,6 +160,20 @@ Contenía un archivo `opencode.json` con dos plugins problemáticos:
 `opencode-supermemory` (roto) y `opencode-auto-resume`. No recrear esa
 carpeta sin justificación. Si algún día se necesita un plugin global,
 usar la configuración global en `~/.config/opencode/`.
+
+### Nivel de razonamiento del agente (política desde 11/10/2026)
+
+OpenCode permite elegir el nivel de razonamiento del modelo con el comando `/variants`. La política del proyecto es:
+
+- **`high`** (default): documentación pura, ediciones quirúrgicas simples (< 20 líneas), actualizaciones de comentarios y docstrings.
+- **`max`** (obligatorio): cambios de firma de funciones públicas, sub-fases con múltiples archivos, refactors estructurales, depuración de bugs.
+- **`low`**: NO es válido para trabajo técnico.
+
+El criterio central: **si el cambio puede romper consumidores en cascada, `max`**.
+
+Evidencia: durante la Fase 3.3.d, la configuración por defecto de OpenCode quedó en `low` tras la actualización a 1.19.0, y produjo 15 fallos evitables en la suite. Al subir a `max`, los errores se detectan antes de escribir el código. El coste por prompt sube de ~$0.15 a ~$0.37, pero el ahorro en correcciones lo compensa.
+
+Verificación: la cabecera del chat de OpenCode muestra el nivel activo (p. ej. `Build · Kimi K3 Moonshot AI · max`).
 
 ## Gobernanza
 

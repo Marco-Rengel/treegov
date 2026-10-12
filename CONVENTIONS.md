@@ -22,7 +22,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de 243/243 tests, no se commitea.
+Si la suite baja de 377/377 tests, no se commitea.
 
 **Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
 a los 5 minutos de inactividad. Verificar en PowerShell entre cada
@@ -67,6 +67,8 @@ Reglas operativas derivadas:
   comportamiento esperado.
 - **Tareas en ráfaga**: 4-6 tareas seguidas sin pausa dentro de la
   sub-fase, luego verificación + commit + cierre del cliente.
+
+**Refinamiento 11/10/2026.** La regla de ráfaga se refuerza: una sub-fase COMPLETA se manda en ráfaga (todos los prompts seguidos), y se verifica UNA sola vez al final. Enviar prompts de uno en uno con verificación intermedia rompe la caché y multiplica el coste. El desglose del Product Bill del 11/10/2026 confirma que la caché de Moonshot está operando al 93.8% de tokens servidos desde caché, y que los levers reales son: (1) respuestas cortas del modelo (output), (2) prompts quirúrgicos (input fresco), (3) no romper el TTL de 5 minutos con pausas largas. El tamaño del prefijo cacheado ya no es un lever significativo.
 
 ## Comentarios y docs
 

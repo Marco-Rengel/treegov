@@ -1751,6 +1751,137 @@ analista que quiera aislar el drift del modelo.
 
 ---
 
+## §14. Population category decisions (Phase 3.3)
+
+### 14.1 The population filter is opt-in, mirroring sample weighting
+
+**Context.** Phase 3.3 introduces a population-category filter: an
+optional auxiliary CSV column whose values determine which rows
+participate in training and evaluation. The question is whether the
+filter is mandatory (the analyst must always declare a population
+column) or opt-in (the analyst declares it only if the dataset has
+one).
+
+**Decision.** Opt-in. With `population_col=None`, the session behaves
+identically to the pre-3.3 pipeline. Invariant C1 is preserved.
+
+**Rationale.** Mirrors the sample-weighting decision of Phase 3.2:
+both features are auxiliary metadata that only apply when the analyst's
+data has the corresponding column. Forcing the declaration would break
+existing datasets and tests for no benefit.
+
+**Consequences.** Every consumer of the population filter must handle
+`population_col is None` explicitly. The `Session` caches
+`_pop_col`/`_pop_ok_values` are `None` in the opt-out case. The
+`fix_spec` signature gains two keyword-only parameters with defaults, so
+existing callers continue to work unchanged.
+
+### 14.2 Whitelist semantics: everything not declared OK is an exclusion
+
+**Context.** A population column can contain many values (`OK`,
+`INDET`, `INSUFFICIENT`, `NO_PERF`, plus values the analyst has never
+seen). The question is how to interpret values not in the declared
+whitelist.
+
+**Alternatives considered.**
+
+- (a) Blacklist: exclude the declared values, include everything else.
+  Rejected: silently includes new values introduced by a data refresh,
+  which is the exact opposite of fail-fast MRM.
+- (b) Whitelist: include only the declared values, exclude everything
+  else. Chosen.
+
+**Decision.** Whitelist. Any value not in `population_ok_values` is an
+exclusion reason, and its value appears verbatim in the
+`population_breakdown`.
+
+**Rationale.** Two intentional consequences: (1) a new value in the CSV
+is never silently included; the analyst sees it in the breakdown and
+decides; (2) a typo in the whitelist is visible: if the analyst
+declares `("OKk",)` instead of `("OK",)`, every row is excluded and
+`fix_spec` fails on the `K_ok >= 2` check. This is the fail-fast
+principle of `docs/design_decisions.md` §0.3 applied to the population.
+
+**Consequences.** The breakdown is a complete partition of the excluded
+set, ordered deterministically by descending count and then ascending
+value. No row is counted twice, no row is missed.
+
+### 14.3 `train_idx` / `test_idx` remain relative to the original `_df`
+
+**Context.** When the population filter is active, only a subset of the
+CSV participates in the partition. The question is whether
+`train_idx`/`test_idx` are positions relative to the original `_df` or
+to the filtered view.
+
+**Decision.** Relative to the original `_df`. The filter is applied
+upstream of `stratified_split`; the split returns positions relative to
+the filtered view, and they are mapped back via
+`ok_indices[idx_rel]`.
+
+**Rationale.** Auditability: any external reference to "row 42 of the
+CSV" remains valid across the session lifecycle. A row excluded by the
+population filter is still uniquely identified by its CSV index. If the
+indices were relative to a filtered view, an auditor reconstructing
+the pipeline from the audit trail would need the exact filtering rule
+to interpret them.
+
+**Documented semantic change.** Before 3.3, `train_idx ∪ test_idx`
+always covered all rows of the CSV. After 3.3, it covers only the OK
+rows when the filter is declared. This is a documented breaking change
+on the meaning of the union, not on the type.
+
+**Consequences.** Tests that assert
+`len(train_idx) + len(test_idx) == N` must adapt to
+`len(train_idx) + len(test_idx) + n_excluded_population == N` when the
+filter is declared, or add `population_col=None` to the fixture.
+
+### 14.4 The OOT flat DTO renames `n_excluded` to `n_excluded_routing`
+
+**Context.** Before 3.3, the OOT flat DTO exposed a key `n_excluded`
+that meant "rows that could not be routed through the tree". With 3.3,
+a second, distinct exclusion exists: rows excluded by the population
+filter. The two must not be confused.
+
+**Decision.** Rename the existing flat key to `n_excluded_routing`. Add
+`n_excluded_population` and `population_breakdown`. The inner
+`OOTReport` dataclass keeps its field name `n_excluded`; only the flat
+DTO representation changes.
+
+**Rationale.** The flat DTO is what the frontend and any external
+consumer sees. An ambiguous key would be silently misinterpreted. The
+rename forces the consumer to choose. The inner dataclass stays stable
+to avoid breaking the Python-level API.
+
+**Consequences.** Documented breaking change on the flat DTO only,
+mirroring how Phase 3.1 broke the flat DTO by changing `pd_final`
+shape. Tests that read `dto["oot"]["n_excluded"]` are updated to read
+`n_excluded_routing`.
+
+### 14.5 Mirror rule extended to a triad: target / weight / population
+
+**Context.** Before 3.3, the wizard had a binary mirror rule: the target
+column is not available as a predictor. Phase 3.2 added a second
+auxiliary column (`weight_col`) with the same rule. Phase 3.3 adds a
+third (`population_col`).
+
+**Decision.** Generalize the rule to a triad: target, weight column,
+and population column are all excluded from the predictor list. Any two
+of them cannot be the same column, and none can be a declared
+predictor.
+
+**Rationale.** Each auxiliary column plays a specific role that is
+orthogonal to prediction. Using any of them as a predictor would leak
+information into the tree (the weight, the exclusion rule, or the
+target itself).
+
+**Consequences.** `PredictorsPage._on_target_change` and
+`_on_weight_change` and `_on_population_change` must each exclude the
+other two. The `fix_spec` validation in `Session` rejects any
+combination where `population_col` equals `target` or is a declared
+predictor.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

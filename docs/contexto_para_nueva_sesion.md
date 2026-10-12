@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 10/10/2026
+**Fecha de última actualización:** 11/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -103,14 +103,14 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ✅ (09/10/2026) |
 | **3.1** | **Multiclase (fase completa)** | **✅ Cerrada 09/10/2026** |
 | **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada 10/10/2026** |
-| 3.3 | Categorías Indet/Insufficient/No Perf | ⏳ Próxima |
-| 3.4 | CRT/QUEST multiclase | ⏳ |
+| **3.3** | **Categorías de población (Indet / Insufficient / No Perf)** | **✅ Cerrada 11/10/2026** |
+| 3.4 | CRT/QUEST multiclase | ⏳ Próxima |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 346/346 PASSED
+**Suite de tests:** 377/377 PASSED
 
 ## Entorno de desarrollo
 
@@ -258,7 +258,7 @@ URL: https://pypi.org/project/treegov/1.0.0a1/
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-## Próximos pasos (Fase 3.3 — Categorías Indet / Insufficient / No Perf)
+## Próximos pasos (Fase 3.4 — CRT y QUEST multiclase)
 
 **Fase 3.2 — Ponderación por muestra: Cerrada 10/10/2026.** 8 sub-fases
 (a-h). Invariante C1: sin pesos, comportamiento idéntico al pre-3.2.
@@ -266,13 +266,16 @@ Suite 346/346. Ver `docs/roadmap.md` sección "Desglose de la Fase 3.2"
 y `docs/audit_log.md` entradas del 10/10/2026 (3.2.a a 3.2.h) para el
 detalle del alcance.
 
-**Fase 3.3 — Categorías Indet / Insufficient / No Perf (próxima).**
+**Fase 3.3 — Categorías de población: Cerrada 11/10/2026.** 5 sub-fases
+(a-e). Invariante C1: sin `population_col`, comportamiento idéntico al
+pre-3.3. Suite 377/377. Ver `docs/roadmap.md` sección "Desglose de la
+Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
 
-Qué es: categorías especiales en los predictores para valores
-indeterminados, insuficientes o sin performance, con tratamiento
-explícito en los motores y gobernanza en el wizard. Alcance a detallar
-en el diseño de la fase (ver `docs/roadmap.md`, tabla principal de
-Fase 3).
+**Fase 3.4 — CRT y QUEST multiclase (próxima).** Abrir los motores C&RT
+y QUEST a targets con K > 2 clases. Hoy solo CHAID los admite; CRT y
+QUEST lanzan `ValueError` con K > 2 desde 3.1.c. Requiere tocar
+`crt_engine.py` (Gini ya soporta K), `quest_engine.py` (extender Stage 1
+χ² y Stage 2 QDA), y `Session.train` (levantar el bloqueo de 3.1.c).
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

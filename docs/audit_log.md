@@ -3342,3 +3342,60 @@ Se refuerza la regla: los nombres de producto privativo no deben aparecer en doc
 **Referencias**: `docs/audit_log.md` entradas del 10/10/2026 (tarde) y del 11/10/2026; capturas de la consola platform.kimi.ai del 11/10/2026 (búsquedas con Select-String); `docs/prompt_para_asistente.md` y `CONVENTIONS.md` para la regla de cero referencias a software privativo.
 
 ---
+
+### 11/10/2026 — Fase 3.3 completa (a-e) + lecciones del bloque
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**:
+
+Fase 3.3 (Categorías de población) arrancada y cerrada el mismo día. La categoría de población es un filtro opt-in declarado en `fix_spec` como columna auxiliar del CSV: las filas cuyo valor no está en la whitelist de valores OK se excluyen antes del split, antes del train y antes de la evaluación OOS/OOT, y se reportan en `n_excluded_population` + `population_breakdown` (desglose por motivo). Cinco sub-fases (a-e). Invariante C1: sin `population_col`, comportamiento idéntico al pre-3.3.
+
+**Sub-fase 3.3.a (SessionState + Session)**:
+
+`SessionState` gana 6 campos (`population_col`, `population_ok_values`, `n_excluded_population`, `population_breakdown`, `n_excluded_population_oot`, `population_breakdown_oot`). `Session` gana 2 caches (`_pop_col`, `_pop_ok_values`) y 1 método nuevo (`describe_population_column`, lectura pura para el wizard). `fix_spec` acepta 2 kwargs nuevos. `partition` filtra y remapea índices al `_df` original (train_idx/test_idx siguen siendo posiciones del CSV completo). `load_oot` filtra el OOT con la misma regla. Commit `67fcf77`. Suite 365/365.
+
+Dos errores durante la sub-fase, ninguno llegó al commit: (a) el orden de validaciones estaba invertido — el `ValueError` por `K_ok < 2` se lanzaba antes del WARNING por clase perdida, rompiendo la trazabilidad MRM (el warning es la evidencia de qué se perdió y debe emitirse siempre) — corregido en el mismo bloque invirtiendo el orden; (b) el fixture OOT de un test tenía una sola clase del target y `load_oot` lo rechazaba correctamente — corregido el fixture con ambas clases.
+
+**Sub-fase 3.3.b (TreeBuilder)**:
+
+`TreeBuilder` gana 2 kwargs keyword-only (`population_col`, `population_ok_values`) que solo entran en el fingerprint (trazabilidad); no tocan lógica numérica. El filtrado de filas vive en `Session`, aguas arriba. Commit `a54ad96`. Suite 368/368 (3 tests nuevos: fingerprint incluye/distingue los dos parámetros).
+
+**Sub-fase 3.3.c (reporting)**:
+
+`reporting.build_oos_oot_report` renombra `n_excluded` → `n_excluded_routing` en el DTO plano y añade `n_excluded_population` + `population_breakdown`. La dataclass interna `OOTReport` no se toca: solo cambia el DTO plano, para que un auditor no confunda los dos tipos de exclusión (routing vs población). Commit `f432363`. Suite 370/370.
+
+**Sub-fase 3.3.d (Wizard + MainWindow + i18n)**:
+
+El wizard gana combo de población con regla espejo (la columna elegida sale de predictores disponibles y resetea `weight_col` si coincidía), tabla de valores OK con checkbox por valor (todos marcados por defecto) y aviso ámbar si la columna tiene NaN. i18n gana 9 claves × 2 idiomas. `MainWindow` propaga `population_provider` al wizard y los dos campos nuevos a `fix_spec`. Commits `e644cdf` + `188c6c3` (el segundo completa al primero, que había dejado sin commitear 3 archivos: `i18n.py`, `main_window.py`, `test_wizard.py`). Suite 375/375 (5 tests nuevos de wizard).
+
+Lección principal del bloque: durante 3.3.d el nivel de razonamiento de OpenCode había quedado en `low` tras la actualización a 1.19.0 (la configuración por defecto se reseteó). El nivel `low` produjo 15 fallos evitables: firmas desalineadas en `_train_pipeline`, cfgs de test sin las claves nuevas, `()` vs `None` en `population_ok_values`. Al subir a `max` con `/variants`, los errores se detectaron antes de escribir el código. Política adoptada: `max` obligatorio para cambios de firma pública, sub-fases con múltiples archivos y refactors; `low` no es válido para trabajo técnico. Documentada en `docs/prompt_para_asistente.md` sección 6.
+
+Lección secundaria: cuando una función gana parámetros obligatorios, TODOS sus consumidores deben buscarse y adaptarse en el mismo bloque, no en la sub-fase siguiente. Los 15 fallos provinieron de no haber auditado los helpers `_cfg()` de los tests E2E antes de tocar `_train_pipeline`.
+
+Lección terciaria: el commit `e644cdf` quedó incompleto porque en el `git add` se omitieron 3 archivos (i18n, main_window, test_wizard). La suite pasó porque los tests de wizard quedaron sin commitear. Se detectó al revisar el `git status` de la sub-fase siguiente y se corrigió con `188c6c3`. Refuerzo de la regla: antes de cada commit, revisar la lista completa de archivos modificados contra el plan, no solo el output de `git status`.
+
+**Sub-fase 3.3.e (E2E + cierre documental)**:
+
+Tests E2E del flujo de población: fixture `_make_csv_population` (CSV con columna `pop` 60/25/15 OK/INDET/INSUF) + 2 tests nuevos (flujo completo con filtro activo; reset limpia caches y permite reconfigurar sin releer el CSV). Cierre documental sincronizado en el mismo bloque: `docs/roadmap.md`, `docs/estado_proyecto.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `.treegovrules`, `AGENTS.md`, `CONVENTIONS.md`. Suite 377/377.
+
+**Reglas operativas nuevas del bloque**:
+
+- Auditoría obligatoria de consumidores antes de cambiar firmas públicas.
+- Nivel de razonamiento: `max` para cambios multi-archivo y firmas.
+- Revisión completa del `git status` contra el plan antes de cada commit.
+- Ráfaga real: una sub-fase completa en prompts seguidos con verificación única al final; enviar prompts de uno en uno con verificación intermedia rompe la caché de prefijos (hallazgo del 11/10/2026).
+
+**Cierre**:
+
+Fase 3.3 completa (5 sub-fases). Suite 377/377. Invariante C1 verificado: sin `population_col`, el comportamiento es idéntico al pre-3.3 (tests de paridad incluidos). Próximos pasos: (a) PyPI 1.0.0a2 (diferido del 11/10, target después de 3.3 → ya toca); (b) Fase 3.4 (CRT y QUEST multiclase).
+
+**Tests**: 377/377 PASSED.
+
+**Referencias**: `docs/3.3_design_population_categories.md`, `docs/design_decisions.md` §14, `docs/roadmap.md` sección Fase 3.3, y las entradas del 10/10/2026 y 11/10/2026 (documentation maintenance).
+
+---

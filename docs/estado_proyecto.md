@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 10/10/2026
+**Fecha de última actualización:** 11/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -211,10 +211,30 @@ Tres parámetros nuevos en el fingerprint: `weighted`, `weight_col`,
 `min_child_weight`. Tres decisiones diferidas en `design_decisions.md`
 (§13.7, §13.8, §13.9). Suite: 346/346.
 
+### Fase 3.3 — Categorías de población ✅ Cerrada 11/10/2026
+
+**Alcance**: filtro opt-in de población, declarado en fix_spec como
+columna auxiliar del CSV. Filas cuyo valor no está en la whitelist de
+valores OK se excluyen antes del split, antes del train y antes de la
+evaluación OOS/OOT, y se reportan en `n_excluded_population` +
+`population_breakdown` (desglose por motivo). Invariante C1: sin
+`population_col`, comportamiento idéntico al pre-3.3.
+
+**Sub-fases** (5, todas cerradas el 11/10/2026):
+
+- 3.3.a — `SessionState` y `Session`: campos, caches, `fix_spec`, `partition`, `load_oot`, `reset_to_data_loaded`, `describe_population_column` ✅
+- 3.3.b — `TreeBuilder`: `population_col` y `population_ok_values` en fingerprint ✅
+- 3.3.c — `reporting.build_oos_oot_report`: rename `n_excluded` → `n_excluded_routing` + nuevos contadores ✅
+- 3.3.d — Wizard: combo de población, regla espejo, tabla de valores OK, i18n ✅
+- 3.3.e — Tests E2E del flujo de población + cierre documental ✅
+
+Dos parámetros nuevos en el fingerprint: `population_col`,
+`population_ok_values`. Suite: 377/377.
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3.3** — Categorías Indet / Insufficient / No Perf
+- **Fase 3.3** — Categorías de población ✅ Completada 11/10/2026
 - **Fase 3.4** — CRT y QUEST multiclase
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación)
 - **Fase 3.6** — Validación con datasets públicos (German Credit, UCI)
@@ -355,22 +375,22 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 11 |
 | profiling.py | 3 |
-| tree_builder.py | 32 |
-| session_state.py | 59 |
+| tree_builder.py | 35 |
+| session_state.py | 77 |
 | validation.py | 17 |
 | pruning.py | 6 |
 | stability.py | 18 |
-| reporting.py | 18 |
+| reporting.py | 20 |
 | gui_smoke (frontend) | 9 |
-| wizard (frontend) | 16 |
+| wizard (frontend) | 21 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
-| e2e_mainwindow (frontend) | 7 |
+| e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 7 |
-| e2e_reports (frontend) | 4 |
-| **Total** | **346** |
+| e2e_reports (frontend) | 5 |
+| **Total** | **377** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 346/346 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 377/377 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -417,7 +437,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
 - [x] **Fase 3.2** — Ponderación por muestra: Cerrada 10/10/2026 (8 sub-fases a-h, suite 346/346).
-- [ ] **Fase 3.3** — Categorías Indet / Insufficient / No Perf. **Próximo paso.**
+- [x] **Fase 3.3** — Categorías de población. **Completada 11/10/2026.** 5 sub-fases (a-e). Suite 377/377.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
@@ -482,9 +502,9 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 3. Primer mensaje sugerido al agente:
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
-> 3.0, 3.1 (multiclase) y 3.2 (ponderación por muestra) cerradas. Suite
-> 346/346. Próximo paso: Fase 3.3 (categorías Indet / Insufficient /
-> No Perf) con OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
+> 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra) y 3.3 (categorías
+> de población) cerradas. Suite 377/377. Próximo paso: Fase 3.4 (CRT y
+> QUEST multiclase) con OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo
 > (key propia)."
 
 ---

@@ -197,7 +197,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada 04/10/2026 |
 | 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
 | 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
-| 3.3 | Categorías Indet / Insufficient / No Perf | Alta |
+| 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
 | 3.4 | CRT y QUEST multiclase | Media |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
 | 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
@@ -218,6 +218,18 @@ y no-crédito (biología, ciencias sociales).
 | 3.2.h | stability ponderado + wizard + E2E + cierre | ✅ 10/10/2026 |
 
 **Cierre de la Fase 3.2.** Las 8 sub-fases (a-h) quedan cerradas el 10/10/2026. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard. Invariante C1: sin pesos, comportamiento idéntico al pre-3.2. Tres parámetros nuevos en el fingerprint: weighted, weight_col, min_child_weight. Tres decisiones diferidas registradas en design_decisions.md §13.7 (KS/AUC/Gini del gains table sin ponderar), §13.8 (HL escala con la masa), §13.9 (nombre del parámetro weight_oot). Suite: 346/346 PASSED.
+
+**Desglose de la Fase 3.3:**
+
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.3.a | SessionState + Session: campos, caches, fix_spec, partition, load_oot, reset, describe_population_column | ✅ 11/10/2026 |
+| 3.3.b | TreeBuilder: population_col y population_ok_values en fingerprint | ✅ 11/10/2026 |
+| 3.3.c | reporting.build_oos_oot_report: rename n_excluded → n_excluded_routing + nuevos contadores de población | ✅ 11/10/2026 |
+| 3.3.d | Wizard: combo de población, regla espejo, tabla de valores OK, i18n | ✅ 11/10/2026 |
+| 3.3.e | Tests E2E del flujo de población + cierre documental | ✅ 11/10/2026 |
+
+**Cierre de la Fase 3.3.** Las 5 sub-fases (a-e) quedan cerradas el 11/10/2026. La categoría de población es un filtro opt-in declarado en `fix_spec`: filas cuyo valor de columna de población no está en la whitelist declarada se excluyen antes del split, antes del train y antes de la evaluación OOS/OOT; se reportan en `n_excluded_population` y `population_breakdown`. Invariante C1: sin `population_col`, comportamiento idéntico al pre-3.3. Suite: 377/377 PASSED.
 
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
@@ -373,6 +385,9 @@ panel).
 - Prompts quirúrgicos: nombrar líneas exactas cuando se edita código. Evitar que el agente lea archivos enteros.
 - Instrucciones de respuesta corta: el output del modelo cuesta cinco veces más que el input nuevo.
 - Documentar el coste por sub-fase. Referencia de Fase 3.2: dos dólares veintinueve centavos por sub-fase. Si una sub-fase futura excede tres dólares, diagnosticar.
+- **Nivel de razonamiento del agente (Fase 3.3).** Default `high`. `max` obligatorio para: (a) cambios de firma de funciones públicas, (b) sub-fases con múltiples archivos, (c) refactors estructurales, (d) depuración de bugs. `low` NUNCA es válido para trabajo técnico. Durante la Fase 3.3.d el nivel quedó en `low` tras una actualización de OpenCode, y produjo 15 fallos evitables (firmas desalineadas, cfgs de test sin actualizar). Verificado el 11/10/2026: `max` detecta estos errores antes de escribir el código.
+- **Auditoría de consumidores antes de cambiar firmas públicas.** Cuando una función gana parámetros obligatorios, TODOS sus consumidores deben buscarse y adaptarse en el mismo bloque, no dejarlo para la sub-fase siguiente. Los 15 fallos de 3.3.d provienen de no haber auditado los helpers `_cfg()` de los tests E2E antes de tocar `_train_pipeline`.
+- **Un prompt = un archivo, verificación al final del bloque.** La regla de ráfaga se refuerza: una sub-fase completa se manda en ráfaga (todos los prompts seguidos) y se verifica UNA sola vez al final. Enviar prompts de uno en uno con verificación intermedia rompe la caché y multiplica el coste.
 - Evaluar modelos más baratos para tareas de bajo razonamiento (documentación, formateo).
 
 **Pendientes abiertos.** Investigar el hueco de dos dólares noventa y siete centavos del bloque 3.2 con la pestaña Export Records del panel de Moonshot. Analizar los logs de OpenCode del 10/10 para desglose por tarea. Evaluar el TTL de una hora de caché (requiere plugin custom). Evaluar Kimi K2.6 o K2.7-code para tareas simples.
