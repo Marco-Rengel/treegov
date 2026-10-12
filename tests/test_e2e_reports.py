@@ -71,6 +71,8 @@ def _cfg() -> dict:
         "target_class": 1,
         "class_labels": {0: "Non-event", 1: "Event"},
         "weight_col": None,
+        "population_col": None,
+        "population_ok_values": (),
         "train_frac": 0.7,
         "seed": 42,
         "max_depth": 3,

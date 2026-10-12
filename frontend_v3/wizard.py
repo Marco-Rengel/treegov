@@ -135,6 +135,7 @@ class PredictorsPage(QWizardPage):
         *,
         target_provider: Callable[[str], dict] | None = None,
         weight_validator: Callable[[str], bool] | None = None,
+        population_provider: Callable[[str], dict] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -144,6 +145,7 @@ class PredictorsPage(QWizardPage):
         self._types = types
         self._target_provider = target_provider
         self._weight_validator = weight_validator
+        self._population_provider = population_provider
 
         layout = QVBoxLayout(self)
 
@@ -178,6 +180,45 @@ class PredictorsPage(QWizardPage):
         self._lbl_weight_hint = QLabel()
         self._lbl_weight_hint.setWordWrap(True)
         layout.addWidget(self._lbl_weight_hint)
+
+        # --- Phase 3.3.d: population column row + OK values table ---
+        population_row = QHBoxLayout()
+        self._lbl_population = QLabel()
+        self._combo_population = QComboBox()
+        self._combo_population.setObjectName("comboPopulation")
+        self._combo_population.addItem("", userData=None)  # retraducido
+        for col in columns:
+            self._combo_population.addItem(col, userData=col)
+        population_row.addWidget(self._lbl_population)
+        population_row.addWidget(self._combo_population, 1)
+        layout.addLayout(population_row)
+
+        self._lbl_population_warning = QLabel()
+        self._lbl_population_warning.setObjectName("lblPopulationWarning")
+        self._lbl_population_warning.setWordWrap(True)
+        self._lbl_population_warning.setVisible(False)
+        layout.addWidget(self._lbl_population_warning)
+
+        self._lbl_population_hint = QLabel()
+        self._lbl_population_hint.setWordWrap(True)
+        layout.addWidget(self._lbl_population_hint)
+
+        self._group_population = QGroupBox()
+        self._group_population.setObjectName("groupPopulationOK")
+        self._group_population.setVisible(False)
+        gpop_layout = QVBoxLayout(self._group_population)
+        self._lbl_population_ok_hint = QLabel()
+        self._lbl_population_ok_hint.setWordWrap(True)
+        gpop_layout.addWidget(self._lbl_population_ok_hint)
+        self._tbl_population = QTableWidget(0, 3)
+        self._tbl_population.setObjectName("tblPopulation")
+        self._tbl_population.setHorizontalHeaderLabels(["", "", ""])
+        header_p = self._tbl_population.horizontalHeader()
+        header_p.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._tbl_population.verticalHeader().setVisible(False)
+        self._tbl_population.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        gpop_layout.addWidget(self._tbl_population)
+        layout.addWidget(self._group_population)
 
         self._group_class = QGroupBox()
         self._group_class.setObjectName("groupClassOfInterest")
@@ -254,8 +295,12 @@ class PredictorsPage(QWizardPage):
         self._btn_remove_all.clicked.connect(lambda: self._move(True, True))
         self._combo_target.currentIndexChanged.connect(self._on_target_change)
         self._combo_weight.currentIndexChanged.connect(self._on_weight_change)
+        self._combo_population.currentIndexChanged.connect(
+            self._on_population_change
+        )
 
         self._on_weight_change(0)  # incluye el fill inicial de disponibles
+        self._on_population_change(0)
 
     # --- data access -----------------------------------------------------
 
@@ -266,6 +311,22 @@ class PredictorsPage(QWizardPage):
         """Columna de pesos seleccionada, o None (Phase 3.2.h)."""
         data = self._combo_weight.currentData()
         return None if data is None else str(data)
+
+    def population_col(self) -> str | None:
+        """Columna de población seleccionada, o None (Phase 3.3.d)."""
+        data = self._combo_population.currentData()
+        return None if data is None else str(data)
+
+    def population_ok_values(self) -> tuple[str, ...]:
+        """Whitelist de valores marcados como OK en la tabla de población.
+
+        Devuelve tupla vacía si no hay columna de población declarada.
+        """
+        if self.population_col() is None:
+            return ()
+        return tuple(
+            r["value"] for r in self._population_rows if r["checkbox"].isChecked()
+        )
 
     def selected_predictors(self) -> list[str]:
         return [
@@ -309,17 +370,21 @@ class PredictorsPage(QWizardPage):
     def _on_target_change(self, _index: int) -> None:
         target = self.target()
         weight = self.weight_col()
-        # if the new target was selected as predictor, move it back first
+        pop = self.population_col()
+        # Si el target o la columna de poblacion estaban como predictores
+        # seleccionados, devolverlos a disponibles antes de recomputar.
         for i in range(self._lst_selected.count() - 1, -1, -1):
             item = self._lst_selected.item(i)
-            if item.data(Qt.ItemDataRole.UserRole) == target:
+            col = item.data(Qt.ItemDataRole.UserRole)
+            if col == target or col == pop:
                 self._lst_selected.takeItem(i)
                 self._lst_available.addItem(item)
-        # available = columns - target - selected - weight_col
+        # available = columns - target - selected - weight_col - population_col
         in_selected = set(self.selected_predictors())
         self._lst_available.clear()
         for col in self._columns:
-            if col == target or col == weight or col in in_selected:
+            if (col == target or col == weight or col == pop
+                    or col in in_selected):
                 continue
             disabled = self._is_chaid() and self._types[col] == "CONTINUOUS"
             self._lst_available.addItem(self._make_item(col, not disabled))
@@ -360,6 +425,66 @@ class PredictorsPage(QWizardPage):
                 valido = False
         self._lbl_weight_warning.setVisible(not valido)
         return valido
+
+    def _on_population_change(self, _index: int) -> None:
+        """Regla espejo: la columna de población sale de predictores
+        disponibles y de la lista de pesos."""
+        pop = self.population_col()
+        # Si era predictor seleccionado, devolverla a disponibles.
+        if pop is not None:
+            for i in range(self._lst_selected.count() - 1, -1, -1):
+                item = self._lst_selected.item(i)
+                if item.data(Qt.ItemDataRole.UserRole) == pop:
+                    self._lst_selected.takeItem(i)
+                    self._lst_available.addItem(item)
+        # Si era la columna de pesos, resetear el combo de pesos.
+        if pop is not None and self.weight_col() == pop:
+            self._combo_weight.setCurrentIndex(0)
+        self._on_target_change(self._combo_target.currentIndex())
+        self._refresh_population_table()
+        self.completeChanged.emit()
+
+    def _refresh_population_table(self) -> None:
+        """Puebla la tabla de OK values desde population_provider.
+
+        Sin provider o sin columna declarada: tabla vacía y grupo oculto.
+        Con provider: una fila por valor observado, con checkbox de OK
+        marcado por defecto (el analista desmarca los no-OK).
+        """
+        self._tbl_population.setRowCount(0)
+        self._population_rows: list[dict] = []
+        pop = self.population_col()
+        if pop is None or self._population_provider is None:
+            self._group_population.setVisible(False)
+            self._lbl_population_warning.setVisible(False)
+            return
+        try:
+            dto = self._population_provider(pop)
+        except (ValueError, RuntimeError, KeyError):
+            self._group_population.setVisible(False)
+            return
+        if not dto.get("exists"):
+            self._group_population.setVisible(False)
+            return
+        values = dto.get("values") or ()
+        # Aviso ámbar si hay NaN entre los valores observados
+        has_nan = any(v == "<NaN>" for v, _ in values)
+        self._lbl_population_warning.setVisible(has_nan)
+        # Poblar tabla
+        self._tbl_population.setRowCount(len(values))
+        for row_idx, (val, count) in enumerate(values):
+            item_val = QTableWidgetItem(val)
+            item_cnt = QTableWidgetItem(str(count))
+            self._tbl_population.setItem(row_idx, 0, item_val)
+            self._tbl_population.setItem(row_idx, 1, item_cnt)
+            chk = QCheckBox()
+            chk.setObjectName(f"chkPop_{row_idx}")
+            chk.setChecked(True)  # por defecto OK
+            self._tbl_population.setCellWidget(row_idx, 2, chk)
+            self._population_rows.append(
+                {"value": val, "count": count, "checkbox": chk}
+            )
+        self._group_population.setVisible(True)
 
     def _refresh_class_table(self) -> None:
         """Repobla la tabla de clases desde el target_provider.
@@ -526,6 +651,17 @@ class PredictorsPage(QWizardPage):
         self._combo_weight.setItemText(0, tr("wizard_weight_none"))
         self._lbl_weight_warning.setText(tr("wizard_weight_warning"))
         self._lbl_weight_hint.setText(tr("wizard_weight_hint"))
+        self._lbl_population.setText(tr("wizard_population_label"))
+        self._combo_population.setItemText(0, tr("wizard_population_none"))
+        self._lbl_population_hint.setText(tr("wizard_population_hint"))
+        self._lbl_population_warning.setText(tr("wizard_population_warning"))
+        self._group_population.setTitle(tr("wizard_population_ok_title"))
+        self._lbl_population_ok_hint.setText(tr("wizard_population_ok_hint"))
+        self._tbl_population.setHorizontalHeaderLabels([
+            tr("wizard_population_ok_col_value"),
+            tr("wizard_population_ok_col_count"),
+            tr("wizard_population_ok_col_ok"),
+        ])
 
 
 # ---------------------------------------------------------------------------
@@ -762,6 +898,7 @@ class ModelWizard(QWizard):
         *,
         target_provider: Callable[[str], dict] | None = None,
         weight_validator: Callable[[str], bool] | None = None,
+        population_provider: Callable[[str], dict] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -773,7 +910,8 @@ class ModelWizard(QWizard):
         self.page_engine = EnginePage(self)
         self.page_predictors = PredictorsPage(
             columns, types, target_provider=target_provider,
-            weight_validator=weight_validator, parent=self
+            weight_validator=weight_validator,
+            population_provider=population_provider, parent=self
         )
         self.page_validation = ValidationPage(self)
         self.page_governance = GovernancePage(self)
@@ -799,6 +937,8 @@ class ModelWizard(QWizard):
             "target_class": self.page_predictors.target_class(),
             "class_labels": self.page_predictors.class_labels(),
             "weight_col": self.page_predictors.weight_col(),
+            "population_col": self.page_predictors.population_col(),
+            "population_ok_values": self.page_predictors.population_ok_values(),
             "train_frac": self.page_validation.train_frac(),
             "seed": self.page_validation.seed(),
             "max_depth": self.page_governance.max_depth(),

@@ -595,7 +595,7 @@ class Session:
             self._w_col = None
         # --- Fase 3.3: categorias de poblacion ---
         if population_col is None:
-            if population_ok_values is not None:
+            if population_ok_values:
                 raise ValueError(
                     "[session] population_ok_values requiere population_col "
                     "(no se puede declarar whitelist sin columna)"
