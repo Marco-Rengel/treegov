@@ -436,6 +436,10 @@ class MainWindow(QMainWindow):
             columns, types,
             target_provider=lambda col: self._session.describe_target(col),
             weight_validator=self._weight_validator,
+            population_provider=lambda col: (
+                self._session.describe_population_column(col)
+                if self._session is not None else {"exists": False, "n": 0, "values": ()}
+            ),
             parent=self,
         )
         wiz.finished_with_config.connect(self._on_wizard_finished)
@@ -583,6 +587,8 @@ class MainWindow(QMainWindow):
             target_class=cfg["target_class"],
             class_labels=cfg["class_labels"],
             weight_col=cfg["weight_col"],
+            population_col=cfg["population_col"],
+            population_ok_values=cfg["population_ok_values"],
         )
         self._session.partition(cfg["train_frac"], cfg["seed"])
         self._session.train(

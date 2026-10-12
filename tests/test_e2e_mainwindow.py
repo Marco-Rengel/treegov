@@ -63,6 +63,37 @@ def _make_csv(path: Path, n: int = 300, seed: int = 42) -> Path:
     return path
 
 
+def _make_csv_population(path: Path, n: int = 300, seed: int = 42) -> Path:
+    """CSV con columna de poblacion. 60% OK, 25% INDET, 15% INSUF.
+
+    Mantiene las columnas de _make_csv (edad/seg/ratio/default) para no
+    romper consumidores existentes, y añade `pop`.
+    """
+    rng = np.random.default_rng(seed)
+    df = pd.DataFrame({
+        "edad": rng.integers(20, 60, size=n),
+        "seg": rng.choice(["a", "b", "c"], size=n),
+        "ratio": rng.uniform(0.1, 0.9, size=n),
+        "default": (rng.integers(20, 60, size=n) >= 40).astype(int),
+    })
+    n_ok = int(round(n * 0.60))
+    n_indet = int(round(n * 0.25))
+    n_insuf = n - n_ok - n_indet
+    df["pop"] = ["OK"] * n_ok + ["INDET"] * n_indet + ["INSUF"] * n_insuf
+    df.to_csv(path, index=False)
+    return path
+
+
+def _cfg_population(pop_col: str | None = "pop",
+                    ok_values: tuple = ("OK",)) -> dict:
+    """Config mínima válida con/sin filtro de población."""
+    cfg = _cfg()
+    cfg["predictors"] = ["edad", "seg", "ratio"]
+    cfg["population_col"] = pop_col
+    cfg["population_ok_values"] = ok_values
+    return cfg
+
+
 def _cfg() -> dict:
     """Minimal valid wizard config for a 300-row synthetic dataset."""
     return {
@@ -306,6 +337,80 @@ def test_e2e_weighted_full_flow():
         finally:
             w1.close()
             w1.deleteLater()
+
+
+def test_e2e_population_full_flow():
+    """Fase 3.3.e: flujo completo con filtro de poblacion activo.
+
+    Verifica que:
+    - el wizard cfg con population_col llega a Session.fix_spec;
+    - el modelo se entrena con las filas OK;
+    - n_excluded_population y population_breakdown se reportan;
+    - train_idx y test_idx son posiciones relativas al _df original
+      (invariante de 3.3 §1.3).
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv_population(Path(td) / "mini_pop.csv")
+        w = _open_window(csv)
+        try:
+            w._on_wizard_finished(_cfg_population())
+            st = w._session.state
+            assert st.state.name == "TRAINED"
+            assert st.tree is not None
+            assert st.population_col == "pop"
+            assert st.population_ok_values == ("OK",)
+            assert st.n_excluded_population > 0
+            # breakdown por motivo, dos valores no-OK
+            valores = [b[0] for b in st.population_breakdown]
+            assert "INDET" in valores
+            assert "INSUF" in valores
+            # idx relativos al CSV original (no al filtrado)
+            n_total = st.n_rows
+            assert n_total is not None
+            assert (len(st.train_idx) + len(st.test_idx)
+                    + st.n_excluded_population) == n_total
+            # fingerprint registra el filtro
+            assert st.tree.params_fingerprint  # existe
+            # OOS evalua sobre las filas OK de test
+            w._on_evaluate_oos()
+            metrics = w._session.state.oos_metrics
+            assert metrics is not None
+        finally:
+            w.close()
+            w.deleteLater()
+
+
+def test_e2e_population_reset_clears_state():
+    """Fase 3.3.e: reset_to_data_loaded limpia los caches de poblacion
+    y permite reconfigurar sin releer el CSV."""
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv_population(Path(td) / "mini_pop.csv")
+        w = _open_window(csv)
+        try:
+            # Primera corrida CON filtro
+            w._on_wizard_finished(_cfg_population())
+            st1 = w._session.state
+            assert st1.n_excluded_population > 0
+
+            # Reset y segunda corrida SIN filtro (mismo dataset)
+            w._on_new_wizard()  # dispara reset_to_data_loaded internamente
+            st_reset = w._session.state
+            assert st_reset.state.name == "DATA_LOADED"
+            assert st_reset.population_col is None
+            assert st_reset.population_ok_values == ()
+            assert w._session._pop_col is None
+            assert w._session._pop_ok_values is None
+
+            # Segunda corrida sin filtro -> paridad con pre-3.3
+            w._on_wizard_finished(_cfg_population(pop_col=None,
+                                                  ok_values=()))
+            st2 = w._session.state
+            assert st2.state.name == "TRAINED"
+            assert st2.n_excluded_population == 0
+            assert st2.population_breakdown == ()
+        finally:
+            w.close()
+            w.deleteLater()
 
 
 # ---------------------------------------------------------------------------

@@ -234,6 +234,7 @@ def test_wizard_finish_emits_config():
         "engine", "target", "predictors", "target_class", "class_labels",
         "train_frac", "seed", "max_depth", "min_child_size",
         "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
+        "population_col", "population_ok_values",
     }
     assert cfg["engine"] == "CRT"
     assert cfg["target"] == "default"
@@ -246,6 +247,8 @@ def test_wizard_finish_emits_config():
     assert cfg["governance_mode"] == "BANKING"
     assert cfg["apply_jeffreys"] is True and cfg["pd_floor"] == 0.0003
     assert cfg["weight_col"] is None  # default del wizard: sin pesos
+    assert cfg["population_col"] is None
+    assert cfg["population_ok_values"] == ()
 
 
 def test_wizard_research_mode_disables_governance():
@@ -338,6 +341,8 @@ def test_mainwindow_wizard_config_trains():
             "target_class": 1,
             "class_labels": {0: "Non-event", 1: "Event"},
             "weight_col": None,
+            "population_col": None,
+            "population_ok_values": (),
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
             "governance_mode": "BANKING",
@@ -504,6 +509,104 @@ def test_wizard_weight_warning_when_validator_returns_false():
 # ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
+
+def test_wizard_population_combo_default_is_none():
+    """Fase 3.3.d: el combo arranca en "sin filtro de población"."""
+    wiz = _make_wizard()
+    page = wiz.page_predictors
+    assert page.population_col() is None
+    assert page.population_ok_values() == ()
+    assert page._combo_population.itemData(0) is None
+    assert page._combo_population.currentIndex() == 0
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_population_mirror_rule():
+    """Fase 3.3.d: la columna de población sale de predictores disponibles."""
+    wiz = _make_wizard()
+    page = wiz.page_predictors
+    assert "ingreso" in _available_cols(page)
+    idx = page._combo_population.findData("ingreso")
+    assert idx > 0
+    page._combo_population.setCurrentIndex(idx)
+    assert page.population_col() == "ingreso"
+    assert "ingreso" not in _available_cols(page)
+    # Volver a "(sin filtro)": reaparece
+    page._combo_population.setCurrentIndex(0)
+    assert page.population_col() is None
+    assert "ingreso" in _available_cols(page)
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_population_ok_table_populated_from_provider():
+    """Fase 3.3.d: con population_provider, la tabla se puebla con valores
+    y conteos. Todos los valores marcados OK por defecto."""
+    wiz = ModelWizard(
+        _COLS, _TYPES,
+        population_provider=lambda _col: {
+            "exists": True, "n": 120,
+            "values": (("OK", 70), ("INDET", 30), ("INSUF", 20)),
+        },
+    )
+    page = wiz.page_predictors
+    idx = page._combo_population.findData("ingreso")
+    page._combo_population.setCurrentIndex(idx)
+    assert page._tbl_population.rowCount() == 3
+    assert page._tbl_population.item(0, 0).text() == "OK"
+    assert page._tbl_population.item(0, 1).text() == "70"
+    # Todos marcados OK por defecto
+    assert page.population_ok_values() == ("OK", "INDET", "INSUF")
+    # Desmarcar los dos últimos
+    page._population_rows[1]["checkbox"].setChecked(False)
+    page._population_rows[2]["checkbox"].setChecked(False)
+    assert page.population_ok_values() == ("OK",)
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_population_requires_at_least_one_ok():
+    """Fase 3.3.d: si el analista desmarca todo, population_ok_values()
+    devuelve tupla vacía (el backend lo rechazará con error claro)."""
+    wiz = ModelWizard(
+        _COLS, _TYPES,
+        population_provider=lambda _col: {
+            "exists": True, "n": 10,
+            "values": (("OK", 10),),
+        },
+    )
+    page = wiz.page_predictors
+    idx = page._combo_population.findData("ingreso")
+    page._combo_population.setCurrentIndex(idx)
+    page._population_rows[0]["checkbox"].setChecked(False)
+    assert page.population_ok_values() == ()
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_population_in_current_config():
+    """Fase 3.3.d: current_config incluye population_col y
+    population_ok_values."""
+    wiz = ModelWizard(
+        _COLS, _TYPES,
+        population_provider=lambda _col: {
+            "exists": True, "n": 10,
+            "values": (("OK", 8), ("INDET", 2)),
+        },
+    )
+    cfg0 = wiz.current_config()
+    assert cfg0["population_col"] is None
+    assert cfg0["population_ok_values"] == ()
+    page = wiz.page_predictors
+    idx = page._combo_population.findData("ingreso")
+    page._combo_population.setCurrentIndex(idx)
+    cfg1 = wiz.current_config()
+    assert cfg1["population_col"] == "ingreso"
+    assert cfg1["population_ok_values"] == ("OK", "INDET")
+    wiz.close()
+    wiz.deleteLater()
+
 
 if __name__ == "__main__":
     tests = [

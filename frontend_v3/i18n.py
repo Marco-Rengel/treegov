@@ -109,6 +109,24 @@ _STRINGS: dict[str, dict[str, str]] = {
             "Sample weights adjust the model to the target population. "
             "Rows with zero weight should be excluded before loading."
         ),
+        "wizard_population_label": "Population column:",
+        "wizard_population_none": "(no population filter)",
+        "wizard_population_hint": (
+            "Rows whose population value is not in the OK list below are "
+            "excluded from training and evaluation, and reported separately."
+        ),
+        "wizard_population_warning": (
+            "Warning: the selected column has missing values (NaN). "
+            "Encode them as a string in the CSV before proceeding."
+        ),
+        "wizard_population_ok_title": "Population OK values",
+        "wizard_population_ok_hint": (
+            "Check every value that should be treated as OK. Every "
+            "unchecked value becomes an exclusion reason."
+        ),
+        "wizard_population_ok_col_value": "Value",
+        "wizard_population_ok_col_count": "Rows",
+        "wizard_population_ok_col_ok": "OK",
         "step3_title": "Step 3 — Validation scheme",
         "step3_subtitle": "Stratified holdout partition (Hamilton-Hare).",
         "step3_scheme_label": "Scheme",
@@ -365,6 +383,25 @@ _STRINGS: dict[str, dict[str, str]] = {
             "objetivo. Las filas con peso cero deben excluirse antes de "
             "cargar."
         ),
+        "wizard_population_label": "Columna de población:",
+        "wizard_population_none": "(sin filtro de población)",
+        "wizard_population_hint": (
+            "Las filas cuyo valor de población no esté en la lista de OK "
+            "se excluyen del entrenamiento y la evaluación, y se reportan "
+            "por separado."
+        ),
+        "wizard_population_warning": (
+            "Aviso: la columna seleccionada tiene valores faltantes (NaN). "
+            "Codifíquelos como string en el CSV antes de continuar."
+        ),
+        "wizard_population_ok_title": "Valores OK de población",
+        "wizard_population_ok_hint": (
+            "Marque todos los valores que deban tratarse como OK. Cada "
+            "valor no marcado se convierte en un motivo de exclusión."
+        ),
+        "wizard_population_ok_col_value": "Valor",
+        "wizard_population_ok_col_count": "Filas",
+        "wizard_population_ok_col_ok": "OK",
         "step3_title": "Paso 3 — Esquema de validación",
         "step3_subtitle": "Partición holdout estratificada (Hamilton-Hare).",
         "step3_scheme_label": "Esquema",
