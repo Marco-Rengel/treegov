@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0a1
+**Version**: 1.0.0a2
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 346/346 passing
+**Test suite**: 377/377 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -178,7 +178,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 346/346 passing.**
+**Test suite: 377/377 passing.**
 
 ---
 
