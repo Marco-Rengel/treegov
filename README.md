@@ -167,7 +167,7 @@ TreeGov/
 | **3.0** | Documentation closure + configurable canonical parameters | Completed |
 | **3.1** | Multiclass (target + wizard + MetricsPanel alerts) | Completed |
 | **3.2** | Sample weighting | Completed |
-| **3.3** | Indet / Insufficient / No Perf categories | Planned (next) |
+| **3.3** | Indet / Insufficient / No Perf categories | Completed 11/10/2026 |
 | **3.4** | Multiclass support in C&RT and QUEST | Completed 12/10/2026 |
 | **3.5** | Reports adapted for multiclass and weighting | Planned |
 | **3.6** | Validation with public datasets | Planned |

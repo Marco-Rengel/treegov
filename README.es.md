@@ -167,7 +167,7 @@ TreeGov/
 | **3.0** | Cierre documental + parámetros canónicos configurables | Completada |
 | **3.1** | Multiclase (target + wizard + alertas en MetricsPanel) | Completada |
 | **3.2** | Ponderación por muestra | Completada |
-| **3.3** | Categorías Indet / Insufficient / No Perf | Planificada (siguiente) |
+| **3.3** | Categorías Indet / Insufficient / No Perf | Completada 11/10/2026 |
 | **3.4** | Soporte multiclase en C&RT y QUEST | Completada 12/10/2026 |
 | **3.5** | Reportes adaptados para multiclase y ponderación | Planificada |
 | **3.6** | Validación con datasets públicos | Planificada |
