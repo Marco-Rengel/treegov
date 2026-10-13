@@ -3419,3 +3419,79 @@ Fase 3.3 completa (5 sub-fases). Suite 377/377. Invariante C1 verificado: sin `p
 **Referencias**: `docs/3.4_design_multiclass_crt_quest.md` secciones §2 y §4.1.
 
 ---
+
+### 12/10/2026 — Fase 3.4.b: QUEST multiclase
+
+**Estado**: ✅ Cerrada. Fase 3.4 completa.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Segunda y última sub-fase de la Fase 3.4. Abre el motor
+QUEST a targets con K ≥ 3 clases mediante dos extensiones documentadas:
+Etapa 1 con F-test de K grupos y tie-breaker Brown-Forsythe de K
+grupos; Etapa 2 con QDA univariante para K=2 (paridad) y barrido de
+Gini para K>2. `statistics.py` no se toca: `f_oneway` y
+`brown_forsythe` ya aceptan K ≥ 2 grupos desde 3.2.a. `crt_engine.py`
+no se toca: los kernels de Gini ya se importan en `quest_engine.py`.
+
+**Cambios aplicados**:
+
+- `backend_v3/quest_engine.py`:
+  - Etapa 1 generalizada: eliminado el bloqueo `len(classes) > 2` en
+    `evaluate`; codificación de clase 0..K-1; `_prepare` reescrito
+    para detectar clases presentes y relabelarlas localmente a
+    0..local_K-1 (evita columnas vacías en la tabla c×K que
+    `pearson_chi2` rechaza); `f_oneway` y `brown_forsythe` invocados
+    con K grupos.
+  - Etapa 2 generalizada: `_subset_cut` con `codes*K + yc` y
+    `reshape(k_cats, K)`; en la rama nominal K>10, tasa calculada
+    sobre la clase modal global (coherente con
+    `crt_engine._rates_cls`) con WARNING si k_cats > max_exhaustive_cardinality;
+    `_numeric_cut` bifurca por K (K=2 → QDA existente; K>2 → método
+    nuevo `_gini_sweep_numeric`). El nuevo método duplica ~12 líneas
+    del barrido de `CrtEngine._sweep_values` (deuda diferida explícita).
+- `backend_v3/session_state.py`: eliminado por completo el bloqueo
+  multiclase de `Session.train`. Comentario defensivo añadido.
+- `tests/test_quest_engine.py`: 5 tests nuevos.
+- `tests/test_session_state.py`: `test_train_blocks_quest_multiclass`
+  reemplazado por `test_train_allows_quest_multiclass`; añadido
+  `test_quest_multiclass_k3_tree_is_coherent`.
+
+**Identidades verificadas**:
+
+- Etapa 1 K=3: fixture x=[1..10], y=[0]*5+[1]*2+[2]*3 → F=19.6
+  exacto (SSB=70, SSW=12.5), df=(2, 7).
+- Etapa 2 K=3: mismo fixture → threshold = 5.5; child_ns=(5, 5).
+- Paridad K=2: fixture x=[0,1,10,11,12,13], y=[0,0,1,1,1,1]; QDA da
+  threshold ≈ 4.3852 (raíz cuadrática), Gini-sweep daría 1.5. El
+  dispatch K=2 → QDA preserva 4.3852.
+- Brown-Forsythe K=3: fixture con medias iguales y varianzas distintas
+  → W = 23.142857; F-test de medias devuelve p=1; BF sí selecciona.
+- Árbol K=3 completo vía `TreeBuilder`: PD vector de longitud 3
+  sumando 1 en cada nodo; invariantes de `TreeModel` preservados.
+
+**Lecciones del bloque**:
+
+1. `_prepare` con sub-nodos que no contienen todas las clases globales
+   exige relabel local. Sin él, la tabla c×K contiene columnas vacías
+   que `pearson_chi2` rechaza. Detectado en diseño (P1bis).
+2. La bifurcación K=2 / K>2 en Etapa 2 debe preservar la paridad
+   numérica exacta del camino QDA. El test
+   `test_quest_binary_parity_after_3_4` usa un fixture donde QDA y
+   Gini-sweep divergen.
+3. Duplicación de ~12 líneas entre `CrtEngine._sweep_values` y
+   `QuestEngine._gini_sweep_numeric` es deliberada. Extracción a
+   `tree_kernels.py` diferida hasta que un tercer motor lo necesite.
+
+**Tests**: 378/378 → 384/384 PASSED.
+
+**Referencias**:
+
+- `docs/3.4_design_multiclass_crt_quest.md` §3 y §4.
+- `docs/design_decisions.md` §4.5 (nueva subsección).
+- `docs/methodology.md` §3.8 (nueva subsección).
+- `docs/audit_log.md` entrada del 12/10/2026 (3.4.a).
+
+---

@@ -514,6 +514,68 @@ standard practice.
 
 > See `docs/design_decisions.md` §13.4 for the full decision rationale.
 
+### 3.8 QUEST multiclass extensions (Phase 3.4)
+
+QUEST (Loh & Shih 1997) is strictly binary in its canonical form:
+Stage 1 selects a variable via a two-group ANOVA F or a c×2 Pearson χ²;
+Stage 2 splits it via a univariate QDA boundary. Phase 3.4.b opens the
+engine to targets with K ≥ 3 classes through two documented extensions.
+
+**Stage 1 — K-group ANOVA F.**
+
+    F = (SSB / (K - 1)) / (SSW / (N - K))
+
+where SSB and SSW are the between- and within-group sums of squares
+over the K target classes. For K = 2 this reduces exactly to the binary
+form (§3.1). The nominal χ² is unchanged in form: it already operates
+on a c×K contingency table.
+
+**Stage 1 tie-breaker — K-group Brown-Forsythe.**
+
+If no predictor's mean-statistic p-value beats the Bonferroni threshold,
+the robust tie-breaker replaces the data with Levene's z-scores
+`|x_i − median_group|` per class and applies the K-group ANOVA F on
+those. For K = 2 this reduces exactly to the binary Brown-Forsythe.
+
+**Stage 2 — Gini reduction sweep for K > 2.**
+
+The canonical Stage 2 uses a QDA boundary between two Gaussian
+class-conditional densities. This is intrinsically binary, so TreeGov
+bifurcates by K:
+
+- **K = 2**: the QDA path is preserved unchanged (parity invariant).
+- **K > 2**: a Gini reduction sweep over the selected predictor:
+  - Continuous / ordinal: sweep midpoints between consecutive distinct
+    values and choose the cut maximising
+    `ΔI = I(parent) − (n_L/N)·I(L) − (n_R/N)·I(R)`, where `I` is the
+    Gini impurity `1 − Σ_k p_k²` over the K classes.
+  - Nominal with k_cats ≤ 10: exhaustive over the `2^(k_cats−1) − 1`
+    binary partitions of the categories (same kernel as C&RT, §2.5).
+  - Nominal with k_cats > 10: rate-based heuristic on the modal class
+    of the node (same convention as `crt_engine._rates_cls`).
+
+The sweep reuses the same weighted-Gini kernel `_gini_dI` documented
+in §2.1–§2.3.
+
+**Fidelity note.** QUEST canonical (Loh & Shih 1997) is strictly binary.
+The multiclass extension is a deliberate, documented deviation,
+justified by (a) internal coherence with C&RT, and (b) preserving the
+binary nature of each node's split, as required by the tree builder's
+contract (binary split per node, K-length PD vector).
+
+**Fingerprint.** No new field is added. The multiclass behaviour is a
+property of the model, not a configuration toggle: two QUEST models —
+one built on K=2, the other on K=3, same CSV and hyperparameters — are
+already distinguishable by their `class_labels` and `n_classes` entries
+(Phase 3.1).
+
+**Citation.** Loh, W.-Y. & Shih, Y.-S. (1997). *Statistica Sinica*
+7(4), 815-840. The Gini sweep is the standard binary-impurity reduction
+of Breiman, L., Friedman, J. H., Olshen, R. A. & Stone, C. J. (1984).
+*Classification and Regression Trees*, chapters 2-4.
+
+> See docs/design_decisions.md §4.5 for the full decision rationale.
+
 ---
 
 ## 4. SplitConfig — Common contract between engines

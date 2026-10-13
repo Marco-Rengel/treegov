@@ -468,6 +468,90 @@ there is an explicit reason to believe otherwise.
 **Consequences.** The QDA boundary shifts toward the majority class,
 consistent with the empirical prior. Documented in `quest_engine.py`.
 
+### 4.5 QUEST multiclass extension — Stage 1 (K-group F) and Stage 2 (Gini sweep)
+
+**Context.** QUEST (Loh & Shih 1997) is strictly binary in its
+canonical formulation: Stage 1 uses a two-group ANOVA F (continuous
+predictors) or a c×2 Pearson χ² (nominal), and Stage 2 uses a
+univariate QDA cut. Phase 3.4.b opens QUEST to K ≥ 3 classes. Both
+stages require an extension.
+
+**Alternatives considered.**
+
+- *Stage 1, one-vs-rest F*: K separate binary F-tests, take the minimum
+  p-value. Rejected: multiplies the multiple-testing surface and breaks
+  the Bonferroni correction logic in `_mk_selection`.
+- *Stage 1, χ² for all predictors*: reject continuity, treat every
+  predictor as nominal. Rejected: discards the ordinal/continuous
+  structure of the predictor.
+- *Stage 1, K-group F*: natural generalisation of the ANOVA F to K
+  groups. Adopted.
+- *Stage 2, multivariate QDA*: K×K covariance matrices. Rejected:
+  introduces new mathematics not covered by `methodology.md`, breaks
+  the univariate-split promise of QUEST.
+- *Stage 2, one-vs-rest QDA*: K binary cuts per node. Rejected:
+  breaks the single-cut-per-node promise.
+- *Stage 2, Gini reduction sweep*: find the best binary cut for K
+  classes, identical to what C&RT does. Adopted.
+- *Tie-breaker, one-vs-rest Brown-Forsythe*: rejected, same
+  multiplicity problem as one-vs-rest F.
+- *Tie-breaker, K-group Brown-Forsythe*: natural generalisation of
+  Levene's test. Adopted.
+
+**Decision.** Two documented extensions, both preserving the K=2 parity
+invariant.
+
+- **Stage 1**. Replace the two-group F-test with the K-group F-test
+  `F = (SSB / (K − 1)) / (SSW / (N − K))`. For K = 2 this reduces
+  exactly to the current binary F. The nominal χ² is unchanged in
+  form: it already operates on a c × K table.
+- **Stage 1 tie-breaker**. Replace two-group Brown-Forsythe with the
+  K-group version (Levene's z-scores, K-group ANOVA).
+- **Stage 2**. Bifurcate by K:
+  - K = 2 → existing QDA path (parity invariant).
+  - K > 2 → Gini reduction sweep over the selected predictor.
+    Continuous/ordinal: midpoints between consecutive distinct values.
+    Nominal with k_cats ≤ 10: exhaustive over 2^(k_cats−1)−1 binary
+    partitions (same kernel as C&RT). Nominal with k_cats > 10:
+    rate-based heuristic on the modal class of the node (same
+    convention as `crt_engine._rates_cls`).
+- **New method `QuestEngine._gini_sweep_numeric`** duplicates ~12 lines
+  of the sweep kernel in `CrtEngine._sweep_values`. Deliberate:
+  deferred debt (extract to `backend_v3/tree_kernels.py` only if a
+  third engine needs the same kernel).
+- **No new fingerprint field**. The multiclass behaviour is a property
+  of the model, not a configuration toggle. Already captured by
+  `class_labels` / `n_classes` (Phase 3.1).
+
+**Rationale.** K-group F is the natural generalisation preserving the
+"predictor discriminates between classes" reading without new machinery.
+The Gini sweep makes Stage 2 "find the best binary cut for K classes",
+identical to C&RT; coherent with the tree builder's binary-split-per-node
+contract.
+
+**Fidelity note.** Documented deviation from canonical Loh & Shih (1997),
+which is strictly binary. Mirrors the existing fidelity notes in §4.1
+(Bonferroni family), §4.2 (nominal high-card), §4.3 (QDA restriction).
+
+**Consequences.**
+
+- QUEST produces valid K>2 trees through the same Session pipeline as
+  CHAID and C&RT.
+- `Session.train` no longer blocks any engine on class count.
+- Downstream metrics (`validation.py`, `reporting.py`, `stability.py`)
+  continue to block K>2 until Phase 3.5.
+- K=2 parity verified by `test_quest_binary_parity_after_3_4`.
+- `_prepare` relabels classes locally within each sub-node, avoiding
+  empty columns that `pearson_chi2` rejects.
+
+**References.**
+
+- Loh, W.-Y. & Shih, Y.-S. (1997). *Statistica Sinica* 7(4), 815-840.
+- Breiman, L. et al. (1984). *Classification and Regression Trees*.
+- `docs/methodology.md` §3.8.
+- `docs/3.4_design_multiclass_crt_quest.md` §3.1–§3.3.
+- `docs/audit_log.md` 12/10/2026 (3.4.b).
+
 ---
 
 ## §5. Tree builder decisions

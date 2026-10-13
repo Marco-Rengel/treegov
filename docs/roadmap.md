@@ -198,7 +198,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
 | 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
-| 3.4 | CRT y QUEST multiclase | En curso (3.4.a ✅ 12/10/2026) |
+| 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
 | 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
@@ -230,6 +230,15 @@ y no-crédito (biología, ciencias sociales).
 | 3.3.e | Tests E2E del flujo de población + cierre documental | ✅ 11/10/2026 |
 
 **Cierre de la Fase 3.3.** Las 5 sub-fases (a-e) quedan cerradas el 11/10/2026. La categoría de población es un filtro opt-in declarado en `fix_spec`: filas cuyo valor de columna de población no está en la whitelist declarada se excluyen antes del split, antes del train y antes de la evaluación OOS/OOT; se reportan en `n_excluded_population` y `population_breakdown`. Invariante C1: sin `population_col`, comportamiento idéntico al pre-3.3. Suite: 377/377 PASSED.
+
+**Desglose de la Fase 3.4:**
+
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.4.a | C&RT multiclase: levantar el bloqueo en Session.train | ✅ 12/10/2026 |
+| 3.4.b | QUEST multiclase: Etapa 1 F de K grupos + tie-breaker BF K grupos; Etapa 2 QDA K=2 / barrido Gini K>2; retirar bloqueo; §3.8 en methodology | ✅ 12/10/2026 |
+
+**Cierre de la Fase 3.4.** Las dos sub-fases (a: C&RT; b: QUEST) quedan cerradas el 12/10/2026. Ningún motor bloquea ya targets con K > 2 en Session.train. Los bloqueos downstream (validation, reporting, stability) siguen activos hasta Fase 3.5. Invariante K=2: los motores producen modelos numéricamente idénticos al pre-3.4. Fingerprint sin cambios: la conducta multiclase se captura por `class_labels` / `n_classes` desde 3.1. Suite: 384/384 PASSED.
 
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
