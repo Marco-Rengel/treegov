@@ -302,9 +302,13 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 5. `docs/estado_proyecto.md` — dossier completo.
 6. `docs/methodology.md` — metodología matemática con citas.
 7. `docs/design_decisions.md` — decisiones de implementación.
-8. `docs/3.1_design_multiclass.md` — diseño de la fase 3.1 (en curso).
-9. `docs/audit_log.md` — bitácora cronológica (leer últimas 3 entradas).
-10. `docs/roadmap.md` — plan de fases.
+8. `docs/3.1_design_multiclass.md` — diseño de Fase 3.1 (cerrada 09/10/2026).
+9. `docs/3.2_decisions_consolidated.md` — índice consolidado de Fase 3.2 (cerrada 10/10/2026).
+10. `docs/3.3_design_population_categories.md` — diseño de Fase 3.3 (cerrada 11/10/2026).
+11. `docs/3.4_design_multiclass_crt_quest.md` — diseño de Fase 3.4 (cerrada 12/10/2026).
+12. `docs/audit_log.md` — bitácora cronológica (leer últimas 3 entradas).
+13. `docs/roadmap.md` — plan de fases.
+14. `docs/api.md` — superficie de API pública.
 
 ---
 

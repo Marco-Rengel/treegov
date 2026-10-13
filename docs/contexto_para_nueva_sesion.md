@@ -140,7 +140,7 @@ WSL (bash):
 
 - VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
 - Windows Terminal con Ubuntu por defecto.
-- **OpenCode 1.18.35** — **herramienta activa** desde el 09/10/2026.
+- **OpenCode 1.19.0** — **herramienta activa** desde el 09/10/2026.
   Cliente de desarrollo con Kimi K3. Instalación global vía `npm`.
   Autenticación: `opencode auth login` con provider `Moonshot AI`
   (internacional, endpoint `https://api.moonshot.ai/v1`, key propia
@@ -252,8 +252,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a1` en PyPI (03/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0a1/
+**Última versión publicada:** `treegov 1.0.0a3` en PyPI (12/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0a3/
 
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
