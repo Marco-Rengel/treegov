@@ -787,8 +787,8 @@ class Session:
 
         Fase 3.1.c: la clase de interes y las etiquetas canonicas se leen
         de SessionState (fijadas en fix_spec). La clase de interes se lee
-        exclusivamente de SessionState (fijada en fix_spec). Solo CHAID /
-        CHAID_EXHAUSTIVE admiten K > 2 clases en esta fase.
+        exclusivamente de SessionState (fijada en fix_spec).
+        Fase 3.4.a: C&RT también admite K > 2. QUEST sigue bloqueado hasta 3.4.b.
 
         Fase 3.2: si la sesion esta ponderada (fix_spec con weight_col),
         los pesos de train (`_w_train`) se propagan a TreeBuilder junto
@@ -810,12 +810,12 @@ class Session:
         else:
             engine_name = type(engine).__name__
         # Bloqueo multiclase previo a instanciar nada (atomicidad).
-        if K > 2 and engine_name not in ("CHAID", "CHAID_EXHAUSTIVE"):
+        # Fase 3.4.a: C&RT se abre a K>2. QUEST sigue bloqueado hasta 3.4.b.
+        if K > 2 and engine_name not in ("CHAID", "CHAID_EXHAUSTIVE", "CRT"):
             raise ValueError(
                 f"[session] engine {engine_name!r} no soporta targets "
-                f"multiclase en Fase 3.1 (K={K} clases detectadas). "
-                f"Use CHAID o CHAID_EXHAUSTIVE para multiclase, o espere "
-                f"a la Fase 3.4."
+                f"multiclase. Use CHAID, CHAID_EXHAUSTIVE o CRT para "
+                f"multiclase (QUEST se abre en Fase 3.4.b)."
             )
         # Fase 3.1.c paso 4: SessionState es la unica fuente de verdad.
         # El endurecimiento de fix_spec garantiza target_class no-None.

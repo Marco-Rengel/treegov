@@ -684,7 +684,9 @@ def test_fix_spec_multiclass_k3_accepted():
         assert len(s.state.target_classes) == 3
 
 
-def test_train_blocks_crt_multiclass():
+def test_train_allows_crt_multiclass():
+    """Fase 3.4.a: C&RT se abre a K>2. Reemplaza al pre-3.4
+    test_train_blocks_crt_multiclass."""
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv_k3(Path(td))
         s = Session(logger=_quiet_logger())
@@ -692,7 +694,15 @@ def test_train_blocks_crt_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        _assert_raises(ValueError, s.train, "CRT")
+        s.train("CRT", max_depth=3, min_child_size=5)
+        assert s.state.state is FlowState.TRAINED
+        assert s.state.tree is not None
+        assert s.state.tree.method == "CRT"
+        # Coherencia: cada nodo del arbol tiene PD vector de K=3 componentes
+        # que suma 1.
+        for nd in s.state.tree.nodes:
+            assert len(nd.pd_final) == 3
+            assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
 
 
 def test_train_blocks_quest_multiclass():
@@ -1578,6 +1588,31 @@ def test_get_oos_oot_report_includes_population_counts():
         oot = dto["oot"]
         assert oot["n_excluded_population"] == 0
         assert oot["population_breakdown"] == ()
+
+
+def test_crt_multiclass_k3_tree_is_coherent():
+    """Fase 3.4.a: arbol C&RT K=3 con clases bien separadas. Verifica
+    invariantes estructurales: n_events por nodo suma n, todos los nodos
+    tienen vector PD de longitud 3, y las hojas son consistentes."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        s.train("CRT", max_depth=4, min_child_size=5)
+        tree = s.state.tree
+        assert tree is not None
+        for nd in tree.nodes:
+            # n_events por nodo suma exactamente n
+            assert sum(nd.n_events) == nd.n
+            # vector PD coherente
+            assert len(nd.pd_final) == 3
+            assert len(nd.pd_jeffreys) == 3
+            assert len(nd.class_labels) == 3
+            assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+            assert abs(sum(nd.pd_jeffreys) - 1.0) <= 1e-12
 
 
 if __name__ == "__main__":
