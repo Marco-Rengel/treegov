@@ -1,14 +1,15 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "treegov"
-version = "1.0.0a3"
+version = "1.0.0a4"
 description = "Governed decision trees for credit risk — CHAID, C&RT, QUEST with native MRM/IFRS 9."
 readme = "README.md"
 requires-python = ">=3.11"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
     {name = "Marco Rengel"},
 ]
@@ -16,7 +17,6 @@ keywords = ["credit-risk", "decision-trees", "chaid", "crt", "quest", "mrm", "if
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Information Analysis",
@@ -39,7 +39,7 @@ Homepage = "https://github.com/Marco-Rengel/treegov"
 Repository = "https://github.com/Marco-Rengel/treegov"
 
 [tool.setuptools]
-packages = ["backend_v3", "frontend_v3"]
+packages = ["backend_v3", "frontend_v3", "frontend_v3.resources"]
 
 [tool.setuptools.package-data]
 frontend_v3 = ["resources/*.qss"]
