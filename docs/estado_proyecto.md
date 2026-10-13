@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0a0 (alpha) |
+| Versión | 1.0.0a3 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | pypi.org/project/treegov/1.0.0a1 |
+| PyPI | pypi.org/project/treegov/1.0.0a3 |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -261,12 +261,15 @@ TreeGov/
 ├── backend_v3/ # Capa analítica pura
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
-│ # metrics_panel, theme, i18n)
-├── tests/ # Suite de tests (346 tests)
+│ # metrics_panel, reports_panel, theme, i18n)
+├── tests/ # Suite de tests (384 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
 │ ├── 3.1_design_multiclass.md
+│ ├── 3.2_decisions_consolidated.md
+│ ├── 3.3_design_population_categories.md
+│ ├── 3.4_design_multiclass_crt_quest.md
 │ ├── api.md
 │ ├── roadmap.md
 │ ├── philosophy.md
@@ -279,13 +282,20 @@ TreeGov/
 ├── data/ # Datasets (solo lectura, excluido de Git)
 ├── logs/ # Logs por corrida (excluido de Git)
 ├── treegov.py # Orquestador headless
-├── pyproject.toml # Empaquetado
+├── treegov_gui.py # Entry point de la GUI (Fase 2)
+├── pyproject.toml # Empaquetado (fuente oficial de dependencias)
+├── requirements.txt # Mínimos de trabajo (transitorio)
+├── opencode.json # Configuración del proyecto OpenCode
 ├── CONVENTIONS.md # Convenciones operativas para Aider
 ├── AGENTS.md # Instrucciones para agentes IA
 ├── README.md # README principal (inglés)
 ├── README.es.md # README en español
+├── NOTICE.md # Aviso legal y atribución
+├── LICENSE # Apache 2.0
 ├── .gitignore # Exclusiones de Git
+├── .gitattributes # Normalización de line endings
 ├── .aiderignore # Exclusiones del repo-map de Aider
+├── .aider.conf.example.yml # Plantilla de configuración de Aider
 └── .treegovrules # Reglas de gobernanza para agentes IA
 ```
 
@@ -371,24 +381,24 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | statistics.py | 28 |
 | chaid_engine.py | 26 |
 | crt_engine.py | 27 |
-| quest_engine.py | 30 |
+| quest_engine.py | 35 |
 | imputation.py | 5 |
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 35 |
-| session_state.py | 77 |
+| session_state.py | 82 |
 | validation.py | 17 |
 | pruning.py | 6 |
 | stability.py | 18 |
-| reporting.py | 20 |
+| reporting.py | 18 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 21 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 7 |
-| e2e_reports (frontend) | 5 |
-| **Total** | **377** |
+| e2e_reports (frontend) | 4 |
+| **Total** | **384** |
 
 **Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 384/384 PASSED
 
@@ -411,6 +421,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0a3/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |

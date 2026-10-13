@@ -75,8 +75,9 @@ underscore) are internal and may change without notice.
   pd_floor=0.0003, apply_jeffreys=True)` — `engine` accepts an engine
   instance or its name ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST");
   `pd_floor=None` + `apply_jeffreys=False` yields Research mode
-  (Phase 2.1). In Phase 3.1, multiclass targets (K > 2) are supported by
-  CHAID only; C&RT and QUEST reject K > 2 until Phase 3.4.
+  (Phase 2.1). Multiclass targets (K > 2) are supported by all engines
+  since Phase 3.4. Downstream metrics and reports (validation,
+  reporting, stability) remain binary-only until Phase 3.5.
 - `Session.get_gains_table(*, partition, by, n_buckets, tie, seed)` —
   flat DTO of a gains table for a routed partition (Phase 2.4.c.1).
   Binary targets only in Phase 3.1; K > 2 raises `ValueError`.

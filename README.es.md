@@ -50,8 +50,8 @@ Herramienta de segmentación analítica para riesgo de crédito con gobernanza M
 | Capacidad | Referencia | Anclaje regulatorio | Características clave |
 |---|---|---|---|
 | **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
-| **C&RT** binario | Breiman et al. (1984) | — | Impureza de Gini / varianza, surrogate splits para valores nulos |
-| **QUEST** binario | Loh & Shih (1997) | — | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante |
+| **C&RT** | Breiman et al. (1984) | — | Impureza de Gini / varianza, surrogate splits para valores nulos, multiclase (K ≥ 2) |
+| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante para K=2, barrido de Gini para K > 2 |
 | **Estimador de Jeffreys + PD Floor** | — | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
 | **Partición Hamilton-Hare** | — | — | Split train/test estratificado exacto, sin sesgo de redondeo |
 | **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
@@ -98,7 +98,10 @@ TreeGov/
 ├── docs/                    # Documentación
 │   ├── methodology.md       # Metodología matemática (EN)
 │   ├── design_decisions.md  # Decisiones de implementación (EN)
-│   ├── 3.1_design_multiclass.md  # Diseño multiclase (EN)
+│   ├── 3.1_design_multiclass.md  # Diseño Fase 3.1 (EN)
+│   ├── 3.2_decisions_consolidated.md  # Decisiones Fase 3.2 (EN)
+│   ├── 3.3_design_population_categories.md  # Diseño Fase 3.3 (EN)
+│   ├── 3.4_design_multiclass_crt_quest.md  # Diseño Fase 3.4 (EN)
 │   ├── api.md               # API pública (EN)
 │   ├── roadmap.md           # Plan de fases (EN)
 │   ├── philosophy.md        # Filosofía (EN)
@@ -113,13 +116,18 @@ TreeGov/
 ├── treegov.py               # Orquestador headless (CLI)
 ├── treegov_gui.py           # Entry point de la GUI (Fase 2)
 ├── pyproject.toml           # Empaquetado
+├── requirements.txt         # Mínimos de trabajo (pyproject.toml es la fuente oficial)
+├── opencode.json            # Configuración del proyecto OpenCode
 ├── README.md                # README principal (EN)
 ├── README.es.md             # Este archivo (ES)
 ├── AGENTS.md                # Instrucciones operativas para agentes IA
 ├── CONVENTIONS.md           # Convenciones operativas para Aider
 ├── LICENSE                  # Apache 2.0
+├── NOTICE.md                # Aviso legal y atribución
 ├── .gitignore               # Exclusiones de Git
 ├── .aiderignore             # Exclusiones del repo-map de Aider
+├── .gitattributes           # Normalización de line endings
+├── .aider.conf.example.yml  # Plantilla de configuración de Aider
 └── .treegovrules            # Reglas de gobernanza para agentes IA
 ```
 

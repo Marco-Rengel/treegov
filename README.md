@@ -50,8 +50,8 @@ An analytical segmentation tool for credit risk with native MRM/IFRS 9 governanc
 | Capability | Reference | Regulatory anchor | Key characteristics |
 |---|---|---|---|
 | **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | — | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
-| **C&RT** binary | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits for missing values |
-| **QUEST** binary | Loh & Shih (1997) | — | Unbiased variable selection (ANOVA + χ² + Levene), univariate QDA split |
+| **C&RT** | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits for missing values, multiclass (K ≥ 2) |
+| **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection (ANOVA + χ² + Levene), univariate QDA split for K=2, Gini reduction sweep for K > 2 |
 | **Jeffreys estimator + PD Floor** | — | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test split, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
@@ -98,7 +98,10 @@ TreeGov/
 ├── docs/                    # Documentation
 │   ├── methodology.md       # Mathematical methodology (EN)
 │   ├── design_decisions.md  # Implementation decisions (EN)
-│   ├── 3.1_design_multiclass.md  # Multiclass design (EN)
+│   ├── 3.1_design_multiclass.md  # Phase 3.1 design (EN)
+│   ├── 3.2_decisions_consolidated.md  # Phase 3.2 decisions (EN)
+│   ├── 3.3_design_population_categories.md  # Phase 3.3 design (EN)
+│   ├── 3.4_design_multiclass_crt_quest.md  # Phase 3.4 design (EN)
 │   ├── api.md               # Public API (EN)
 │   ├── roadmap.md           # Phase plan (EN)
 │   ├── philosophy.md        # Project philosophy (EN)
@@ -113,13 +116,18 @@ TreeGov/
 ├── treegov.py               # Headless orchestrator (CLI)
 ├── treegov_gui.py           # GUI entry point (Phase 2)
 ├── pyproject.toml           # Packaging
+├── requirements.txt         # Working minimum pins (pyproject.toml is source of truth)
+├── opencode.json            # OpenCode project configuration
 ├── README.md                # This file (EN)
 ├── README.es.md             # Spanish translation
 ├── AGENTS.md                # Operating instructions for AI agents
 ├── CONVENTIONS.md           # Operational conventions for Aider
 ├── LICENSE                  # Apache 2.0
+├── NOTICE.md                # Legal notice and attribution
 ├── .gitignore               # Git exclusions
 ├── .aiderignore             # Aider repo-map exclusions
+├── .gitattributes           # Line-ending normalization
+├── .aider.conf.example.yml  # Aider configuration template
 └── .treegovrules            # Governance rules for AI agents
 ```
 
