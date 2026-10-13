@@ -27,6 +27,16 @@ reconstrucciones costosas al abrir un chat nuevo. Excepciones:
 504/timeout del proveedor de IA (se documenta al volver), o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
 
+**Checklist ampliado (12/10/2026).** A los cuatro documentos
+actualizados en cada cierre de sub-fase (audit_log, roadmap,
+estado_proyecto, documentos de contexto) se añaden:
+`README.md` / `README.es.md` (cuentan como uno) y `docs/api.md`.
+Motivo: los tres huecos detectados el 12/10/2026 (estructura del
+repositorio en READMEs, conteos individuales de tests en
+estado_proyecto §7, versión de PyPI en estado_proyecto §1) caen
+todos dentro del checklist ampliado. Si alguno queda
+desincronizado, la sub-fase NO se considera cerrada.
+
 ## Regla de oro de la caché de Moonshot (refinada el 10/10/2026)
 
 La caché de prompt de Moonshot es automática. Solo se activa si se
@@ -252,8 +262,16 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a3` en PyPI (12/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0a3/
+**Última versión publicada:** `treegov 1.0.0a4` en PyPI (12/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0a4/
+
+**Regla PyPI (12/10/2026).** PyPI congela el README en el momento
+del upload. Si el README del repositorio cambia después de una
+publicación, la página pública queda desincronizada hasta la
+próxima release. Al modificar el README, decidir explícitamente:
+(a) publicar una nueva versión inmediatamente, o (b) esperar a la
+próxima release con cambios de código. Nunca dejar la decisión
+implícita.
 
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.

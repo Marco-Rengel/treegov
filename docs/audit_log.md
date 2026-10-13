@@ -3495,3 +3495,142 @@ no se toca: los kernels de Gini ya se importan en `quest_engine.py`.
 - `docs/audit_log.md` entrada del 12/10/2026 (3.4.a).
 
 ---
+
+### 12/10/2026 (tarde) — Cierre operativo de la jornada
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Bloque consolidado de cierre de la jornada del
+12/10/2026. Cubre tres frentes: (a) publicación 1.0.0a3 en PyPI,
+(b) sincronización documental completa del repositorio (estructura,
+conteos, versión PyPI, LICENSE), (c) cierre de los 3 avisos de
+setuptools que rompían en 2027 y publicación 1.0.0a4. Sin cambios
+de código; solo empaquetado y documentación.
+
+**Fase (a) — Publicación 1.0.0a3 en PyPI**:
+
+- Bump de versión en pyproject.toml, frontend_v3/__init__.py,
+  README.md, README.es.md.
+- Normalización de la tabla de fases en ambos READMEs: se
+  eliminaron las fechas en las filas 3.3 y 3.4 para respetar la
+  convención del resto de la tabla (solo "Completada" / "Completed",
+  sin fecha). Motivo: coherencia visual y porque las fechas viven
+  en audit_log y estado_proyecto, no en el README.
+- Build, twine check, twine upload. Verificado con instalación
+  limpia en venv aislado (`import backend_v3; frontend_v3.__version__`
+  → "1.0.0a3").
+- Commits: `0f4f38d` (release).
+- Página pública: https://pypi.org/project/treegov/1.0.0a3/
+
+**Fase (b) — Sincronización documental**:
+
+Auditoría cruzada entre el árbol real del repositorio
+(`Get-ChildItem -Recurse -Force -File`, excluyendo venvs, cachés y
+artefactos de build) y las secciones de "Estructura del repositorio"
+en READMEs, "Estructura de directorios" en estado_proyecto, y la
+tabla de tests en estado_proyecto §7. Tres desincronizaciones
+detectadas, todas preexistentes (arrastradas desde varios cierres
+de fase anteriores):
+
+1. Estructura del repositorio en READMEs: faltaban 5 archivos de
+   raíz (NOTICE.md, .gitattributes, .aider.conf.example.yml,
+   opencode.json, requirements.txt), 3 documentos de diseño en docs/
+   (3.2_decisions_consolidated, 3.3_design_population_categories,
+   3.4_design_multiclass_crt_quest), y LICENSE (que ni siquiera
+   existía como archivo).
+2. Tabla de tests en estado_proyecto §7: conteos individuales por
+   archivo desactualizados desde hacía varias fases; suma (377) no
+   cuadraba con el total real (384).
+3. Metadatos stale: version y URL PyPI en estado_proyecto §1
+   (congeladas en 1.0.0a1), herramienta activa en
+   contexto_para_nueva_sesion (OpenCode 1.18.35 en lugar de 1.19.0),
+   frase stale en api.md sobre bloqueos multiclase de C&RT/QUEST,
+   lista de 10 archivos de referencia en prompt_para_asistente
+   (faltaban los diseños de 3.2, 3.3 y 3.4).
+
+**Fase (c) — Correcciones aplicadas**:
+
+- `LICENSE` creado como archivo nuevo con el texto canónico Apache
+  2.0 descargado de https://www.apache.org/licenses/LICENSE-2.0.txt
+  (11.358 bytes, verificado por tamaño y encabezado). `NOTICE.md` se
+  mantiene por separado, con su función legal específica (respaldo
+  por posible conflicto de propiedad intelectual con el empleador).
+  Los dos coexisten sin conflicto: Apache 2.0 recomienda NOTICE para
+  atribución adicional.
+- `README.md` y `README.es.md`: sección "Repository structure" /
+  "Estructura del repositorio" completada con 8 archivos y 3
+  documentos faltantes; tabla "Analytical capabilities" /
+  "Capacidades analíticas" actualizada — se retiró la palabra
+  "binary" / "binario" de las filas C&RT y QUEST (ambos admiten
+  K ≥ 2 desde Fase 3.4) y se mencionó explícitamente el soporte
+  multiclase.
+- `docs/estado_proyecto.md`: §1 versión y URL PyPI; §4 estructura
+  de directorios completa; §7 tabla de tests con 20 conteos reales
+  medidos con `pytest --collect-only -q` (suma verificada: 384);
+  §9 fila nueva con la URL versionada de PyPI.
+- `docs/api.md`: frase sobre bloqueos multiclase sustituida por
+  "Multiclass targets (K > 2) are supported by all engines since
+  Phase 3.4."
+- `docs/contexto_para_nueva_sesion.md`: OpenCode 1.19.0; estado de
+  release actualizado a 1.0.0a3.
+- `docs/prompt_para_asistente.md`: lista de archivos de referencia
+  ampliada de 10 a 14 entradas.
+
+**Fase (c.2) — Cierre de avisos de setuptools y publicación 1.0.0a4**:
+
+Los 3 avisos emitidos por setuptools 84.0.0 en el build de 1.0.0a3:
+
+1. `project.license` como tabla TOML deprecada.
+2. Clasificador de licencia deprecado.
+3. `frontend_v3.resources` no declarada en `packages`.
+
+Correcciones:
+
+- `license = "Apache-2.0"` (cadena SPDX, PEP 639) + `license-files =
+  ["LICENSE"]`.
+- Eliminado `"License :: OSI Approved :: Apache Software License"`
+  de classifiers.
+- `packages = ["backend_v3", "frontend_v3", "frontend_v3.resources"]`.
+- `build-system.requires` sube de `setuptools>=68` a `setuptools>=77`
+  (requisito de la sintaxis SPDX moderna).
+- Bump a 1.0.0a4 en pyproject.toml, frontend_v3/__init__.py,
+  README.md, README.es.md.
+
+**Aprendizaje registrado (2 reglas nuevas)**:
+
+1. **PyPI congela el README en el momento del upload.** Si el README
+   del repo cambia después, la página pública queda desincronizada
+   hasta la próxima release. Al modificar el README, decidir
+   explícitamente: (a) publicar nueva versión, o (b) esperar a la
+   próxima release con código nuevo. No dejar la decisión implícita.
+   Esta lección se materializó hoy: 1.0.0a3 se publicó con el README
+   en estado pre-sincronización; los 3 commits posteriores de README
+   solo se ven en GitHub, no en PyPI. Se resolvió publicando 1.0.0a4.
+
+2. **Checklist de cierre de sub-fase ampliado de 4 a 6 documentos.**
+   A los 4 actuales (roadmap, estado_proyecto, contexto_para_nueva_sesion,
+   prompt_para_asistente) se añaden: `README.md` / `README.es.md`
+   (cuentan como uno) y `docs/api.md`. Los tres huecos detectados en
+   esta sesión (estructura del repo, conteos de tests, versión PyPI)
+   caen todos dentro del checklist ampliado.
+
+**Tests**: 384/384 PASSED.
+
+**Referencias**:
+- Commits: `3ccae9c`, `d206525`, `0f4f38d`, `8949fe5`, `8ef16c8`,
+  `b0215ac`, `87888b4`, más el commit de esta entrada.
+- `docs/prompt_para_asistente.md` sección 4 ("Cómo trabajamos") y
+  sección 6 ("Herramientas y limitaciones"), actualizados con las
+  dos reglas nuevas.
+- `AGENTS.md` sección "Documentación obligatoria", actualizado con
+  el checklist ampliado.
+- `docs/contexto_para_nueva_sesion.md` "Regla de oro del proyecto",
+  actualizado con el checklist ampliado.
+- `.treegovrules` (pendiente de actualización en una sesión
+  posterior; no bloquea).
+
+---

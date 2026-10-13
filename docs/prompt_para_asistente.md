@@ -61,6 +61,27 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase cierra, la actualización de audit_log + roadmap + estado_proyecto + documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo desincroniza el contexto y cuesta tiempo de reconstrucción en el siguiente chat (esto ya ocurrió en 3.1.d/e). Excepciones: solo 504/timeout del proveedor o cambio trivial de 1 línea consolidado.
 - **Trabajo en ráfaga refinado el 10/10/2026.** La regla anterior (no cerrar OpenCode nunca, mantener siempre la misma sesión) se refina a "cerrar en fronteras naturales". Dentro de una sub-fase: OpenCode abierto, los prompts de código, tests y documentación van seguidos. Al cerrar una sub-fase (commit pusheado): cerrar OpenCode; el prefijo vuelve a ser pequeño al reabrir. El cierre documental de una fase se trata como una unidad. Evitar salidas accidentales al copiar un prompt.
 - **Nunca aplazar la documentación de cierre.** Ya estaba en el brief, pero se refuerza: cuando una sub-fase cierra, la actualización de `audit_log` + `roadmap` + `estado_proyecto` + documentos de contexto se hace en el mismo bloque. Si se aplaza, el coste de reconstruir el contexto en el siguiente chat es más alto que hacerlo bien la primera vez.
+- **Checklist de cierre ampliado a 6 documentos (12/10/2026).**
+  Al cerrar una sub-fase, además de los 4 documentos ya
+  registrados (audit_log, roadmap, estado_proyecto, documentos
+  de contexto), se actualizan también `README.md` /
+  `README.es.md` (cuentan como uno) y `docs/api.md`. Motivo: los
+  tres huecos detectados el 12/10/2026 (estructura del
+  repositorio en READMEs, conteos individuales de tests en
+  estado_proyecto §7, versión de PyPI en estado_proyecto §1)
+  caen todos dentro del checklist ampliado. Si alguno queda
+  desincronizado, la sub-fase no se considera cerrada.
+- **Regla PyPI (12/10/2026).** PyPI congela el README en el
+  momento del upload. Si el README del repositorio cambia
+  después de una publicación, la página pública queda
+  desincronizada hasta la próxima release. Al modificar el
+  README, decidir explícitamente: (a) publicar una nueva versión
+  inmediatamente, o (b) esperar a la próxima release con cambios
+  de código. Nunca dejar la decisión implícita. Esta regla se
+  materializó el 12/10/2026: 1.0.0a3 se publicó con el README
+  en estado pre-sincronización; los 3 commits posteriores de
+  README solo se ven en GitHub, no en PyPI. Se resolvió
+  publicando 1.0.0a4.
 
 ---
 

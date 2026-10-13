@@ -51,6 +51,25 @@ volver), o cambio trivial de 1 línea consolidado en la entrada de
 bloque. Ver `docs/roadmap.md` sección "Recorded architectural
 decisions: Phase closure documentation: never deferred".
 
+**Checklist de cierre ampliado a 6 documentos (12/10/2026).**
+Al cerrar una sub-fase, además de los 4 documentos ya
+registrados (`audit_log.md`, `roadmap.md`, `estado_proyecto.md`,
+documentos de contexto), se actualizan también `README.md` /
+`README.es.md` (cuentan como uno) y `docs/api.md`. Motivo: los
+tres huecos detectados el 12/10/2026 (estructura del
+repositorio en READMEs, conteos individuales de tests en
+`estado_proyecto.md` §7, versión de PyPI en `estado_proyecto.md`
+§1) caen todos dentro del checklist ampliado. Si alguno queda
+desincronizado, la sub-fase NO se considera cerrada.
+
+**Regla PyPI (12/10/2026).** PyPI congela el README en el
+momento del upload. Si el README del repositorio cambia después
+de una publicación, la página pública queda desincronizada
+hasta la próxima release. Al modificar el README, decidir
+explícitamente: (a) publicar una nueva versión inmediatamente,
+o (b) esperar a la próxima release con cambios de código. Nunca
+dejar la decisión implícita.
+
 **Regla de ráfaga (refinada el 10/10/2026).** Dentro de una sub-fase:
 OpenCode abierto, los prompts de código, tests y documentación van
 seguidos, sin cerrar el cliente. Al cerrar una sub-fase (commit
