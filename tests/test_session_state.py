@@ -705,7 +705,9 @@ def test_train_allows_crt_multiclass():
             assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
 
 
-def test_train_blocks_quest_multiclass():
+def test_train_allows_quest_multiclass():
+    """Fase 3.4.b: QUEST se abre a K>2. Reemplaza al pre-3.4
+    test_train_blocks_quest_multiclass."""
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv_k3(Path(td))
         s = Session(logger=_quiet_logger())
@@ -713,7 +715,36 @@ def test_train_blocks_quest_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        _assert_raises(ValueError, s.train, "QUEST")
+        s.train("QUEST", max_depth=3, min_child_size=5)
+        assert s.state.state is FlowState.TRAINED
+        assert s.state.tree is not None
+        assert s.state.tree.method == "QUEST"
+        for nd in s.state.tree.nodes:
+            assert len(nd.pd_final) == 3
+            assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+
+
+def test_quest_multiclass_k3_tree_is_coherent():
+    """Fase 3.4.b: invariantes estructurales del árbol QUEST K=3
+    (paralelo a test_crt_multiclass_k3_tree_is_coherent)."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_k3(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition()
+        s.train("QUEST", max_depth=4, min_child_size=5)
+        tree = s.state.tree
+        assert tree is not None
+        assert tree.method == "QUEST"
+        for nd in tree.nodes:
+            assert sum(nd.n_events) == nd.n
+            assert len(nd.pd_final) == 3
+            assert len(nd.pd_jeffreys) == 3
+            assert len(nd.class_labels) == 3
+            assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+            assert abs(sum(nd.pd_jeffreys) - 1.0) <= 1e-12
 
 
 def test_train_allows_chaid_multiclass():

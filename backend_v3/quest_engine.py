@@ -21,12 +21,18 @@ Dos etapas:
       * nominal -> particion binaria por ganancia de Gini, EXACTAMENTE como
         C&RT: exhaustiva 2^(K-1)-1 si K <= max_exhaustive_cardinality; orden
         por tasa supervisada si K > 10.
+      Con K > 2 se sustituye la QDA univariante por un barrido de Gini
+      sobre el predictor seleccionado (extension documentada en
+      methodology.md §3.8, coherente con C&RT). K=2 conserva el camino
+      QDA original (paridad invariante).
 
 Restricciones regulatorias activas:
   * MRM-INTERPRETABILIDAD: PROHIBIDO ACP/rotaciones; QDA estrictamente
     univariante -> la regla exportada es un "x <= t" o un "x in {...}"
     directamente traducible a CASE WHEN.
-  * Fase 0: target EXCLUSIVAMENTE binario -> ValueError si hay mas de 2 clases.
+  * Multiclase (Fase 3.4.b): Etapa 1 admite K >= 2; Etapa 2 sigue el
+    camino binario QDA cuando K=2 y el barrido de Gini cuando K > 2
+    (extension documentada, ver §3.8 de methodology.md).
   * DATA LEAKAGE: la imputacion NO vive aqui; corresponde a
     backend_v3/imputation.py (TrainOnlyImputer, solo train). Este motor aplica
     dropna defensivo por variable con conteo en el log.
@@ -235,7 +241,7 @@ class QuestEngine:
                     "[QUEST] weights deben ser finitos y estrictamente positivos"
                 )
 
-        # --- target: EXCLUSIVAMENTE binario (restriccion Fase 0) ---
+        # --- target: K >= 2 clases (binario o multiclase) ---
         yd = ys.dropna()
         if len(yd) == 0:
             self._log.warning("[QUEST] target totalmente NaN")
@@ -250,15 +256,10 @@ class QuestEngine:
                 "asignar codigos 0/1 de forma determinista "
                 f"(clases={list(pd.unique(yd))!r})"
             ) from e
-        if len(classes) > 2:
-            raise ValueError(
-                f"[QUEST] target no binario ({len(classes)} clases): "
-                "Fase 0 soporta solo 2 clases"
-            )
         if len(classes) < 2:
             self._log.warning("[QUEST] target constante: nodo puro, sin split")
             return None
-        codes = yd.map({classes[0]: 0, classes[1]: 1}).to_numpy(dtype=np.int64)
+        codes = yd.map({c: i for i, c in enumerate(classes)}).to_numpy(dtype=np.int64)
         y_full = pd.Series(np.nan, index=ys.index)  # alinear con dropna por variable
         y_full.loc[yd.index] = codes
 
@@ -293,11 +294,11 @@ class QuestEngine:
                 if ptype == PredictorType.NOMINAL or nombre not in preparado:
                     continue
                 xd, yc, info = preparado[nombre]
-                if info["x0"].size == 0 or info["x1"].size == 0:
+                xs_k = info["xs_k"]
+                ws_k = info["ws_k"]
+                if any(x.size == 0 for x in xs_k):
                     continue
-                bf = brown_forsythe(
-                    info["x0"], info["x1"], weights=(info["w0"], info["w1"])
-                )
+                bf = brown_forsythe(*xs_k, weights=tuple(ws_k))
                 if mejor_var is None or bf.p_value < mejor_var[0]:
                     mejor_var = (bf.p_value, nombre, bf)
             if mejor_var is not None and mejor_var[0] < umbral:
@@ -414,10 +415,16 @@ class QuestEngine:
             self._log.info("[QUEST|%r] <3 casos validos: excluido", nombre)
             return None
 
-        y1 = yc == 1
-        if not y1.any() or y1.all():
+        # Fase 3.4.b: relabel local de clases. Un subnodo puede contener
+        # un subconjunto de las clases globales; relabelar a 0..local_K-1
+        # garantiza que la tabla c x K y los sub-vectores por clase no
+        # contengan columnas vacias (que pearson_chi2 rechaza).
+        present = np.unique(yc)
+        if present.size < 2:
             # una sola clase tras dropna: sin asociacion evaluable
             return None
+        yc = np.searchsorted(present, yc)  # relabel a 0..local_K-1
+        K = int(present.size)  # K local, no global
 
         if ptype == PredictorType.NOMINAL:
             # tabla (c, K) de contingencia con sumas de pesos (np.bincount
@@ -432,8 +439,8 @@ class QuestEngine:
             if k_cats < 2:
                 return None
             tab = np.bincount(
-                cat_codes * 2 + yc, weights=w, minlength=2 * k_cats
-            ).reshape(k_cats, 2)
+                cat_codes * K + yc, weights=w, minlength=K * k_cats
+            ).reshape(k_cats, K)
             test = pearson_chi2(tab)
             return xd, yc, {"source": "chi2", "test": test, "w": w}
 
@@ -454,16 +461,15 @@ class QuestEngine:
             xv = codes.astype(float)
         if not np.all(np.isfinite(xv)):
             raise ValueError(f"[QUEST|{nombre!r}] x contiene no finitos")
-        x0 = xv[~y1]
-        x1 = xv[y1]
-        w0 = w[~y1]
-        w1 = w[y1]
-        if x0.size == 0 or x1.size == 0 or x0.size + x1.size <= 2:
+        xs_k = [xv[yc == k] for k in range(K)]
+        ws_k = [w[yc == k] for k in range(K)]
+        if any(x.size == 0 for x in xs_k):
+            # alguna clase sin filas tras el dropna defensivo
             test = TestResult(0.0, (1, 1), 1.0)
         else:
-            test = f_oneway(x0, x1, weights=(w0, w1))
-        return xd, yc, {"source": "anova", "test": test, "x0": x0, "x1": x1,
-                        "w0": w0, "w1": w1, "w": w, "xv": xv, "labels": labels}
+            test = f_oneway(*xs_k, weights=tuple(ws_k))
+        return xd, yc, {"source": "anova", "test": test, "xs_k": xs_k,
+                        "ws_k": ws_k, "w": w, "xv": xv, "labels": labels}
 
     def _mk_selection(
         self, nombre: str, source: str, res: TestResult, j_total: int
@@ -594,6 +600,48 @@ class QuestEngine:
             return float(r2)
         return float(r1)
 
+    def _gini_sweep_numeric(
+        self,
+        xv: np.ndarray,
+        yc: np.ndarray,
+        w: np.ndarray,
+        nombre: str,
+    ) -> float | None:
+        """Barrido de Gini multiclase sobre el predictor ordenado.
+
+        Recorre los bordes entre valores distintos de xv y devuelve el
+        punto medio del borde que maximiza la ganancia de Gini sobre las
+        K clases (yc ya relabelado localmente por _prepare). Devuelve
+        None si todos los valores son iguales (sin corte valido).
+
+        Duplicacion deliberada (~12 lineas) del kernel de barrido de
+        CrtEngine._sweep_values: la extraccion a tree_kernels.py queda
+        diferida y solo se hara si un tercer motor lo necesita (misma
+        deuda ya documentada en la cabecera del modulo).
+        """
+        K = int(np.max(yc)) + 1
+        orden = np.argsort(xv, kind="mergesort")
+        xs = xv[orden]
+        bordes = np.flatnonzero(xs[1:] != xs[:-1])
+        if bordes.size == 0:
+            self._log.info("[QUEST|%r] predictor constante: sin corte", nombre)
+            return None
+        ys = yc[orden]
+        ws = w[orden]
+        w_total = float(ws.sum())
+        one_hot = (ys[:, None] == np.arange(K)[None, :]).astype(np.float64)
+        cum = np.cumsum(one_hot * ws[:, None], axis=0)
+        c_l = cum[bordes]
+        c_r = cum[-1][None, :] - c_l
+        counts_parent = cum[-1]
+        p_parent = counts_parent / w_total
+        i_parent = 1.0 - float((p_parent * p_parent).sum())
+        d_i, _, _ = _gini_dI(c_l, c_r, i_parent, w_total)
+        best = int(np.argmax(d_i))
+        v_low = float(xs[bordes[best]])
+        v_high = float(xs[bordes[best] + 1])
+        return v_low + (v_high - v_low) / 2.0
+
     def _numeric_cut(
         self, xd: pd.Series, yc: np.ndarray, info: dict, nombre: str
     ) -> tuple[float | None, tuple | None]:
@@ -605,7 +653,16 @@ class QuestEngine:
         labels = info.get("labels")
         if labels is not None and len(labels) < 2:
             return None, None
-        t = self._qda_cutpoint(xv, yc, nombre, weights=info["w"])
+        K = int(np.max(yc)) + 1
+        # Fase 3.4.b: K=2 -> QDA univariante (paridad). K>2 -> barrido
+        # de Gini sobre el predictor seleccionado (extension documentada,
+        # ver methodology.md §3.8).
+        if K == 2:
+            t = self._qda_cutpoint(xv, yc, nombre, weights=info["w"])
+        else:
+            t = self._gini_sweep_numeric(xv, yc, info["w"], nombre)
+            if t is None:
+                return None, None
         if labels is None:
             return t, None
         k = int(math.floor(t))
@@ -653,9 +710,10 @@ class QuestEngine:
         if k_cats < 2:
             return None
         w = weights if weights is not None else np.ones(len(xd))
+        K = int(np.max(yc)) + 1
         counts = np.bincount(
-            codes * 2 + yc, weights=w, minlength=2 * k_cats
-        ).reshape(k_cats, 2).astype(float)
+            codes * K + yc, weights=w, minlength=K * k_cats
+        ).reshape(k_cats, K).astype(float)
         rows_per_cat = np.bincount(codes, minlength=k_cats)  # conteo FISICO
         n_tot = float(counts.sum())
         p = counts.sum(axis=0) / n_tot
@@ -670,7 +728,16 @@ class QuestEngine:
             best = int(np.argmax(d_i))
             mask_der = masks[best]
         else:
-            tasas = counts[:, 1] / counts.sum(axis=1)
+            if counts.shape[1] == 2:
+                clase = 1
+            else:
+                clase = int(np.argmax(counts.sum(axis=0)))
+                self._log.warning(
+                    "[QUEST|%r] heurística pragmática activada; se pierde "
+                    "optimalidad en multiclase; considere discretizar el "
+                    "predictor", nombre,
+                )
+            tasas = counts[:, clase] / counts.sum(axis=1)
             orden = np.argsort(-tasas, kind="stable")
             cum = np.cumsum(counts[orden], axis=0)
             c_l = cum[:-1]

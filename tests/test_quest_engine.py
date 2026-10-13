@@ -226,12 +226,28 @@ def test_categorica_gana_subset():
 # ---------------------------------------------------------------------------
 
 
-def test_target_multiclase_valueerror():
-    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])})
+def test_target_multiclase_k3_accepted():
+    """Fase 3.4.b: evaluate acepta K=3 sin error (el bloqueo interno
+    del motor se retiró). Reemplaza al pre-3.4
+    test_target_multiclase_valueerror.
+
+    NOTA (corrección empírica 12/10/2026): el fixture original del
+    prompt (x = [1..6], medias 1.5/3.5/5.5) produce F = 16 con
+    p = 0.0250946, JUSTO por encima del umbral Bonferroni 0.025
+    (alpha/(2J), J=1), así que evaluate devolvía None y el assert
+    `cfg is not None` fallaba. El fixture se amplía a medias
+    1.5/10.5/20.5 (F = 361.33), que sí supera el umbral. df y
+    statistic_name no dependen del fixture."""
+    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 10.0, 11.0, 20.0, 21.0])})
     y3 = pd.Series([0, 0, 1, 1, 2, 2])
-    _assert_raises(
-        ValueError, _engine().evaluate, X, y3, {"v": _CONTINUOUS}
-    )
+    cfg = _engine().evaluate(X, y3, {"v": _CONTINUOUS})
+    # Hay señal (medias 1.5 / 10.5 / 20.5 bien separadas): devuelve un
+    # SplitConfig válido.
+    assert cfg is not None
+    assert isinstance(cfg, SplitConfig)
+    assert cfg.predictor == "v"
+    assert cfg.statistic_name == "f"
+    assert cfg.df == (2, 3)  # K-1=2, N-K=3
     # una sola clase -> None (nodo puro, sin error)
     y1 = pd.Series([1, 1, 1, 1, 1, 1])
     assert _engine().evaluate(X, y1, {"v": _CONTINUOUS}) is None
@@ -673,6 +689,98 @@ def test_weighted_quest_best_split_propagates_weights():
     assert pesados is not None
     assert pesados.predictor == "nom"
     assert pesados.predictor != sin.predictor
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.4.b: QUEST multiclase (K >= 3) + paridad binaria
+# ---------------------------------------------------------------------------
+
+
+def test_quest_multiclass_stage1_f_k3():
+    # F de ANOVA con K=3 grupos: SSB=70, SSW=12.5, N=10, K=3
+    # -> F = (70/2) / (12.5/7) = 19.6, df = (K-1, N-K) = (2, 7).
+    x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    y = pd.Series([0] * 5 + [1] * 2 + [2] * 3)
+    X = pd.DataFrame({"v": pd.Series(x, dtype=float)})
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS})
+    assert cfg is not None
+    assert cfg.predictor == "v"
+    assert cfg.statistic_name == "f"
+    assert cfg.df == (2, 7)
+    assert math.isclose(cfg.statistic, 19.6, rel_tol=1e-12)
+    assert cfg.bonferroni_multiplier == 2  # J=1, family=2
+
+
+def test_quest_multiclass_stage2_gini_k3():
+    # Misma fixture: el corte optimo de Gini cae entre 5 y 6 (5.5),
+    # separando la clase 0 de las clases 1+2.
+    x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    y = pd.Series([0] * 5 + [1] * 2 + [2] * 3)
+    X = pd.DataFrame({"v": pd.Series(x, dtype=float)})
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS})
+    assert cfg is not None
+    assert cfg.threshold == 5.5
+    assert cfg.branches is None  # predictor continuo
+    assert cfg.child_ns == (5, 5)
+
+
+def test_quest_multiclass_k3_builds():
+    from backend_v3.tree_builder import TreeBuilder
+    from backend_v3.types import TargetType
+    x = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+    y = pd.Series([0] * 5 + [1] * 2 + [2] * 3)
+    X = pd.DataFrame({"v": pd.Series(x)})
+    model = TreeBuilder(_engine(), target_type=TargetType.CATEGORICAL,
+                        target_class=0,
+                        class_labels=("Low", "Mid", "High"),
+                        max_depth=3, min_child_size=2).build(
+        X, y, {"v": _CONTINUOUS})
+    assert model.method == "QUEST"
+    for nd in model.nodes:
+        assert len(nd.pd_final) == 3
+        assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
+    raiz = model.nodes[model.root_id]
+    assert raiz.split is not None
+    assert raiz.split.predictor == "v"
+
+
+def test_quest_binary_parity_after_3_4():
+    # Fixture donde QDA y el barrido de Gini divergen: si el dispatch K=2
+    # tomara el camino Gini por error, el threshold seria 1.5 (primer
+    # corte perfecto) y la asercion de paridad fallaria.
+    # QDA: m0=0.5, m1=11.5, v0=0.5, v1=5/3, priors 1/3 y 2/3 -> raiz en el
+    # intervalo inter-medias [0.5, 11.5]: t = 4.3852...
+    x = [0, 1, 10, 11, 12, 13]
+    y = pd.Series([0, 0, 1, 1, 1, 1])
+    X = pd.DataFrame({"v": pd.Series(x, dtype=float)})
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS})
+    assert cfg is not None
+    assert math.isclose(cfg.threshold, 4.3852, abs_tol=1e-4)
+    assert not math.isclose(cfg.threshold, 1.5, abs_tol=1e-3)
+    assert cfg.statistic_name == "f"
+    assert cfg.child_ns == (2, 4)
+
+
+def test_quest_multiclass_brown_forsythe_k3():
+    # F-test de medias NO dispara (las tres medias son 5.0); Brown-Forsythe
+    # sobre desviaciones a la mediana SI: z0=z1=0, z2=|x-5|.
+    # SSB=9.6, SSW=5.6, K=3, N=30 -> W = (9.6/2) / (5.6/27) = 23.142857.
+    # NOTA (correccion empirica 12/10/2026): el fixture es simetrico alre-
+    # dedor de 5, asi que el barrido de Gini de la Etapa 2 empata de forma
+    # EXACTA (bit a bit) entre los cortes 4.5 y 5.5 (dI = 52/507 en ambos);
+    # np.argmax devuelve el primero -> threshold 4.5 y child_ns (4, 26).
+    # El prompt original esperaba 5.5 y (24, 6); los valores se corrigieron
+    # tras verificar el comportamiento real del motor.
+    x = [5.0] * 10 + [5.0] * 10 + [3.0, 4.0, 5.0, 6.0, 7.0] * 2
+    y = pd.Series([0] * 10 + [1] * 10 + [2] * 10)
+    X = pd.DataFrame({"v": pd.Series(x)})
+    cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS})
+    assert cfg is not None
+    assert cfg.predictor == "v"
+    assert cfg.statistic_name == "f"  # W de Brown-Forsythe es F-distribuido
+    assert math.isclose(cfg.statistic, 23.142857, rel_tol=1e-5)
+    assert math.isclose(cfg.threshold, 4.5, abs_tol=1e-9)
+    assert cfg.child_ns == (4, 26)
 
 
 # ---------------------------------------------------------------------------
