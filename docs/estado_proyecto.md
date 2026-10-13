@@ -229,13 +229,13 @@ evaluación OOS/OOT, y se reportan en `n_excluded_population` +
 - 3.3.e — Tests E2E del flujo de población + cierre documental ✅
 
 Dos parámetros nuevos en el fingerprint: `population_col`,
-`population_ok_values`. Suite: 377/377.
+`population_ok_values`. Suite: 378/378.
 
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
 - **Fase 3.3** — Categorías de población ✅ Completada 11/10/2026
-- **Fase 3.4** — CRT y QUEST multiclase
+- **Fase 3.4** — CRT y QUEST multiclase. **En curso.** 3.4.a (C&RT) ✅ 12/10/2026. Próximo: 3.4.b (QUEST).
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación)
 - **Fase 3.6** — Validación con datasets públicos (German Credit, UCI)
 - **Fase 3.6.b** — Modo no-bancario (terminología + ejemplos + docs)
@@ -390,7 +390,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_reports (frontend) | 5 |
 | **Total** | **377** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 377/377 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 378/378 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -437,7 +437,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
 - [x] **Fase 3.2** — Ponderación por muestra: Cerrada 10/10/2026 (8 sub-fases a-h, suite 346/346).
-- [x] **Fase 3.3** — Categorías de población. **Completada 11/10/2026.** 5 sub-fases (a-e). Suite 377/377.
+- [x] **Fase 3.3** — Categorías de población. **Completada 11/10/2026.** 5 sub-fases (a-e). Suite 378/378.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
@@ -503,7 +503,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
 > 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra) y 3.3 (categorías
-> de población) cerradas. Suite 377/377. Próximo paso: Fase 3.4 (CRT y
+> de población) cerradas. Suite 378/378. Próximo paso: Fase 3.4 (CRT y
 > QUEST multiclase) con OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo
 > (key propia)."
 

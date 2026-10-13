@@ -3399,3 +3399,23 @@ Fase 3.3 completa (5 sub-fases). Suite 377/377. Invariante C1 verificado: sin `p
 **Referencias**: `docs/3.3_design_population_categories.md`, `docs/design_decisions.md` §14, `docs/roadmap.md` sección Fase 3.3, y las entradas del 10/10/2026 y 11/10/2026 (documentation maintenance).
 
 ---
+
+### 12/10/2026 — Fase 3.4.a: C&RT multiclase
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Primera sub-fase de la Fase 3.4 (multiclass C&RT y QUEST). C&RT ya soporta K mayor o igual a 3 en su motor; la restricción estaba en `Session.train`, que bloqueaba los motores no-CHAID para K mayor a 2 desde 3.1.c. 3.4.a levanta el bloqueo solo para C&RT; QUEST sigue bloqueado hasta 3.4.b.
+
+**Cambios aplicados**: `backend_v3/session_state.py` (bloqueo permite CHAID, CHAID_EXHAUSTIVE y CRT); `tests/test_session_state.py` (reemplaza `test_train_blocks_crt_multiclass` por `test_train_allows_crt_multiclass`; añade `test_crt_multiclass_k3_tree_is_coherent`).
+
+**Identidades verificadas**: C&RT sobre fixture K=3 construye árbol con max_depth=3 y min_child_size=5; `pd_final` y `pd_jeffreys` de longitud 3 suman 1; `n_events` por nodo suma n.
+
+**Tests**: 378/378 PASSED. Commit `91c3ac7`.
+
+**Referencias**: `docs/3.4_design_multiclass_crt_quest.md` secciones §2 y §4.1.
+
+---

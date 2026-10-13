@@ -198,7 +198,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
 | 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
-| 3.4 | CRT y QUEST multiclase | Media |
+| 3.4 | CRT y QUEST multiclase | En curso (3.4.a ✅ 12/10/2026) |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
 | 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |

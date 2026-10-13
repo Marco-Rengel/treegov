@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 11/10/2026
+**Fecha de última actualización:** 12/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -104,13 +104,13 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.1** | **Multiclase (fase completa)** | **✅ Cerrada 09/10/2026** |
 | **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada 10/10/2026** |
 | **3.3** | **Categorías de población (Indet / Insufficient / No Perf)** | **✅ Cerrada 11/10/2026** |
-| 3.4 | CRT/QUEST multiclase | ⏳ Próxima |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ |
+| **3.4** | **CRT/QUEST multiclase** | **🟡 En curso (3.4.a ✅ 12/10/2026)** |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ Próxima |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 377/377 PASSED
+**Suite de tests:** 378/378 PASSED
 
 ## Entorno de desarrollo
 
@@ -260,6 +260,8 @@ PySide6). Verificación de instalación limpia completada.
 
 ## Próximos pasos (Fase 3.4 — CRT y QUEST multiclase)
 
+**Fase 3.4 en curso.** 3.4.a (C&RT multiclase) cerrada el 12/10/2026: se levantó el bloqueo de `Session.train` para C&RT. 3.4.b (QUEST multiclase) es el próximo paso: extender Etapa 1 (F-test con K grupos) y Etapa 2 (barrido de Gini) del motor QUEST, y retirar el bloqueo para QUEST. Diseño aprobado en `docs/3.4_design_multiclass_crt_quest.md`.
+
 **Fase 3.2 — Ponderación por muestra: Cerrada 10/10/2026.** 8 sub-fases
 (a-h). Invariante C1: sin pesos, comportamiento idéntico al pre-3.2.
 Suite 346/346. Ver `docs/roadmap.md` sección "Desglose de la Fase 3.2"
@@ -268,7 +270,7 @@ detalle del alcance.
 
 **Fase 3.3 — Categorías de población: Cerrada 11/10/2026.** 5 sub-fases
 (a-e). Invariante C1: sin `population_col`, comportamiento idéntico al
-pre-3.3. Suite 377/377. Ver `docs/roadmap.md` sección "Desglose de la
+pre-3.3. Suite 378/378. Ver `docs/roadmap.md` sección "Desglose de la
 Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
 
 **Fase 3.4 — CRT y QUEST multiclase (próxima).** Abrir los motores C&RT
