@@ -40,10 +40,41 @@
 1. Every architectural decision is recorded in docs/audit_log.md.
 2. Every bug fix is recorded with its numerical trace.
 3. Obsolete documents are moved to archive/legacy_docs/ with a historical header, never deleted.
-4. Phase closure documentation is never deferred. When a sub-phase closes (commit pushed, suite green), the update of docs/audit_log.md, docs/roadmap.md, docs/estado_proyecto.md and the context documents (docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md) happens IN THE SAME work block, never in a later session. Exceptions: provider outage (504/timeout, documented on return) or a one-line trivial change consolidated into the block entry. A synchronization checklist is mandatory at closure: roadmap reflects status, estado_proyecto reflects the real suite, contexto reflects the next step, prompt_para_asistente reflects the active tool. If any of the four is out of sync, the sub-phase is NOT closed.
+4. Phase closure documentation is never deferred. When a sub-phase
+   closes (commit pushed, suite green), the update of
+   docs/audit_log.md, docs/roadmap.md, docs/estado_proyecto.md,
+   docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md,
+   the README pair (README.md / README.es.md), and docs/api.md
+   happens IN THE SAME work block, never in a later session.
+   Exceptions: provider outage (504/timeout, documented on return)
+   or a one-line trivial change consolidated into the block entry.
 5. **Audit consumers before changing public function signatures.** When a function gains mandatory parameters, every consumer of that function must be found and adapted in the SAME work block. Not in the next sub-phase. Rationale: the 15 avoidable failures of Phase 3.3.d came from not auditing the `_cfg()` helpers of the E2E tests before changing `_train_pipeline`.
+6. **PyPI release rule.** PyPI freezes the README at upload
+   time. If the README of the repository changes after a
+   release, the public page stays out of sync until the next
+   release. When modifying the README, decide explicitly: (a)
+   publish a new version immediately, or (b) wait for the next
+   release with code changes. Never leave the decision implicit.
+   This rule was materialised on 12/10/2026: 1.0.0a3 was
+   published with the README in its pre-synchronization state;
+   the three subsequent README commits are visible on GitHub but
+   not on PyPI. Resolved by publishing 1.0.0a4.
 
-Synchronization checklist (mandatory at every sub-phase closure): (a) docs/roadmap.md reflects the new status; (b) docs/estado_proyecto.md reflects the real test count; (c) docs/contexto_para_nueva_sesion.md reflects the next step; (d) docs/prompt_para_asistente.md reflects the active tool and current phase. Any sub-phase whose closure leaves any of the four out of sync is not considered closed.
+Synchronization checklist (mandatory at every sub-phase closure,
+expanded to 6 documents on 12/10/2026): (a) docs/roadmap.md
+reflects the new status; (b) docs/estado_proyecto.md reflects
+the real test count; (c) docs/contexto_para_nueva_sesion.md
+reflects the next step; (d) docs/prompt_para_asistente.md
+reflects the active tool and current phase; (e) README.md /
+README.es.md reflect the current version, the phase table
+status, and the test suite count; (f) docs/api.md reflects the
+current public API surface and does not carry stale statements
+about blocking behaviour. Any sub-phase whose closure leaves any
+of the six out of sync is not considered closed. Motive: three
+documentation gaps were detected on 12/10/2026 (repository
+structure in READMEs, per-file test counts in estado_proyecto
+§7, PyPI version in estado_proyecto §1) that the previous
+four-document checklist did not cover.
 
 ## Language
 
