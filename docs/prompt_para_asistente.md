@@ -125,6 +125,7 @@ combo y tabla de valores OK, tests E2E. Invariante C1: sin
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
 - **Próximo paso:** Fase 3.5 (Reportes adaptados multiclase + ponderados).
+- **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
 
@@ -330,6 +331,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 12. `docs/audit_log.md` — bitácora cronológica (leer últimas 3 entradas).
 13. `docs/roadmap.md` — plan de fases.
 14. `docs/api.md` — superficie de API pública.
+15. `docs/roadmap.md` sección "Deferred (no blocking current work)" — contiene los 8 hallazgos UX pendientes (H1 a H8) registrados el 13/10/2026 tras la primera sesión de visualización de la GUI.
 
 ---
 

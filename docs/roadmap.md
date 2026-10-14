@@ -401,6 +401,22 @@ panel).
 
 **Pendientes abiertos.** Investigar el hueco de dos dólares noventa y siete centavos del bloque 3.2 con la pestaña Export Records del panel de Moonshot. Analizar los logs de OpenCode del 10/10 para desglose por tarea. Evaluar el TTL de una hora de caché (requiere plugin custom). Evaluar Kimi K2.6 o K2.7-code para tareas simples.
 
+### UX findings from first GUI session (13/10/2026) — Deferred
+Priority: Low (deferred, not blocking).
+
+La primera sesión de visualización end-to-end de la GUI (13/10/2026) identificó 8 hallazgos de usabilidad y estética. Ninguno es bug funcional. Se documentan aquí como deuda diferida. La fuente de verdad es la entrada del 13/10/2026 en `docs/audit_log.md`.
+
+- H1 — Radio buttons del asistente invisibles (motor en Paso 1, clase de interés en Paso 2). Prioridad Alta.
+- H2 — Target por defecto del asistente es la primera columna del CSV. Prioridad Alta.
+- H3 — Botones de mover predictores se ven como texto plano. Prioridad Media.
+- H4 — Paleta y layout del visor del árbol y del panel de reportes frente al prototipo previo. Prioridad Media.
+- H5 — Opción Cross-validation del Paso 3 deshabilitada sin explicación al usuario. Prioridad Baja.
+- H6 — Datos sensibles en logs DEBUG y reports HTML exportados. Seguridad transversal y política de datos para v1.0.0. Prioridad Alta.
+- H7 — Matriz de clasificación con umbral 0.5 degenerada en targets con baja tasa de eventos. Prioridad Media.
+- H8 — Tema oscuro demasiado oscuro, sin jerarquía visual entre fondo y paneles. Prioridad Media.
+
+**Motivo del aplazamiento.** Ninguna de las fases pendientes (3.5, 3.6, 3.7) requiere cerrar estos hallazgos para avanzar. Se planifican en una sub-fase específica de rediseño UX posterior a la Fase 3.5, o como bloque pre-release dentro de la Fase 3.7 en el caso de H6 (seguridad y datos sensibles).
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality

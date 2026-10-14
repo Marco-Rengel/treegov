@@ -220,6 +220,7 @@ WSL (bash):
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
 | **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
+| **Hallazgos UX pendientes de la primera sesión de GUI** (radio buttons invisibles en el asistente, target por defecto mal elegido, tema oscuro sin jerarquía visual, etcétera) | Ver `docs/roadmap.md` sección "Deferred (no blocking current work)" para los 8 hallazgos H1 a H8 y su prioridad. Ninguno bloquea el desarrollo actual. |
 
 ## Cómo retomar el trabajo
 
@@ -317,6 +318,8 @@ diferidos de 3.2: KS/AUC/Gini ponderados del gains table
 - Restricciones de monotonicidad.
 - Exportación de reglas legibles (Markdown/JSON).
 - Documentación automática del modelo.
+
+Nota (13/10/2026): la GUI se verificó end-to-end en pantalla real el 13/10/2026. Flujo completo funcional. Hay 8 hallazgos UX diferidos en `docs/roadmap.md` que se planifican en una sub-fase posterior de rediseño.
 
 ## Documentos históricos
 

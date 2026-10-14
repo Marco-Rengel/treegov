@@ -3634,3 +3634,57 @@ Correcciones:
   posterior; no bloquea).
 
 ---
+
+### 13/10/2026 — Sesión de visualización end-to-end de la GUI y hallazgos UX
+
+**Estado**: Documentada. Sin cambios de código. Suite 384/384 intacta.
+
+**Motivación**:
+Tras 14 fases de desarrollo programando sin abrir la GUI en pantalla real, se ejecutó una sesión completa de visualización end-to-end con el dataset sintético `data/credit_risk_dataset.csv`. El objetivo era verificar el flujo completo (cargar CSV, asistente de 4 pasos, entrenar, evaluar OOS, reportes, export HTML, tema oscuro) y registrar hallazgos de usabilidad que no se detectan en tests headless.
+
+**Flujo ejecutado (todo OK)**:
+
+1. `python treegov_gui.py` — ventana abre correctamente. Idioma español detectado del locale del sistema. Tema claro por defecto.
+2. Archivo > Abrir dataset — `credit_risk_dataset.csv` (2500 filas × 9 columnas) cargado. Indicador Sesión: `DATA_LOADED`. Menú Modelo > Entrenar activado.
+3. Ctrl+N — asistente de 4 pasos. Target cambiado manualmente a `default`. 8 predictores seleccionados. Clase de interés `1` (166 eventos, minoritaria). Holdout 70/30, semilla 42. Gobernanza Banking.
+4. Finalizar — modelo C&RT entrenado. Pestaña Árbol del modelo muestra árbol de 11 nodos y 6 hojas. Fingerprint `b4952bce1250253a`. PD raíz 6.65% (Jeffreys sobre 116 eventos en 1750 filas, coincide con cálculo manual).
+5. Modelo > Evaluar OOS — panel OOS completo: Gini 0.4265, KS 0.3614, Brier 0.05565, Brier skill 0.1057, HL p-valor 0.3169 (no rechaza la hipótesis de calibración). Valores coherentes con la gains table.
+6. Pestaña Reportes — gains table con 6 hojas ordenadas por PD ascendente. Total 750, KS 0.3614, AUC 0.7133, Gini 0.4265.
+7. Cambio de umbral de clasificación a 0.15 y luego a 0.05 — matriz de clasificación se reparte correctamente: recall pasa de 0 a 0.44 a 0.58, con precisión decreciente. Valida la mecánica del umbral.
+8. Reportes > Exportar HTML — diálogo con vista previa correcta del HTML autocontenido (gains table, resumen y matriz).
+9. Ver > Tema > Oscuro — tema oscuro aplicado. Árbol y paneles se recolorean correctamente.
+
+**Hallazgos registrados (ninguno es bug funcional)**:
+
+| ID | Descripción | Tipo | Prioridad |
+|---|---|---|---|
+| H1 | Los radio buttons del asistente (motor en Paso 1, clase de interés en Paso 2) son invisibles visualmente. El usuario no sabe qué tiene seleccionado. El QSS está ocultando el indicador circular. | Cosmético, usabilidad grave | Alta |
+| H2 | El asistente abre con la primera columna del CSV como target por defecto. En `credit_risk_dataset.csv` es `ingreso_mensual` (variable continua), lo que hace el Paso 2 inusable hasta que el analista cambia el target manualmente. | UX grave | Alta |
+| H3 | Los botones de mover predictores del Paso 2 (flecha derecha, doble flecha derecha, flecha izquierda, doble flecha izquierda) se ven como texto plano sin decoración. | Cosmético | Media |
+| H4 | Paleta y layout del visor del árbol y del panel de reportes. El prototipo previo del autor (Antigravity) usaba colores por nivel de riesgo (verde, amarillo, naranja, rojo), metadata más rica por nodo, y panel inferior con cortes candidatos. Pendiente de rediseño estético. | Rediseño | Media |
+| H5 | La opción Cross-validation del Paso 3 del asistente está deshabilitada sin tooltip explicativo. Ya cubierta funcionalmente por Fase 2.1.b, pero el usuario no entiende por qué está gris. | Cosmético | Baja |
+| H6 | TreeGov está diseñado para uso final con datos bancarios reales en el escritorio del analista, aunque el desarrollo use solo datos sintéticos o públicos. Los logs DEBUG, los reports HTML exportados y las rutas guardadas en SessionState contienen información sensible del modelo. Seguridad y política de datos sensibles merecen tratamiento explícito antes de v1.0.0, no como fase cosmética al final. | Conceptual / roadmap | Alta (pre-release) |
+| H7 | La matriz de clasificación con umbral 0.5 produce resultados degenerados cuando la tasa de eventos es baja (todos los registros clasificados como predicho bueno, recall cero). No es bug de cálculo, es elección inadecuada del umbral por defecto. | UX | Media |
+| H8 | El tema oscuro es demasiado oscuro: la diferencia entre BG (0x1E1E1E) y SURFACE (0x2A2A2A) es de solo 12 puntos, sin jerarquía visual entre fondo y panel. Propuestas: elevar luminosidad general con referencia a VS Code Dark+, introducir un tercer nivel SURFACE_ELEVATED, y ofrecer una variante oscura suave. Los encabezados del asistente usan negro absoluto en lugar de la paleta. | Rediseño | Media |
+
+**Decisiones**:
+
+- Los hallazgos H1, H2, H3, H4, H5, H7 y H8 se agrupan en una futura sub-fase de rediseño estético y de usabilidad del asistente, visor del árbol y panel de reportes. A planificar en el roadmap.
+- El hallazgo H6 (seguridad y datos sensibles) se planifica como bloque transversal más bloque pre-release dentro de Fase 3.7. No se convierte en una fase de seguridad al final.
+- Ninguno de estos hallazgos bloquea el desarrollo actual ni la Fase 3.5.
+
+**Verificaciones cruzadas con el backend**:
+
+- PD de la raíz calculada a mano: (116 + 0.5) / (1750 + 1) = 0.06648. Coincide con el 6.65% mostrado en la GUI.
+- AUC implícita desde el Gini del panel OOS: (0.4265 + 1) / 2 = 0.71325. Coincide con el AUC de la gains table (0.7133).
+- Las tres vistas (panel OOS, gains table, panel OOS/OOT) reportan las mismas métricas: discriminación consistente entre consumidores.
+- Matriz de clasificación a 3 umbrales (0.50, 0.15, 0.05) reproduce el trade-off esperado entre recall y precisión. Las sumas de celdas siempre dan 750.
+
+**Tests**: 384/384 PASSED. Sin cambios de código.
+
+**Referencias**:
+- Sesión de visualización del 13/10/2026.
+- `docs/roadmap.md` sección Deferred (los hallazgos H1-H8 se planifican en sub-fase futura de rediseño de UX).
+- `docs/estado_proyecto.md` (hito: GUI verificada end-to-end).
+
+---
