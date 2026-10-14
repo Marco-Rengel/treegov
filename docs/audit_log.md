@@ -3682,6 +3682,14 @@ Tras 14 fases de desarrollo programando sin abrir la GUI en pantalla real, se ej
 
 **Tests**: 384/384 PASSED. Sin cambios de código.
 
+**Diseño de Fase 3.5 — auditoría y cierre**:
+
+En la misma sesión se redactó el documento de diseño `docs/3.5_design_multiclass_weighted_reports.md` y se auditó antes de cerrar el día. El diseño cubre los tres puntos de bloqueo multiclase remanentes de la Fase 3.1 (validation, reporting y `Session.evaluate_oot`) y su composición con el modo ponderado de la Fase 3.2.
+
+La auditoría identificó 5 correcciones puntuales: tres zonas grises (el factor 1/2 del Brier multiclase necesario para la paridad K=2; el cierre de la decisión diferida §13.7 de `design_decisions.md` para el path multiclase; y el shortcut K=2 en el PR-AUC micro-average) que se formalizaron como decisiones nuevas D12, D13 y D14; y dos reescrituras de redacción ambigua (§2.3 KS y §3.2 `event_capture_rate`). Las cinco correcciones se aplicaron al documento en esta misma sesión.
+
+Decisión final: el diseño queda aprobado con las catorce decisiones (D1 a D14) formalizadas. La implementación comienza en la próxima sesión con la sub-fase 3.5.a (`validation.py` multiclase).
+
 **Referencias**:
 - Sesión de visualización del 13/10/2026.
 - `docs/roadmap.md` sección Deferred (los hallazgos H1-H8 se planifican en sub-fase futura de rediseño de UX).
