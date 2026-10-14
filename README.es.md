@@ -9,6 +9,8 @@
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
+**Ámbito de datos.** TreeGov se desarrolla exclusivamente con datasets públicos (German Credit, UCI) y datos sintéticos. Está diseñado para uso final con datos bancarios reales en el escritorio del analista: el CSV nunca sale del equipo. Durante el desarrollo no se envían datos reales a APIs de IA de terceros. Cuando TreeGov se use en producción con datos reales, los logs DEBUG y los reports HTML exportados contienen información sensible del modelo (PD por nodo, conteos por segmento, nombres de columnas reales, rutas de archivo) y deben tratarse como material confidencial por parte del analista.
+
 ---
 
 ## Resumen ejecutivo
