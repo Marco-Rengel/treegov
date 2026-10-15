@@ -54,11 +54,11 @@ An analytical segmentation tool for credit risk with native MRM/IFRS 9 governanc
 | **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | — | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
 | **C&RT** | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits for missing values, multiclass (K ≥ 2) |
 | **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection (ANOVA + χ² + Levene), univariate QDA split for K=2, Gini reduction sweep for K > 2 |
-| **Jeffreys estimator + PD Floor** | — | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
+| **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test split, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
 | **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing |
-| **OOS / OOT validation** | — | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; out-of-time cohort support |
+| **OOS / OOT validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980); Davis & Goadrich (2006) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; out-of-time cohort support |
 | **Stability monitoring** | Siddiqi (2006) | Basel / EBA | PSI (leaves), CSI (covariates), Gini Drop with traffic lights |
 | **Gains table + classification matrix** | Siddiqi (2006) | SR 11-7 | Per-leaf / per-bucket view, cumulative / decumulative metrics, KS / AUC / Gini recomputed, HTML export |
 
@@ -104,6 +104,7 @@ TreeGov/
 │   ├── 3.2_decisions_consolidated.md  # Phase 3.2 decisions (EN)
 │   ├── 3.3_design_population_categories.md  # Phase 3.3 design (EN)
 │   ├── 3.4_design_multiclass_crt_quest.md  # Phase 3.4 design (EN)
+│   ├── 3.5_design_multiclass_weighted_reports.md  # Phase 3.5 design (EN)
 │   ├── api.md               # Public API (EN)
 │   ├── roadmap.md           # Phase plan (EN)
 │   ├── philosophy.md        # Project philosophy (EN)
@@ -194,11 +195,21 @@ TreeGov/
 
 ## Academic references
 
-- Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
-- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
-- Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
-- Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
 - Biggs, D., de Ville, B. & Suen, E. (1991). *A Method of Choosing Multiway Partitions for Classification and Decision Trees*. Journal of Applied Statistics 18(1), 49-62.
+- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
+- Brier, G.W. (1950). *Verification of forecasts expressed in terms of probability*. Monthly Weather Review 78(1), 1-3.
+- Brown, M.B. & Forsythe, A.B. (1974). *Robust Tests for the Equality of Variances*. Journal of the American Statistical Association 69(346), 364-367.
+- Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
+- Davis, J. & Goadrich, M. (2006). *The relationship between Precision-Recall and ROC curves*. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
+- Fisher, R.A. (1925). *Statistical Methods for Research Workers*. Oliver & Boyd, Edinburgh.
+- Hanley, J.A. & McNeil, B.J. (1982). *The meaning and use of the area under a receiver operating characteristic (ROC) curve*. Radiology 143(1), 29-36.
+- Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). *Applied Survey Data Analysis*. Chapman & Hall/CRC.
+- Hosmer, D.W. & Lemeshow, S. (1980). *A goodness-of-fit test for the multiple logistic regression model*. Communications in Statistics A10, 1043-1069.
+- Jeffreys, H. (1946). *An invariant form for the prior probability in estimation problems*. Proceedings of the Royal Society of London A 186(1007), 453-461.
+- Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
+- Levene, H. (1960). *Robust tests for equality of variances*. In Contributions to Probability and Statistics, Stanford University Press, 278-292.
+- Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
+- Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
 - Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring*. Wiley.
 
 ---
