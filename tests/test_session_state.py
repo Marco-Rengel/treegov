@@ -830,8 +830,14 @@ def test_classification_matrix_multiclass_raises():
         _assert_raises(ValueError, s.get_classification_matrix)
 
 
-def test_gains_table_multiclass_raises():
-    """Fase 3.1.d: get_gains_table bloquea K>2 (delegado al builder)."""
+def test_gains_table_multiclass_works():
+    """Fase 3.5.b: get_gains_table NO bloquea K>2 (delegado al builder
+    multiclase). Reemplaza al pre-3.5.b test_gains_table_multiclass_raises.
+
+    El bloqueo anterior era transitivo desde reporting.build_gains_table,
+    no un check explícito en Session. La Fase 3.5 §5.1 planifica esta
+    apertura como consecuencia de abrir reporting en 3.5.b.
+    """
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv_k3(Path(td))
         s = Session(logger=_quiet_logger())
@@ -840,7 +846,14 @@ def test_gains_table_multiclass_raises():
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition(train_frac=0.7, seed=42)
         s.train("CHAID", max_depth=3, min_child_size=5)
-        _assert_raises(ValueError, s.get_gains_table, partition="oos")
+        dto = s.get_gains_table(partition="oos")
+        assert dto is not None
+        # En K>2 el DTO lleva class_labels canónicos (target_class primero)
+        # y los conteos por clase.
+        assert dto["class_labels"] == ("alto", "bajo", "medio")
+        assert len(dto["n_per_class_global"]) == 3
+        # El path multiclase del builder no lanza
+        assert dto["by"] == "leaf"
 
 
 def test_describe_target_returns_counts():
