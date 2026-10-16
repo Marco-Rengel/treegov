@@ -89,9 +89,23 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.validation
 
-- `OOSMetrics`, `predict_pd(model, X, *, unseen_policy="error")`,
-  `predict_leaf_assignment(model, X, *, unseen_policy="error")`,
-  `compute_oos_metrics`
+- `OOSMetrics` (frozen dataclass) — multiclass-aware metrics
+  container. Fields `hl_stat`, `hl_df`, `hl_p` are Optional as of
+  Phase 3.5.a (None in multiclass mode); `hl_groups` remains int.
+  Three new fields since Phase 3.5.a, all with empty defaults:
+  `ks_pairs: tuple[tuple[int, int, float], ...]`,
+  `auc_pairs: tuple[tuple[int, int, float], ...]`,
+  `roc_per_class: tuple[tuple[tuple[float, float, float], ...], ...]`.
+- `predict_pd(model, X, *, unseen_policy="error")` — returns a 2D
+  array of shape (n_rows, K) since Phase 3.1.
+- `predict_leaf_assignment(model, X, *, unseen_policy="error")`.
+- `compute_oos_metrics(p, y, *, n_groups=10, weights=None)` — the
+  input `p` accepts two forms (Phase 3.5.a, decision D15): 1D
+  (classic binary path) or 2D with shape (n, K) for multiclass. For
+  K = 2, the 2D path reduces internally to column 0 and executes
+  the binary path; the caller must pass `y_2d = 1 - y_1d` to
+  preserve the uniform "column c ↔ label c" contract. For K > 2,
+  `y` must be a 1D array of labels in {0, 1, ..., K-1}.
 
 ## backend_v3.stability
 
@@ -142,6 +156,9 @@ In particular:
 - Fingerprint composition: `design_decisions.md` §10.1, §10.2.
 - QUEST Bonferroni family and other canonical deviations:
   `design_decisions.md` §11.
+- `compute_oos_metrics` input contract and `OOSMetrics` field
+  additions: `docs/3.5_design_multiclass_weighted_reports.md` §2.0
+  (D15), §2.4 (D16), §2.7 (D17).
 
 > **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be

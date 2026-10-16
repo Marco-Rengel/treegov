@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 12/10/2026
+**Fecha de última actualización:** 15/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -115,12 +115,13 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada 10/10/2026** |
 | **3.3** | **Categorías de población (Indet / Insufficient / No Perf)** | **✅ Cerrada 11/10/2026** |
 | **3.4** | **CRT/QUEST multiclase** | **✅ Cerrada 12/10/2026** |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | ⏳ Próxima |
+| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | 🟡 En curso |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 384/384 PASSED
+**Suite de tests:** 397/397 PASSED
 
 ## Entorno de desarrollo
 
@@ -278,6 +279,16 @@ Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
 ## Próximos pasos (Fase 3.5 — Reportes adaptados multiclase + ponderados)
+
+**Fase 3.5.a — validation.py multiclase + desbloqueo K>2: Cerrada
+15/10/2026.** Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics
+a K ≥ 2 y compone con el modo ponderado de la Fase 3.2. Tres
+decisiones nuevas añadidas al diseño (D15: contrato de entrada 1D/2D;
+D16: HL con tipos Optional y validaciones saltadas para K > 2; D17:
+campos ks_pairs, auc_pairs, roc_per_class en OOSMetrics). Invariante
+K=2 1D vs 2D bit a bit. Suite 397/397 (384 - 1 test obsoleto + 14
+nuevos). Commits 56748c9 y 18bbdf0. Próximo paso: Fase 3.5.b
+(reporting.py multiclase + ponderados).
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

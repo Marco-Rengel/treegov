@@ -199,7 +199,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
 | 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | Media |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | En curso (3.5.a ✅) |
 | 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
@@ -240,6 +240,24 @@ y no-crédito (biología, ciencias sociales).
 
 **Cierre de la Fase 3.4.** Las dos sub-fases (a: C&RT; b: QUEST) quedan cerradas el 12/10/2026. Ningún motor bloquea ya targets con K > 2 en Session.train. Los bloqueos downstream (validation, reporting, stability) siguen activos hasta Fase 3.5. Invariante K=2: los motores producen modelos numéricamente idénticos al pre-3.4. Fingerprint sin cambios: la conducta multiclase se captura por `class_labels` / `n_classes` desde 3.1. Suite: 384/384 PASSED.
 
+**Desglose de la Fase 3.5:**
+
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
+| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ⏳ |
+| 3.5.c | stability + Session: evaluate_oot multiclase | ⏳ |
+| 3.5.d | wizard, cableado GUI y cierre documental | ⏳ |
+
+**Cierre parcial de la Fase 3.5.** 3.5.a abre compute_oos_metrics a
+targets multiclase (K ≥ 2) y compone con el modo ponderado de la Fase
+3.2. Invariante no negociable: para K=2 con weights None o uniformes,
+el resultado es idéntico bit a bit al pre-3.5, salvo por los tres
+campos nuevos (ks_pairs, auc_pairs, roc_per_class) que el modo 1D deja
+vacíos. Tres decisiones nuevas (D15, D16, D17) añadidas al diseño
+antes de la implementación. Suite: 397/397 PASSED (384 - 1 test
+obsoleto + 14 nuevos).
+
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
 amplia: mezclaba analítica avanzada (necesaria para uso real en banca) con
@@ -256,6 +274,9 @@ del 04/10/2026 separa esas familias:
 - Fase 3.x — Screenshot automatizado de la GUI (requiere xvfb o runner
   gráfico).
 - Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
+- El fixture _make_csv de los tests E2E (target aleatorio respecto a
+  predictores) sigue pendiente de reemplazo por uno con señal real.
+  Sin cambios en 3.5.a.
 
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 12/10/2026
+**Fecha de última actualización:** 15/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0a3 (alpha) |
+| Versión | 1.0.0a4 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | pypi.org/project/treegov/1.0.0a3 |
+| PyPI | pypi.org/project/treegov/1.0.0a4 |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -231,6 +231,26 @@ evaluación OOS/OOT, y se reportan en `n_excluded_population` +
 Dos parámetros nuevos en el fingerprint: `population_col`,
 `population_ok_values`. Suite: 384/384.
 
+### Fase 3.5 — Reportes multiclase y ponderados 🟡 En curso
+
+**Alcance**: abrir los tres puntos de bloqueo remanentes de la Fase
+3.1.d (validation, reporting y Session.evaluate_oot) a targets con
+K > 2 y componer con el modo ponderado de la Fase 3.2. Cuatro
+sub-fases (a-d). Invariante no negociable: para K=2 con weights None
+o uniformes, el resultado es idéntico bit a bit al pre-3.5.
+
+**Sub-fases**:
+
+- 3.5.a — validation.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
+- 3.5.b — reporting.py multiclase + desbloqueo K>2. Pendiente.
+- 3.5.c — stability + Session: evaluate_oot multiclase. Pendiente.
+- 3.5.d — wizard, cableado GUI y cierre documental. Pendiente.
+
+**Cierre parcial de 3.5.a**. Tres decisiones nuevas añadidas al diseño
+(D15: contrato de entrada de compute_oos_metrics; D16: HL bloqueado
+con tipos Optional y validaciones saltadas para K>2; D17: campos
+nuevos en OOSMetrics). Suite: 397/397 PASSED.
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
@@ -391,7 +411,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | profiling.py | 3 |
 | tree_builder.py | 35 |
 | session_state.py | 82 |
-| validation.py | 17 |
+| validation.py | 30 |
 | pruning.py | 6 |
 | stability.py | 18 |
 | reporting.py | 18 |
@@ -402,9 +422,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **384** |
+| **Total** | **397** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 384/384 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 397/397 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -519,9 +539,10 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
 > 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra), 3.3 (categorías
-> de población) y 3.4 (CRT y QUEST multiclase) cerradas. Suite 384/384.
-> Próximo paso: Fase 3.5 (Reportes adaptados multiclase + ponderados)
-> con OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo (key propia)."
+> de población), 3.4 (CRT y QUEST multiclase) y 3.5.a (validation.py
+> multiclase) cerradas. Suite 397/397. Próximo paso: Fase 3.5.b
+> (reporting.py multiclase + ponderados) con OpenCode 1.19.0 + Kimi K3
+> vía Moonshot AI directo (key propia)."
 
 ---
 

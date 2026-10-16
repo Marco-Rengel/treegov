@@ -3696,3 +3696,70 @@ Decisión final: el diseño queda aprobado con las catorce decisiones (D1 a D14)
 - `docs/estado_proyecto.md` (hito: GUI verificada end-to-end).
 
 ---
+
+### 15/10/2026 — Fase 3.5.a: multiclase en validation.py
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Primera sub-fase de la Fase 3.5 (reportes adaptados multiclase + ponderados). Abre compute_oos_metrics a K mayor o igual que 2 y compone con el modo ponderado de la Fase 3.2. El diseño fue aprobado y auditado en docs/3.5_design_multiclass_weighted_reports.md con catorce decisiones (D1 a D14). Antes de arrancar la implementación se añadieron tres decisiones nuevas D15, D16 y D17, auditadas el 15/10/2026 tras revisar los consumidores de OOSMetrics.
+
+**Decisiones nuevas pre-implementación (commit 56748c9)**:
+
+- **D15 — Contrato de entrada de compute_oos_metrics.** La entrada p acepta 1D (binario clásico) o 2D (multiclase). Para K=2 en 2D, la función reduce internamente a la columna 0 y ejecuta el binario clásico. La convención entre columna c y etiqueta c es uniforme para todo K. En 2D con K=2, el shortcut invierte y internamente (y_bin = 1 - y_2d) antes de ejecutar el binario clásico, cuya convención es y=1 = columna 0. Un llamador que hoy pase 1D y migre a 2D con K=2 debe pasar y_2d = 1 - y_1d. El contrato literal vive en el docstring de la función.
+
+- **D16 — HL bloqueado con tipos opcionales y validaciones saltadas para K mayor que 2.** En modo multiclase los campos hl_stat, hl_df y hl_p del DTO OOSMetrics pasan a None; sus tipos cambian a float | None, int | None y float | None. hl_groups se mantiene int. Las validaciones n_groups mayor o igual que 3 y n_groups * 5 menor o igual que n se saltan para K mayor que 2; se mantienen íntegras para K=2.
+
+- **D17 — Campos nuevos en OOSMetrics.** El DTO gana tres campos al final, todos con default vacío: ks_pairs (tupla de tuplas (i, j, ks)), auc_pairs (tupla de tuplas (i, j, auc)), roc_per_class (tupla de K curvas ROC one-vs-rest). Para K=2 los tres campos se pueblan.
+
+**Cambios aplicados (commit 18bbdf0)**:
+
+**backend_v3/validation.py** (386 líneas cambiadas):
+
+- OOSMetrics: hl_stat / hl_df / hl_p cambian a Optional; hl_groups sigue int. Tres campos nuevos al final con default vacío: ks_pairs, auc_pairs, roc_per_class.
+- compute_oos_metrics: dispatch por forma de p. Con p.ndim == 1, la ruta binaria clásica se preserva intacta (movida verbatim a un helper privado) y los tres campos nuevos quedan vacíos. Con p.ndim == 2 y K == 2, el shortcut D12/D14 invierte y_2d y pasa la columna 0 al binario clásico; los tres campos nuevos se pueblan. Con p.ndim == 2 y K mayor que 2, se ejecuta el camino multiclase completo:
+  - AUC Hand & Till 2001: para cada par (i, j) con i menor que j, se promedian A_ij y A_ji. auc = media aritmética sobre todos los pares; gini = 2*auc - 1.
+  - KS worst-case (D4): el mínimo de los KS por par. Cada KS por par se computa con score = columna i, positivos = filas con y == i, negativos = filas con y == j.
+  - Brier multiclase con factor 1/2 (D12). brier_ref = (1/2) * suma_k pi_k * (1 - pi_k). brier_skill = 1 - brier / brier_ref.
+  - PR-AUC micro (D7): problema pooled de N*K pares; Average Precision stepwise (sin trapezoide).
+  - ROC one-vs-rest: K curvas en roc_per_class; roc_points se puebla con la curva one-vs-rest de la clase 0.
+  - HL: None en los tres campos con WARNING citando Fagerland 2012 (D16). Las validaciones n_groups se saltan para K mayor que 2.
+- Helpers privados puros (numpy + stdlib). Sin imports nuevos externos salvo replace de dataclasses.
+- El bloqueo multiclase previo se elimina por completo. No queda ninguna mención a Fase 3.5 en mensajes de error.
+- predict_pd y predict_leaf_assignment: sin cambios.
+
+**tests/test_validation.py** (434 líneas cambiadas):
+
+- Se elimina test_compute_oos_metrics_multiclass_raises (aserta el bloqueo K mayor que 2 que esta sub-fase abre).
+- 14 tests nuevos (A-N) con valores verificados a mano: paridad K=2 1D vs 2D; contrato D15 con inversión; Hand & Till K=3 con AUC por par calculado a mano; worst-case KS; Brier con factor 1/2 y BSS; reducción del Brier a binario para K=2; PR-AUC micro; HL None con WARNING capturado; validaciones n_groups saltadas para K mayor que 2; ROC one-vs-rest; paridad ponderado × multiclase con pesos uniformes; ponderado × multiclase con pesos no triviales verificados a mano; invarianza de escala ×7.5; K=3 con una clase con masa cero.
+
+**Identidades verificadas**:
+
+- Paridad K=2 1D vs 2D bit a bit: los 14 campos comunes idénticos; los tres campos nuevos vacíos en 1D y poblados en 2D.
+- Fixture K=3 con separación completa: auc_pairs = ((0, 1, 1.0), (0, 2, 1.0), (1, 2, 1.0)); gini = 1.
+- Brier K=3 con factor 1/2 verificado a mano.
+- HL bloqueado en K mayor que 2 con WARNING citando Fagerland.
+- Validaciones n_groups saltadas para K mayor que 2 y presentes para K=2.
+- Modo ponderado × multiclase: paridad con pesos uniformes; ratios invariantes a escala 7.5.
+
+**Incidentes**:
+
+- Kimi reescribió validation.py en una sola pasada (386 líneas) y tests/test_validation.py en otra (434 líneas). Ningún fallo de protocolo, ninguna respuesta cortada. Los 397 tests pasan a la primera.
+- El primer pytest -q tras el prompt 1 (validation.py) mostró 383 passed, 1 failed (test_compute_oos_metrics_multiclass_raises). Es el fallo esperado y requerido: el test verifica el bloqueo que esta sub-fase elimina por diseño. Se elimina en el prompt 2.
+
+**Lecciones del bloque**:
+
+- La regla "un prompt = un archivo" se mantiene: los dos prompts (validation.py y test_validation.py) fueron quirúrgicos y funcionaron a la primera.
+- La revisión previa de los consumidores de OOSMetrics (stability.py, reporting.py, test_stability.py, test_reporting.py, test_session_state.py) confirmó que los cambios de tipo y los campos nuevos no rompen ninguna construcción manual ni lectura existente.
+- El nivel max fue obligatorio: cambio de firma pública (compute_oos_metrics y OOSMetrics), sub-fase multi-archivo, decisiones D15/D16/D17 nuevas.
+
+**Tests**: 397/397 PASSED (384 - 1 obsoleto + 14 nuevos). Cero regresiones.
+
+**Commits**: 56748c9 (D15/D16/D17 en el diseño), 18bbdf0 (validation.py + test_validation.py).
+
+**Referencias**: docs/3.5_design_multiclass_weighted_reports.md, docs/design_decisions.md §7.1 (convención Gini), docs/methodology.md §8.1 (Gini canónico), §8.3 (HL), §8.4 (Brier), §8.10 (PR-AUC stepwise), Hand & Till 2001, Fagerland 2012, Davis & Goadrich 2006, Heeringa West & Berglund 2010.
+
+---
