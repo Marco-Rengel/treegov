@@ -245,18 +245,26 @@ y no-crédito (biología, ciencias sociales).
 | Sub-fase | Alcance | Estado |
 |---|---|---|
 | 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ⏳ |
+| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.c | stability + Session: evaluate_oot multiclase | ⏳ |
 | 3.5.d | wizard, cableado GUI y cierre documental | ⏳ |
 
 **Cierre parcial de la Fase 3.5.** 3.5.a abre compute_oos_metrics a
 targets multiclase (K ≥ 2) y compone con el modo ponderado de la Fase
-3.2. Invariante no negociable: para K=2 con weights None o uniformes,
-el resultado es idéntico bit a bit al pre-3.5, salvo por los tres
-campos nuevos (ks_pairs, auc_pairs, roc_per_class) que el modo 1D deja
-vacíos. Tres decisiones nuevas (D15, D16, D17) añadidas al diseño
-antes de la implementación. Suite: 397/397 PASSED (384 - 1 test
-obsoleto + 14 nuevos).
+3.2. 3.5.b abre las dos funciones de reporte (build_gains_table y
+build_classification_matrix) al mismo régimen y cierra por definición
+el diferido §13.7 de design_decisions.md para el path multiclase
+(D13). Tres decisiones nuevas D15-D17 (3.5.a) y tres D18-D20 (3.5.b)
+añadidas al diseño. Invariante no negociable: para K=2 con weights None
+o uniformes, el resultado es idéntico bit a bit al pre-3.5 en todo el
+path de validación y reporte, salvo por los campos aditivos nuevos
+que quedan vacíos. Suite: 406/406 PASSED.
+
+**Asimetría diferida registrada (D13 literal).** El path binario de
+build_gains_table conserva _discrimination_metrics sin ponderar incluso
+con pesos; el path multiclase llama a compute_oos_metrics que sí
+pondera. La asimetría respeta el invariante no negociable y está
+documentada en el diseño §1.2 y en audit_log (entrada 15/10/2026).
 
 **Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
 analíticos + MCP + export SQL/Python". Esa agrupación era demasiado

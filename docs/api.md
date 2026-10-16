@@ -107,6 +107,42 @@ underscore) are internal and may change without notice.
   preserve the uniform "column c ↔ label c" contract. For K > 2,
   `y` must be a 1D array of labels in {0, 1, ..., K-1}.
 
+## backend_v3.reporting
+
+- `build_oos_oot_report(st)` — flat OOS/OOT DTO (Phase 2.3.d).
+- `GainsRow` (frozen dataclass) — one gains-table line. Extended in
+  Phase 3.5.b with 6 additive fields at the end, all empty by default:
+  `n_per_class`, `n_per_class_cum`, `n_per_class_decum`, and the
+  weighted siblings `w_n_per_class`, `w_n_per_class_cum`,
+  `w_n_per_class_decum`. In the binary path they stay empty.
+- `GainsTableResult` (frozen dataclass) — extended in Phase 3.5.b
+  with 5 additive fields: `class_labels`, `n_per_class_global`,
+  `w_n_per_class_global`, `ks_pairs`, `auc_pairs`. Empty in the binary
+  path.
+- `build_gains_table(model, leaf_assignment, y, *, by="leaf",
+  n_buckets=10, tie="preserve", seed=None, weights=None)` — dispatch
+  by K since Phase 3.5.b. K=2 keeps the pre-3.5.b path (local
+  `_discrimination_metrics`, unweighted, D13 literal); K>2 uses
+  `validation.compute_oos_metrics` with adaptive `n_groups =
+  min(10, max(3, n // 5))` and returns ks/auc/gini = None when
+  n < 15 (D20).
+- `ClassificationMatrix` (frozen dataclass) — extended in Phase 3.5.b
+  with 12 additive fields: `confusion_matrix`, `n_per_class`,
+  `precision_per_class`, `recall_per_class`, `f1_per_class`,
+  `accuracy`, and weighted siblings. `accuracy` is populated in both
+  K=2 and K>2. The binary fields (`tp`, `tn`, `fp`, `fn`, `precision`,
+  `recall`, `f1`, `bad_capture_rate`, `n_good`, `n_bad`) keep their
+  meaning in K>2 by grouping the class of interest (index 0) as
+  positive and the rest as negative (D19).
+- `build_classification_matrix(leaf_assignment, y, pd_per_leaf, *,
+  threshold=0.5, weights=None)` — binary, unchanged signature.
+  Populates `accuracy` since Phase 3.5.b.
+- `build_classification_matrix_multiclass(leaf_assignment, y,
+  pd_per_leaf: dict[int, tuple[float, ...]], *, weights=None)` — new
+  in Phase 3.5.b. Argmax assignment, K×K matrix, per-class metrics,
+  accuracy, binary legacy fields from class 0 vs rest. `threshold`
+  records NaN.
+
 ## backend_v3.stability
 
 - `PSIReport`, `CSIReport`, `GiniDropReport`, `OOTReport`.
@@ -159,6 +195,9 @@ In particular:
 - `compute_oos_metrics` input contract and `OOSMetrics` field
   additions: `docs/3.5_design_multiclass_weighted_reports.md` §2.0
   (D15), §2.4 (D16), §2.7 (D17).
+- Reporting dispatch by K, superset DTOs, adaptive n_groups:
+  `docs/3.5_design_multiclass_weighted_reports.md` §3.1 (D18, D20),
+  §3.3 (D19).
 
 > **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be

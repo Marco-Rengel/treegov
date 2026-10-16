@@ -3763,3 +3763,123 @@ Decisión final: el diseño queda aprobado con las catorce decisiones (D1 a D14)
 **Referencias**: docs/3.5_design_multiclass_weighted_reports.md, docs/design_decisions.md §7.1 (convención Gini), docs/methodology.md §8.1 (Gini canónico), §8.3 (HL), §8.4 (Brier), §8.10 (PR-AUC stepwise), Hand & Till 2001, Fagerland 2012, Davis & Goadrich 2006, Heeringa West & Berglund 2010.
 
 ---
+
+### 15/10/2026 — Fase 3.5.b: multiclase en reporting.py
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Segunda sub-fase de la Fase 3.5. Abre las dos funciones
+de reporte (build_gains_table y build_classification_matrix) a targets
+con K ≥ 2 y compone con el modo ponderado de la Fase 3.2. Cierra por
+definición el diferido §13.7 de design_decisions.md para el path
+multiclase (D13, decisión aprobada el 13/10/2026). Antes de la
+implementación se añadieron tres decisiones nuevas D18, D19 y D20 al
+diseño (commits 580d5fa y 067b33a) que cerraron las zonas grises del
+dispatch por K, el DTO superset y el cálculo adaptativo de n_groups.
+
+**Cambios aplicados (commits 9af51c9)**:
+
+**backend_v3/reporting.py** (408 líneas cambiadas):
+
+- Import directo `from .validation import compute_oos_metrics` (D19). La
+  verificación previa confirmó que no hay ciclo. El path binario sigue
+  usando _discrimination_metrics local (D13 literal).
+- `_validated_routed` gana parámetro `n_classes: int | None = None`
+  (D18). Con None valida y binario como hoy; con n_classes=K valida y
+  en {0, 1, ..., K-1}.
+- `ClassificationMatrix` extendida con 12 campos nuevos al final, todos
+  con default vacío: confusion_matrix, n_per_class, precision_per_class,
+  recall_per_class, f1_per_class, accuracy, más sus simétricos w_*.
+- `build_classification_matrix` (binaria, sin cambios de firma): ahora
+  puebla el campo accuracy en K=2 (traza de la 2x2 dividida por n_total).
+  Los demás campos nuevos quedan vacíos.
+- Nueva función `build_classification_matrix_multiclass(leaf_assignment,
+  y, pd_per_leaf: dict[int, tuple[float, ...]], *, weights=None)`: asigna
+  cada fila enrutable a argmax de pd_per_leaf[leaf_id], construye la
+  matriz K x K en orden canónico, calcula per-class precision/recall/f1,
+  accuracy, y puebla los campos binarios heredados (tp, tn, fp, fn,
+  precision, recall, f1, bad_capture_rate, n_good, n_bad) con la clase de
+  interés (índice 0) como positivo y el resto como negativo (D19).
+  threshold se registra como NaN (no aplica en argmax).
+- `GainsRow` extendida con 6 campos nuevos al final: n_per_class,
+  n_per_class_cum, n_per_class_decum, y sus simétricos w_*.
+- `GainsTableResult` extendida con 5 campos nuevos al final: class_labels,
+  n_per_class_global, w_n_per_class_global, ks_pairs, auc_pairs.
+- `build_gains_table`: dispatch por K. Con K=2 el path binario se
+  conserva intacto (usa _discrimination_metrics local sin ponderar, D13
+  literal). Con K>2 construye pd_row_2d (matriz n x K), acumula
+  n_per_class por grupo y globales, computa ks/auc/gini/ks_pairs/auc_pairs
+  vía compute_oos_metrics con n_groups adaptativo (D20): n_groups_eff =
+  min(10, max(3, n // 5)) si n ≥ 15, sino ks=auc=gini=None y los pares
+  vacíos. El check "gains table is binary-only in Phase 3.1" se elimina.
+  El check "no routed rows" se mantiene.
+
+**tests/test_reporting.py** (342 líneas cambiadas):
+
+- Eliminado test_gains_table_multiclass_raises (aserta el bloqueo K>2
+  que 3.5.b abre).
+- 10 tests nuevos (A-J) con valores verificados a mano: accuracy 175/250
+  en binario; matriz K=3 perfecta; matriz K=3 con errores controlados;
+  matriz K=3 ponderada con pesos no triviales; gains K=3 con tres hojas
+  puras; gains K=3 con n=10 (D20 → None); gains K=3 ponderada con
+  invarianza de escala; paridad binaria bit a bit contra los valores
+  pre-3.5.b; D13 literal con pesos que no alteran ks/auc/gini en binario;
+  _validated_routed con y sin n_classes.
+
+**tests/test_session_state.py** (19 líneas cambiadas):
+
+- test_gains_table_multiclass_raises reemplazado por
+  test_gains_table_multiclass_works. El bloqueo era transitivo desde
+  reporting.build_gains_table, no un check explícito en Session; el
+  diseño 3.5 §5.1 planifica su apertura como consecuencia de 3.5.b.
+
+**Identidades verificadas**:
+
+- Paridad binaria bit a bit: fixtures pre-3.5.b (KS = 220/589, AUC =
+  10612.5/14725) producen valores idénticos, con los campos nuevos
+  vacíos. Invariante no negociable.
+- D13 literal: en binario con pesos no triviales, ks/auc/gini siguen
+  calculados sin ponderar (idénticos al caso sin pesos); las columnas
+  w_* sí cambian.
+- Matriz K=3 perfecta: accuracy = 1.0, diagonal 30, off-diagonal 0.
+- Matriz K=3 con errores: P/R/F1 por clase verificados a mano.
+- Matriz K=3 ponderada: w_tp=50, w_fp=10, w_tn=50, w_accuracy=100/120.
+- Gains K=3 con 90 filas enrutables: n_groups_eff = 10; ks=auc=gini=1
+  en fixture perfectamente separable; ks_pairs y auc_pairs con 3 pares.
+- Gains K=3 con n=10 (D20): ks=auc=gini=None, pares vacíos, conteos
+  poblados sin excepción.
+
+**Hallazgos**:
+
+1. El agente detectó y corrigió un error del revisor en el Test D
+   (matriz ponderada). Yo le pasé w_fp=20 y w_tn=100 asumiendo que los
+   pesos se aplicaban a filas verdaderas 1 y 2; pero solo la fila
+   verdadera 0 pesa ×2 en el fixture. Los valores correctos son w_fp=10
+   y w_tn=50. El agente verificó empíricamente y escribió el test con
+   los valores correctos, documentando la derivación en el docstring.
+   Es la segunda vez esta semana que el agente corrige al revisor en el
+   mismo bloque: confirma el patrón "verificación empírica en ambas
+   direcciones" registrado el 09/10/2026 (cierre 3.1).
+2. El agente diagnosticó erróneamente que test_gains_table_multiclass_raises
+   pertenecía a 3.5.c. La revisión del diseño §5.1 (unblocking
+   transitivo por propagación) confirma que pertenece a 3.5.b. Corregido
+   durante el cierre.
+
+**Tests**: 406/406 PASSED (397 + 10 nuevos en test_reporting.py + 1
+reemplazo en test_session_state.py). Cero regresiones.
+
+**Commits**: 9af51c9 (reporting.py + test_reporting.py + test_session_state.py),
+580d5fa (D18-D20 en el diseño).
+
+**Referencias**: docs/3.5_design_multiclass_weighted_reports.md (§2.3 KS,
+§3.1 gains table, §3.2 classification matrix, §3.3 DTO superset),
+docs/design_decisions.md §13.7 (diferido cerrado para el path multiclase),
+docs/methodology.md §8.1 a §8.10, Breiman et al. (1984), Hand & Till
+(2001), Davis & Goadrich (2006), Heeringa, West & Berglund (2010),
+Fagerland (2012).
+
+---

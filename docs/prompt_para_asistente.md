@@ -106,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 397/397 PASSED.
+- **Suite de tests:** 406/406 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro opt-in
@@ -121,7 +121,15 @@ Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics a K ≥ 2 y
 compone con el modo ponderado de la Fase 3.2. Tres decisiones nuevas
 (D15 contrato de entrada 1D/2D, D16 HL Optional + validaciones
 saltadas, D17 campos ks_pairs / auc_pairs / roc_per_class). Suite
-397/397. Próximo paso: Fase 3.5.b (reporting.py multiclase).
+406/406. Próximo paso: Fase 3.5.b (reporting.py multiclase).
+
+**Fase 3.5.b (multiclase en reporting.py): ✅ cerrada 15/10/2026.**
+Segunda sub-fase de la Fase 3.5. Abre build_gains_table y
+build_classification_matrix a K ≥ 2 con dispatch por K. Tres decisiones
+nuevas (D18 _validated_routed con n_classes, D19 import directo +
+DTO ClassificationMatrix superset, D20 n_groups adaptativo con guarda
+n<15). Suite 406/406. Próximo paso: Fase 3.5.c (stability + Session:
+evaluate_oot multiclase).
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -131,7 +139,8 @@ saltadas, D17 campos ks_pairs / auc_pairs / roc_per_class). Suite
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.5.b (reporting.py multiclase + ponderados).
+- **Próximo paso:** Fase 3.5.c (stability + Session: evaluate_oot
+  multiclase).
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -344,7 +353,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.4 cerradas (3.4: C&RT y QUEST multiclase) y 3.5.a cerrada (validation.py multiclase). Fase 3.5.b (reporting.py multiclase + ponderados) es el próximo paso. Suite 397/397. Herramienta: OpenCode 1.19.0 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.4 cerradas (3.4: C&RT y QUEST multiclase), 3.5.a cerrada (validation.py multiclase) y 3.5.b cerrada (reporting.py multiclase). Fase 3.5.c (stability + Session: evaluate_oot multiclase) es el próximo paso. Suite 406/406. Herramienta: OpenCode 1.19.0 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 
