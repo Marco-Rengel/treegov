@@ -267,8 +267,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a4` en PyPI (12/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0a4/
+**Última versión publicada:** `treegov 1.0.0a5` en PyPI (12/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0a5/
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una

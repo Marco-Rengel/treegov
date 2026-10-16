@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0a4 (alpha) |
+| Versión | 1.0.0a5 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | pypi.org/project/treegov/1.0.0a4 |
+| PyPI | pypi.org/project/treegov/1.0.0a5 |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
