@@ -199,7 +199,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
 | 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | En curso (3.5.a ✅) |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | Completada 15/10/2026 |
 | 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
@@ -247,20 +247,32 @@ y no-crédito (biología, ciencias sociales).
 | 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.c | stability + Session: evaluate_oot multiclase | ✅ 15/10/2026 |
-| 3.5.d | wizard, cableado GUI y cierre documental | ⏳ |
+| 3.5.d | auditoría de frontend + methodology + cierre documental | ✅ 15/10/2026 |
 
-**Cierre parcial de la Fase 3.5 (a, b, c).** Las tres primeras
-sub-fases abren el pipeline completo de validación y reporte a
-targets multiclase (K ≥ 2) con composición ponderada. 3.5.a abrió
-compute_oos_metrics. 3.5.b abrió las dos funciones de reporte y
-cerró el diferido §13.7 para el path multiclase (D13). 3.5.c
-desbloqueó evaluate_oos, evaluate_oot y get_classification_matrix a
-nivel Session; stability.py no se toca. Nueve decisiones nuevas
-(D15-D20 + tres que se numeran aparte, ver diseño §10) integradas en
-el diseño antes de la implementación. Invariante no negociable
-preservado: para K=2 con weights None o uniformes, todo el pipeline
-de evaluación y reporte es idéntico bit a bit al pre-3.5. Suite:
-411/411 PASSED.
+**Cierre de la Fase 3.5.** Las cuatro sub-fases (a-d) cierran el pipeline
+completo de validación, reporte y monitoreo a targets multiclase
+(K ≥ 2) con composición ponderada. 3.5.a abrió compute_oos_metrics con
+D15-D17. 3.5.b abrió build_gains_table y build_classification_matrix
+con D18-D20 y cerró el diferido §13.7 para el path multiclase (D13).
+3.5.c desbloqueó evaluate_oos, evaluate_oot y get_classification_matrix
+a nivel Session (traducción de etiquetas al orden interno en Session,
+Z2). 3.5.d auditó el frontend (cero cambios obligatorios; tres mejoras
+cosméticas diferidas a H4), publicó las subsecciones §8.11-§8.14 de
+methodology y cerró la documentación.
+
+**Invariante no negociable**: para K=2 con weights None o uniformes,
+todo el pipeline es idéntico bit a bit al pre-3.5, salvo por los campos
+aditivos de los DTOs que quedan vacíos (excepto accuracy, poblado en
+ambos modos). Suite: 411/411 PASSED.
+
+**Deuda diferida**:
+- Tres mejoras cosméticas del ReportsPanel (fila accuracy, fila "n por
+  clase", título "clase de interés vs resto" en K>2) se agrupan en el
+  rediseño H4.
+- Las subsecciones §8.11-§8.14 de methodology.md no cubren todavía el
+  ROC one-vs-rest por clase (D8/D17); el DTO expone las K curvas pero
+  el documento matemático no las formaliza. Se difiere a la Fase 3.6
+  si el caso de uso lo exige.
 
 **Traducción de etiquetas al orden interno (Z2).** La traducción
 {viejo → índice interno} vive dentro de Session, en el helper privado

@@ -1056,6 +1056,184 @@ Conference on Machine Learning (ICML)*, 233-240.
 
 > See `docs/design_decisions.md` §7.3 for the full decision rationale.
 
+### 8.11 Multiclass discrimination — Hand & Till AUC, worst-case KS
+
+Phase 3.5.a extended `compute_oos_metrics` to targets with K ≥ 2
+classes. The binary path (K = 2) is unchanged; the multiclass path
+is documented here.
+
+**Hand & Till (2001) multiclass AUC.**
+
+    For every unordered pair (i, j) with i < j:
+      A_ij = P(score_i of a random class-i member > score_i of a random class-j member) + 0.5 * P(tie)
+      A_ji = P(score_j of a random class-j member > score_j of a random class-i member) + 0.5 * P(tie)
+      pair_contribution(i, j) = (A_ij + A_ji) / 2
+
+    M = mean of pair_contribution(i, j) over all K*(K-1)/2 pairs
+    auc = M
+    gini = 2*M - 1
+
+The per-pair AUCs use the same direct pair-counting kernel as the
+binary path (concordant = 1, tied = 0.5, discordant = 0; with weights,
+over weighted class masses). The reported `ks_pairs` and `auc_pairs`
+tuples expose the per-pair values; the reviewer sees which pair
+dominates.
+
+**Worst-case pairwise KS (decision D4).**
+
+    ks_pair(i, j) computed over the pair (i, j): score = column i of p,
+    positives = rows with y == i, negatives = rows with y == j. Same
+    descending-score accumulation with whole tie blocks as the binary
+    KS (see §8.2).
+
+    ks = min over all pairs of ks_pair(i, j)
+
+The minimum is the worst case, the number an MRM reviewer would use to
+challenge the model. For K = 2 there is a single pair and the reported
+value equals the binary KS exactly.
+
+**K = 2 parity.** With one pair, M equals the binary AUC by
+construction, and the worst-case KS equals the binary KS. The K = 2
+result is bit-identical to the pre-3.5 computation given identical
+inputs.
+
+**Citation:** Hand, D.J. & Till, R.J. (2001). A simple generalisation of
+the area under the ROC curve for multiple class classification
+problems. *Machine Learning*, 45(2), 171–186. Decision D1 and D4; see
+`docs/3.5_design_multiclass_weighted_reports.md` §2.1 and §2.3.
+
+> See `docs/design_decisions.md` §7.1 for the Gini convention, and
+> §8.1 above for the binary case.
+
+### 8.12 Multiclass calibration — Brier, BSS, Hosmer-Lemeshow block
+
+Phase 3.5.a generalised the Brier score and Brier skill score to K ≥ 2
+classes and blocked the Hosmer-Lemeshow test by design.
+
+**Multiclass Brier score (decision D6, factor 1/2 per D12).**
+
+    Y_ik = 1 if observation i belongs to class k, else 0
+    brier = (1 / (2 * N)) * sum_i sum_k (Y_ik - p_ik)^2
+
+The factor 1/2 makes the K = 2 case reduce exactly to the conventional
+binary Brier score, since the two class terms sum to twice the binary
+squared error. Without the factor, K = 2 parity would break.
+
+**Multiclass Brier skill score.**
+
+    pi_k = (sum_i w_i * Y_ik) / W          (weighted empirical class frequency)
+    brier_ref = (1/2) * sum_k pi_k * (1 - pi_k)
+    brier_skill = 1 - brier / brier_ref    (NaN when brier_ref == 0)
+
+For K = 2, `brier_ref` reduces to `pi_event * (1 - pi_event)`, which
+matches the binary reference score of §8.4 exactly.
+
+**Hosmer-Lemeshow: blocked by design (decision D5, typing per D16).**
+
+In multiclass mode the fields `hl_stat`, `hl_df` and `hl_p` of the
+`OOSMetrics` DTO are set to `None`; a WARNING is logged citing
+Fagerland, Hosmer & Bofin (2012). The Hosmer-Lemeshow statistic is
+intrinsically binary: it groups observations by predicted probability
+of a single event class. The multinomial extension of Fagerland et al.
+introduces a second grouping dimension and a different reference
+distribution, which the project evaluated and rejected on
+complexity-versus-value grounds. The per-class observed-versus-predicted
+rates in the gains table provide the operational calibration view
+instead.
+
+The `n_groups >= 3` and `n_groups * 5 <= n` validations of §8.3 are
+skipped in multiclass mode (HL is not computed) and preserved in full
+for K = 2.
+
+**Citation:** Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012).
+Multinomial goodness-of-fit tests for logistic regression models.
+*Statistics in Medicine*, 31(30), 4238–4253 (evaluated and rejected).
+Decision D5, D6, D12, D16; see `docs/3.5_design_multiclass_weighted_reports.md`
+§2.4 and §2.5.
+
+### 8.13 Multiclass PR-AUC — micro-average (K > 2), K = 2 shortcut
+
+Phase 3.5.a generalised the precision-recall area to K ≥ 3 classes via
+micro-averaging, with an explicit K = 2 shortcut for parity.
+
+**Micro-average (K > 2).**
+
+    Pooled problem: N * K examples, one per (observation, class) pair.
+    Example (i, k) is positive iff y_i == k, negative otherwise.
+    Score = p[i, k], weight = w_i (per-observation weight).
+
+    The pooled PR curve is integrated step-wise, exactly as in the
+    binary case (see §8.10):
+
+        AP = sum_i (R_i - R_{i-1}) * P_i
+
+    with operating points ordered by descending pooled score and
+    R_0 = 0.
+
+**K = 2 shortcut (decision D14).** For K = 2 the design reports the
+same target-class PR-AUC as the pre-3.5 binary path, not the
+micro-average of the pooled problem. The shortcut is documented in
+the implementation docstring so that parity holds bit-for-bit.
+
+**Citation:** Davis, J. & Goadrich, M. (2006). The relationship between
+Precision-Recall and ROC curves. *ICML*, 233–240. Decision D7 and D14;
+see `docs/3.5_design_multiclass_weighted_reports.md` §2.6.
+
+### 8.14 Multiclass reports — gains table, K×K matrix, adaptive n_groups
+
+Phase 3.5.b generalised the two report DTOs to K ≥ 2 classes and closed
+the deferred §13.7 for the multiclass path (decision D13). Phase 3.5.c
+unblocked the Session-level calls.
+
+**Gains table (decision D2).** A single table ordered by the predicted
+probability of the class of interest (ascending, bureau convention).
+Each row carries per-class columns (n_per_class, cumulative and
+decumulative siblings, and their weighted counterparts in the weighted
+mode) in canonical class order. `class_labels` is propagated from the
+model.
+
+**Classification matrix (decision D3, DTO per D19).** A K×K
+contingency table of true class (rows) versus predicted class
+(columns), canonical order on both axes. Per-class precision, recall
+and F1; `accuracy` = trace / n_total, populated in both K = 2 and K > 2.
+The binary fields of the DTO (`tp`, `tn`, `fp`, `fn`, `precision`,
+`recall`, `f1`, `bad_capture_rate`, `n_good`, `n_bad`) keep their
+meaning for K > 2 by grouping the class of interest (index 0) as
+positive and the remaining classes as negative. Assignment is argmax
+of the predicted probability vector; the binary `threshold` is ignored
+in K > 2 and recorded as NaN for traceability.
+
+**Discrimination metrics.** For K > 2 the gains-table `ks`, `auc` and
+`gini` are computed by calling `validation.compute_oos_metrics` with
+the full 2D probability matrix and the label-translated `y` (see
+§8.11, §8.13). The `ks_pairs` and `auc_pairs` fields are exposed on
+the DTO.
+
+**Adaptive n_groups (decision D20).** `compute_oos_metrics` requires
+`n_groups >= 3` and `n_groups * 5 <= n`. To avoid a spurious
+`ValueError` on small multiclass gains tables, the reporting layer
+computes
+
+    n_groups_eff = min(10, max(3, n // 5))
+
+where `n` is the number of routed rows. If `n < 15` (the minimum for
+`n_groups = 3`), `ks`, `auc`, `gini` are set to `None` and the pair
+tuples remain empty; the counts, `bad_rate`, `lift` and weighted
+columns are still populated. This mirrors the same pattern already
+used in `Session.evaluate_oot` (see §8.5).
+
+**Label translation (Session-level, decision Z2).** Internally the
+class of interest always sits at index 0 (canonical order). At
+evaluation time the Session translates the external `y` labels to the
+internal canonical order via a private helper before calling
+`compute_oos_metrics`. This preserves the public signature of
+`compute_oos_metrics` from Phase 3.5.a and keeps the K = 2 path
+untouched.
+
+**Citation:** Breiman et al. (1984), *Classification and Regression
+Trees* (per-class error decomposition). Decision D2, D3, D13, D19,
+D20; see `docs/3.5_design_multiclass_weighted_reports.md` §3 and §5.
+
 ---
 
 ## Full bibliographic references
@@ -1063,7 +1241,13 @@ Conference on Machine Learning (ICML)*, 233-240.
 - Biggs, D., de Ville, B. & Suen, E. (1991). A Method of Choosing Multiway Partitions for Classification and Decision Trees. Journal of Applied Statistics, 18(1), 49-62.
 - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
 - Cochran, W.G. (1954). Some Methods for Strengthening the Common Chi-2 Tests. Biometrics, 10(4), 417-451.
+- Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). Multinomial
+  goodness-of-fit tests for logistic regression models. Statistics in
+  Medicine, 31(30), 4238-4253.
 - Fisher, R.A. (1925). Statistical Methods for Research Workers. Oliver & Boyd.
+- Hand, D.J. & Till, R.J. (2001). A simple generalisation of the area
+  under the ROC curve for multiple class classification problems.
+  Machine Learning, 45(2), 171-186.
 - Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics, 29(2), 119-127.
 - Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica, 7(4), 815-840.
 - Pearson, K. (1900). On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling. Philosophical Magazine, Ser. 5, 50(302), 157-175.

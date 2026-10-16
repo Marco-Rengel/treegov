@@ -138,6 +138,14 @@ orden interno dentro de Session (helper privado
 _translate_y_to_internal). stability.py no se toca. Suite 411/411.
 Próximo paso: Fase 3.5.d (wizard, cableado GUI y cierre documental
 de la Fase 3.5).
+
+**Fase 3.5.d (cierre de la familia 3.5): ✅ cerrada 15/10/2026.**
+Última sub-fase de la Fase 3.5. Auditoría de los cuatro archivos de
+frontend (cero cambios obligatorios; tres cosméticos diferidos a H4),
+subsecciones §8.11-§8.14 en methodology.md, cierre documental.
+Fase 3.5 completa: pipeline de validación/reporte/monitoreo admite
+K ≥ 2 con ponderación. Suite 411/411. Próximo paso: Fase 3.6
+(validación con datasets públicos).
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -147,8 +155,8 @@ de la Fase 3.5).
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.5.d (wizard, cableado GUI y cierre documental
-  de la Fase 3.5).
+- **Próximo paso:** Fase 3.6 (validación con datasets públicos: German
+  Credit, UCI).
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -361,7 +369,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.4 cerradas, 3.5.a cerrada (validation.py multiclase), 3.5.b cerrada (reporting.py multiclase) y 3.5.c cerrada (Session multiclase). Fase 3.5.d (wizard, cableado GUI y cierre documental) es el próximo paso. Suite 411/411. Herramienta: OpenCode 1.19.0 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.5 cerradas (3.5: reportes adaptados multiclase + ponderados, 4 sub-fases a-d). Fase 3.6 (validación con datasets públicos: German Credit, UCI) es el próximo paso. Suite 411/411. Herramienta: OpenCode 1.19.0 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

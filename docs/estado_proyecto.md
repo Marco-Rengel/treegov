@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 15/10/2026
+**Fecha de última actualización:** 15/10/2026 (cierre de Fase 3.5)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -231,7 +231,7 @@ evaluación OOS/OOT, y se reportan en `n_excluded_population` +
 Dos parámetros nuevos en el fingerprint: `population_col`,
 `population_ok_values`. Suite: 384/384.
 
-### Fase 3.5 — Reportes multiclase y ponderados 🟡 En curso
+### Fase 3.5 — Reportes multiclase y ponderados ✅ Cerrada 15/10/2026
 
 **Alcance**: abrir los tres puntos de bloqueo remanentes de la Fase
 3.1.d (validation, reporting y Session.evaluate_oot) a targets con
@@ -244,23 +244,26 @@ o uniformes, el resultado es idéntico bit a bit al pre-3.5.
 - 3.5.a — validation.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
 - 3.5.b — reporting.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
 - 3.5.c — stability + Session: evaluate_oot multiclase. ✅ Cerrada 15/10/2026.
-- 3.5.d — wizard, cableado GUI y cierre documental. Pendiente.
+- 3.5.d — auditoría de frontend + methodology + cierre documental. ✅ Cerrada 15/10/2026.
 
-**Cierre parcial de 3.5.a, 3.5.b y 3.5.c**. 3.5.a abrió
-compute_oos_metrics a K ≥ 2 con tres decisiones nuevas (D15-D17).
-3.5.b abrió las dos funciones de reporte con tres decisiones nuevas
-(D18-D20). 3.5.c desbloqueó evaluate_oos, evaluate_oot y
-get_classification_matrix en Session; stability.py no se toca
-(§4.2 del diseño lo confirma). La traducción de etiquetas al orden
-interno vive en Session, no en compute_oos_metrics (Z2). Invariante
-K=2 bit a bit preservado. Suite 411/411 PASSED.
+**Cierre de la Fase 3.5 (a-d)**. El pipeline completo de validación,
+reporte y monitoreo admite targets multiclase (K ≥ 2) combinados con
+ponderación por muestra. 3.5.a abrió compute_oos_metrics (D15-D17).
+3.5.b abrió las dos funciones de reporte y cerró el diferido §13.7
+para el path multiclase (D13, D18-D20). 3.5.c desbloqueó
+evaluate_oos/evaluate_oot/get_classification_matrix a nivel Session
+(traducción de etiquetas al orden interno en Session, Z2). 3.5.d
+auditó el frontend (cero cambios obligatorios; tres cosméticos
+diferidos a H4), publicó §8.11-§8.14 en methodology y cerró la
+documentación. Invariante K=2 bit a bit preservado. Suite 411/411
+PASSED.
 
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
 - **Fase 3.3** — Categorías de población ✅ Completada 11/10/2026
 - **Fase 3.4** — CRT y QUEST multiclase. ✅ Cerrada 12/10/2026 (3.4.a C&RT + 3.4.b QUEST).
-- **Fase 3.5** — Reportes adaptados (multiclase + ponderación)
+- **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Cerrada 15/10/2026 (4 sub-fases a-d).
 - **Fase 3.6** — Validación con datasets públicos (German Credit, UCI)
 - **Fase 3.6.b** — Modo no-bancario (terminología + ejemplos + docs)
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
@@ -543,11 +546,10 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
 > 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra), 3.3 (categorías
-> de población), 3.4 (CRT y QUEST multiclase), 3.5.a (validation.py
-> multiclase), 3.5.b (reporting.py multiclase) y 3.5.c (Session
-> multiclase) cerradas. Suite 411/411. Próximo paso: Fase 3.5.d
-> (wizard, cableado GUI y cierre documental de la Fase 3.5) con
-> OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo (key propia)."
+> de población), 3.4 (CRT y QUEST multiclase), 3.5.a, 3.5.b, 3.5.c y
+> 3.5.d cerradas (Fase 3.5 completa). Suite 411/411. Próximo paso:
+> Fase 3.6 (validación con datasets públicos) con OpenCode 1.19.0 +
+> Kimi K3 vía Moonshot AI directo (key propia)."
 
 ---
 

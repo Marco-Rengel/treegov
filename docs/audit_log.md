@@ -3978,3 +3978,101 @@ regresiones.
 Hand & Till (2001), Siddiqi (2006).
 
 ---
+
+### 15/10/2026 — Fase 3.5.d: cierre de la familia 3.5
+
+**Estado**: ✅ Cerrada. Fase 3.5 completa.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=high).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Última sub-fase de la Fase 3.5. Cierra la familia completa
+(reportes adaptados multiclase + ponderados). El diseño §8 de la Fase
+3.5 asigna a 3.5.d tres responsabilidades: cableado de GUI a los nuevos
+DTOs, subsecciones nuevas en methodology.md, y cierre documental.
+
+**Auditoría previa de los cuatro archivos de frontend (15/10/2026)**:
+
+Se revisaron wizard.py, main_window.py, metrics_panel.py y
+reports_panel.py antes de la ráfaga. Veredicto:
+
+- wizard.py: cero cambios. No asume K=2. La tabla de clases es
+  dinámica desde 3.1.e. Ningún texto hardcodea binario.
+- main_window.py: cero cambios. Los métodos que propagan los DTOs
+  (_refresh_reports_panel, _on_evaluate_oos, _load_oot_pipeline,
+  _on_inversion_requested) ya toleran K>2 gracias a los desbloqueos
+  de 3.5.b/c. El botón de inversión de clase (3.1.f) sigue
+  deshabilitado por construcción en K>2 (len(tree.class_labels) != 2
+  → salida silenciosa), que es el comportamiento correcto.
+- metrics_panel.py: cero cambios. Maneja hl_p = None sin romperse
+  (_fmt devuelve guion largo), y gini multiclase (Hand & Till) sigue
+  alimentando el badge de inversión normalmente.
+- reports_panel.py: cero cambios obligatorios. Tres mejoras
+  cosméticas opcionales (fila accuracy, fila "n por clase", título
+  "clase de interés vs resto" en K>2) se difieren al rediseño H4
+  por coherencia con el diseño §8 ("no aesthetic redesign").
+
+**Cambios aplicados**:
+
+**docs/methodology.md** (subsecciones nuevas §8.11 a §8.14):
+
+- §8.11 Multiclass discrimination — Hand & Till (2001) AUC y Gini,
+  worst-case pairwise KS (D4), payload ks_pairs/auc_pairs, paridad
+  K=2 bit a bit.
+- §8.12 Multiclass calibration — Brier multiclase con factor 1/2
+  (D6, D12), BSS multiclase, Hosmer-Lemeshow bloqueado con
+  Fagerland, Hosmer & Bofin (2012) citado (D5, D16).
+- §8.13 Multiclass PR-AUC — micro-average pooled N×K (D7), AP
+  stepwise, shortcut K=2 para paridad (D14).
+- §8.14 Multiclass reports — gains table y matriz K×K (D2, D3),
+  accuracy poblada en ambos modos, campos binarios heredados con
+  clase de interés en índice 0 (D19), n_groups adaptativo con
+  guarda n<15 (D20), traducción de etiquetas al orden interno en
+  Session (Z2).
+
+Bibliografía ampliada con dos entradas: Fagerland et al. (2012) y
+Hand & Till (2001).
+
+**Cierre documental sincronizado**: audit_log.md (esta entrada),
+roadmap.md (fila 3.5 a Completada; desglose a-d con 3.5.d ✅),
+estado_proyecto.md (suite 411/411; fila 3.5 a Completada),
+api.md (referencia a §8.11-§8.14), contexto_para_nueva_sesion.md
+(próximo paso = Fase 3.6), prompt_para_asistente.md (idem),
+README.md y README.es.md (fila 3.5 a Completed / Completada).
+
+**Invariante de la familia 3.5**:
+
+Para K=2 con weights None o uniformes, TODO el pipeline de validación,
+reporte, evaluación OOS/OOT y monitoreo es numéricamente idéntico bit a
+bit al pre-3.5. Verificado por los tests de paridad de cada sub-fase
+(evaluate_oos, evaluate_oot, get_classification_matrix,
+get_gains_table, classification_matrix en binario). Los campos aditivos
+de los DTOs quedan vacíos en K=2 (excepto accuracy, poblado en ambos
+modos).
+
+**Suite**: 411/411 PASSED (sin cambios respecto a 3.5.c; 3.5.d solo
+tocó documentación).
+
+**Commits de la familia 3.5**:
+- 56748c9 (D15-D17 en el diseño)
+- 18bbdf0 (validation.py + test_validation.py — 3.5.a)
+- 067b33a (cierre documental 3.5.a)
+- 580d5fa (D18-D20 en el diseño)
+- 9af51c9 (reporting.py + tests — 3.5.b)
+- ef3de7c (cierre documental 3.5.b)
+- 70460f6 (session_state.py + tests — 3.5.c)
+- 5658067 (cierre documental 3.5.c)
+- más el commit de esta entrada.
+
+**Estado final de la Fase 3.5**: cerrada. El pipeline completo de
+evaluación, reporte y monitoreo admite targets multiclase (K ≥ 2)
+combinados con ponderación por muestra, manteniendo la paridad binaria
+bit a bit. Próximo paso: Fase 3.6 (validación con datasets públicos).
+
+**Referencias**: docs/3.5_design_multiclass_weighted_reports.md
+(decisiones D1 a D20), docs/methodology.md §8.11-§8.14,
+docs/design_decisions.md §13.7, docs/audit_log.md entradas de 3.5.a,
+3.5.b, 3.5.c (misma fecha).
+
+---

@@ -213,6 +213,9 @@ In particular:
 - Session-level multiclass unblocking and label translation:
   `docs/3.5_design_multiclass_weighted_reports.md` §4 (Gini Drop),
   §5 (Session changes).
+- Multiclass formulas (Hand & Till AUC, worst-case KS, Brier with
+  1/2 factor, blocked Hosmer-Lemeshow, PR-AUC micro, K×K matrix,
+  adaptive n_groups): `docs/methodology.md` §8.11 to §8.14.
 
 > **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be

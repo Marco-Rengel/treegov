@@ -118,7 +118,8 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.c | Session multiclase (evaluate_oos, evaluate_oot, get_classification_matrix) | ✅ 15/10/2026 |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | 🟡 En curso |
+| 3.5.d | Auditoría de frontend + methodology + cierre | ✅ 15/10/2026 |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada 15/10/2026 |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
@@ -280,35 +281,19 @@ implícita.
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-## Próximos pasos (Fase 3.5 — Reportes adaptados multiclase + ponderados)
+## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 
-**Fase 3.5.c — Session multiclase: Cerrada 15/10/2026.** Tercera
-sub-fase de la Fase 3.5. Desbloquea evaluate_oos, evaluate_oot y
-get_classification_matrix a nivel Session. stability.py no se toca.
-La traducción de etiquetas al orden interno vive en Session (helper
-privado _translate_y_to_internal). Invariante K=2 bit a bit
-preservado. Suite 411/411. Commit 70460f6. Próximo paso: Fase 3.5.d
-(wizard, cableado GUI y cierre documental de la Fase 3.5).
+**Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
+15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
+de validación, reporte y monitoreo a targets multiclase (K ≥ 2) con
+composición ponderada. Invariante K=2 bit a bit preservado. Suite
+411/411. Commits de la familia: 56748c9, 18bbdf0, 067b33a, 580d5fa,
+9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
+documental.
 
-**Fase 3.5.b — reporting.py multiclase + desbloqueo K>2: Cerrada
-15/10/2026.** Segunda sub-fase de la Fase 3.5. Abre build_gains_table
-y build_classification_matrix a K ≥ 2 con dispatch por K. Tres
-decisiones nuevas añadidas al diseño (D18 _validated_routed con
-n_classes; D19 import directo de validation + DTO ClassificationMatrix
-superset; D20 n_groups adaptativo con guarda n<15). Invariante
-binario bit a bit preservado (D13 literal). Suite 406/406 (397 + 10
-nuevos − 1 obsoleto). Commit 9af51c9. Próximo paso: Fase 3.5.c
-(stability + Session: evaluate_oot multiclase).
-
-**Fase 3.5.a — validation.py multiclase + desbloqueo K>2: Cerrada
-15/10/2026.** Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics
-a K ≥ 2 y compone con el modo ponderado de la Fase 3.2. Tres
-decisiones nuevas añadidas al diseño (D15: contrato de entrada 1D/2D;
-D16: HL con tipos Optional y validaciones saltadas para K > 2; D17:
-campos ks_pairs, auc_pairs, roc_per_class en OOSMetrics). Invariante
-K=2 1D vs 2D bit a bit. Suite 397/397 (384 - 1 test obsoleto + 14
-nuevos). Commits 56748c9 y 18bbdf0. Próximo paso: Fase 3.5.b
-(reporting.py multiclase + ponderados).
+**Próximo paso**: Fase 3.6 (validación con datasets públicos: German
+Credit, UCI). Objetivo: validar el comportamiento del motor y las
+métricas multiclase sobre datasets reconocidos.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.
@@ -329,13 +314,6 @@ detalle del alcance.
 (a-e). Invariante C1: sin `population_col`, comportamiento idéntico al
 pre-3.3. Suite 384/384. Ver `docs/roadmap.md` sección "Desglose de la
 Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
-
-**Fase 3.5 — Reportes adaptados (multiclase + ponderación) (próxima).**
-Adaptar las métricas y reportes downstream (validation, reporting,
-stability) a targets multiclase y ponderados. Hoy bloquean K > 2 con
-`ValueError` desde 3.1.d; los bloqueos se levantan en 3.5. Incluye los
-diferidos de 3.2: KS/AUC/Gini ponderados del gains table
-(`docs/design_decisions.md` §13.7).
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

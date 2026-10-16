@@ -180,7 +180,7 @@ TreeGov/
 | **3.2** | Sample weighting | Completed |
 | **3.3** | Indet / Insufficient / No Perf categories | Completed |
 | **3.4** | Multiclass support in C&RT and QUEST | Completed |
-| **3.5** | Reports adapted for multiclass and weighting | In progress |
+| **3.5** | Reports adapted for multiclass and weighting | Completed |
 | **3.6** | Validation with public datasets | Planned |
 | **3.6.b** | Non-banking mode (neutral vocabulary + examples) | Planned |
 | **3.7** | Phase 3 closure + v1.0.0 stable | Planned |
