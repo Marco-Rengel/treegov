@@ -782,54 +782,6 @@ def test_class_labels_dict_property():
         assert s.class_labels_dict == {0: "Bueno", 1: "Malo"}
 
 
-def test_evaluate_oos_multiclass_raises():
-    """Fase 3.1.d: evaluate_oos bloquea K>2 con ValueError."""
-    with tempfile.TemporaryDirectory() as td:
-        csv_path = _csv_k3(Path(td))
-        s = Session(logger=_quiet_logger())
-        s.load_dataset(str(csv_path))
-        s.fix_spec("default", target_class=2,
-                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
-        s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
-        _assert_raises(ValueError, s.evaluate_oos)
-
-
-def test_evaluate_oot_multiclass_raises():
-    """Fase 3.1.d: evaluate_oot bloquea K>2 con ValueError."""
-    with tempfile.TemporaryDirectory() as td:
-        tmp = Path(td)
-        csv_dev = _csv_k3(tmp)
-        # Cohort OOT K=3: reusamos el mismo fixture (los tests de bloqueo
-        # no dependen de la separabilidad real train/OOT).
-        csv_oot = tmp / "oot_k3.csv"
-        df = pd.read_csv(csv_dev)
-        df.to_csv(csv_oot, index=False)
-        s = Session(logger=_quiet_logger())
-        s.load_dataset(str(csv_dev))
-        s.fix_spec("default", target_class=2,
-                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
-        s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
-        # load_oot verifica columnas contra spec+target; como el OOT es
-        # el mismo CSV, coincide.
-        s.load_oot(str(csv_oot))
-        _assert_raises(ValueError, s.evaluate_oot)
-
-
-def test_classification_matrix_multiclass_raises():
-    """Fase 3.1.d: get_classification_matrix bloquea K>2 con ValueError."""
-    with tempfile.TemporaryDirectory() as td:
-        csv_path = _csv_k3(Path(td))
-        s = Session(logger=_quiet_logger())
-        s.load_dataset(str(csv_path))
-        s.fix_spec("default", target_class=2,
-                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
-        s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
-        _assert_raises(ValueError, s.get_classification_matrix)
-
-
 def test_gains_table_multiclass_works():
     """Fase 3.5.b: get_gains_table NO bloquea K>2 (delegado al builder
     multiclase). Reemplaza al pre-3.5.b test_gains_table_multiclass_raises.
@@ -1657,6 +1609,195 @@ def test_crt_multiclass_k3_tree_is_coherent():
             assert len(nd.class_labels) == 3
             assert abs(sum(nd.pd_final) - 1.0) <= 1e-12
             assert abs(sum(nd.pd_jeffreys) - 1.0) <= 1e-12
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.5.c: desbloqueo multiclase en Session
+# ---------------------------------------------------------------------------
+
+
+def test_translate_y_to_internal_k3():
+    """_translate_y_to_internal con target_class=2 (Fase 3.5.c).
+
+    Orden interno canonico: (2, 0, 1) — target_class 2 primero, resto
+    {0, 1} ascendente. Mapa: 2->0, 0->1, 1->2. Por tanto
+    [0, 1, 2, 0, 1, 2] se traduce a [1, 2, 0, 1, 2, 0].
+    No requiere entrenar: solo el estado de fix_spec.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_k3(Path(td))))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        out = s._translate_y_to_internal(np.array([0, 1, 2, 0, 1, 2]))
+        assert np.array_equal(out, np.array([1, 2, 0, 1, 2, 0]))
+
+
+def test_translate_y_to_internal_k3_target_zero():
+    """_translate_y_to_internal con target_class=0 es la identidad.
+
+    Orden interno canonico: (0, 1, 2) — target_class 0 primero, resto
+    {1, 2} ascendente. La traduccion coincide con la entrada.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_k3(Path(td))))
+        s.fix_spec("default", target_class=0,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        entrada = np.array([0, 1, 2, 0, 1, 2])
+        out = s._translate_y_to_internal(entrada)
+        assert np.array_equal(out, entrada)
+
+
+def test_evaluate_oos_multiclass_works():
+    """Fase 3.5.c: evaluate_oos funciona con K=3.
+
+    Fixture _csv_k3 (clases seg-driven, separacion perfecta): CHAID
+    corta por seg1/seg2 y el OOS queda perfectamente separado, con las
+    tres clases presentes en test (12 por clase de 36). auc = gini = 1.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_k3(Path(td))))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        st_part = s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        st = s.evaluate_oos(n_groups=3)
+        m = st.oos_metrics
+        assert m is not None
+        assert m.n_test == len(st_part.test_idx)
+        assert m.auc is not None and m.gini is not None
+        assert m.ks is not None and m.pr_auc is not None
+        # separacion perfecta del fixture
+        assert m.auc == 1.0 and m.gini == 1.0
+
+
+def test_evaluate_oos_k2_parity():
+    """Invariante no negociable: K=2 bit a bit igual al pre-3.5.c.
+
+    Mismo fixture y parametros que test_evaluate_oos_e2e_valores_exactos:
+    auc = gini = ks = 1; brier = (0.5/43)^2; hl_stat = 24/85.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv(Path(td))))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        st = s.evaluate_oos(n_groups=3)
+        m = st.oos_metrics
+        assert m is not None
+        assert m.auc == 1.0 and m.gini == 1.0 and m.ks == 1.0
+        esperado_bs = (0.5 / 43.0) ** 2
+        assert math.isclose(m.brier, esperado_bs, rel_tol=1e-12)
+        assert math.isclose(m.hl_stat, 24.0 / 85.0, rel_tol=1e-12)
+
+
+def test_evaluate_oot_multiclass_works():
+    """Fase 3.5.c: evaluate_oot funciona con K=3 y Gini Drop multiclase.
+
+    Fixture _csv_k3 como dev y como OOT (dos copias del mismo CSV; el
+    fixture no tiene senal temporal, es solo plumbing). Misma
+    distribucion en ambas cohortes: metricas computables, PSI ~0.
+    El drop usa el Gini multiclase (Hand & Till) con la formula intacta.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        csv_dev = _csv_k3(tmp)
+        csv_oot = tmp / "oot_k3.csv"
+        pd.read_csv(csv_dev).to_csv(csv_oot, index=False)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.load_oot(str(csv_oot))
+        st = s.evaluate_oot()
+        r = st.oot_report
+        assert r is not None
+        assert r.metrics is not None
+        assert r.metrics.auc is not None
+        assert isinstance(r.drop.gini_oot, float)
+        assert r.drop.alert_oot in ("NONE", "WARNING", "CRITICAL")
+        assert r.psi.flag in ("STABLE", "MODERATE", "UNSTABLE", "UNDETERMINED")
+
+
+def test_get_classification_matrix_multiclass_works():
+    """Fase 3.5.c: get_classification_matrix funciona con K=3.
+
+    Fixture _csv_k3 separable: matriz 3x3, accuracy = 1 (separacion
+    perfecta), 3 clases en n_per_class, y los campos binarios heredados
+    (clase 0 = positivo) suman n_total.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_k3(Path(td))))
+        s.fix_spec("default", target_class=2,
+                   class_labels={0: "bajo", 1: "medio", 2: "alto"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CHAID", max_depth=3, min_child_size=5)
+        dto = s.get_classification_matrix(partition="oos")
+        assert dto is not None
+        assert isinstance(dto["confusion_matrix"], tuple)
+        assert len(dto["confusion_matrix"]) == 3
+        assert all(len(fila) == 3 for fila in dto["confusion_matrix"])
+        assert dto["accuracy"] is not None
+        assert dto["accuracy"] == 1.0
+        assert len(dto["n_per_class"]) == 3
+        assert (dto["tp"] + dto["tn"] + dto["fp"] + dto["fn"]
+                ) == dto["n_total"]
+
+
+def test_get_classification_matrix_k2_parity():
+    """K=2: la matriz binaria queda bit a bit igual al pre-3.5.c.
+
+    Fixture _csv (separacion perfecta): n_test=36, 18 bads y 18 goods,
+    todos bien clasificados con threshold=0.5 (pd hojas 0.5/43 y
+    42.5/43). accuracy = 1. Los campos nuevos 3.5.b quedan vacios.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv(Path(td))))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        dto = s.get_classification_matrix(partition="oos", threshold=0.5)
+        assert dto is not None
+        assert dto["tp"] == 18 and dto["tn"] == 18
+        assert dto["fp"] == 0 and dto["fn"] == 0
+        assert dto["accuracy"] == 1.0
+        assert dto["confusion_matrix"] == ()
+        assert dto["n_per_class"] == ()
+
+
+def test_get_classification_matrix_multiclass_threshold_ignored():
+    """K=3: el threshold se ignora (asignacion argmax); resultado identico.
+
+    Dos sesiones identicas salvo threshold=0.99 vs 0.01: los DTOs son
+    iguales campo a campo (excluyendo el propio threshold, que se
+    registra como NaN en ambos para trazabilidad).
+    """
+    def _dto_con_threshold(thr):
+        with tempfile.TemporaryDirectory() as td:
+            s = Session(logger=_quiet_logger())
+            s.load_dataset(str(_csv_k3(Path(td))))
+            s.fix_spec("default", target_class=2,
+                       class_labels={0: "bajo", 1: "medio", 2: "alto"})
+            s.partition(train_frac=0.7, seed=42)
+            s.train("CHAID", max_depth=3, min_child_size=5)
+            return s.get_classification_matrix(partition="oos", threshold=thr)
+
+    d1 = _dto_con_threshold(0.99)
+    d2 = _dto_con_threshold(0.01)
+    assert d1 is not None and d2 is not None
+    assert math.isnan(d1["threshold"]) and math.isnan(d2["threshold"])
+    resto1 = {k: v for k, v in d1.items() if k != "threshold"}
+    resto2 = {k: v for k, v in d2.items() if k != "threshold"}
+    assert resto1 == resto2
 
 
 if __name__ == "__main__":

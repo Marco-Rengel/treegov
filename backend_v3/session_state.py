@@ -42,6 +42,7 @@ from .pruning import Pruner
 from .quest_engine import QuestEngine
 from .reporting import (
     build_classification_matrix,
+    build_classification_matrix_multiclass,
     build_gains_table,
     build_oos_oot_report,
 )
@@ -350,6 +351,33 @@ class Session:
             return self._w_oot
         return None
 
+    def _translate_y_to_internal(self, y: np.ndarray) -> np.ndarray:
+        """Traduce etiquetas originales (CSV) al orden interno canonico.
+
+        Fase 3.5.c: aplica solo al path multiclase (K > 2). En K = 2 el
+        path binario se mantiene intacto y NO se llama a este helper
+        (paridad bit a bit con el pre-3.5.c).
+
+        Recibe un vector 1D de etiquetas en valores ORIGINALES y
+        devuelve otro de la misma longitud con las etiquetas traducidas
+        al orden interno del modelo (columna c <-> etiqueta c). El
+        orden interno se reconstruye desde SessionState con la misma
+        regla que Session.train usa para class_labels_canonical:
+        indice 0 = st.target_class; indices 1..K-1 = resto de
+        st.target_classes ordenado ascendente.
+        """
+        st = self._state
+        if st.target_class is None or not st.target_classes:
+            raise RuntimeError(
+                "[session] _translate_y_to_internal sin target_class/"
+                "target_classes en SessionState (fix_spec no ejecutado)"
+            )
+        orden = (st.target_class,) + tuple(
+            sorted(c for c in st.target_classes if c != st.target_class)
+        )
+        mapa = {valor: idx for idx, valor in enumerate(orden)}
+        return np.array([mapa[v] for v in np.asarray(y)], dtype=int)
+
     def get_oos_oot_report(self) -> dict | None:
         """DTO plain-Python del estado OOS/OOT (None si no hay modelo)."""
         return build_oos_oot_report(self._state)
@@ -407,28 +435,33 @@ class Session:
         if self._state.tree is None:
             return None
         K = len(self._state.tree.class_labels)
-        if K > 2:
-            raise ValueError(
-                f"[session] get_classification_matrix: clasificacion "
-                f"multiclase no implementada en Fase 3.1 (K={K} clases "
-                f"detectadas). Planificada para la Fase 3.5."
-            )
         X, y, unseen_policy = self._routed_partition(partition)
         leaf_assignment = predict_leaf_assignment(
             self._state.tree, X, unseen_policy=unseen_policy
         )
-        # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of interest.
-        pd_per_leaf = {
-            nd.node_id: nd.pd_final[0]
-            for nd in self._state.tree.nodes if nd.is_leaf
-        }
-        result = build_classification_matrix(
-            leaf_assignment, y, pd_per_leaf, threshold=threshold,
-            weights=self._partition_weights(partition),
-        )
+        if K == 2:
+            # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of interest.
+            pd_per_leaf = {
+                nd.node_id: nd.pd_final[0]
+                for nd in self._state.tree.nodes if nd.is_leaf
+            }
+            result = build_classification_matrix(
+                leaf_assignment, y, pd_per_leaf, threshold=threshold,
+                weights=self._partition_weights(partition),
+            )
+        else:
+            pd_per_leaf = {
+                nd.node_id: tuple(nd.pd_final)
+                for nd in self._state.tree.nodes if nd.is_leaf
+            }
+            y_interno = self._translate_y_to_internal(y)
+            result = build_classification_matrix_multiclass(
+                leaf_assignment, y_interno, pd_per_leaf,
+                weights=self._partition_weights(partition),
+            )
         self._log.info(
-            "[session] get_classification_matrix: partition=%s threshold=%.4g",
-            partition, threshold,
+            "[session] get_classification_matrix: partition=%s K=%d",
+            partition, K,
         )
         return asdict(result)
 
@@ -872,16 +905,15 @@ class Session:
         assert st.tree is not None
         assert self._X_test is not None and self._y_test is not None
         K = len(st.tree.class_labels)
-        if K > 2:
-            raise ValueError(
-                f"[session] evaluate_oos: metricas multiclase no "
-                f"implementadas en Fase 3.1 (K={K} clases detectadas). "
-                f"Planificadas para la Fase 3.5."
-            )
         p_2d = predict_pd(st.tree, self._X_test)
-        p = p_2d[:, 0]  # Phase 3.1.d: binary consumers read column 0
+        if K == 2:
+            p = p_2d[:, 0]  # Phase 3.1.d: binary consumers read column 0
+            y_eval = self._y_test
+        else:
+            p = p_2d
+            y_eval = self._translate_y_to_internal(self._y_test)
         metrics = compute_oos_metrics(
-            p, self._y_test, n_groups=n_groups, weights=self._w_test
+            p, y_eval, n_groups=n_groups, weights=self._w_test
         )
         return self._commit(
             st.state,
@@ -1060,15 +1092,6 @@ class Session:
         `weight_oot=False`, el OOT usa pesos uniformes en PSI/CSI.
         """
         self._require(FlowState.OOT_LOADED, "evaluate_oot")
-        st_check = self._state
-        if st_check.tree is not None:
-            K = len(st_check.tree.class_labels)
-            if K > 2:
-                raise ValueError(
-                    f"[session] evaluate_oot: metricas multiclase no "
-                    f"implementadas en Fase 3.1 (K={K} clases "
-                    f"detectadas). Planificadas para la Fase 3.5."
-                )
         from .stability import GiniDropReport, StabilityMonitor, gini_drop_alert
 
         st = self._state
@@ -1076,6 +1099,7 @@ class Session:
         assert self._X_oot is not None and self._y_oot is not None
 
         model = st.tree
+        K = len(model.class_labels)
         spec_d = dict(st.spec)
 
         asign_oot = predict_leaf_assignment(
@@ -1087,12 +1111,19 @@ class Session:
 
         # metricas OOT sobre las filas enrutables
         if n_val >= 15:
-            p_val = np.array(
-                [model.nodes[int(a)].pd_final[0] for a in asign_oot[validas]]
-            )
+            if K == 2:
+                p_val = np.array(
+                    [model.nodes[int(a)].pd_final[0] for a in asign_oot[validas]]
+                )
+                y_val = self._y_oot[validas]
+            else:
+                p_val = np.array(
+                    [model.nodes[int(a)].pd_final for a in asign_oot[validas]]
+                )
+                y_val = self._translate_y_to_internal(self._y_oot[validas])
             g_eff = n_groups if n_val >= 5 * n_groups else max(3, n_val // 5)
             w_val = None if self._w_oot is None else self._w_oot[validas]
-            metrics = compute_oos_metrics(p_val, self._y_oot[validas],
+            metrics = compute_oos_metrics(p_val, y_val,
                                           n_groups=g_eff, weights=w_val)
         else:
             self._log.warning(
@@ -1106,10 +1137,15 @@ class Session:
         asign_tr = predict_leaf_assignment(
             model, self._X_train, unseen_policy="error"
         )
-        p_tr = np.array([model.nodes[int(a)].pd_final[0] for a in asign_tr])
+        if K == 2:
+            p_tr = np.array([model.nodes[int(a)].pd_final[0] for a in asign_tr])
+            y_tr = self._y_train.to_numpy()
+        else:
+            p_tr = np.array([model.nodes[int(a)].pd_final for a in asign_tr])
+            y_tr = self._translate_y_to_internal(self._y_train.to_numpy())
         n_tr = int(len(p_tr))
         g_eff_tr = min(5, max(3, n_tr // 5))
-        m_tr = compute_oos_metrics(p_tr, self._y_train.to_numpy(),
+        m_tr = compute_oos_metrics(p_tr, y_tr,
                                    n_groups=g_eff_tr, weights=self._w_train)
         gini_train = m_tr.gini if m_tr.gini is not None else float("nan")
 
@@ -1119,10 +1155,15 @@ class Session:
             asign_te = predict_leaf_assignment(
                 model, self._X_test, unseen_policy="error"
             )
-            p_te = np.array([model.nodes[int(a)].pd_final[0] for a in asign_te])
+            if K == 2:
+                p_te = np.array([model.nodes[int(a)].pd_final[0] for a in asign_te])
+                y_te = self._y_test
+            else:
+                p_te = np.array([model.nodes[int(a)].pd_final for a in asign_te])
+                y_te = self._translate_y_to_internal(self._y_test)
             n_te_eff = max(3, int(len(p_te)) // 5)
             gini_oos = compute_oos_metrics(
-                p_te, self._y_test, n_groups=n_te_eff, weights=self._w_test
+                p_te, y_te, n_groups=n_te_eff, weights=self._w_test
             ).gini
 
         def _drop(g):
