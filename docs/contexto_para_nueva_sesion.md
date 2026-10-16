@@ -117,12 +117,13 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.4** | **CRT/QUEST multiclase** | **✅ Cerrada 12/10/2026** |
 | 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
+| 3.5.c | Session multiclase (evaluate_oos, evaluate_oot, get_classification_matrix) | ✅ 15/10/2026 |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | 🟡 En curso |
 | 3.6 | Validación con datasets públicos | ⏳ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 406/406 PASSED
+**Suite de tests:** 411/411 PASSED
 
 ## Entorno de desarrollo
 
@@ -280,6 +281,14 @@ Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
 ## Próximos pasos (Fase 3.5 — Reportes adaptados multiclase + ponderados)
+
+**Fase 3.5.c — Session multiclase: Cerrada 15/10/2026.** Tercera
+sub-fase de la Fase 3.5. Desbloquea evaluate_oos, evaluate_oot y
+get_classification_matrix a nivel Session. stability.py no se toca.
+La traducción de etiquetas al orden interno vive en Session (helper
+privado _translate_y_to_internal). Invariante K=2 bit a bit
+preservado. Suite 411/411. Commit 70460f6. Próximo paso: Fase 3.5.d
+(wizard, cableado GUI y cierre documental de la Fase 3.5).
 
 **Fase 3.5.b — reporting.py multiclase + desbloqueo K>2: Cerrada
 15/10/2026.** Segunda sub-fase de la Fase 3.5. Abre build_gains_table

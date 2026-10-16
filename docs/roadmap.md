@@ -246,19 +246,27 @@ y no-crédito (biología, ciencias sociales).
 |---|---|---|
 | 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
 | 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.c | stability + Session: evaluate_oot multiclase | ⏳ |
+| 3.5.c | stability + Session: evaluate_oot multiclase | ✅ 15/10/2026 |
 | 3.5.d | wizard, cableado GUI y cierre documental | ⏳ |
 
-**Cierre parcial de la Fase 3.5.** 3.5.a abre compute_oos_metrics a
-targets multiclase (K ≥ 2) y compone con el modo ponderado de la Fase
-3.2. 3.5.b abre las dos funciones de reporte (build_gains_table y
-build_classification_matrix) al mismo régimen y cierra por definición
-el diferido §13.7 de design_decisions.md para el path multiclase
-(D13). Tres decisiones nuevas D15-D17 (3.5.a) y tres D18-D20 (3.5.b)
-añadidas al diseño. Invariante no negociable: para K=2 con weights None
-o uniformes, el resultado es idéntico bit a bit al pre-3.5 en todo el
-path de validación y reporte, salvo por los campos aditivos nuevos
-que quedan vacíos. Suite: 406/406 PASSED.
+**Cierre parcial de la Fase 3.5 (a, b, c).** Las tres primeras
+sub-fases abren el pipeline completo de validación y reporte a
+targets multiclase (K ≥ 2) con composición ponderada. 3.5.a abrió
+compute_oos_metrics. 3.5.b abrió las dos funciones de reporte y
+cerró el diferido §13.7 para el path multiclase (D13). 3.5.c
+desbloqueó evaluate_oos, evaluate_oot y get_classification_matrix a
+nivel Session; stability.py no se toca. Nueve decisiones nuevas
+(D15-D20 + tres que se numeran aparte, ver diseño §10) integradas en
+el diseño antes de la implementación. Invariante no negociable
+preservado: para K=2 con weights None o uniformes, todo el pipeline
+de evaluación y reporte es idéntico bit a bit al pre-3.5. Suite:
+411/411 PASSED.
+
+**Traducción de etiquetas al orden interno (Z2).** La traducción
+{viejo → índice interno} vive dentro de Session, en el helper privado
+_translate_y_to_internal. No toca la firma pública de
+compute_oos_metrics ni de stability.py. En K=2 el helper no se
+invoca: el camino binario queda intacto bit a bit.
 
 **Asimetría diferida registrada (D13 literal).** El path binario de
 build_gains_table conserva _discrimination_metrics sin ponderar incluso

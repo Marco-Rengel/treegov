@@ -86,6 +86,18 @@ underscore) are internal and may change without notice.
   Phase 3.1; K > 2 raises `ValueError`.
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
+- `Session.evaluate_oos(*, n_groups=10)` — supports K > 2 since
+  Phase 3.5.c. Internally translates `y` to the internal canonical
+  order via `_translate_y_to_internal` and calls
+  `compute_oos_metrics` with the full 2D probability matrix.
+- `Session.evaluate_oot(*, n_groups=10, weight_oot=True)` — supports
+  K > 2 since Phase 3.5.c. Same label translation. The Gini Drop
+  formula is unchanged; it now feeds from the multiclass Gini.
+- `Session.get_classification_matrix(*, partition="oos",
+  threshold=0.5)` — supports K > 2 since Phase 3.5.c. With K = 2 it
+  calls the binary function with the threshold; with K > 2 it calls
+  `build_classification_matrix_multiclass` (argmax assignment,
+  threshold ignored and recorded as NaN).
 
 ## backend_v3.validation
 
@@ -198,6 +210,9 @@ In particular:
 - Reporting dispatch by K, superset DTOs, adaptive n_groups:
   `docs/3.5_design_multiclass_weighted_reports.md` §3.1 (D18, D20),
   §3.3 (D19).
+- Session-level multiclass unblocking and label translation:
+  `docs/3.5_design_multiclass_weighted_reports.md` §4 (Gini Drop),
+  §5 (Session changes).
 
 > **Note:** this list reflects the API as of the close of Phase 2.1. Later
 > phases (see `docs/roadmap.md`) will add new public modules, which will be

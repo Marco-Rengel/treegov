@@ -3883,3 +3883,98 @@ docs/methodology.md §8.1 a §8.10, Breiman et al. (1984), Hand & Till
 Fagerland (2012).
 
 ---
+
+### 15/10/2026 — Fase 3.5.c: multiclase en Session y stability
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0, reasoning=max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Tercera sub-fase de la Fase 3.5. Desbloquea la evaluacion
+OOS/OOT multiclase a nivel Session. Los tres bloqueos remanentes de la
+Fase 3.1.d (evaluate_oos, evaluate_oot, get_classification_matrix) se
+retiran. stability.py NO se toca: el diseno §4.2 lo confirma (PSI y CSI
+son target-agnostic; solo el Gini Drop alimenta del Gini multiclase, y
+su formula no cambia).
+
+**Decision clave (Z2, aprobada el 15/10/2026)**: la traduccion de
+etiquetas originales al orden interno canonico (columna c <-> etiqueta
+c) vive DENTRO de Session, no en compute_oos_metrics. Motivo: preserva
+la firma publica que 3.5.a definio; cero cambios a
+compute_oos_metrics, stability.py, ni a los DTOs. La traduccion usa
+SessionState.target_class y target_classes, que ya existian desde
+3.1.c. En K = 2 el helper NO se invoca: paridad bit a bit con el
+pre-3.5.c.
+
+**Cambios aplicados (commit 70460f6)**:
+
+**backend_v3/session_state.py** (125 lineas cambiadas):
+
+- Import de build_classification_matrix_multiclass desde
+  backend_v3.reporting.
+- Nuevo metodo privado Session._translate_y_to_internal(y). Recibe
+  etiquetas originales, devuelve el mismo vector traducido al orden
+  interno canonico del modelo. Se construye desde target_class (indice
+  0) + resto de target_classes ascendente. RuntimeError si el estado
+  no tiene target_class o target_classes.
+- evaluate_oos: dispatch por K. Con K=2, p_2d[:, 0] y self._y_test
+  (paridad intacta). Con K>2, p_2d completa y
+  _translate_y_to_internal(self._y_test). compute_oos_metrics se llama
+  en ambos casos con la misma firma.
+- evaluate_oot: dispatch por K en los tres bloques donde se calculan
+  metricas (OOT, Gini train, Gini oos al vuelo). K se calcula una vez.
+  La formula del Gini Drop no cambia.
+- get_classification_matrix: dispatch por K. Con K=2 llama a
+  build_classification_matrix (binaria, threshold). Con K>2 llama a
+  build_classification_matrix_multiclass (nueva en 3.5.b) con
+  pd_per_leaf = dict[int, tuple[float, ...]] y y traducida al orden
+  interno.
+
+**tests/test_session_state.py** (237 lineas cambiadas):
+
+- Eliminados los tres tests obsoletos (bloqueos K>2):
+  test_evaluate_oos_multiclass_raises,
+  test_evaluate_oot_multiclass_raises,
+  test_classification_matrix_multiclass_raises.
+- 8 tests nuevos (A-H): _translate_y_to_internal con target_class=2
+  (orden (2,0,1)) y con target_class=0 (identidad); evaluate_oos K=3;
+  paridad K=2 bit a bit (auc=ks=gini=1, brier=(0.5/43)^2, hl=24/85);
+  evaluate_oot K=3 con Gini Drop multiclase y PSI target-agnostic;
+  get_classification_matrix K=3 (tupla 3x3, accuracy=1.0); paridad
+  K=2 de la matriz (tp=18, tn=18, accuracy=1.0, campos nuevos vacios);
+  threshold ignorado en K=3 (D19).
+
+**Identidades verificadas**:
+
+- Paridad K=2 bit a bit: los valores exactos del fixture pre-3.5.c
+  (auc=ks=gini=1.0, brier=(0.5/43)^2, hl_stat=24/85) se mantienen.
+  Invariante no negociable.
+- _translate_y_to_internal: con target_class=2 el vector [0,1,2,0,1,2]
+  se convierte en [1,2,0,1,2,0]; con target_class=0 es la identidad.
+- Gini Drop: la formula (gini_train - g) / gini_train no cambia; el
+  unico cambio es el Gini multiclase que la alimenta.
+- threshold ignorado en K>2: dos llamadas con threshold=0.99 y 0.01
+  producen DTOs identicos campo a campo (excluyendo threshold, que es
+  NaN).
+
+**Hallazgos**:
+
+- El agente detecto durante el Test H que comparar dos DTOs con
+  threshold = NaN falla porque NaN != NaN en Python. Ajusto el test a
+  comparar campo a campo excluyendo threshold. Documentado en el
+  docstring.
+- stability.py no se toco. El diseno §4.2 lo confirma: PSI y CSI son
+  target-agnostic por construccion.
+
+**Tests**: 411/411 PASSED (406 - 3 obsoletos + 8 nuevos). Cero
+regresiones.
+
+**Commits**: 70460f6.
+
+**Referencias**: docs/3.5_design_multiclass_weighted_reports.md §4 y
+§5, docs/design_decisions.md §13.7, docs/methodology.md §8.1 a §8.10,
+Hand & Till (2001), Siddiqi (2006).
+
+---

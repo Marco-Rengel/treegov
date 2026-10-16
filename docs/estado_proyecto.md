@@ -243,18 +243,17 @@ o uniformes, el resultado es idéntico bit a bit al pre-3.5.
 
 - 3.5.a — validation.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
 - 3.5.b — reporting.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
-- 3.5.c — stability + Session: evaluate_oot multiclase. Pendiente.
+- 3.5.c — stability + Session: evaluate_oot multiclase. ✅ Cerrada 15/10/2026.
 - 3.5.d — wizard, cableado GUI y cierre documental. Pendiente.
 
-**Cierre parcial de 3.5.a y 3.5.b**. 3.5.a abrió compute_oos_metrics
-a K ≥ 2 con tres decisiones nuevas (D15 contrato de entrada 1D/2D;
-D16 HL bloqueado con tipos Optional y validaciones saltadas; D17
-campos ks_pairs, auc_pairs, roc_per_class). 3.5.b abrió las dos
-funciones de reporte (build_gains_table, build_classification_matrix)
-con tres decisiones nuevas (D18 _validated_routed con n_classes; D19
-import directo de validation + DTO ClassificationMatrix superset;
-D20 n_groups adaptativo con guarda n<15). Invariante K=2 1D vs 2D
-bit a bit preservado. Suite 406/406 PASSED.
+**Cierre parcial de 3.5.a, 3.5.b y 3.5.c**. 3.5.a abrió
+compute_oos_metrics a K ≥ 2 con tres decisiones nuevas (D15-D17).
+3.5.b abrió las dos funciones de reporte con tres decisiones nuevas
+(D18-D20). 3.5.c desbloqueó evaluate_oos, evaluate_oot y
+get_classification_matrix en Session; stability.py no se toca
+(§4.2 del diseño lo confirma). La traducción de etiquetas al orden
+interno vive en Session, no en compute_oos_metrics (Z2). Invariante
+K=2 bit a bit preservado. Suite 411/411 PASSED.
 
 ### Fases pendientes
 
@@ -415,7 +414,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 35 |
-| session_state.py | 82 |
+| session_state.py | 87 |
 | validation.py | 30 |
 | pruning.py | 6 |
 | stability.py | 18 |
@@ -427,9 +426,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **406** |
+| **Total** | **411** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 406/406 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 411/411 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -545,9 +544,10 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
 > 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra), 3.3 (categorías
 > de población), 3.4 (CRT y QUEST multiclase), 3.5.a (validation.py
-> multiclase) y 3.5.b (reporting.py multiclase) cerradas. Suite 406/406.
-> Próximo paso: Fase 3.5.c (stability + Session: evaluate_oot multiclase)
-> con OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo (key propia)."
+> multiclase), 3.5.b (reporting.py multiclase) y 3.5.c (Session
+> multiclase) cerradas. Suite 411/411. Próximo paso: Fase 3.5.d
+> (wizard, cableado GUI y cierre documental de la Fase 3.5) con
+> OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo (key propia)."
 
 ---
 
