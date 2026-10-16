@@ -103,6 +103,7 @@ class ReportsPanel(QWidget):
         "recall",
         "f1",
         "bad_capture_rate",
+        "accuracy",
     )
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -218,6 +219,10 @@ class ReportsPanel(QWidget):
             row_label = QLabel(summary)
             summary_layout.addWidget(row_label)
             self._summary_rows[key] = row_label
+        self._per_class_label = QLabel(summary)
+        self._per_class_label.setWordWrap(True)
+        self._per_class_label.setVisible(False)
+        summary_layout.addWidget(self._per_class_label)
         summary_layout.addStretch(1)
         layout.addWidget(summary, 1)
 
@@ -499,7 +504,6 @@ class ReportsPanel(QWidget):
         self._refresh_button.setText(tr("reports_refresh"))
         self._export_button.setText(tr("reports_export_html"))
         self._summary_title.setText(tr("reports_summary_title"))
-        self._matrix_title.setText(tr("reports_matrix_title"))
         self._matrix_corner.setText(tr("reports_matrix_corner"))
         self._matrix_pred_good.setText(tr("reports_matrix_pred_good"))
         self._matrix_pred_bad.setText(tr("reports_matrix_pred_bad"))
@@ -539,9 +543,25 @@ class ReportsPanel(QWidget):
         gains = self._gains or {}
         for key, label in self._summary_rows.items():
             label.setText(f"{tr('reports_sum_' + key)}: {_fmt(gains.get(key))}")
+        n_per_class = gains.get("n_per_class_global") or ()
+        if n_per_class:
+            values = ", ".join(str(int(v)) for v in n_per_class)
+            self._per_class_label.setText(
+                f"{tr('reports_sum_n_per_class')}: ({values})"
+            )
+            self._per_class_label.setVisible(True)
+        else:
+            self._per_class_label.setVisible(False)
 
     def _repaint_matrix(self) -> None:
         matrix = self._matrix or {}
+        # Titulo dinamico: en K>2 el DTO trae confusion_matrix poblada;
+        # en K=2 llega vacia y se usa el titulo binario clasico.
+        cm = matrix.get("confusion_matrix") or ()
+        if cm:
+            self._matrix_title.setText(tr("reports_matrix_title_multiclass"))
+        else:
+            self._matrix_title.setText(tr("reports_matrix_title"))
         for key, cell in self._matrix_cells.items():
             cell.setText(_fmt(matrix.get(key)))
         for key, label in self._matrix_rows.items():

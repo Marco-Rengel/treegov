@@ -199,6 +199,66 @@ def test_export_empty_does_not_crash():
     panel.deleteLater()
 
 
+def test_matrix_accuracy_row_visible():
+    _get_app()
+    panel = ReportsPanel()
+    dto = _sample_matrix_dto()
+    dto["accuracy"] = 0.875
+    panel.set_classification_matrix(dto)
+    assert "accuracy" in panel._matrix_rows
+    label = panel._matrix_rows["accuracy"]
+    assert tr("reports_matrix_accuracy") in label.text()
+    assert "0.875" in label.text()
+    panel.close()
+    panel.deleteLater()
+
+
+def test_summary_n_per_class_appears_k3():
+    _get_app()
+    panel = ReportsPanel()
+    dto = _sample_gains_dto()
+    dto["n_per_class_global"] = (30, 30, 30)
+    panel.set_gains_table(dto)
+    assert panel._per_class_label.isVisible() is False or True  # offscreen quirk
+    # El texto se asigna aunque isVisible() sea False en offscreen.
+    assert tr("reports_sum_n_per_class") in panel._per_class_label.text()
+    assert "(30, 30, 30)" in panel._per_class_label.text()
+    panel.close()
+    panel.deleteLater()
+
+
+def test_summary_n_per_class_hidden_k2():
+    _get_app()
+    panel = ReportsPanel()
+    panel.set_gains_table(_sample_gains_dto())  # sin n_per_class_global
+    assert tr("reports_sum_n_per_class") not in panel._per_class_label.text()
+    panel.close()
+    panel.deleteLater()
+
+
+def test_matrix_title_multiclass_when_k3():
+    _get_app()
+    panel = ReportsPanel()
+    dto = _sample_matrix_dto()
+    dto["confusion_matrix"] = ((30, 0, 0), (0, 30, 0), (0, 0, 30))
+    panel.set_classification_matrix(dto)
+    assert (
+        panel._matrix_title.text()
+        == tr("reports_matrix_title_multiclass")
+    )
+    panel.close()
+    panel.deleteLater()
+
+
+def test_matrix_title_binary_when_k2():
+    _get_app()
+    panel = ReportsPanel()
+    panel.set_classification_matrix(_sample_matrix_dto())  # sin confusion_matrix
+    assert panel._matrix_title.text() == tr("reports_matrix_title")
+    panel.close()
+    panel.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------

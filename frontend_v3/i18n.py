@@ -289,6 +289,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_export_hint": "Preview below. Use 'Save as...' to save the file.",
         "reports_export_empty": "Nothing to export. Train a model first.",
         "reports_export_doc_title": "TreeGov Report",
+        "reports_matrix_accuracy": "Accuracy",
+        "reports_sum_n_per_class": "N per class",
+        "reports_matrix_title_multiclass": (
+            "Classification matrix (class of interest vs rest)"
+        ),
         "reports_no_model": "Train a model to view reports.",
     },
     "es": {
@@ -566,6 +571,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_export_hint": "Vista previa abajo. Use 'Guardar como...' para guardar el archivo.",
         "reports_export_empty": "Nada que exportar. Entrene un modelo primero.",
         "reports_export_doc_title": "Reporte TreeGov",
+        "reports_matrix_accuracy": "Exactitud",
+        "reports_sum_n_per_class": "N por clase",
+        "reports_matrix_title_multiclass": (
+            "Matriz de clasificación (clase de interés vs resto)"
+        ),
         "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }
