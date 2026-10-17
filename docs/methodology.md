@@ -742,10 +742,14 @@ component-wise and the vector is renormalised to preserve the invariant
     pd_final[c] = pd_temp[c] / sum(pd_temp)
 
 This is a **soft floor**: each component is guaranteed a minimum of
-`pd_floor / sum(pd_temp)`, not exactly `pd_floor`. For K = 2 it reduces
-to the standard binary floor: the class of interest receives
-`max(pd_floor, pd_jeffreys[0])` and the other class one minus that
-value (§6.3).
+`pd_floor / sum(pd_temp)`, not exactly `pd_floor`.
+
+**Note on K=2 reduction.** The implementation applies the soft-floor
+renormalization (`pd_temp / sum(pd_temp)`) for all K, including K=2.
+This introduces a numerically negligible deviation from the strict
+complementary assignment (`1 - max(pd_floor, pd_j[0])`) when the floor
+is active. This text reflects the actual code behavior; exact parity
+is not guaranteed.
 
 **Citation:** Jeffreys, H. (1946). An invariant form for the prior
 probability in estimation problems. *Proceedings of the Royal Society
@@ -1114,6 +1118,14 @@ reported metric already satisfy that threshold. Row scoring through
 default `"error"` (a row that cannot be routed aborts the evaluation),
 while `Session.evaluate_oot` uses `"exclude"` and reports the count in
 `n_excluded`.
+
+**Fidelity note on pairwise KS.** Unlike Hand & Till's AUC, which
+symmetrizes the pair by averaging `A_ij` and `A_ji`, the implementation
+of `ks_pair(i, j)` for K > 2 evaluates only the unidirectional
+projection on coordinate `p_i` for `i < j`. Consequently, the
+statistic is sensitive to the indexing order of secondary classes.
+This is a known limitation and is scheduled for resolution in
+Phase 3.7 before the stable v1.0.0.
 
 ### 8.12 Multiclass calibration — Brier, BSS, Hosmer-Lemeshow block
 

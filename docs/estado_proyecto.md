@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0a5 (alpha) |
+| Versión | 1.0.0a6 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0a5/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0a6/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -462,7 +462,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0a3/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0a6/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |

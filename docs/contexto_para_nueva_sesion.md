@@ -260,8 +260,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a5` en PyPI (15/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0a5/
+**Última versión publicada:** `treegov 1.0.0a6` en PyPI (17/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0a6/
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -274,7 +274,7 @@ implícita.
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-Tras la resolución del pendiente Aider/build/twine (16/10/2026) NO se publicó nueva versión en PyPI: el README del repositorio tiene un desfase de conteo de tests (dice 411, la realidad es 416) que solo se sincronizará en la próxima publicación. Decisión tomada el 16/10/2026: esperar a la próxima release con cambios de código (probablemente al cerrar la Fase 3.6). Ver docs/roadmap.md, regla PyPI.
+La espera decidida el 16/10/2026 (no publicar hasta tener cambios de código) quedó cerrada con esta release: 1.0.0a6 sincroniza en PyPI el README renovado (frase canónica, tabla "Why TreeGov?", capacidades expandidas) y el conteo real de tests (422/422). Ver docs/roadmap.md, regla PyPI.
 
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 

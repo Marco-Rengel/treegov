@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0a5
+**Version**: 1.0.0a6
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6

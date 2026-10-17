@@ -295,6 +295,9 @@ y no-crédito (biología, ciencias sociales).
 | 3.6.e | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
 | 3.7.a | Auditoría de seguridad y privacidad (retención de logs, advertencias GUI, modelo de amenazas) antes de la v1.0.0 | Alta |
+| 3.7.b | Simetrizar el estadístico KS por pares en validation.py (promediar KS_ij y KS_ji) y actualizar methodology.md | Alta |
+| 3.7.c | Exponer `min_child_weight` en la firma de `Session.train` y cablearlo en el asistente gráfico (actualmente es un parámetro interno de TreeBuilder) | Alta |
+| 3.7.d | Ampliar tests/test_uci_integration.py para incluir aserciones de CHAID (Car Evaluation, Balance Scale) y QUEST (los 6 datasets) | Alta |
 
 **Desglose de la Fase 3.2:**
 
