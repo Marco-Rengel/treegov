@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 12/10/2026
+**Última actualización:** 16/10/2026
 
 ---
 
@@ -106,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 411/411 PASSED.
+- **Suite de tests:** 416/416 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro opt-in
@@ -121,21 +121,21 @@ Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics a K ≥ 2 y
 compone con el modo ponderado de la Fase 3.2. Tres decisiones nuevas
 (D15 contrato de entrada 1D/2D, D16 HL Optional + validaciones
 saltadas, D17 campos ks_pairs / auc_pairs / roc_per_class). Suite
-411/411. Próximo paso: Fase 3.5.b (reporting.py multiclase).
+416/416. Próximo paso: Fase 3.5.b (reporting.py multiclase).
 
 **Fase 3.5.b (multiclase en reporting.py): ✅ cerrada 15/10/2026.**
 Segunda sub-fase de la Fase 3.5. Abre build_gains_table y
 build_classification_matrix a K ≥ 2 con dispatch por K. Tres decisiones
 nuevas (D18 _validated_routed con n_classes, D19 import directo +
 DTO ClassificationMatrix superset, D20 n_groups adaptativo con guarda
-n<15). Suite 411/411. Próximo paso: Fase 3.5.c (stability + Session:
+n<15). Suite 416/416. Próximo paso: Fase 3.5.c (stability + Session:
 evaluate_oot multiclase).
 
 **Fase 3.5.c (Session multiclase): ✅ cerrada 15/10/2026.** Tercera
 sub-fase de la Fase 3.5. Desbloquea evaluate_oos, evaluate_oot y
 get_classification_matrix a nivel Session. Traducción de etiquetas al
 orden interno dentro de Session (helper privado
-_translate_y_to_internal). stability.py no se toca. Suite 411/411.
+_translate_y_to_internal). stability.py no se toca. Suite 416/416.
 Próximo paso: Fase 3.5.d (wizard, cableado GUI y cierre documental
 de la Fase 3.5).
 
@@ -144,8 +144,10 @@ de la Fase 3.5).
 frontend (cero cambios obligatorios; tres cosméticos diferidos a H4),
 subsecciones §8.11-§8.14 en methodology.md, cierre documental.
 Fase 3.5 completa: pipeline de validación/reporte/monitoreo admite
-K ≥ 2 con ponderación. Suite 411/411. Próximo paso: Fase 3.6
+K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
 (validación con datasets públicos).
+
+**Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -369,7 +371,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado: Fases 0-3.5 cerradas (3.5: reportes adaptados multiclase + ponderados, 4 sub-fases a-d). Fase 3.6 (validación con datasets públicos: German Credit, UCI) es el próximo paso. Suite 411/411. Herramienta: OpenCode 1.19.0 con configuración corregida (moonshotai + plugin de caché). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026: Fases 0 a 3.5 cerradas. Suite 416/416. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6 (validación con datasets públicos: German Credit, UCI). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

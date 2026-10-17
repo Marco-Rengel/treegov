@@ -124,7 +124,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
-**Suite de tests:** 411/411 PASSED
+**Suite de tests:** 416/416 PASSED
 
 ## Entorno de desarrollo
 
@@ -172,15 +172,8 @@ WSL (bash):
   **Nota:** Kimi Code CLI 2.1.1 se probó como alternativa, pero su
   inyección de metadatos dinámicos rompe el prefix matching de la
   caché. OpenCode se mantiene como herramienta principal.
-- **Aider 0.86.2** — **herramienta de respaldo** desde el 09/10/2026.
-- **Aider 0.86.2** (histórico: reemplazó a OpenCode el 27/09/2026 y a
-  NVIDIA NIM el 03/10/2026; desde el 09/10/2026 es respaldo, ver arriba).
-- **Modelo:** `moonshot/kimi-k3` (Moonshot AI directo, plataforma internacional).
-- **Endpoint:** `https://api.moonshot.ai/v1` (LiteLLM lo conoce por defecto).
-- **Configuración local:** `.aider.conf.yml` (no versionado).
-- **Metadata de modelos:**
-  - `~/.aider.model.metadata.json` — contexto y costes.
-  - `~/.aider.model.settings.yml` — comportamiento (temperature, edit format).
+- **Aider 0.86.2** — herramienta de respaldo desde el 09/10/2026. Instalación global vía pipx con Python 3.11.9 (C:\Users\maren\.local\bin\aider.exe). NO instalar Aider dentro del .venv del proyecto: eso ya ocurrió el 27/09/2026 y se resolvió el 16/10/2026 (ver audit_log). Configuración local en .aider.conf.yml (no versionado). Modelo moonshot/kimi-k3 vía Moonshot AI directo.
+- **build 1.6.1 / twine 7.0.0** — herramientas de empaquetado PyPI, instaladas globalmente vía pipx con Python 3.14.7. Se usan para las publicaciones de TreeGov en PyPI. NO instalar en el .venv del proyecto (regla del 16/10/2026).
 
 ### Configuración de Aider
 
@@ -267,7 +260,7 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a5` en PyPI (12/10/2026).
+**Última versión publicada:** `treegov 1.0.0a5` en PyPI (15/10/2026).
 URL: https://pypi.org/project/treegov/1.0.0a5/
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el momento
@@ -281,13 +274,17 @@ implícita.
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
+Tras la resolución del pendiente Aider/build/twine (16/10/2026) NO se publicó nueva versión en PyPI: el README del repositorio tiene un desfase de conteo de tests (dice 411, la realidad es 416) que solo se sincronizará en la próxima publicación. Decisión tomada el 16/10/2026: esperar a la próxima release con cambios de código (probablemente al cerrar la Fase 3.6). Ver docs/roadmap.md, regla PyPI.
+
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
+
+> **Estado intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con datasets públicos: German Credit, UCI).
 
 **Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
 15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
 de validación, reporte y monitoreo a targets multiclase (K ≥ 2) con
 composición ponderada. Invariante K=2 bit a bit preservado. Suite
-411/411. Commits de la familia: 56748c9, 18bbdf0, 067b33a, 580d5fa,
+416/416. Commits de la familia: 56748c9, 18bbdf0, 067b33a, 580d5fa,
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 

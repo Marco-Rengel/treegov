@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 15/10/2026 (cierre de Fase 3.5)
+**Fecha de última actualización:** 16/10/2026
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -17,7 +17,7 @@ y trazabilidad del proyecto, apto para:
 | Versión | 1.0.0a5 (alpha) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | pypi.org/project/treegov/1.0.0a5 |
+| PyPI | https://pypi.org/project/treegov/1.0.0a5/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -255,8 +255,12 @@ evaluate_oos/evaluate_oot/get_classification_matrix a nivel Session
 (traducción de etiquetas al orden interno en Session, Z2). 3.5.d
 auditó el frontend (cero cambios obligatorios; tres cosméticos
 diferidos a H4), publicó §8.11-§8.14 en methodology y cerró la
-documentación. Invariante K=2 bit a bit preservado. Suite 411/411
+documentación. Invariante K=2 bit a bit preservado. Suite 416/416
 PASSED.
+
+### Cierre intermedio 16/10/2026
+
+Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente de herramientas CLI duplicadas en el .venv del proyecto (aider-chat, build, twine; ver docs/audit_log.md entrada del 16/10/2026). Sin cambios de código analítico.
 
 ### Fases pendientes
 
@@ -427,11 +431,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 9 |
-| reports_panel (frontend) | 7 |
+| reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **411** |
+| **Total** | **416** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 411/411 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 416/416 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -547,7 +551,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 > "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
 > 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra), 3.3 (categorías
 > de población), 3.4 (CRT y QUEST multiclase), 3.5.a, 3.5.b, 3.5.c y
-> 3.5.d cerradas (Fase 3.5 completa). Suite 411/411. Próximo paso:
+> 3.5.d cerradas (Fase 3.5 completa). Suite 416/416. Próximo paso:
 > Fase 3.6 (validación con datasets públicos) con OpenCode 1.19.0 +
 > Kimi K3 vía Moonshot AI directo (key propia)."
 

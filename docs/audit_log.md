@@ -4076,3 +4076,74 @@ docs/design_decisions.md §13.7, docs/audit_log.md entradas de 3.5.a,
 3.5.b, 3.5.c (misma fecha).
 
 ---
+
+### 16/10/2026 — Cierre de los tres cosméticos del ReportsPanel diferidos a H4
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la Fase 3.5.d (cerrada el 15/10/2026) había diferido al rediseño H4 tres mejoras cosméticas del ReportsPanel. Esos tres cosméticos se cerraron el 16/10/2026, en la sesión previa a la de hoy. Son:
+1. Fila "accuracy" en la matriz de clasificación (consume ClassificationMatrix.accuracy, poblada en ambos modos desde 3.5.b, D19).
+2. Fila "n por clase" en el summary de la gains table (consume GainsRow.n_per_class y sus acumulados).
+3. Título multiclase cuando K>2 ("clase de interés vs resto" o equivalente, construido dinámicamente desde TreeModel.class_labels).
+
+**Cambios aplicados**:
+
+- `frontend_v3/i18n.py`: tres claves nuevas por idioma (`reports_matrix_accuracy`, `reports_sum_n_per_class`, `reports_matrix_title_multiclass`), añadidas justo antes de `reports_no_model` en los bloques "en" y "es". Paridad EN/ES estricta. Ninguna clave existente tocada.
+- `frontend_v3/reports_panel.py` — accuracy: la métrica `"accuracy"` se añade a la tupla de clase `_MATRIX_METRICS`, con lo que el bucle existente crea y repinta la fila automáticamente. Consume `ClassificationMatrix.accuracy`, poblado en ambos modos (K=2 y K>2) desde 3.5.b (D19). Cero lógica nueva.
+- `frontend_v3/reports_panel.py` — n por clase: etiqueta nueva `_per_class_label` al final del summary (word-wrap, oculta por defecto), poblada en `_repaint_summary` desde `gains["n_per_class_global"]` (GainsTableResult.n_per_class_global). Visible solo cuando el campo llega no vacío; en K=2 el DTO lo trae vacío y la etiqueta queda oculta. Los campos por fila (`GainsRow.n_per_class` y sus acumulados cum/decum) NO se consumen: el panel solo muestra el global. Corrección respecto al contexto del diferido.
+- `frontend_v3/reports_panel.py` — título dinámico: `_repaint_matrix` decide el título según la presencia de `confusion_matrix` en el DTO (poblada en K>2, vacía en K=2), usando la clave i18n `reports_matrix_title_multiclass` o la binaria clásica. El título NO se construye desde `TreeModel.class_labels`: es una cadena i18n fija por modo. Corrección respecto al contexto del diferido. El `setText` fijo del título en `retranslate_ui` se elimina: `_repaint_matrix` queda como única fuente de verdad (retranslate_ui termina llamando a `refresh()`).
+
+**Tests**: 5 tests nuevos en `tests/test_reports_panel.py`. Cubren: fila accuracy visible con su texto y valor (`test_matrix_accuracy_row_visible`); etiqueta "n por clase" poblada cuando llega `n_per_class_global` (`test_summary_n_per_class_appears_k3`) y vacía cuando no llega (`test_summary_n_per_class_hidden_k2`); título multiclase cuando el DTO trae `confusion_matrix` (`test_matrix_title_multiclass_when_k3`) y título binario cuando no (`test_matrix_title_binary_when_k2`). Nota offscreen documentada en el propio test: `isVisible()` devuelve siempre False en widgets no mostrados, por lo que las aserciones van sobre el texto. Suite: 411/411 antes → 416/416 después. Cero regresiones.
+
+**Nota de gobernanza**: la documentación de cierre de este bloque NO se sincronizó en su momento, violando la regla "Phase closure documentation: never deferred" (audit_log + roadmap + estado_proyecto + documentos de contexto, en el mismo bloque). Se completa en retrospectiva el 16/10/2026, en el mismo bloque de trabajo que la resolución del pendiente Aider/build/twine.
+
+**Referencias**: docs/audit_log.md entrada del 15/10/2026 (Fase 3.5.d, donde se difirieron los cosméticos a H4), docs/roadmap.md sección Deferred.
+
+---
+
+### 16/10/2026 — Resolución del pendiente Aider/build/twine en el .venv del proyecto
+
+**Estado**: ✅ Cerrada. Los tres paquetes desinstalados del .venv del proyecto. Suite 416/416. pip check limpio.
+
+**Modelo**: N/A (operación de entorno, sin uso de IA generativa).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: el 12/10/2026 se detectó que aider-chat 0.86.2 estaba instalado dentro del .venv del proyecto, compartiendo librerías con TreeGov. El aviso original de pip fue:
+
+- aider-chat 0.86.2 requires packaging==26.0, but you have packaging 26.3 which is incompatible.
+- aider-chat 0.86.2 requires rich==14.3.2, but you have rich 15.0.0 which is incompatible.
+
+El pendiente quedó anotado en la conversación pero NO se registró en docs/roadmap.md, violando la política del proyecto. Ha estado abierto 4 días sin trazabilidad formal.
+
+**Diagnóstico del 16/10/2026 (esta sesión)**:
+
+- Confirmado: aider-chat 0.86.2 en .venv, sin Required-by (nada del proyecto depende de él).
+- HALLAZGO: Aider YA estaba en pipx desde el 28/09/2026, instalado con Python 3.11.9. La migración a pipx sí se completó. Lo que ocurrió es que Aider se reinstaló DENTRO del .venv sin advertir el duplicado. No era migrar, era borrar duplicado.
+- HALLAZGO ADICIONAL: build 1.6.1 y twine 7.0.0 también están duplicados en .venv y en pipx. Fueron instalados en .venv el 12/10/2026 (para las publicaciones 1.0.0a3 y 1.0.0a4), y su instalación subió packaging 26.0→26.3 y rich 14.3.2→15.0.0, rompiendo los pins de Aider. Aider era víctima, no causa.
+- Los tres binarios de pipx (aider.exe, pyproject-build.exe, twine.exe) siguen operativos en C:\Users\maren\.local\bin.
+
+**Acción aplicada**:
+
+1. pip uninstall -y aider-chat build twine (dentro del .venv del proyecto).
+2. pip check → No broken requirements found.
+3. pip list → numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2, pytest 9.1.1, pyarrow 25.0.1, openpyxl 3.1.5, todos intactos.
+4. python -m pytest tests -q → 416 passed in 10.22s.
+5. aider --version (fuera del venv) → aider 0.86.2.
+6. where.exe aider → C:\Users\maren\.local\bin\aider.exe.
+7. pipx list → aider-chat 0.86.2 (Python 3.11.9), build 1.6.1 (Python 3.14.7), twine 7.0.0 (Python 3.14.7), los tres operativos.
+
+**Deuda residual registrada**:
+
+- Aproximadamente 100 paquetes huérfanos en .venv: dependencias únicas de Aider (litellm, openai, huggingface_hub, fastapi, starlette, jsonschema, tree-sitter-*, sounddevice, soundfile, tiktoken, tokenizers, posthog, mixpanel, etc.) y de build/twine (keyring, readme_renderer, requests-toolbelt, rfc3986, docutils, nh3, etc.). No afectan al runtime de TreeGov. Reconstrucción limpia del .venv diferida a sesión propia, con pip freeze previo para congelar versiones exactas.
+- packaging 26.3 y rich 15.0.0 se mantienen: ya no los pincha ningún paquete roto.
+
+**Lección de gobernanza**: toda deuda detectada debe registrarse en docs/roadmap.md, no basta con mencionarla en audit_log. Regla nueva propuesta a .treegovrules en este mismo bloque.
+
+**Referencias**: docs/audit_log.md entrada del 27/09/2026 (instalación inicial de Aider en .venv, decisión de mantener numpy/scipy degradadas), entrada del 28/09/2026 (migración a pipx), entrada del 12/10/2026 (instalación de build/twine, aviso de pip).
+
+---

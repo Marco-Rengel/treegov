@@ -273,6 +273,7 @@ ambos modos). Suite: 411/411 PASSED.
   ROC one-vs-rest por clase (D8/D17); el DTO expone las K curvas pero
   el documento matemático no las formaliza. Se difiere a la Fase 3.6
   si el caso de uso lo exige.
+- ✅ Cerrado el 16/10/2026: los tres cosméticos del ReportsPanel (fila accuracy, fila "n por clase", título multiclase K>2) fueron implementados, testeados (5 tests nuevos, suite 411 → 416) y documentados en docs/audit_log.md entrada del 16/10/2026. Ya no se difieren a H4.
 
 **Traducción de etiquetas al orden interno (Z2).** La traducción
 {viejo → índice interno} vive dentro de Session, en el helper privado
@@ -466,6 +467,19 @@ La primera sesión de visualización end-to-end de la GUI (13/10/2026) identific
 
 **Motivo del aplazamiento.** Ninguna de las fases pendientes (3.5, 3.6, 3.7) requiere cerrar estos hallazgos para avanzar. Se planifican en una sub-fase específica de rediseño UX posterior a la Fase 3.5, o como bloque pre-release dentro de la Fase 3.7 en el caso de H6 (seguridad y datos sensibles).
 
+### ✅ Pendiente Aider/build/twine en el .venv del proyecto
+**Priority: LOW (resolved 16/10/2026).**
+
+Detectado el 12/10/2026 que aider-chat 0.86.2 (más build 1.6.1 y twine 7.0.0) estaban instalados dentro del .venv del proyecto, violando la regla del 27/09/2026 ("CLI tools via pipx, nunca en el .venv del proyecto"). El pendiente quedó anotado en la conversación pero NO se registró en este roadmap.
+
+Resuelto el 16/10/2026: los tres paquetes desinstalados del .venv. pip check limpio. Suite 416/416. aider --version sigue respondiendo 0.86.2 desde pipx. Los tres binarios de pipx (aider.exe, pyproject-build.exe, twine.exe) siguen operativos en C:\Users\maren\.local\bin.
+
+Hallazgo importante: Aider YA estaba correctamente instalado en pipx desde el 28/09/2026. La causa raíz del conflicto fue la instalación de build/twine dentro del .venv el 12/10/2026, que subió packaging 26.0→26.3 y rich 14.3.2→15.0.0, rompiendo los pins de Aider. Aider era víctima, no causa.
+
+Deuda residual: ~100 paquetes huérfanos en .venv (dependencias únicas de Aider/build/twine). No afectan runtime. Reconstrucción limpia del .venv diferida a sesión propia, con pip freeze previo.
+
+Detalle completo en docs/audit_log.md entrada del 16/10/2026.
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality
@@ -513,6 +527,7 @@ La primera sesión de visualización end-to-end de la GUI (13/10/2026) identific
   - **Referencias cruzadas**: `docs/audit_log.md` entradas del
     09/10/2026 (migración OpenCode, hallazgo de caché), `.treegovrules`
     (política "no dejar cabos sueltos").
+- **Toda deuda detectada se registra en el roadmap (16/10/2026).** Cuando se detecta una deuda técnica o un pendiente, se registra en este documento (sección Deferred o Pending decisions) EN LA MISMA SESIÓN en que se detecta. No basta con mencionarlo en audit_log.md o en la conversación. Motivo: el pendiente Aider/build/twine del 12/10/2026 estuvo abierto 4 días sin trazabilidad en el roadmap; al retomarlo el 16/10 hubo que reconstruir el contexto desde cero. El roadmap es la fuente de verdad de deuda técnica del proyecto; el audit_log es la bitácora cronológica.
 
 ## Releases
 

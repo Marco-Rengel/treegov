@@ -93,6 +93,8 @@ sub-fase futura excede $3, diagnosticar. Análisis completo en
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
 
+**Herramientas CLI: SIEMPRE vía pipx, nunca en el .venv del proyecto.** Las herramientas de desarrollo (Aider, build, twine, linters, formatters) NO se instalan con pip dentro del .venv del proyecto. Se instalan globalmente con pipx, que las aísla en su propio entorno. Motivo: instalar herramientas CLI dentro del .venv degrada las versiones de las librerías compartidas (numpy, scipy, packaging, rich) y rompe la compatibilidad verificada del proyecto. Esto ya ocurrió dos veces: el 27/09/2026 (Aider bajó numpy 2.4.6 → 1.26.4 y scipy 1.17.1 → 1.15.3) y el 12/10/2026 (build/twine subieron packaging 26.0 → 26.3 y rich 14.3.2 → 15.0.0, rompiendo los pins de Aider). Verificación obligatoria tras instalar cualquier herramienta CLI: ejecutar pip show <tool> y confirmar que Location apunta a C:\Users\maren\AppData\Local\pipx\pipx\venvs\..., no al .venv del proyecto.
+
 ## Herramienta de desarrollo: OpenCode
 
 - **Versión:** 1.19.0 (global vía `npm`).
