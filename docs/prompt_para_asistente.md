@@ -22,7 +22,7 @@
 
 **TreeGov** es una estación de trabajo analítica para segmentación de riesgo de crédito con gobernanza MRM (Model Risk Management) e IFRS 9 nativas.
 
-- **Inspiración:** software estadístico clásico de árboles de decisión (descontinuado), del cual se recupera la capacidad del analista de intervenir manualmente los cortes del árbol por razones de negocio, no solo estadísticas.
+- **Inspiración:** software estadístico clásico de árboles de decisión (discontinuado), del cual se recupera la capacidad del analista de intervenir manualmente los cortes del árbol por razones de negocio, no solo estadísticas.
 - **Diferenciador:** la gobernanza no es un añadido; es el punto de partida (evidencia auditable, caja blanca matemática, trazabilidad regulatoria).
 - **Stack:** Python 3.11, PySide6 (GUI), numpy/pandas/scipy (solo backend).
 - **Prohibiciones duras:** `sklearn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`. Bloqueados a nivel de intérprete.
@@ -155,7 +155,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
   Aider 0.86.2 como respaldo documentado.
 - **Anomalía de consumo de tokens:** resuelta el 10/10/2026 (causa
-  raíz: typo `moonshot` → fallback caro; agravantes: plugins fantasma
+  raíz: typo `moonshot` → *fallback* caro; agravantes: plugins fantasma
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
@@ -205,7 +205,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
 
 El archivo `opencode.json` debe usar `moonshotai/kimi-k3` (con "ai" al
 final). Un typo como `moonshot` hace que OpenCode caiga a un modelo de
-fallback carísimo. Verificado el 10/10/2026: el gasto de los días
+*fallback* carísimo. Verificado el 10/10/2026: el gasto de los días
 05-06/10 fue de $5.14 y $13.75 por este motivo.
 
 **Regla de la caché de Moonshot:**
@@ -300,7 +300,7 @@ Esta lección está documentada en `docs/audit_log.md` (05/10/2026).
 
 Probada el 10/10/2026. Es el cliente oficial de Moonshot, pero inyecta
 metadatos dinámicos (paths absolutos, timestamps, telemetría) que
-rompen el prefix matching de la caché ($0.22 con thinking=high, $0.12
+rompen el *prefix matching* de la caché ($0.22 con thinking=high, $0.12
 con thinking=low para una tarea de ~25K de contexto). Se mantiene
 OpenCode como herramienta principal; Kimi Code CLI queda como
 alternativa para tareas puntuales.
@@ -381,5 +381,5 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 - Si algo no se entiende, pregunta antes de asumir.
 - No usar jerga sin explicarla.
-- Respetar que el proyecto es **para aprender**, no para llegar rápido.
-- El objetivo es **calidad auditada**, no velocidad.
+- Respetar que el proyecto es para aprender, no para llegar rápido.
+- El objetivo es calidad auditada, no velocidad.

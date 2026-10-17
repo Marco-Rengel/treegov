@@ -165,12 +165,12 @@ WSL (bash):
   **Modelo configurado:** `moonshotai/kimi-k3` (con la "ai" al final)
   en los campos `model` y `small_model` de `opencode.json`. Antes
   decía `moonshot/kimi-k3` y eso hacía que OpenCode cayera a un
-  modelo de fallback carísimo (causa raíz de la anomalía de consumo,
+  modelo de *fallback* carísimo (causa raíz de la anomalía de consumo,
   ver `docs/audit_log.md` 10/10/2026).
   **Plugin de caché:** `@jimmyyen/opencode-context-cache` instalado y
-  activo (estabiliza la cache key de Moonshot).
+  activo (estabiliza la *cache key* de Moonshot).
   **Nota:** Kimi Code CLI 2.1.1 se probó como alternativa, pero su
-  inyección de metadatos dinámicos rompe el prefix matching de la
+  inyección de metadatos dinámicos rompe el *prefix matching* de la
   caché. OpenCode se mantiene como herramienta principal.
 - **Aider 0.86.2** — herramienta de respaldo desde el 09/10/2026. Instalación global vía pipx con Python 3.11.9 (C:\Users\maren\.local\bin\aider.exe). NO instalar Aider dentro del .venv del proyecto: eso ya ocurrió el 27/09/2026 y se resolvió el 16/10/2026 (ver audit_log). Configuración local en .aider.conf.yml (no versionado). Modelo moonshot/kimi-k3 vía Moonshot AI directo.
 - **build 1.6.1 / twine 7.0.0** — herramientas de empaquetado PyPI, instaladas globalmente vía pipx con Python 3.14.7. Se usan para las publicaciones de TreeGov en PyPI. NO instalar en el .venv del proyecto (regla del 16/10/2026).
@@ -204,7 +204,7 @@ WSL (bash):
 | **Line endings mezclados (CRLF/LF)** | Si un commit muestra cientos de líneas cambiadas en un archivo que solo recibió un bloque, es mezcla de line endings. Diagnóstico: `git diff -w --stat`. Solución: `.gitattributes` con `-text` para archivos con historial CRLF. Ver commit `7040046` y `audit_log.md` 03/10/2026. |
 | **API key mal pegada** | Verificar `$env:MOONSHOT_API_KEY.Length` (~51) y que empieza con `sk-`. Si no, pedirla otra vez con `Read-Host -AsSecureString`. |
 | **BOM en archivos JSON creados con PowerShell** | Usar `[System.IO.File]::WriteAllText(..., [System.Text.UTF8Encoding]::new($false))`. |
-| **Modelos descontinuados** | DeepSeek V4 Pro retirado (14/09/2026). |
+| **Modelos discontinuados** | DeepSeek V4 Pro retirado (14/09/2026). |
 | **Privacidad** | No enviar datos bancarios reales ni credenciales a APIs gratuitas. |
 | **Pegado en terminal** | A veces duplica contenido o deja caracteres colgando. Escribir comandos cortos a mano. |
 | `git push` desde WSL | Hacer push desde Windows nativo (PowerShell) o VS Code. |
@@ -280,7 +280,7 @@ La espera decidida el 16/10/2026 (no publicar hasta tener cambios de código) qu
 
 > **Estado intermedio (mañana).** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con *datasets* públicos: German Credit, UCI).
 
-> **Estado intermedio (tarde).** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + fixtures versionadas `tests/fixtures/uci/`).
+> **Estado intermedio (tarde).** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + *fixtures* versionadas `tests/fixtures/uci/`).
 
 **Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
 15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
@@ -315,10 +315,10 @@ Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera
   target aleatorio respecto a los predictores; los E2E verifican
-  plumbing, no analítica). Documentado en `docs/roadmap.md` sección
+  *plumbing*, no analítica). Documentado en `docs/roadmap.md` sección
   "Deferred (no blocking current work)".
-- Fase 2.4.e — screenshot automatizado de la GUI.
-- Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
+- Fase 2.4.e — *screenshot* automatizado de la GUI.
+- Fase 2.1.b — CV scheme + *guardrail* runtime de imports backend.
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.

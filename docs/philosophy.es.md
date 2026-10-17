@@ -2,11 +2,11 @@
 
 ## La frase central
 
-> "Python le da el motor. TreeGov le da el motor, el freno, el tablero, el cinturón de seguridad y el registro de mantenimiento. ¿Cuál prefiere para un modelo que va a ser auditado por el regulador?"
+> «Python le da el motor. TreeGov le da el motor, el freno, el tablero, el cinturón de seguridad y el registro de mantenimiento. ¿Cuál prefiere para un modelo que va a ser auditado por el regulador?»
 
-## Por qué existe TreeGov
+## ¿Por qué existe TreeGov?
 
-Existe una generación de analistas de riesgo que necesita herramientas GUI para construir árboles auditables, y las herramientas que existían fueron descontinuadas sin reemplazo. Las librerías estadísticas y los entornos de scripting ofrecen potencia analítica, pero no gobernanza nativa. TreeGov llena ese vacío.
+Existe una generación de analistas de riesgo que necesita herramientas GUI para construir árboles auditables, y las herramientas que existían fueron discontinuadas sin reemplazo. Las librerías estadísticas y los entornos de scripting ofrecen potencia analítica, pero no gobernanza nativa. TreeGov llena ese vacío.
 
 ## El diferenciador
 

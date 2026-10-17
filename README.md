@@ -9,7 +9,7 @@
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
-**Data scope.** TreeGov is developed exclusively with public datasets (German Credit, UCI) and synthetic data. It is designed for end use with real banking data on the analyst's desktop: the CSV never leaves the machine. No real data is sent to third-party AI APIs during development. When TreeGov is used in production with real data, the DEBUG logs and exported HTML reports contain sensitive model information (per-node PDs, segment counts, real column names, file paths) and should be treated as confidential material by the analyst.
+**Data scope.** TreeGov is developed exclusively with public *datasets* (German Credit, UCI) and synthetic data. It is designed for end use with real banking data on the analyst's desktop: the CSV never leaves the machine. No real data is sent to third-party AI APIs during development. When TreeGov is used in production with real data, the DEBUG *logs* and exported HTML *reports* contain sensitive model information (per-node PDs, segment counts, real column names, file paths) and should be treated as confidential material by the analyst.
 
 ---
 
@@ -27,7 +27,7 @@ Traditional libraries (*scikit-learn*, *statsmodels*, or R packages) require wri
 
 > "Python gives you the engine. TreeGov gives you the engine, the brakes, the dashboard, the seatbelt, and the maintenance log. Which would you choose for a model that will be audited by the regulator?"
 
-TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and scripting environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
+TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and *scripting* environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
 
 *Read the full project philosophy → [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md) · [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md)*
 
@@ -48,8 +48,8 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 ## Design principles
 
 1. **Clean-room architecture**: strict separation between the analytical backend (`backend_v3/`, no GUI dependencies) and the presentation layer (`frontend_v3/`, no analytical logic).
-2. **White box**: sklearn, statsmodels, and any other black-box library are forbidden. Every statistical formula is written explicitly in the code, with its bibliographic citation.
-3. **Native governance**: DEBUG-grade transactional logging, immutable configuration (frozen `SplitConfig`), and mathematical invariant validation at construction time.
+2. **White box**: *sklearn*, *statsmodels*, and any other black-box library are forbidden. Every statistical formula is written explicitly in the code, with its bibliographic citation.
+3. **Native governance**: DEBUG-grade transactional logging, immutable configuration (*SplitConfig frozen*), and mathematical invariant validation at construction time.
 
 ---
 
