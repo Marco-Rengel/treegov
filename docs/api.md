@@ -13,6 +13,12 @@ underscore) are internal and may change without notice.
 - `TargetType`, `PredictorType`, `CutKind` (Enums).
 - `GovernanceMode` (Enum): `BANKING` (Jeffreys + PD Floor, default) |
   `RESEARCH` (raw k/n, no floor).
+  - Note on terminology: The Python Enum class is `GovernanceMode.BANKING`
+    (kept for historical fingerprint compatibility and backward
+    compatibility). However, in business and GUI documentation, this is
+    referred to as 'Regulatory mode' (Modo Regulatorio) because it applies
+    to banks, credit bureaus, and any regulated MRM environment. The
+    fingerprint stores the string 'BANKING'.
 - `MethodName`, `StatisticName` (Literal validation aliases of the contract).
 
 ## backend_v3.statistics
@@ -67,23 +73,29 @@ underscore) are internal and may change without notice.
 - `Session.describe_dataset() -> (columns, types)` — read-only profile of
   the loaded dataset (types as `PredictorType.name` strings; Phase 2.1).
 - `Session.fix_spec(target, spec=None, *, predictors=None, target_class,
-  class_labels)` — optional predictor subset filter applied inside the
-  backend (Phase 2.1). `target_class` and `class_labels` are **mandatory**
-  as of Phase 3.1: they name the class of interest and the label for each
-  target class (see `docs/3.1_design_multiclass.md` §1bis).
+  class_labels, weight_col=None, population_col=None,
+  population_ok_values=None)` — optional predictor subset filter applied
+  inside the backend (Phase 2.1). `target_class` and `class_labels` are
+  **mandatory** as of Phase 3.1: they name the class of interest and the
+  label for each target class (see `docs/3.1_design_multiclass.md` §1bis).
+  `weight_col` (Phase 3.2) declares the sample-weight column;
+  `population_col` + `population_ok_values` (Phase 3.3) declare the
+  opt-in population filter.
 - `Session.train(engine, *, target_type, max_depth, min_child_size,
   pd_floor=0.0003, apply_jeffreys=True)` — `engine` accepts an engine
   instance or its name ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST");
   `pd_floor=None` + `apply_jeffreys=False` yields Research mode
   (Phase 2.1). Multiclass targets (K > 2) are supported by all engines
-  since Phase 3.4. Downstream metrics and reports (validation,
-  reporting, stability) remain binary-only until Phase 3.5.
+  since Phase 3.4; downstream metrics, reports and stability monitoring
+  support K > 2 since Phase 3.5. (The weighted-mass floor
+  `min_child_weight` is a `TreeBuilder`-level parameter and is not
+  exposed on this signature.)
 - `Session.get_gains_table(*, partition, by, n_buckets, tie, seed)` —
   flat DTO of a gains table for a routed partition (Phase 2.4.c.1).
-  Binary targets only in Phase 3.1; K > 2 raises `ValueError`.
+  Supports K > 2 since Phase 3.5.
 - `Session.get_classification_matrix(*, partition, threshold)` — flat
-  DTO of a classification matrix (Phase 2.4.c.1). Binary targets only in
-  Phase 3.1; K > 2 raises `ValueError`.
+  DTO of a classification matrix (Phase 2.4.c.1). Supports K > 2 since
+  Phase 3.5.c (see the extended entry below).
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
 - `Session.evaluate_oos(*, n_groups=10)` — supports K > 2 since
@@ -217,9 +229,10 @@ In particular:
   1/2 factor, blocked Hosmer-Lemeshow, PR-AUC micro, K×K matrix,
   adaptive n_groups): `docs/methodology.md` §8.11 to §8.14.
 
-> **Note:** this list reflects the API as of the close of Phase 2.1. Later
-> phases (see `docs/roadmap.md`) will add new public modules, which will be
-> documented here once they stabilize.
+> **Note:** this list reflects the API as of the close of Phase 3.6
+> (public-dataset validation). Later phases (see `docs/roadmap.md`) will
+> add new public modules, which will be documented here once they
+> stabilize.
 
 *Generated against the actual `__all__` of each module (verified at Phase
 2.1). `log_config` and `import_guard` declare no `__all__`; the listing is

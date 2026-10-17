@@ -1105,6 +1105,16 @@ problems. *Machine Learning*, 45(2), 171–186. Decision D1 and D4; see
 > See `docs/design_decisions.md` §7.1 for the Gini convention, and
 > §8.1 above for the binary case.
 
+**Related defaults feeding these metrics.** C&RT tree growth accepts
+only splits with impurity gain above `min_impurity_decrease = 1e-9`
+(see `docs/design_decisions.md` §3.1), so the leaves behind every
+reported metric already satisfy that threshold. Row scoring through
+`predict_pd` is governed by `unseen_policy` (see
+`docs/design_decisions.md` §7.6): `Session.evaluate_oos` uses the
+default `"error"` (a row that cannot be routed aborts the evaluation),
+while `Session.evaluate_oot` uses `"exclude"` and reports the count in
+`n_excluded`.
+
 ### 8.12 Multiclass calibration — Brier, BSS, Hosmer-Lemeshow block
 
 Phase 3.5.a generalised the Brier score and Brier skill score to K ≥ 2

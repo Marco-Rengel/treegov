@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | OpenCode 1.18.35 (cliente activo desde 09/10/2026) + Kimi K3 vía Moonshot AI directo con key propia de Moonshot (NO vía NVIDIA NIM). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Migración de NVIDIA NIM a Moonshot el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
+| Modelo de IA en desarrollo | OpenCode 1.19.0 (cliente activo desde 09/10/2026) + Kimi K3 vía Moonshot AI directo con key propia de Moonshot (NO vía NVIDIA NIM). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Migración de NVIDIA NIM a Moonshot el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
 
 ---
 
@@ -300,7 +300,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (384 tests)
+├── tests/ # Suite de tests (422 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -308,6 +308,8 @@ TreeGov/
 │ ├── 3.2_decisions_consolidated.md
 │ ├── 3.3_design_population_categories.md
 │ ├── 3.4_design_multiclass_crt_quest.md
+│ ├── 3.6_design_public_datasets.md
+│ ├── validation_results_3.6.md
 │ ├── api.md
 │ ├── roadmap.md
 │ ├── philosophy.md
@@ -482,7 +484,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ### Pendientes técnicos
 
 - [x] **Decisión de proveedor de IA** — migrado a Moonshot AI directo el 03/10/2026. Ver `audit_log.md`.
-- [x] **Herramienta activa de desarrollo** — OpenCode 1.18.35 desde el 09/10/2026 (Aider 0.86.2 queda como respaldo documentado). Ver `audit_log.md`.
+- [x] **Herramienta activa de desarrollo** — OpenCode 1.19.0 + Kimi K3 vía Moonshot AI desde el 09/10/2026 (con Aider como respaldo en pipx). Ver `audit_log.md`.
 - [x] **Fase 2.4** — Reportes + integración. Completada el 03/10/2026.
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
@@ -493,19 +495,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] *Datasets* públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
 - [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
 
-### Pendientes de CV y carrera profesional
-
-- [ ] **Solicitar contrato a RRHH (Banco de Loja)** — acción personal, fuera del proyecto.
-- [ ] Revisar cláusula de propiedad intelectual del contrato.
-- [ ] Regenerar PDF del CV (encoding UTF-8 roto en encabezado).
-- [ ] Mover sección "Idiomas" a la parte superior del CV.
-- [ ] Añadir "IA agéntica" a Habilidades del CV.
-- [ ] Agregar TreeGov al CV (formulación personal/*open source*) — depende de la cláusula IP.
-- [ ] Actualizar LinkedIn con mención genérica de TreeGov (sin enlace al repo) — decisión estratégica.
-
 ### Pendientes diferidos / estructurales
 
-- [ ] `CONTRIBUTING.md` en el repo (bloqueado por contrato).
+- [ ] `CONTRIBUTING.md` en el repo (bloqueado por revisión legal).
 - [ ] `docs/i18n/` para centralizar traducciones (cuando haya 5+ docs bilingües).
 - [ ] Mnemonics `&` en menús GUI (Fase 2.3).
 - [ ] QSettings persistencia de parámetros de gobernanza (Fase 2.1.b).
@@ -517,7 +509,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ### Decisiones de largo plazo
 
 - [ ] **Distribución:** método de empaquetado, firma digital, canal.
-- [ ] **Publicación del repo en GitHub:** pendiente de revisar contrato laboral antes de hacerlo público.
+- [ ] **Publicación del repo en GitHub:** pendiente de revisión legal antes de hacerlo público.
 
 ---
 ## 11. Cómo reconstruir el contexto en una nueva sesión

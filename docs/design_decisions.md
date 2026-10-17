@@ -122,6 +122,13 @@ silently alters the mathematics.
   the same fingerprint**. This is the MRM evidence that the choice was
   explicit.
 
+**Note on terminology.** The Python Enum class is `GovernanceMode.BANKING`
+(kept for historical fingerprint compatibility and backward compatibility).
+However, in business and GUI documentation, this is referred to as
+"Regulatory mode" (Modo Regulatorio) because it applies to banks, credit
+bureaus, and any regulated MRM environment. The fingerprint stores the
+string `BANKING`.
+
 ### 0.4 Vocabulary policy
 
 **Decision.** Internal identifiers (class fields, function names,
@@ -1219,6 +1226,13 @@ without changing anything else. This is intentional: the fingerprint
 identifies the *model*, not the dataset. Documented in
 `tree_builder.py::_governance_label`.
 
+**Note on terminology.** The Python Enum class is `GovernanceMode.BANKING`
+(kept for historical fingerprint compatibility and backward compatibility).
+However, in business and GUI documentation, this is referred to as
+"Regulatory mode" (Modo Regulatorio) because it applies to banks, credit
+bureaus, and any regulated MRM environment. The fingerprint stores the
+string `BANKING`.
+
 ### 10.3 Event log — append-only, no timestamps in memory
 
 **Context.** `SessionState.event_log` records the sequence of state
@@ -1480,102 +1494,103 @@ entry of 10/10/2026 (Fase 3.2.c).
 
 ### 13.4 Weighted variance divisor — W − 1 vs W
 
-**Context.** En la ponderación por muestra, la varianza de un grupo
-admite dos definiciones estándar:
+**Context.** In sample weighting, the variance of a group admits two
+standard definitions:
 
-- Varianza muestral ponderada: `sum(w_i * (x_i - m)^2) / (W - 1)`,
-  donde `W = sum(w_i)`. Convención "pesos como frecuencias".
-- Varianza poblacional ponderada: `sum(w_i * (x_i - m)^2) / W`.
-  Convención "pesos como masa".
+- Weighted sample variance: `sum(w_i * (x_i - m)^2) / (W - 1)`,
+  where `W = sum(w_i)`. "Weights as frequencies" convention.
+- Weighted population variance: `sum(w_i * (x_i - m)^2) / W`.
+  "Weights as mass" convention.
 
-La elección afecta a la fórmula del QDA de QUEST (Etapa 2), porque
-las varianzas entran en los coeficientes de la ecuación cuadrática.
+The choice affects the QUEST QDA formula (Stage 2), because the
+variances enter the coefficients of the quadratic equation.
 
 **Alternatives considered.**
 
-- (a) Divisor `W - 1` (Bessel ponderado). La convención estándar
-  cuando los pesos son frecuencias en el análisis de encuestas
-  complejas (Heeringa, West & Berglund 2010, §5.3). NO es invariante a la
-  escala de pesos: si se multiplican los pesos por `k`, el
-  denominador pasa de `W - 1` a `k·W - 1`, que no es `k·(W - 1)`.
-- (b) Divisor `W` (masa). Es invariante a la escala de pesos: el
-  cociente `(k · S) / (k · W)` = `S / W`. Pero subestima la
-  varianza en muestras pequeñas (no corrige el sesgo de Bessel).
+- (a) Divisor `W - 1` (weighted Bessel). The standard convention
+  when weights are frequencies in complex survey analysis
+  (Heeringa, West & Berglund 2010, §5.3). It is NOT weight-scale
+  invariant: if the weights are multiplied by `k`, the denominator
+  goes from `W - 1` to `k·W - 1`, which is not `k·(W - 1)`.
+- (b) Divisor `W` (mass). It is weight-scale invariant: the ratio
+  `(k · S) / (k · W)` = `S / W`. But it underestimates the variance
+  in small samples (no Bessel bias correction).
 
-**Decision.** Opción (a) — divisor `W − 1`. Es la convención estándar
-para pesos como frecuencias y da estimaciones insesgadas de la
-varianza.
+**Decision.** Option (a) — divisor `W − 1`. It is the standard
+convention for weights as frequencies and gives unbiased variance
+estimates.
 
-**Rationale.** La corrección de Bessel existe para que la varianza
-muestral sea un estimador insesgado de la varianza poblacional. El
-mismo razonamiento aplica cuando los pesos son frecuencias. La
-alternativa `W` es matemáticamente más limpia en cuanto a invarianza
-de escala, pero introduce sesgo. Preferimos insesgadez a invarianza
-estricta.
+**Rationale.** The Bessel correction exists so that the sample
+variance is an unbiased estimator of the population variance. The
+same reasoning applies when weights are frequencies. The `W`
+alternative is mathematically cleaner regarding scale invariance,
+but introduces bias. We prefer unbiasedness over strict invariance.
 
 **Consequences.**
 
-- El umbral del QDA de QUEST no es invariante a la escala de pesos.
-  Documentado como hallazgo matemático en la entrada de audit_log
-  del 10/10/2026 (Fase 3.2.d) y en el docstring de `_qda_cutpoint`.
-- Cubierto por el test `test_weighted_quest_qda_variance_uses_w_minus_one`.
-- Este comportamiento coexiste con otras sensibilidades a escala ya
-  documentadas: χ² escala linealmente (§13.2), F es invariante
-  (cociente SSB/SSW). El analista es responsable de elegir la escala
-  de pesos; TreeGov informa pero no decide en silencio.
+- The QUEST QDA threshold is not weight-scale invariant. Documented
+  as a mathematical finding in the audit_log entry of 10/10/2026
+  (Phase 3.2.d) and in the `_qda_cutpoint` docstring.
+- Covered by the test `test_weighted_quest_qda_variance_uses_w_minus_one`.
+- This behaviour coexists with other already documented scale
+  sensitivities: χ² scales linearly (§13.2), F is invariant
+  (SSB/SSW ratio). The analyst is responsible for choosing the
+  weight scale; TreeGov reports but does not decide silently.
 
 **Cross-reference.** `backend_v3/quest_engine.py::_qda_cutpoint`;
-`docs/design_decisions.md` §13.2; `docs/audit_log.md` entrada del
-10/10/2026 (Fase 3.2.d).
+`docs/design_decisions.md` §13.2; `docs/audit_log.md` entry of
+10/10/2026 (Phase 3.2.d).
 
 ---
 
 ### 13.5 TreeNode.w_events — informative field with empty default
 
-**Context.** La ponderación por muestra (Fase 3.2) introduce la masa
-ponderada por clase en cada nodo del árbol. Hace falta decidir cómo
-se expone esa masa en `TreeNode` sin romper los ~30 tests que
-construyen `TreeNode` a mano (pruning, reporting, validation,
+**Context.** Sample weighting (Phase 3.2) introduces the weighted
+mass per class in each tree node. A decision is needed on how to
+expose that mass in `TreeNode` without breaking the ~30 tests that
+build `TreeNode` by hand (pruning, reporting, validation,
 tree_view, etc.).
 
 **Alternatives considered.**
 
-- (a) Añadir `w_events: tuple[float, ...]` como campo obligatorio.
-  Rechazada: rompe la construcción manual de `TreeNode` en todos los
-  tests existentes y obliga a actualizar ~30 fixtures.
-- (b) Añadir `w_events: tuple[float, ...] = ()` con default vacío.
-  Adoptada. Los tests que construyen `TreeNode` a mano siguen
-  funcionando sin cambios. Los nodos producidos por `TreeBuilder`
-  siempre lo pueblan. `TreeModel.__post_init__` valida coherencia
-  solo cuando el campo no está vacío.
-- (c) Derivar `w_events` de `n_events` cuando no se especifica.
-  Rechazada: no hay información suficiente para distinguir "nodo sin
-  pesos" de "nodo con pesos todos 1" sin consultar el modo del
-  builder, que no está disponible en el `TreeModel`.
+- (a) Add `w_events: tuple[float, ...]` as a mandatory field.
+  Rejected: breaks manual `TreeNode` construction in all existing
+  tests and forces updating ~30 fixtures.
+- (b) Add `w_events: tuple[float, ...] = ()` with an empty default.
+  Adopted. Tests that build `TreeNode` by hand keep working
+  unchanged. Nodes produced by `TreeBuilder` always populate it.
+  `TreeModel.__post_init__` validates consistency only when the
+  field is non-empty.
+- (c) Derive `w_events` from `n_events` when not specified.
+  Rejected: there is not enough information to distinguish "node
+  without weights" from "node with all-ones weights" without
+  consulting the builder's mode, which is not available in the
+  `TreeModel`.
 
-**Decision.** Opción (b).
+**Decision.** Option (b).
 
-**Rationale.** La regla de oro de la Fase 3.2 es "sin pesos, paridad
-exacta". Añadir un campo obligatorio obligaría a tocar todos los
-tests y aumentaría el riesgo de introducir cambios sutiles en el
-camino no ponderado. El default vacío es el mecanismo estándar de
-Python para extensiones compatibles hacia atrás.
+**Rationale.** The golden rule of Phase 3.2 is "no weights, exact
+parity". Adding a mandatory field would force touching every test
+and would increase the risk of introducing subtle changes in the
+unweighted path. The empty default is Python's standard mechanism
+for backward-compatible extensions.
 
 **Consequences.**
 
-- `TreeNode.w_events` es `()` en nodos construidos a mano sin
-  declarar pesos; es una tupla poblada en nodos producidos por
+- `TreeNode.w_events` is `()` in hand-built nodes without declared
+  weights; it is a populated tuple in nodes produced by
   `TreeBuilder`.
-- La validación de longitud (`== K`) y no-negatividad se aplica solo
-  a nodos con `w_events` no vacío.
-- `w_events` es puramente informativo: no altera routing, no altera
-  poda (`pruning.py` no lo lee), no altera métricas downstream.
-- Documentado en `docs/audit_log.md` entrada del 10/10/2026 (Fase
+- Length validation (`== K`) and non-negativity apply only to nodes
+  with non-empty `w_events`.
+- `w_events` is purely informative: it does not alter routing, does
+  not alter pruning (`pruning.py` does not read it), does not alter
+  downstream metrics.
+- Documented in `docs/audit_log.md` entry of 10/10/2026 (Phase
   3.2.e).
 
 **Cross-reference.** `backend_v3/tree_builder.py::TreeNode`;
 `docs/design_decisions.md` §5.2 (pd_final tuple); `docs/audit_log.md`
-entrada del 10/10/2026 (Fase 3.2.e).
+entry of 10/10/2026 (Phase 3.2.e).
 
 ---
 
@@ -1583,255 +1598,253 @@ entrada del 10/10/2026 (Fase 3.2.e).
 
 #### 13.6.1 Check B2 (≥2 rows per class per side) is conditional on weights
 
-**Context.** El diseño original de la Fase 3.2 introdujo un check "B2":
-tras particionar, verificar que cada clase observada tiene al menos 2
-filas físicas en train y en test. La intención era defender contra
-pesos extremos que concentran toda la masa en pocas filas y dejan
-una clase con 0 filas en alguna partición. El diseño v2 §1bis.2
-decía que B2 se aplicaba "siempre, con y sin pesos".
+**Context.** The original Phase 3.2 design introduced a "B2" check:
+after partitioning, verify that each observed class has at least 2
+physical rows in train and in test. The intent was to defend against
+extreme weights that concentrate all the mass in a few rows and
+leave a class with 0 rows in some partition. Design v2 §1bis.2
+stated that B2 applied "always, with and without weights".
 
 **Alternatives considered.**
 
-- (a) B2 incondicional. Rompe `test_largest_remainder` (fixture con
-  clase de solo 3 filas, 1 en test) y viola el invariante C1 de la
-  Fase 3.2 ("sin pesos, comportamiento idéntico al pre-3.2").
-- (b) B2 solo cuando `weights is not None`. Adoptada. El
-  comportamiento sin pesos se preserva intacto; el modo ponderado
-  gana la defensa específica.
-- (c) B2 como advertencia (warning) en lugar de error. Rechazada: un
-  warning pasa desapercibido en logs ruidosos; el fallo explícito
-  es preferible en modo ponderado.
+- (a) Unconditional B2. Breaks `test_largest_remainder` (fixture
+  with a class of only 3 rows, 1 in test) and violates the C1
+  invariant of Phase 3.2 ("no weights, behaviour identical to
+  pre-3.2").
+- (b) B2 only when `weights is not None`. Adopted. The weight-free
+  behaviour is preserved intact; the weighted mode gains the
+  specific defense.
+- (c) B2 as a warning instead of an error. Rejected: a warning goes
+  unnoticed in noisy logs; explicit failure is preferable in
+  weighted mode.
 
-**Decision.** Opción (b).
+**Decision.** Option (b).
 
-**Rationale.** C1 es el invariante prioritario. B2 es una defensa
-específica del modo ponderado, no un comportamiento general. Con
-Hamilton-Hare sobre conteo de filas, una clase con `n_k >= 2` no
-puede quedar con 0 filas en ninguna partición; B2 solo es necesario
-cuando los pesos pueden hacer que la masa de una clase colapse en
-muy pocas filas.
+**Rationale.** C1 is the priority invariant. B2 is a defense specific
+to the weighted mode, not a general behaviour. With Hamilton-Hare
+over row counts, a class with `n_k >= 2` cannot end up with 0 rows
+in any partition; B2 is only necessary when weights can make a
+class's mass collapse into very few rows.
 
 **Consequences.**
 
-- `test_largest_remainder` (fixture histórico con clase pequeña)
-  sigue pasando sin cambios.
-- Los fixtures degenerados en tests existentes no necesitan
-  agrandarse.
-- Test consagra el invariante:
+- `test_largest_remainder` (historical fixture with a small class)
+  keeps passing unchanged.
+- Degenerate fixtures in existing tests do not need to be enlarged.
+- Test enshrining the invariant:
   `test_weighted_splitting_check_b2_not_applied_without_weights`.
 
 **Cross-reference.** `backend_v3/splitting.py::stratified_split`;
-`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.f).
+`docs/audit_log.md` entry of 10/10/2026 (Phase 3.2.f).
 
 #### 13.6.2 Stratification with weights: row counts, not weighted quotas
 
-**Context.** El diseño v2 §1bis.2 decía "estratifica por peso acumulado
-de cada clase (Hamilton-Hare sobre W_k en vez de n_k)". La
-implementación literal de esa frase conduce a un bug: la cuota
-`Q_k = W_k * train_frac` es PESO, no filas, y traducirla
-directamente a filas produce `floor(Q_k) > n_k` cuando los pesos son
-extremos.
+**Context.** Design v2 §1bis.2 stated "stratify by accumulated weight
+of each class (Hamilton-Hare over W_k instead of n_k)". The literal
+implementation of that sentence leads to a bug: the quota
+`Q_k = W_k * train_frac` is WEIGHT, not rows, and translating it
+directly into rows produces `floor(Q_k) > n_k` when weights are
+extreme.
 
 **Alternatives considered.**
 
-- (a) Traducir la cuota ponderada a filas con
-  `n_k_target = round(n_k * train_frac)`. Es la traducción correcta
-  de "estratificar por peso" a "estratificar en filas": el peso no
-  cambia la proporción de filas que va a train; los pesos viajan con
-  cada fila y afectan al modelo, no a la partición.
-- (b) Normalizar los pesos a suma = n antes de la estratificación.
-  Rechazada: introduce una decisión silenciosa del motor que el
-  analista no pidió.
-- (c) Estratificar sobre el vector de pesos como si fueran
-  frecuencias (sin traducir a filas). Es la implementación que
-  falló; ver contexto.
+- (a) Translate the weighted quota into rows with
+  `n_k_target = round(n_k * train_frac)`. It is the correct
+  translation of "stratify by weight" into "stratify in rows":
+  weight does not change the proportion of rows going to train;
+  weights travel with each row and affect the model, not the
+  partition.
+- (b) Normalize weights to sum = n before stratification. Rejected:
+  introduces a silent engine decision the analyst did not ask for.
+- (c) Stratify over the weight vector as if they were frequencies
+  (without translating to rows). This is the implementation that
+  failed; see context.
 
-**Decision.** Opción (a) — Hamilton-Hare clásico sobre `n_k * train_frac`.
+**Decision.** Option (a) — classic Hamilton-Hare over `n_k * train_frac`.
 
-**Rationale.** La estratificación sirve para que train y test tengan
-proporciones de clase similares a la población. Con conteo de filas,
-esa proporción se preserva exactamente. La masa ponderada no es una
-propiedad de la partición: es una propiedad de las filas que
-componen cada partición, y viaja con ellas. Introducir el peso en
-la fórmula de la partición duplica su efecto (una vez en la
-estratificación, otra en el entrenamiento) y genera fallos
-degenerados.
+**Rationale.** Stratification exists so that train and test have
+class proportions similar to the population. With row counts, that
+proportion is preserved exactly. The weighted mass is not a property
+of the partition: it is a property of the rows composing each
+partition, and it travels with them. Introducing weight into the
+partition formula doubles its effect (once in stratification, once
+in training) and produces degenerate failures.
 
 **Consequences.**
 
-- El split (idx_train, idx_test) es numéricamente idéntico con pesos
-  y sin pesos, con el mismo seed.
-- Los pesos se separan como sub-vectores después del split
-  (`_w_train`, `_w_test`, `_w_oot`) y viajan con cada fila hasta el
+- The split (idx_train, idx_test) is numerically identical with
+  weights and without weights, given the same seed.
+- Weights are separated as sub-vectors after the split
+  (`_w_train`, `_w_test`, `_w_oot`) and travel with each row to the
   `TreeBuilder`.
-- Test consagra el invariante:
+- Test enshrining the invariant:
   `test_weighted_splitting_split_unchanged_by_weights`.
-- Corrige la afirmación del diseño v2 §1bis.2; el split no depende
-  de los pesos.
+- Corrects the statement in design v2 §1bis.2; the split does not
+  depend on the weights.
 
 **Cross-reference.** `backend_v3/splitting.py::stratified_split`;
-`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.f).
+`docs/audit_log.md` entry of 10/10/2026 (Phase 3.2.f).
 
 ---
 
 ### 13.7 Deferred: KS / AUC / Gini of the gains table are not weighted
 
-**Context.** `build_gains_table` en `backend_v3/reporting.py` devuelve
-`ks`, `auc` y `gini` calculados sobre PD por fila de las filas
-enrutables. En 3.2.g se añadieron columnas `w_*` ponderadas a las
-filas de la tabla, pero los tres estadísticos agregados quedaron
-sin ponderar. La razón es que `_discrimination_metrics` es una
-reimplementación local de las fórmulas ya presentes (y ya
-ponderadas) en `backend_v3/validation.py`.
+**Context.** `build_gains_table` in `backend_v3/reporting.py` returns
+`ks`, `auc` and `gini` computed over per-row PD of the routable
+rows. In 3.2.g, weighted `w_*` columns were added to the table
+rows, but the three aggregate statistics remained unweighted. The
+reason is that `_discrimination_metrics` is a local reimplementation
+of formulas already present (and already weighted) in
+`backend_v3/validation.py`.
 
 **Alternatives considered.**
 
-- (a) Ponderar `_discrimination_metrics` en 3.2.g. Rechazada:
-  duplicaría la lógica ponderada de `validation.compute_oos_metrics`
-  en un módulo distinto, con riesgo de divergencia.
-- (b) Reemplazar `_discrimination_metrics` por una llamada a
-  `validation.compute_oos_metrics`. Rechazada en 3.2.g: cambiaría
-  el diseño de `reporting.py` (hoy autocontenido) y afectaría a un
-  módulo no previsto en la fase.
-- (c) Diferir la ponderación de KS/AUC/Gini a una sub-fase futura.
-  Adoptada.
+- (a) Weight `_discrimination_metrics` in 3.2.g. Rejected: would
+  duplicate the weighted logic of `validation.compute_oos_metrics`
+  in a different module, with divergence risk.
+- (b) Replace `_discrimination_metrics` with a call to
+  `validation.compute_oos_metrics`. Rejected in 3.2.g: would change
+  the design of `reporting.py` (currently self-contained) and would
+  affect a module not planned in the phase.
+- (c) Defer the weighting of KS/AUC/Gini to a future sub-phase.
+  Adopted.
 
-**Decision.** Opción (c). En 3.2.g los estadísticos agregados del
-`GainsTableResult` siguen calculándose sin ponderar. Las columnas
-`w_*` de las filas de la tabla SÍ están ponderadas; el resumen
-agregado (KS/AUC/Gini) no.
+**Decision.** Option (c). In 3.2.g the aggregate statistics of the
+`GainsTableResult` are still computed unweighted. The `w_*` columns
+of the table rows ARE weighted; the aggregate summary
+(KS/AUC/Gini) is not.
 
 **Consequences.**
 
-- Con `weights=None`: comportamiento idéntico al pre-3.2. La
-  paridad se preserva.
-- Con pesos no triviales: las columnas `w_bad_rate_cum`, `w_lift_cum`,
-  etc. reflejan la masa ponderada, pero `ks`/`auc`/`gini` del
-  resultado siguen siendo los de conteo de filas.
-- Documentado como decisión diferida explícita: la futura sub-fase
-  que aborde reportes ponderados completos (probablemente dentro de
-  Fase 3.5, reportes multiclase + ponderados) deberá decidir si
-  reutiliza `validation.compute_oos_metrics` o reimplementa la
-  ponderación localmente.
+- With `weights=None`: behaviour identical to pre-3.2. Parity is
+  preserved.
+- With non-trivial weights: the `w_bad_rate_cum`, `w_lift_cum`,
+  etc. columns reflect the weighted mass, but the result's
+  `ks`/`auc`/`gini` remain those of row counts.
+- Documented as an explicit deferred decision: the future sub-phase
+  that addresses full weighted reports (probably within Phase 3.5,
+  multiclass + weighted reports) must decide whether to reuse
+  `validation.compute_oos_metrics` or reimplement the weighting
+  locally.
 
 **Cross-reference.** `backend_v3/reporting.py::_discrimination_metrics`;
-`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.g).
+`docs/audit_log.md` entry of 10/10/2026 (Phase 3.2.g).
 
 ---
 
 ### 13.8 Hosmer-Lemeshow scales linearly with total weight mass
 
-**Context.** La fórmula del HL es
-`H = Σ_g (O_g − N_g π_g)² / [N_g π_g (1 − π_g)]`. Con pesos, los
-tres agregados por grupo (`O_g`, `N_g`, `π_g`) pasan a calcularse
-como sumas ponderadas. Bajo un cambio de escala uniforme de los
-pesos (multiplicar todos por k), tanto el numerador como el
-denominador escalan linealmente con k, por lo que H escala
-linealmente con k. Es el mismo comportamiento que el χ² de Pearson
-ponderado documentado en §13.2.
+**Context.** The HL formula is
+`H = Σ_g (O_g − N_g π_g)² / [N_g π_g (1 − π_g)]`. With weights, the
+three per-group aggregates (`O_g`, `N_g`, `π_g`) become weighted
+sums. Under a uniform rescaling of the weights (multiplying all by
+k), both the numerator and the denominator scale linearly with k,
+so H scales linearly with k. It is the same behaviour as the
+weighted Pearson χ² documented in §13.2.
 
 **Alternatives considered.**
 
-- (a) Normalizar los pesos para que Σw = n antes de HL. Rechazada
-  por coherencia con §13.2: la decisión general de la Fase 3.2 es no
-  normalizar en silencio.
-- (b) Documentar el escalado y dejar la decisión al analista.
-  Adoptada.
+- (a) Normalize weights so that Σw = n before HL. Rejected for
+  consistency with §13.2: the general decision of Phase 3.2 is not
+  to normalize silently.
+- (b) Document the scaling and leave the decision to the analyst.
+  Adopted.
 
-**Decision.** Opción (b). HL no es invariante a escala; escala
-linealmente con la masa total de pesos. Test
-`test_weighted_validation_scale_invariance` (3.2.g) consagra el
-escalado, no la invarianza.
+**Decision.** Option (b). HL is not scale-invariant; it scales
+linearly with the total weight mass. Test
+`test_weighted_validation_scale_invariance` (3.2.g) enshrines the
+scaling, not the invariance.
 
-**Rationale.** Es comportamiento matemáticamente inevitable cuando los
-pesos entran como masa (sumas ponderadas) y no como conteos. La
-alternativa (normalizar) escondería una decisión del analista.
+**Rationale.** It is mathematically inevitable behaviour when weights
+enter as mass (weighted sums) and not as counts. The alternative
+(normalizing) would hide an analyst decision.
 
 **Consequences.**
 
-- Con pesos uniformes (todos 1) y sin pesos: HL idéntico (paridad
-  C1).
-- Con pesos no triviales: HL puede crecer mucho si Σw es grande.
-  El p-valor del test baja artificialmente. El analista debe saber
-  que HL pondera masa, no filas.
-- Documentado también en `docs/methodology.md` §8.9bis.
+- With uniform weights (all 1) and without weights: identical HL
+  (C1 parity).
+- With non-trivial weights: HL can grow large if Σw is large. The
+  test's p-value drops artificially. The analyst must know that HL
+  weighs mass, not rows.
+- Also documented in `docs/methodology.md` §8.9bis.
 
 **Cross-reference.** `backend_v3/validation.py::compute_oos_metrics`;
-`docs/design_decisions.md` §13.2 (χ² escala); `docs/audit_log.md`
-entrada del 10/10/2026 (Fase 3.2.g).
+`docs/design_decisions.md` §13.2 (χ² scaling); `docs/audit_log.md`
+entry of 10/10/2026 (Phase 3.2.g).
 
 ---
 
 ### 13.9 evaluate_oot parameter is `weight_oot`, not `use_train_weights`
 
-**Context.** El diseño v2 §5.3 propuso el nombre `use_train_weights`
-para el parámetro de `Session.evaluate_oot` que controla el modo de
-ponderación de la cohorte OOT. Durante la implementación de 3.2.h se
-detectó que el nombre es ambiguo: sugiere "aplicar los pesos de
-train al OOT", lo cual no tiene sentido operativo porque train y OOT
-tienen distinto tamaño y distintas filas.
+**Context.** Design v2 §5.3 proposed the name `use_train_weights`
+for the `Session.evaluate_oot` parameter that controls the weighting
+mode of the OOT cohort. During the implementation of 3.2.h it was
+detected that the name is ambiguous: it suggests "apply the train
+weights to the OOT", which makes no operational sense because train
+and OOT have different sizes and different rows.
 
 **Alternatives considered.**
 
-- (a) Mantener `use_train_weights`. Rechazada: ambiguo.
-- (b) Renombrar a `weight_oot: bool = True`. Adoptada. Semántica:
-  True = el OOT usa sus propios pesos; False = el OOT usa pesos
-  uniformes.
+- (a) Keep `use_train_weights`. Rejected: ambiguous.
+- (b) Rename to `weight_oot: bool = True`. Adopted. Semantics:
+  True = the OOT uses its own weights; False = the OOT uses uniform
+  weights.
 
-**Decision.** Opción (b).
+**Decision.** Option (b).
 
-**Rationale.** El nombre describe la pregunta operativa real ("¿pondera
-el OOT con sus propios pesos?"), no un mecanismo de propagación
-imposible.
+**Rationale.** The name describes the real operational question
+("does the OOT weight with its own weights?"), not an impossible
+propagation mechanism.
 
 **Consequences.**
 
 - `Session.evaluate_oot(*, n_groups=10, weight_oot=True)`.
-- El evento de `_commit` registra `weight_oot=false` cuando aplica.
-- Documentado también en el docstring del método.
+- The `_commit` event records `weight_oot=false` when applicable.
+- Also documented in the method's docstring.
 
 **Cross-reference.** `backend_v3/session_state.py::evaluate_oot`;
-`docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.h).
+`docs/audit_log.md` entry of 10/10/2026 (Phase 3.2.h).
 
 ---
 
 ### 13.10 PSI / CSI weighting: each cohort carries its own weights
 
-**Context.** El monitoreo OOT (`stability.py`) compara la distribución
-de hojas del árbol y de cada covariable entre train (referencia) y
-la cohorte OOT. Bajo ponderación por muestra, la pregunta es qué
-pesos usar en cada cohorte.
+**Context.** OOT monitoring (`stability.py`) compares the
+distribution of tree leaves and of each covariate between train
+(reference) and the OOT cohort. Under sample weighting, the
+question is which weights to use in each cohort.
 
 **Alternatives considered.**
 
-- (a) Usar los pesos del train para ambas cohortes. Mide solo el
-  drift del modelo, ignorando el cambio poblacional del OOT.
-  Disponible vía `weight_oot=False`.
-- (b) Usar los pesos propios de cada cohorte: train con pesos de
-  train, OOT con pesos del OOT. Mide ambos cambios: el poblacional
-  y el del modelo. Adoptada como default.
+- (a) Use the train weights for both cohorts. Measures only model
+  drift, ignoring the OOT population change. Available via
+  `weight_oot=False`.
+- (b) Use each cohort's own weights: train with train weights, OOT
+  with OOT weights. Measures both changes: the population one and
+  the model one. Adopted as default.
 
-**Decision.** Opción (b). Default `weight_oot=True`.
+**Decision.** Option (b). Default `weight_oot=True`.
 
-**Rationale.** El diseño v2 §5.3 B4 opción 1 aprobó esta convención. La
-intención es que PSI/CSI capten el drift completo, no solo la parte
-que le toca al modelo. La opción (a) sigue disponible para el
-analista que quiera aislar el drift del modelo.
+**Rationale.** Design v2 §5.3 B4 option 1 approved this convention.
+The intent is for PSI/CSI to capture the full drift, not only the
+part concerning the model. Option (a) remains available for the
+analyst who wants to isolate model drift.
 
 **Consequences.**
 
-- Si train y OOT tienen la misma composición poblacional, los pesos
-  coinciden y PSI refleja solo el cambio en la distribución del
-  modelo.
-- Si difieren (drift poblacional real), PSI captura ambos cambios.
-- `weight_oot=False` fuerza pesos uniformes en OOT (equivalente a
-  ignorar el sesgo de la cohorte OOT).
-- Test `test_weighted_stability_parity_uniform_weights` consagra
-  la paridad con pesos uniformes.
+- If train and OOT have the same population composition, the
+  weights match and PSI reflects only the change in the model's
+  distribution.
+- If they differ (real population drift), PSI captures both
+  changes.
+- `weight_oot=False` forces uniform weights in OOT (equivalent to
+  ignoring the OOT cohort's bias).
+- Test `test_weighted_stability_parity_uniform_weights` enshrines
+  parity with uniform weights.
 
 **Cross-reference.** `backend_v3/stability.py::StabilityMonitor.report`;
-`docs/design_decisions.md` §13.9; `docs/audit_log.md` entrada del
-10/10/2026 (Fase 3.2.h).
+`docs/design_decisions.md` §13.9; `docs/audit_log.md` entry of
+10/10/2026 (Phase 3.2.h).
 
 ---
 
