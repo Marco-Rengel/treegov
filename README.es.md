@@ -15,7 +15,7 @@
 
 ## Resumen ejecutivo
 
-TreeGov es una estación de trabajo analítica de código abierto para la segmentación mediante árboles de decisión. Nace como heredera de las herramientas GUI clásicas (hoy descontinuadas) que permitían a los analistas construir modelos sin programar. A diferencia de las suites corporativas cerradas, TreeGov democratiza la gobernanza de modelos (MRM) y el cumplimiento de estándares como Basilea e IFRS 9.
+TreeGov es una plataforma *open source* para construir, validar y auditar modelos basados en árboles de decisión en entornos regulados. Nace como heredera de las herramientas GUI clásicas (hoy descontinuadas) que permitían a los analistas construir modelos sin programar. A diferencia de las suites corporativas cerradas, TreeGov democratiza la gobernanza de modelos (MRM) y el cumplimiento de estándares como Basilea e IFRS 9.
 
 El sistema implementa CHAID, C&RT y QUEST con matemática de caja blanca: cada fórmula estadística está escrita explícitamente y citada a su publicación original. La gobernanza es *opt-in* a través de dos modos explícitos. El Modo Regulatorio (por defecto) aplica la capa completa de MRM requerida por bancos y burós de crédito: estimador de Jeffreys, PD floor (BCBS CRE 20.39) y huellas criptográficas que registran la elección. El Modo Investigación produce probabilidades empíricas crudas, abriendo la herramienta a dominios como salud, biología o ciencias sociales. La elección es siempre explícita y nunca silenciosa.
 
@@ -67,8 +67,8 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 | **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto, sin sesgo de redondeo |
 | **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
 | **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos |
-| **Validación OOS / OOT** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; cohorte *out-of-time* |
-| **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | PSI (hojas), CSI (covariables), Gini Drop con semáforos |
+| **Validación Out-of-Sample (OOS) / Out-of-Time (OOT)** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; cohorte *out-of-time* |
+| **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | Population Stability Index (PSI, hojas), Characteristic Stability Index (CSI, covariables), Gini Drop con semáforos |
 | **Validación con datasets UCI** | UCI ML Repository | — | Reproducibilidad anclada a 6 *datasets* (German Credit, Breast Cancer, etc.) |
 
 ---
@@ -142,6 +142,17 @@ TreeGov/
 ├── .aider.conf.example.yml  # Plantilla de configuración de Aider
 └── .treegovrules            # Reglas de gobernanza para agentes IA
 ```
+
+---
+
+## ¿Por qué TreeGov? / Why TreeGov?
+
+| Si necesita... / If you need... | Utilice... / Use... |
+|---------------------------------|---------------------|
+| Decenas o cientos de algoritmos ML | *scikit-learn* |
+| *Deep Learning* | *PyTorch* o *TensorFlow* |
+| *Gradient Boosting* | *XGBoost* o *LightGBM* |
+| **Árboles auditables con gobernanza MRM** | **TreeGov** |
 
 ---
 

@@ -22,10 +22,11 @@ La gobernanza no es un añadido. Es el punto de partida:
 - Analistas de riesgo de crédito que quieren dedicar tiempo al análisis, no a la programación.
 - Equipos de validación MRM que necesitan trazabilidad completa.
 - Reguladores que exigen auditabilidad de modelos de PD y clasificación.
+- Científicos de datos y analistas de negocio que prefieren centrarse en la interpretación del modelo en lugar de escribir código de infraestructura.
 
 ## Compromiso
 
-TreeGov no compite en precisión predictiva bruta. Compite en gobernanza y auditabilidad. Si un banco o buró de crédito necesita *XGBoost* para ganar 2 puntos de AUC, que use Python. Si necesita un modelo defendible ante un regulador, usa TreeGov.
+TreeGov compite en transparencia, gobernanza y defendibilidad regulatoria. La precisión predictiva sigue siendo importante, pero nunca a costa de la explicabilidad y la auditabilidad. Si un equipo necesita potencia predictiva bruta, debería usar *XGBoost*. Si necesita un modelo defendible ante un regulador, usa TreeGov.
 
 ## Referencias regulatorias
 
@@ -78,7 +79,9 @@ concretas y auditables en el código.
 - Gobernanza opcional, modo regulatorio por defecto → `GovernanceMode`
   (REGULATORY / RESEARCH) hace que la capa regulatoria sea opt-out,
   abriendo la herramienta a dominios no bancarios (salud, ciencias
-  sociales) sin sacrificar el rigor MRM donde importa.
+  sociales) sin sacrificar el rigor MRM donde importa. Aunque nació en
+  riesgo de crédito, TreeGov puede utilizarse en cualquier dominio donde
+  la trazabilidad, la explicabilidad y la gobernanza sean importantes.
 
 ---
 *[Read in English](philosophy.md)*

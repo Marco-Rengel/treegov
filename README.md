@@ -15,7 +15,7 @@
 
 ## Executive summary
 
-TreeGov is an open-source analytical workbench for decision-tree segmentation. It is the successor to classic GUI tools (now discontinued) that allowed analysts to build models without programming. Unlike closed corporate suites, TreeGov democratizes model governance (MRM) and compliance with standards such as Basel and IFRS 9.
+TreeGov is an open-source platform to build, validate, and audit decision-tree models in regulated environments. It is the successor to classic GUI tools (now discontinued) that allowed analysts to build models without programming. Unlike closed corporate suites, TreeGov democratizes model governance (MRM) and compliance with standards such as Basel and IFRS 9.
 
 The system implements CHAID, C&RT, and QUEST with white-box mathematics: every statistical formula is written explicitly and cited to its original publication. Governance is opt-in through two explicit modes. Regulatory mode (the default) applies the full MRM layer required by banks and credit bureaus: Jeffreys estimator, PD floor (BCBS CRE 20.39), and fingerprints that record the choice. Research mode produces raw empirical probabilities, opening the tool to domains such as health, biology, or social sciences. The choice is always explicit and never silent.
 
@@ -67,8 +67,8 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test *split*, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
 | **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing |
-| **OOS / OOT validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; *out-of-time* cohort support |
-| **Stability monitoring** | Siddiqi (2006) | Basel / EBA | PSI (leaves), CSI (covariates), Gini Drop with traffic lights |
+| **Out-of-Sample (OOS) / Out-of-Time (OOT) validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; *out-of-time* cohort support |
+| **Stability monitoring** | Siddiqi (2006) | Basel / EBA | Population Stability Index (PSI, leaves), Characteristic Stability Index (CSI, covariates), Gini Drop with traffic lights |
 | **UCI dataset validation** | UCI ML Repository | — | Reproducibility anchored to 6 *datasets* (German Credit, Breast Cancer, etc.) |
 
 ---
@@ -142,6 +142,17 @@ TreeGov/
 ├── .aider.conf.example.yml  # Aider configuration template
 └── .treegovrules            # Governance rules for AI agents
 ```
+
+---
+
+## ¿Por qué TreeGov? / Why TreeGov?
+
+| Si necesita... / If you need... | Utilice... / Use... |
+|---------------------------------|---------------------|
+| Decenas o cientos de algoritmos ML | *scikit-learn* |
+| *Deep Learning* | *PyTorch* o *TensorFlow* |
+| *Gradient Boosting* | *XGBoost* o *LightGBM* |
+| **Árboles auditables con gobernanza MRM** | **TreeGov** |
 
 ---
 
