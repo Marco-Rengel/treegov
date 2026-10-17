@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 15/10/2026
+**Fecha de última actualización:** 16/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -280,6 +280,8 @@ Tras la resolución del pendiente Aider/build/twine (16/10/2026) NO se publicó 
 
 > **Estado intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con datasets públicos: German Credit, UCI).
 
+> **Estado intermedio 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + fixtures versionadas `tests/fixtures/uci/`).
+
 **Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
 15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
 de validación, reporte y monitoreo a targets multiclase (K ≥ 2) con
@@ -288,8 +290,7 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Próximo paso**: Fase 3.6 (validación con datasets públicos: German
-Credit, UCI). Objetivo: validar el comportamiento del motor y las
+**Próximo paso**: Fase 3.6.b (script de descarga + fixtures versionadas). La sub-fase 3.6.a (diseño) ya está cerrada. Objetivo: validar el comportamiento del motor y las
 métricas multiclase sobre datasets reconocidos.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases

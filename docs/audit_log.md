@@ -4147,3 +4147,47 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 **Referencias**: docs/audit_log.md entrada del 27/09/2026 (instalación inicial de Aider en .venv, decisión de mantener numpy/scipy degradadas), entrada del 28/09/2026 (migración a pipx), entrada del 12/10/2026 (instalación de build/twine, aviso de pip).
 
 ---
+
+### 16/10/2026 — Fase 3.6.a: diseño de validación con datasets públicos
+
+**Estado**: ✅ Cerrada. Diseño aprobado, documento commiteado (`1df08b0`). Suite 416/416 intacta (sin cambios de código).
+
+**Modelo**: N/A (autoría manual del asistente estratégico con aprobación explícita del revisor; ver nota al final).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la Fase 3.5.d (15/10/2026) había identificado la validación con datasets públicos como el siguiente paso natural del proyecto. Tras la sesión del 16/10/2026 (cierre de los cosméticos del ReportsPanel + resolución del pendiente Aider/build/twine), se abre formalmente la Fase 3.6. Esta sub-fase 3.6.a produce únicamente el documento de diseño; no toca código ni tests.
+
+**Alcance entregado**: `docs/3.6_design_public_datasets.md` (811 líneas, commit `1df08b0`). Estructura de 11 secciones siguiendo el patrón de `docs/3.5_design_multiclass_weighted_reports.md`:
+
+- §0 Scope: qué entrega 3.6 y qué NO entrega (sin nuevas funcionalidades, sin regresión continua, sin cost-sensitive learning, sin cross-validation).
+- §1 Current state: la pipeline al final de 3.5; por qué los fixtures sintéticos no son suficientes (target aleatorio respecto a predictores → Gini ruido).
+- §2 Selección de datasets: German Credit (binario canónico), Car Evaluation (multiclase categórico, K=4), Balance Scale (multiclase ordinal, K=3).
+- §3 Protocolo de normalización: contrato de "TreeGov-ready CSV"; tratamiento específico de cada dataset; preservación de códigos UCI originales.
+- §4 Script de descarga: `scripts/fetch_datasets.py` con verificación SHA256 e idempotencia.
+- §5 Estrategia de tests: fixtures completas versionadas en `tests/fixtures/uci/` (no subset + skip); fingerprint stability; por qué no skip condicional.
+- §6 Script de validación y reporte: `scripts/validate_uci.py` + `docs/validation_results_3.6.md`.
+- §7 Plan de sub-fases: 3.6.a a 3.6.d.
+- §8 Riesgos e invariantes.
+- §9 Preguntas abiertas (ninguna al cierre del diseño).
+- §10 Referencias.
+
+**Nueve decisiones aprobadas (D1-D9)**:
+
+- D1 — Tres datasets: German Credit, Car Evaluation, Balance Scale. Adult, Iris, Wine, Tic-Tac-Toe descartados y registrados en §2.4 con motivo.
+- D2 — Script de descarga con hashes SHA256 hardcoded (capturados durante 3.6.b en la primera descarga verificada).
+- D3 — CSVs normalizados listos para `Session.load_dataset`, sin cambios en `backend_v3/`.
+- D4 — Fixtures completas versionadas en `tests/fixtures/uci/` (~150 KB total), sin subset, sin skip condicional.
+- D5 — Matriz de costes de German Credit ignorada y documentada en §0.2 y §3.2.
+- D6 — Entregable triple: scripts reproducibles + informe de validación + tests de integración.
+- D7 — Fase 3.6 no añade funcionalidad nueva; los bugs detectados durante la validación se difieren a sub-fase correctiva aparte.
+- D8 — El informe combina baseline propio cuantitativo (reproducible) + comentario cualitativo de literatura (sin claims numéricos exactos, sin CV).
+- D9 — Preservar códigos UCI originales de German Credit (`A11`, `A12`, ...) en lugar de traducirlos a etiquetas legibles.
+
+**Nota de gobernanza**: la Fase 3.6.a es un caso atípico dentro de la regla "Phase closure documentation: never deferred". No hay código, no hay tests, no hay cambios en `backend_v3/`. El checklist de 6 documentos se satisface igualmente: roadmap (desglose + estado), audit_log (esta entrada), estado_proyecto (fila 3.6), contexto_para_nueva_sesion + prompt_para_asistente (próximo paso), READMEs (fila 3.6 planificada → en progreso), api.md (sin cambios de API, no aplica).
+
+**Nota de colaboración**: el diseño se redactó con el asistente estratégico como borrador textual, pegado a mano en VS Code por el autor (excepción documentada en CONVENTIONS.md para documentos >200 líneas), y commiteado por el autor. No pasó por OpenCode. Esta excepción se justifica porque es un caso de creación inicial de documento de bootstrap.
+
+**Referencias**: docs/3.6_design_public_datasets.md (documento principal); docs/3.5_design_multiclass_weighted_reports.md (plantilla estructural); docs/roadmap.md (sub-fases 3.6.a-d); commit 1df08b0.
+
+---

@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 16/10/2026
+**Última actualización:** 16/10/2026 (tarde)
 
 ---
 
@@ -148,6 +148,8 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
 (validación con datasets públicos).
 
 **Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
+
+**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). Próximo paso: 3.6.b (script de descarga + fixtures).
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -371,7 +373,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026: Fases 0 a 3.5 cerradas. Suite 416/416. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6 (validación con datasets públicos: German Credit, UCI). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026 (tarde): Fases 0 a 3.5 cerradas, más la sub-fase 3.6.a (diseño del plan de validación con datasets públicos, `docs/3.6_design_public_datasets.md`). Suite 416/416. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6.b (script de descarga + fixtures versionadas). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

@@ -200,9 +200,20 @@ y no-crédito (biología, ciencias sociales).
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
 | 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Completada 15/10/2026 |
-| 3.6 | Validación con datasets públicos (German Credit, UCI) | Alta |
+| 3.6 | Validación con datasets públicos (German Credit, UCI) | En progreso (3.6.a ✅ 16/10/2026) |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
+
+**Desglose de la Fase 3.6:**
+
+| Sub-fase | Alcance | Estado |
+|---|---|---|
+| 3.6.a | Diseño del plan de validación (3 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ 16/10/2026 |
+| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ⏳ |
+| 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ⏳ |
+| 3.6.d | Cierre documental de la fase | ⏳ |
+
+**Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres datasets (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
 
 **Desglose de la Fase 3.2:**
 

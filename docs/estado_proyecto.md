@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 16/10/2026
+**Fecha de última actualización:** 16/10/2026 (Fase 3.6.a cerrada)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -262,13 +262,16 @@ PASSED.
 
 Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente de herramientas CLI duplicadas en el .venv del proyecto (aider-chat, build, twine; ver docs/audit_log.md entrada del 16/10/2026). Sin cambios de código analítico.
 
+**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor: tres datasets de UCI (German Credit binario, Car Evaluation multiclase categórico K=4, Balance Scale multiclase ordinal K=3); script de descarga con verificación SHA256; contrato de CSV TreeGov-ready; fixtures completas versionadas en `tests/fixtures/uci/` (~150 KB) en lugar de subset + skip; matriz de costes de German Credit ignorada; entregable triple (scripts + informe + tests); baseline propio cuantitativo + comentario cualitativo de literatura. Sin cambios de código: `backend_v3/` no se toca, suite 416/416 intacta.
+
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
 - **Fase 3.3** — Categorías de población ✅ Completada 11/10/2026
 - **Fase 3.4** — CRT y QUEST multiclase. ✅ Cerrada 12/10/2026 (3.4.a C&RT + 3.4.b QUEST).
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Cerrada 15/10/2026 (4 sub-fases a-d).
-- **Fase 3.6** — Validación con datasets públicos (German Credit, UCI)
+- **Fase 3.6.a** — Diseño del plan de validación con datasets públicos. ✅ Cerrada 16/10/2026 (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
+- **Fase 3.6** — Validación con datasets públicos (German Credit, Car Evaluation, Balance Scale). En progreso (3.6.b/c/d pendientes).
 - **Fase 3.6.b** — Modo no-bancario (terminología + ejemplos + docs)
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)

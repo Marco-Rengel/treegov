@@ -181,7 +181,9 @@ TreeGov/
 | **3.3** | Categorías Indet / Insufficient / No Perf | Completada |
 | **3.4** | Soporte multiclase en C&RT y QUEST | Completada |
 | **3.5** | Reportes adaptados para multiclase y ponderación | Completada |
-| **3.6** | Validación con datasets públicos | Planificada |
+| **3.6.a** | Diseño del plan de validación con datasets públicos | Completada (16/10/2026) |
+| **3.6.b** | Script de descarga + fixtures versionadas | En progreso |
+| **3.6** | Validación con datasets públicos | En progreso |
 | **3.6.b** | Modo no-bancario (vocabulario neutral + ejemplos) | Planificada |
 | **3.7** | Cierre Fase 3 + v1.0.0 estable | Planificada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |

@@ -181,7 +181,9 @@ TreeGov/
 | **3.3** | Indet / Insufficient / No Perf categories | Completed |
 | **3.4** | Multiclass support in C&RT and QUEST | Completed |
 | **3.5** | Reports adapted for multiclass and weighting | Completed |
-| **3.6** | Validation with public datasets | Planned |
+| **3.6.a** | Design of public-dataset validation plan | Completed (16/10/2026) |
+| **3.6.b** | Fetch script + versioned fixtures | In progress |
+| **3.6** | Validation with public datasets | In progress |
 | **3.6.b** | Non-banking mode (neutral vocabulary + examples) | Planned |
 | **3.7** | Phase 3 closure + v1.0.0 stable | Planned |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
