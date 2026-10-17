@@ -15,9 +15,9 @@
 
 ## Resumen ejecutivo
 
-TreeGov es una estación de trabajo analítica para **segmentación mediante árboles de decisión** con **gobernanza de modelos (MRM)** e **IFRS 9** nativas, ambas opcionales. Implementa los tres algoritmos clásicos de árboles de decisión — CHAID (con su variante Exhaustive), C&RT y QUEST — con **matemática de caja blanca**: cada fórmula estadística está escrita explícitamente en el código y citada a su publicación original.
+TreeGov es una estación de trabajo analítica de código abierto para la segmentación mediante árboles de decisión. Nace como heredera de las herramientas GUI clásicas (hoy descontinuadas) que permitían a los analistas construir modelos sin programar. A diferencia de las suites corporativas cerradas, TreeGov democratiza la gobernanza de modelos (MRM) y el cumplimiento de estándares como Basilea e IFRS 9.
 
-La gobernanza es opt-in, no la identidad del producto. TreeGov ofrece dos modos explícitos. El **modo Banca** (por defecto, y la elección natural para trabajo regulatorio de riesgo de crédito) aplica la capa MRM completa: estimador de Jeffreys sobre las probabilidades de cada nodo, PD floor según Basilea (BCBS CRE 20.39), y huellas de modelo que registran la elección. El **modo Investigación** desactiva ambas cosas y produce probabilidades empíricas crudas sin restricciones regulatorias — abriendo TreeGov a dominios no bancarios (salud, ciencias sociales, marketing, biología) sin sacrificar el núcleo de caja blanca auditable. La elección es explícita, queda en la huella del modelo, y nunca es silenciosa.
+El sistema implementa CHAID, C&RT y QUEST con matemática de caja blanca: cada fórmula estadística está escrita explícitamente y citada a su publicación original. La gobernanza es *opt-in* a través de dos modos explícitos. El Modo Regulatorio (por defecto) aplica la capa completa de MRM requerida por bancos y burós de crédito: estimador de Jeffreys, PD floor (BCBS CRE 20.39) y huellas criptográficas que registran la elección. El Modo Investigación produce probabilidades empíricas crudas, abriendo la herramienta a dominios como salud, biología o ciencias sociales. La elección es siempre explícita y nunca silenciosa.
 
 A diferencia de las librerías de propósito general (scikit-learn, statsmodels, paquetes de R) que exigen programar, TreeGov ofrece un **entorno gráfico** donde el analista se concentra en el análisis, no en el código. A diferencia de las herramientas GUI descontinuadas, es open source, mantenida activamente, y construida desde cero con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño de primera clase.
 
@@ -35,7 +35,31 @@ TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añ
 
 ## ¿Qué es TreeGov?
 
-Herramienta de segmentación analítica para riesgo de crédito con gobernanza MRM/IFRS 9 nativa. Implementa CHAID (Kass, 1980), C&RT (Breiman et al., 1984) y QUEST (Loh & Shih, 1997) con matemática de caja blanca auditable.
+TreeGov es una estación de trabajo analítica para construir, evaluar y auditar árboles de decisión en entornos regulados. A diferencia de las librerías de *machine learning*, donde el analista opera en una caja negra, TreeGov proporciona un entorno visual con matemática explícita y trazabilidad absoluta.
+
+La característica principal de TreeGov es la auditabilidad radical. Absolutamente todo el ciclo de vida del modelo puede ser rastreado por un auditor:
+*   El código: cada fórmula estadística está escrita explícitamente y citada a su publicación original.
+*   Las decisiones: la arquitectura y los *trade-offs* están documentados para justificar cada elección.
+*   El modelo: cada entrenamiento genera un *fingerprint* (huella) único que actúa como sello inmutable.
+*   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 400 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
+
+```mermaid
+flowchart TD
+    subgraph Legacy [Evolución de Herramientas]
+        A[Herramientas GUI Clásicas\nDescontinuadas] -->|Vacío de Gobernanza| B(Suites Corporativas\nCerradas y Costosas)
+    end
+
+    subgraph TreeGov [TreeGov]
+        C((Open Source\nAuditable)) --- D[Entorno Visual\nSin programar]
+        C --- E[Gobernanza Nativa\nMRM / IFRS 9]
+    end
+
+    B -.->|Alternativa Democratizada| C
+    A -.->|Hereda Filosofía Visual| D
+
+    style C fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
+    style TreeGov fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px
+```
 
 ---
 
@@ -52,15 +76,18 @@ Herramienta de segmentación analítica para riesgo de crédito con gobernanza M
 | Capacidad | Referencia | Anclaje regulatorio | Características clave |
 |---|---|---|---|
 | **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
-| **C&RT** | Breiman et al. (1984) | — | Impureza de Gini / varianza, surrogate splits para valores nulos, multiclase (K ≥ 2) |
-| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable (ANOVA + chi-cuadrado + Levene), corte QDA univariante para K=2, barrido de Gini para K > 2 |
+| **C&RT** | Breiman et al. (1984) | — | Impureza de Gini / varianza, *surrogate splits*, multiclase (K ≥ 2) |
+| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable, corte QDA para K=2, barrido de Gini para K > 2 |
+| **Soporte Multiclase** | Hand & Till (2001) | — | Entrenamiento y métricas para K ≥ 2 clases; Gini multiclase y KS por pares |
+| **Ponderación por muestra** | Heeringa et al. (2010) | SR 11-7 | Ajuste de sesgo muestral en todo el pipeline (motores, *split*, métricas) |
+| **Categorías de población** | — | — | Filtro *opt-in* para excluir categorías (Indet, No Perf) antes del entrenamiento |
 | **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
-| **Partición Hamilton-Hare** | — | — | Split train/test estratificado exacto, sin sesgo de redondeo |
+| **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto, sin sesgo de redondeo |
 | **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
 | **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos |
-| **Validación OOS / OOT** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980); Davis & Goadrich (2006) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; soporte de cohorte out-of-time |
+| **Validación OOS / OOT** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; cohorte *out-of-time* |
 | **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | PSI (hojas), CSI (covariables), Gini Drop con semáforos |
-| **Gains table + matriz de clasificación** | Siddiqi (2006) | SR 11-7 | Vista por hoja / por bucket, métricas acumuladas / desacumuladas, KS / AUC / Gini recomputados, export HTML |
+| **Validación con datasets UCI** | UCI ML Repository | — | Reproducibilidad anclada a 6 *datasets* (German Credit, Breast Cancer, etc.) |
 
 ---
 
@@ -181,7 +208,7 @@ TreeGov/
 | **3.3** | Categorías Indet / Insufficient / No Perf | Completada |
 | **3.4** | Soporte multiclase en C&RT y QUEST | Completada |
 | **3.5** | Reportes adaptados para multiclase y ponderación | Completada |
-| **3.6.a** | Diseño del plan de validación con datasets públicos | Completada (16/10/2026) |
+| **3.6.a** | Diseño del plan de validación con datasets públicos | Completada |
 | **3.6.b** | Script de descarga + fixtures versionadas | En progreso |
 | **3.6.e** | Modo no-bancario y validación multi-dominio extensiva | Planificada |
 | **3.6** | Validación con datasets públicos | Completada |
@@ -213,6 +240,7 @@ TreeGov/
 - Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
 - Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
 - Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring*. Wiley.
+- Hand, D.J. & Till, R.J. (2001). *A simple generalisation of the area under the ROC curve for multiple class classification problems*. Machine Learning, 45(2), 171-186.
 
 ---
 

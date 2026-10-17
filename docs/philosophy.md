@@ -12,8 +12,8 @@ There is a generation of risk analysts who need GUI tools to build auditable tre
 
 Governance is not an add-on. It is the starting point:
 
-- Immutable configuration (frozen SplitConfig) = auditable evidence.
-- Transactional DEBUG logging = regulatory traceability.
+- Immutable configuration (*SplitConfig frozen*) = auditable evidence.
+- Transactional *DEBUG logging* = regulatory traceability.
 - White-box mathematics = citable and verifiable formulas.
 - Black-box library blocking = auditability by design.
 
@@ -25,7 +25,7 @@ Governance is not an add-on. It is the starting point:
 
 ## Commitment
 
-TreeGov does not compete on raw predictive accuracy. It competes on governance and auditability. If a bank needs XGBoost to gain 2 AUC points, it should use Python. If it needs a model that can be defended before a regulator, it uses TreeGov.
+TreeGov does not compete on raw predictive accuracy. It competes on governance and auditability. If a bank or credit bureau needs *XGBoost* to gain 2 AUC points, it should use Python. If it needs a model that can be defended before a regulator, it uses TreeGov.
 
 ## Regulatory references
 
@@ -38,23 +38,23 @@ TreeGov does not compete on raw predictive accuracy. It competes on governance a
 
 TreeGov is developed with AI assistance under a workflow with MRM discipline:
 
-- **Methodological rigor:** Design, then audit the design, then implement, then test, then document. Code is never written without first auditing the design.
-- **Short bursts, verification at the end of the block.** The prompts for a sub-phase are grouped; the test suite is run when closing each block, not between prompts. This preserves the AI provider's cache, reduces cost, and keeps verification as a clear control point.
-- **Empirical verification over blind obedience.** The AI assistant may report success without having executed the task. Therefore, every commit requires a green `pytest`, a clean `git status`, and a coherent `git diff --stat` before accepting the change.
-- **No agent runs alone for hours or days.** Every change affects structural invariants (for example, the K=2 binary parity since Phase 3.1, or the `TreeModel` invariants). The human audits every sub-phase. Long-running agents have their place in disposable or low-risk projects; not in a model auditable by a regulator.
-- **Mandatory closure documentation.** Each sub-phase closes with the synchronized update of the status, context, and audit log documents. Nothing is deferred to the next session.
+- Methodological rigor: Design, then audit the design, then implement, then test, then document. Code is never written without first auditing the design.
+- Short bursts, verification at the end of the block. The prompts for a sub-phase are grouped; the test suite is run when closing each block, not between prompts. This preserves the AI provider's cache, reduces cost, and keeps verification as a clear control point.
+- Empirical verification over blind obedience. The AI assistant may report success without having executed the task. Therefore, every commit requires a green `pytest`, a clean `git status`, and a coherent `git diff --stat` before accepting the change.
+- No agent runs alone for hours or days. Every change affects structural invariants (for example, the K=2 binary parity since Phase 3.1, or the `TreeModel` invariants). The human audits every sub-phase. Long-running agents have their place in disposable or low-risk projects; not in a model auditable by a regulator.
+- Mandatory closure documentation. Each sub-phase closes with the synchronized update of the status, context, and audit log documents. Nothing is deferred to the next session.
 
 ## Development vs end use: two different data regimes
 
-TreeGov is currently developed with public datasets (German Credit, UCI) and synthetic data. During development, the privacy rule is strict: no real data is ever sent to third-party AI APIs. Only open-source code, public documentation, and synthetic data are shared.
+TreeGov is currently developed with public datasets (German Credit, UCI) and synthetic data. During development, the privacy rule is strict: no real data is ever sent to third-party AI APIs. Only *open-source* code, public documentation, and synthetic data are shared.
 
-When TreeGov is used in production, the scenario is different: the analyst loads their own CSV with real data on their desktop, and the model is trained and evaluated locally. The data never leaves the analyst's machine. TreeGov has no server, no remote authentication, no database, and no internet connection at runtime.
+When TreeGov is used in production, the scenario is different: the analyst loads their own *CSV* with real data on their desktop, and the model is trained and evaluated locally. The data never leaves the analyst's machine. TreeGov has no server, no remote authentication, no database, and no internet connection at runtime.
 
 This distinction has consequences that the project explicitly assumes:
 
-- **DEBUG logs contain sensitive information.** When training on real data, the log records PD per node, leaf distributions, real CSV column names, model fingerprint, and file paths. The analyst must treat them as confidential material.
-- **Exported HTML reports contain sensitive information.** Gains table, classification matrix, segment counts, PD per leaf. Sharing a report is sharing part of the model.
-- **The sensitive data policy is treated as explicit work.** Before declaring the stable 1.0.0 version, the project plans a specific security and privacy audit block: log retention and cleanup, GUI warnings, and a document dedicated to the threat model.
+- *DEBUG logs* contain sensitive information. When training on real data, the log records PD per node, leaf distributions, real *CSV* column names, model fingerprint, and file paths. The analyst must treat them as confidential material.
+- Exported *HTML* reports contain sensitive information. Gains table, classification matrix, segment counts, PD per leaf. Sharing a report is sharing part of the model.
+- The sensitive data policy is treated as explicit work. Before declaring the stable 1.0.0 version, the project plans a specific security and privacy audit block: log retention and cleanup, *GUI* warnings, and a document dedicated to the threat model.
 
 Operational summary: during development, zero real data in AI APIs. In end use, the data remains on the analyst's desktop, under their responsibility and their institution's policies.
 
@@ -63,19 +63,19 @@ Operational summary: during development, zero real data in AI APIs. In end use, 
 The philosophy is not abstract: it translates into concrete design
 decisions that are auditable in the source code.
 
-- **Clean-room architecture** → `backend_v3/` has zero GUI imports;
+- Clean-room architecture → `backend_v3/` has zero GUI imports;
   `frontend_v3/` has zero analytical logic. Enforced by an AST-based
   test (`test_frontend_clean_room`).
-- **White-box mathematics** → Every statistical formula is written
+- White-box mathematics → Every statistical formula is written
   explicitly, with bibliographic citations (Kass 1980, Breiman 1984,
   Loh & Shih 1997, Cochran 1954). Black-box libraries (sklearn,
   statsmodels) are blocked at the interpreter level by
   `backend_v3/import_guard.py`.
-- **Native governance** → `SplitConfig` is a frozen dataclass (immutable
+- Native governance → `SplitConfig` is a *frozen dataclass* (immutable
   auditable evidence); `params_fingerprint` identifies every model
   uniquely; the DEBUG transactional logger records each decision.
-- **Optional governance, banking by default** → `GovernanceMode`
-  (BANKING / RESEARCH) makes the regulatory layer opt-out, opening the
+- Optional governance, regulatory mode by default → `GovernanceMode`
+  (REGULATORY / RESEARCH) makes the regulatory layer opt-out, opening the
   tool to non-banking domains (health, social sciences) without
   sacrificing MRM rigor where it matters.
 
