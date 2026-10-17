@@ -209,7 +209,7 @@ y no-crédito (biología, ciencias sociales).
 | Sub-fase | Alcance | Estado |
 |---|---|---|
 | 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ 16/10/2026 |
-| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ⏳ |
+| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ✅ 16/10/2026 |
 | 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ⏳ |
 | 3.6.d | Cierre documental de la fase | ⏳ |
 | 3.6.e | Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología) | ⏳ |

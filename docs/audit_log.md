@@ -4221,3 +4221,23 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 **Referencias**: docs/3.6_design_public_datasets.md §2.4–§2.7, §3.5–§3.7, §4.4, §5.1; docs/roadmap.md sub-fase 3.6.e; README.md (claim multi-dominio del 11/10/2026); docs/design_decisions.md §0.2 (perfil biologist/social scientist).
 
 ---
+
+### 16/10/2026 — Fase 3.6.b: script de descarga y fixtures versionadas
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: Kimi K3 vía Moonshot AI directo (OpenCode 1.19.0).
+
+**Revisor**: Marco Rengel.
+
+**Alcance**: Creado `scripts/fetch_datasets.py` (descarga las 6 URLs legacy de UCI, verifica SHA256, normaliza y escribe los CSVs en `tests/fixtures/uci/`). Creadas las 6 fixtures versionadas:
+- german_credit (1000 filas)
+- car_evaluation (1728 filas)
+- balance_scale (625 filas)
+- breast_cancer_wdbc (569 filas)
+- iris (150 filas)
+- blood_transfusion (748 filas)
+
+**Verificación**: El script escribió el CSV y un sidecar `.sha256` por cada dataset. La descarga verificó los hashes contra los valores hardcoded. Suite 416/416 intacta.
+
+---
