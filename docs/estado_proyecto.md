@@ -92,13 +92,13 @@ Módulos:
 
 Módulos:
 - `frontend_v3/wizard.py` — ModelWizard (4 pasos) con retraducción en caliente
-- `backend_v3/types.py` — GovernanceMode (BANKING / RESEARCH)
+- `backend_v3/types.py` — GovernanceMode (REGULATORY / RESEARCH)
 - `backend_v3/tree_builder.py` — apply_jeffreys, pd_floor anulable, fingerprint con governance_mode
 - `backend_v3/session_state.py` — describe_dataset, reset_to_data_loaded,
   fix_spec(predictors=...), train(engine por nombre, apply_jeffreys, pd_floor)
 - `backend_v3/profiling.py` — helper interno _infer_column (reuso sin duplicar)
 
-### Fase 2.2 — Visor interactivo de árbol ✅ Cerrada 25/09/2026
+### Fase 2.2 — Visor interactivo de árbol ✅ Completada
 
 Módulos:
 - `frontend_v3/tree_view.py` — NodeItem, TreeScene, TreeView, TreePanel
@@ -106,7 +106,7 @@ Módulos:
   caliente, recoloreo por tema).
 - Extensión de `main_window.py`: pestaña Tree con HUD de propiedades del nodo.
 
-### Fase 2.3 — Panel de métricas OOS/OOT ✅ Cerrada 29/09/2026
+### Fase 2.3 — Panel de métricas OOS/OOT ✅ Completada
 
 Sub-fases completas:
 - 2.3.a Diseño estructural ✅
@@ -124,25 +124,25 @@ El panel OOS/OOT está operativo end-to-end: carga datos, entrena,
 evalúa OOS, carga OOT, evalúa, y renderiza badges con colores semánticos
 del tema activo.
 
-### Fase 2.4 — Reportes + integración ✅ Cerrada 03/10/2026
+### Fase 2.4 — Reportes + integración ✅ Completada
 
 Sub-pasos:
-- 2.4.a Diseño estructural ✅ (01/10/2026) — Pestaña Reports +
+- 2.4.a Diseño estructural ✅ — Pestaña Reports +
   `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados.
-- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ✅ (03/10/2026)
-- 2.4.c.1 Backend de Session (`get_gains_table` + `get_classification_matrix`) ✅ (03/10/2026)
-- 2.4.c.2.a Panel funcional (`reports_panel.py` + i18n) ✅ (03/10/2026)
-- 2.4.c.2.b Cableado MainWindow ✅ (03/10/2026)
-- 2.4.c.2.c.1 Export HTML ✅ (03/10/2026)
-- 2.4.c.2.c.2 Limpieza i18n ✅ (03/10/2026)
-- 2.4.c.2.c.3 Tests del panel ✅ (03/10/2026)
-- **2.4.c.2 completa** ✅ (03/10/2026)
-- 2.4.d Tests E2E + cierre ✅ (03/10/2026)
-- **Fase 2.4 completa** ✅ (03/10/2026)
+- 2.4.b Backend de reportes (`GainsTable` + `ClassificationMatrix`) ✅
+- 2.4.c.1 Backend de Session (`get_gains_table` + `get_classification_matrix`) ✅
+- 2.4.c.2.a Panel funcional (`reports_panel.py` + i18n) ✅
+- 2.4.c.2.b Cableado MainWindow ✅
+- 2.4.c.2.c.1 Export HTML ✅
+- 2.4.c.2.c.2 Limpieza i18n ✅
+- 2.4.c.2.c.3 Tests del panel ✅
+- **2.4.c.2 completa** ✅
+- 2.4.d Tests E2E + cierre ✅
+- **Fase 2.4 completa** ✅
 
 Diseño completo en `docs/roadmap.md` (sección Fase 2.4).
 
-### Fase 3.0 — Cierre de zona gris documental ✅ Cerrada 04/10/2026
+### Fase 3.0 — Cierre de zona gris documental ✅ Completada
 
 Módulos y documentos:
 - `docs/design_decisions.md` (nuevo) — 44 subsecciones documentando las
@@ -158,7 +158,7 @@ Módulos y documentos:
 - `docs/roadmap.md` — redefinición de las fases 3-7 (la Fase 3 original
   mezclaba tres familias de trabajo).
 
-### Fase 3.1 — Multiclase ✅ Cerrada 09/10/2026
+### Fase 3.1 — Multiclase ✅ Completada
 
 **Diseño estructural completado** (04/10/2026):
 - `docs/3.1_design_multiclass.md` (nuevo, ~40 KB, 13 secciones).
@@ -178,12 +178,12 @@ binarios hasta Fase 3.5.
   post-entrenamiento (badge de Gini negativo + botón de reversión).
 
 **Sub-fases** (6, todas cerradas):
-- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` ✅ (04/10/2026)
+- 3.1.a — `TreeNode`/`TreeModel` tuple fields + `TreeBuilder.target_class` ✅
 - 3.1.b — Jeffreys multivariante + floor renormalizado + reordenamiento ✅ (integrado en 3.1.a)
-- 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST ✅ (05/10/2026)
-- 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability ✅ (09/10/2026)
-- 3.1.e — Wizard multiclase: tabla de clases + counts + warning minoritaria ✅ (09/10/2026)
-- 3.1.f — MetricsPanel: badge Gini negativo + botón de reversión ✅ (09/10/2026)
+- 3.1.c — `Session.fix_spec` + `SessionState` + bloqueo C&RT/QUEST ✅
+- 3.1.d — `predict_pd` 2D + bloqueos en validation/reporting/stability ✅
+- 3.1.e — Wizard multiclase: tabla de clases + counts + warning minoritaria ✅
+- 3.1.f — MetricsPanel: badge Gini negativo + botón de reversión ✅
 
 CHAID y CHAID_EXHAUSTIVE son los únicos motores que admiten K>2 en 3.1;
 C&RT y QUEST se abren en Fase 3.4. Las métricas y reportes siguen
@@ -191,7 +191,7 @@ binarios hasta Fase 3.5. Invariante no negociable: para K=2 con
 target_class=1 y labels estándar, el modelo es numéricamente idéntico
 al pre-3.1.
 
-### Fase 3.2 — Ponderación por muestra ✅ Cerrada 10/10/2026
+### Fase 3.2 — Ponderación por muestra ✅ Completada
 
 **Alcance**: ponderación por muestra transversal al backend (motores,
 árbol, sesión, métricas, reportes, monitoreo y wizard). Invariante C1:
@@ -207,15 +207,15 @@ sin pesos, comportamiento idéntico al pre-3.2.
 - 3.2.g — validation y reporting ponderados ✅
 - 3.2.h — stability ponderado + wizard + E2E + cierre ✅
 
-Tres parámetros nuevos en el fingerprint: `weighted`, `weight_col`,
+Tres parámetros nuevos en el *fingerprint*: `weighted`, `weight_col`,
 `min_child_weight`. Tres decisiones diferidas en `design_decisions.md`
 (§13.7, §13.8, §13.9). Suite: 346/346.
 
-### Fase 3.3 — Categorías de población ✅ Cerrada 11/10/2026
+### Fase 3.3 — Categorías de población ✅ Completada
 
-**Alcance**: filtro opt-in de población, declarado en fix_spec como
+**Alcance**: filtro *opt-in* de población, declarado en fix_spec como
 columna auxiliar del CSV. Filas cuyo valor no está en la whitelist de
-valores OK se excluyen antes del split, antes del train y antes de la
+valores OK se excluyen antes del *split*, antes del train y antes de la
 evaluación OOS/OOT, y se reportan en `n_excluded_population` +
 `population_breakdown` (desglose por motivo). Invariante C1: sin
 `population_col`, comportamiento idéntico al pre-3.3.
@@ -228,10 +228,10 @@ evaluación OOS/OOT, y se reportan en `n_excluded_population` +
 - 3.3.d — Wizard: combo de población, regla espejo, tabla de valores OK, i18n ✅
 - 3.3.e — Tests E2E del flujo de población + cierre documental ✅
 
-Dos parámetros nuevos en el fingerprint: `population_col`,
+Dos parámetros nuevos en el *fingerprint*: `population_col`,
 `population_ok_values`. Suite: 384/384.
 
-### Fase 3.5 — Reportes multiclase y ponderados ✅ Cerrada 15/10/2026
+### Fase 3.5 — Reportes multiclase y ponderados ✅ Completada
 
 **Alcance**: abrir los tres puntos de bloqueo remanentes de la Fase
 3.1.d (validation, reporting y Session.evaluate_oot) a targets con
@@ -241,12 +241,12 @@ o uniformes, el resultado es idéntico bit a bit al pre-3.5.
 
 **Sub-fases**:
 
-- 3.5.a — validation.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
-- 3.5.b — reporting.py multiclase + desbloqueo K>2. ✅ Cerrada 15/10/2026.
-- 3.5.c — stability + Session: evaluate_oot multiclase. ✅ Cerrada 15/10/2026.
-- 3.5.d — auditoría de frontend + methodology + cierre documental. ✅ Cerrada 15/10/2026.
+- 3.5.a — validation.py multiclase + desbloqueo K>2. ✅ Completada.
+- 3.5.b — reporting.py multiclase + desbloqueo K>2. ✅ Completada.
+- 3.5.c — stability + Session: evaluate_oot multiclase. ✅ Completada.
+- 3.5.d — auditoría de frontend + methodology + cierre documental. ✅ Completada.
 
-**Cierre de la Fase 3.5 (a-d)**. El pipeline completo de validación,
+**Cierre de la Fase 3.5 (a-d)**. El *pipeline* completo de validación,
 reporte y monitoreo admite targets multiclase (K ≥ 2) combinados con
 ponderación por muestra. 3.5.a abrió compute_oos_metrics (D15-D17).
 3.5.b abrió las dos funciones de reporte y cerró el diferido §13.7
@@ -262,16 +262,16 @@ PASSED.
 
 Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente de herramientas CLI duplicadas en el .venv del proyecto (aider-chat, build, twine; ver docs/audit_log.md entrada del 16/10/2026). Sin cambios de código analítico.
 
-**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor: tres datasets de UCI (German Credit binario, Car Evaluation multiclase categórico K=4, Balance Scale multiclase ordinal K=3); script de descarga con verificación SHA256; contrato de CSV TreeGov-ready; fixtures completas versionadas en `tests/fixtures/uci/` (~150 KB) en lugar de subset + skip; matriz de costes de German Credit ignorada; entregable triple (scripts + informe + tests); baseline propio cuantitativo + comentario cualitativo de literatura. Sin cambios de código: `backend_v3/` no se toca, suite 416/416 intacta.
+**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor: tres *datasets* de UCI (German Credit binario, Car Evaluation multiclase categórico K=4, Balance Scale multiclase ordinal K=3); script de descarga con verificación SHA256; contrato de CSV TreeGov-ready; fixtures completas versionadas en `tests/fixtures/uci/` (~150 KB) en lugar de subset + skip; matriz de costes de German Credit ignorada; entregable triple (scripts + informe + tests); baseline propio cuantitativo + comentario cualitativo de literatura. Sin cambios de código: `backend_v3/` no se toca, suite 416/416 intacta.
 
 ### Fases pendientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3.3** — Categorías de población ✅ Completada 11/10/2026
-- **Fase 3.4** — CRT y QUEST multiclase. ✅ Cerrada 12/10/2026 (3.4.a C&RT + 3.4.b QUEST).
-- **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Cerrada 15/10/2026 (4 sub-fases a-d).
-- **Fase 3.6.a** — Diseño del plan de validación con datasets públicos. ✅ Cerrada 16/10/2026 (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
-- **Fase 3.6** — Validación con datasets públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Cerrada 16/10/2026 (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
+- **Fase 3.3** — Categorías de población ✅ Completada
+- **Fase 3.4** — CRT y QUEST multiclase. ✅ Completada (3.4.a C&RT + 3.4.b QUEST).
+- **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Completada (4 sub-fases a-d).
+- **Fase 3.6.a** — Diseño del plan de validación con *datasets* públicos. ✅ Completada (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
+- **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
 - **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Pendiente.
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
@@ -281,7 +281,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 
 ### Verificación manual de la GUI (13/10/2026)
 
-La GUI se abrió en pantalla real por primera vez y se recorrió el flujo completo con el dataset sintético `data/credit_risk_dataset.csv`: cargar CSV, asistente de 4 pasos, entrenamiento CRT, evaluación OOS, gains table, matriz de clasificación con umbrales variables, export HTML y tema oscuro. Todos los pasos funcionaron correctamente y los valores numéricos mostrados coinciden con la corrida headless (PD raíz 6.65%, Gini OOS 0.4265, KS 0.3614). Se registraron 8 hallazgos de usabilidad y estética (H1 a H8) como deuda diferida. Ver `docs/roadmap.md` sección Deferred y `docs/audit_log.md` entrada del 13/10/2026.
+La GUI se abrió en pantalla real por primera vez y se recorrió el flujo completo con el *dataset* sintético `data/credit_risk_dataset.csv`: cargar CSV, asistente de 4 pasos, entrenamiento CRT, evaluación OOS, gains table, matriz de clasificación con umbrales variables, export HTML y tema oscuro. Todos los pasos funcionaron correctamente y los valores numéricos mostrados coinciden con la corrida headless (PD raíz 6.65%, Gini OOS 0.4265, KS 0.3614). Se registraron 8 hallazgos de usabilidad y estética (H1 a H8) como deuda diferida. Ver `docs/roadmap.md` sección Deferred y `docs/audit_log.md` entrada del 13/10/2026.
 
 ---
 
@@ -347,10 +347,10 @@ TreeGov/
 | **Caja blanca** (solo numpy/pandas/scipy) | Auditabilidad MRM: cada fórmula explícita con cita bibliográfica |
 | **Gini = 2·AUC − 1** | Convención estándar en credit scoring (no confundir con Gini económico ni Gini = AUC − 0.5) |
 | **Licencia Apache 2.0** | Permisiva, con cláusula de patentes, apta para uso bancario comercial |
-| **Idioma de documentación** | Inglés por defecto (estándar open source); bilingüe README y philosophy; audit_log en español (histórico interno) |
+| **Idioma de documentación** | Inglés por defecto (estándar *open source*); bilingüe README y philosophy; audit_log en español (histórico interno) |
 | **Anti-leakage** | TrainOnlyImputer exclusivo sobre fold de entrenamiento |
 | **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
-| **GovernanceMode opcional (Fase 2.1)** | BANKING por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el fingerprint del modelo etiqueta el modo efectivo (BANKING/RESEARCH/CUSTOM) |
+| **GovernanceMode opcional (Fase 2.1)** | REGULATORY por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el *fingerprint* del modelo etiqueta el modo efectivo (REGULATORY/RESEARCH/CUSTOM) |
 | **Herramienta CLI fuera del .venv** | Aider instalado vía pipx con Python 3.11.9 independiente. Lección del 27/09: instalar herramientas CLI dentro del .venv del proyecto degradó numpy/scipy |
 | **Proveedor de IA: Moonshot AI directo** | Migrado de NVIDIA NIM el 03/10/2026 por 504 recurrentes. Endpoint `https://api.moonshot.ai/v1`, costes $3/$15 por millón de tokens. Requiere `~/.aider.model.settings.yml` con `use_temperature: false` (Kimi K3 exige temperature=1). Cliente sigue siendo Aider (no OpenCode, no Kimi Code Desktop) |
 | **`.gitattributes` con `-text`** | Previene mezcla de line endings (CRLF/LF) que genera diffs ruidosos (1218/1151 en lugar de 68 líneas reales). `-text` le dice a git "no normalices este archivo". Ver commit `7040046` |
@@ -472,12 +472,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
-- [x] Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en `docs/audit_log.md` — **Resuelto el 24/09/2026**.
-- [x] Enlace Filosofía → `docs/philosophy.md` en ambos READMEs — **Resuelto el 24/09/2026**.
-- [x] Columna "Regulatory anchor" en la tabla de capacidades analíticas — **Resuelto el 24/09/2026**.
-- [x] Aviso regulatorio reforzado con bloque visual (⚠️) — **Resuelto el 24/09/2026**.
-- [x] Estado del proyecto visual con emojis/checklist en `roadmap.md` — **Resuelto el 24/09/2026**.
-- [x] Bloque "Cómo se refleja esto en el diseño" en `philosophy.md` — **Resuelto el 24/09/2026**.
+- [x] Sincronizar entradas faltantes de Fase 1 y Fase 1.2 en `docs/audit_log.md` — Resuelto el 24/09/2026.
+- [x] Enlace Filosofía → `docs/philosophy.md` en ambos READMEs — Resuelto el 24/09/2026.
+- [x] Columna "Regulatory anchor" en la tabla de capacidades analíticas — Resuelto el 24/09/2026.
+- [x] Aviso regulatorio reforzado con bloque visual (⚠️) — Resuelto el 24/09/2026.
+- [x] Estado del proyecto visual con emojis/checklist en `roadmap.md` — Resuelto el 24/09/2026.
+- [x] Bloque "Cómo se refleja esto en el diseño" en `philosophy.md` — Resuelto el 24/09/2026.
 
 ### Pendientes técnicos
 
@@ -487,10 +487,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
 - [x] **Fase 3.2** — Ponderación por muestra: Cerrada 10/10/2026 (8 sub-fases a-h, suite 346/346).
-- [x] **Fase 3.3** — Categorías de población. **Completada 11/10/2026.** 5 sub-fases (a-e). Suite 384/384.
+- [x] **Fase 3.3** — Categorías de población. Completada 11/10/2026. 5 sub-fases (a-e). Suite 384/384.
 - [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
-- [ ] Datasets públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
+- [ ] *Datasets* públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
 - [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
 
 ### Pendientes de CV y carrera profesional
@@ -500,7 +500,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] Regenerar PDF del CV (encoding UTF-8 roto en encabezado).
 - [ ] Mover sección "Idiomas" a la parte superior del CV.
 - [ ] Añadir "IA agéntica" a Habilidades del CV.
-- [ ] Agregar TreeGov al CV (formulación personal/open source) — depende de la cláusula IP.
+- [ ] Agregar TreeGov al CV (formulación personal/*open source*) — depende de la cláusula IP.
 - [ ] Actualizar LinkedIn con mención genérica de TreeGov (sin enlace al repo) — decisión estratégica.
 
 ### Pendientes diferidos / estructurales

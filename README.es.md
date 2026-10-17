@@ -19,7 +19,7 @@ TreeGov es una estación de trabajo analítica de código abierto para la segmen
 
 El sistema implementa CHAID, C&RT y QUEST con matemática de caja blanca: cada fórmula estadística está escrita explícitamente y citada a su publicación original. La gobernanza es *opt-in* a través de dos modos explícitos. El Modo Regulatorio (por defecto) aplica la capa completa de MRM requerida por bancos y burós de crédito: estimador de Jeffreys, PD floor (BCBS CRE 20.39) y huellas criptográficas que registran la elección. El Modo Investigación produce probabilidades empíricas crudas, abriendo la herramienta a dominios como salud, biología o ciencias sociales. La elección es siempre explícita y nunca silenciosa.
 
-A diferencia de las librerías de propósito general (scikit-learn, statsmodels, paquetes de R) que exigen programar, TreeGov ofrece un **entorno gráfico** donde el analista se concentra en el análisis, no en el código. A diferencia de las herramientas GUI descontinuadas, es open source, mantenida activamente, y construida desde cero con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño de primera clase.
+Las librerías tradicionales (*scikit-learn*, *statsmodels* o paquetes de R) exigen escribir código, lo que resta tiempo al análisis. Por otro lado, las herramientas visuales que existieron en el pasado fueron descontinuadas. TreeGov llena ese vacío combinando un entorno visual de código abierto con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño fundamental.
 
 ---
 
@@ -42,24 +42,6 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 *   Las decisiones: la arquitectura y los *trade-offs* están documentados para justificar cada elección.
 *   El modelo: cada entrenamiento genera un *fingerprint* (huella) único que actúa como sello inmutable.
 *   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 400 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
-
-```mermaid
-flowchart TD
-    subgraph Legacy [Evolución de Herramientas]
-        A[Herramientas GUI Clásicas\nDescontinuadas] -->|Vacío de Gobernanza| B(Suites Corporativas\nCerradas y Costosas)
-    end
-
-    subgraph TreeGov [TreeGov]
-        C((Open Source\nAuditable)) --- D[Entorno Visual\nSin programar]
-        C --- E[Gobernanza Nativa\nMRM / IFRS 9]
-    end
-
-    B -.->|Alternativa Democratizada| C
-    A -.->|Hereda Filosofía Visual| D
-
-    style C fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
-    style TreeGov fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px
-```
 
 ---
 

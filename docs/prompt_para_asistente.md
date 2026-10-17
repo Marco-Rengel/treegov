@@ -8,10 +8,10 @@
 
 ## 1. Quién soy
 
-**Marco Rengel** — Ecuatoriano, matemático, **econometrista**, NO informático. Trabajo en riesgo de crédito desde 2010 (Equifax Ecuador 2009-2016, banca actual). Uso asistentes IA como tú para:
+**Marco Rengel** — Ecuatoriano, matemático, econometrista, NO informático. Trabajo en riesgo de crédito desde 2010 (Equifax Ecuador 2009-2016, banca actual). Uso asistentes IA como tú para:
 
 - Aprender herramientas modernas (Python, WSL, Aider, OpenCode, git).
-- Diseñar y auditar TreeGov (mi proyecto personal open source).
+- Diseñar y auditar TreeGov (mi proyecto personal *open source*).
 - Traducir mis decisiones de negocio a código.
 
 **No esperes que yo sepa jerga técnica por defecto.** Explica conceptos cuando aparezcan. Cuando yo diga "hazlo", "guíame", "paso a paso", quiero comandos exactos y capturas o textos para pegar, no teoría.
@@ -20,15 +20,15 @@
 
 ## 2. Qué es TreeGov (contexto mínimo)
 
-**TreeGov** es una estación de trabajo analítica para **segmentación de riesgo de crédito** con **gobernanza MRM (Model Risk Management)** e **IFRS 9** nativas.
+**TreeGov** es una estación de trabajo analítica para segmentación de riesgo de crédito con gobernanza MRM (Model Risk Management) e IFRS 9 nativas.
 
-- **Inspiración:** software estadístico clásico de árboles de decisión (descontinuado), del cual se recupera la capacidad del analista de **intervenir manualmente** los cortes del árbol por razones de negocio, no solo estadísticas.
+- **Inspiración:** software estadístico clásico de árboles de decisión (descontinuado), del cual se recupera la capacidad del analista de intervenir manualmente los cortes del árbol por razones de negocio, no solo estadísticas.
 - **Diferenciador:** la gobernanza no es un añadido; es el punto de partida (evidencia auditable, caja blanca matemática, trazabilidad regulatoria).
 - **Stack:** Python 3.11, PySide6 (GUI), numpy/pandas/scipy (solo backend).
 - **Prohibiciones duras:** `sklearn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`. Bloqueados a nivel de intérprete.
 - **Licencia:** Apache 2.0.
 - **GitHub:** github.com/Marco-Rengel/treegov (privado actualmente).
-- **Datos:** NO se manejan datos bancarios reales. Solo datasets públicos (German Credit, UCI) o sintéticos.
+- **Datos:** NO se manejan datos bancarios reales. Solo *datasets* públicos (German Credit, UCI) o sintéticos.
 
 **No confundir con:** el proyecto legacy `DecisionTree_Modeler` (archivado en `archive/`, preservado como referencia histórica, no modificar).
 
@@ -57,7 +57,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Documentación obligatoria.** Cada decisión arquitectónica, hallazgo o cambio va al `audit_log.md` con formato (fecha, estado, artefactos, hallazgos, tests).
 - **Nada fuera de la herramienta elegida.** Si decidimos trabajar con Aider, no proponer "hazlo tú manualmente" salvo excepciones explícitamente aprobadas.
 - **Contexto no asumido.** Cada vez que abras un chat nuevo, asume que solo tienes este documento + lo que yo te pase. Pregunta si falta contexto.
-- **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código open source, documentación pública o datos sintéticos/públicos.
+- **Privacidad estricta.** Nunca se envían a APIs gratuitas datos bancarios reales, credenciales, contratos ni información interna. Solo código *open source*, documentación pública o datos sintéticos/públicos.
 - **Documentación de fase cerrada: nunca se aplaza.** Cuando una sub-fase cierra, la actualización de audit_log + roadmap + estado_proyecto + documentos de contexto se hace en el mismo bloque de trabajo. Aplazarlo desincroniza el contexto y cuesta tiempo de reconstrucción en el siguiente chat (esto ya ocurrió en 3.1.d/e). Excepciones: solo 504/timeout del proveedor o cambio trivial de 1 línea consolidado.
 - **Trabajo en ráfaga refinado el 10/10/2026.** La regla anterior (no cerrar OpenCode nunca, mantener siempre la misma sesión) se refina a "cerrar en fronteras naturales". Dentro de una sub-fase: OpenCode abierto, los prompts de código, tests y documentación van seguidos. Al cerrar una sub-fase (commit pusheado): cerrar OpenCode; el prefijo vuelve a ser pequeño al reabrir. El cierre documental de una fase se trata como una unidad. Evitar salidas accidentales al copiar un prompt.
 - **Nunca aplazar la documentación de cierre.** Ya estaba en el brief, pero se refuerza: cuando una sub-fase cierra, la actualización de `audit_log` + `roadmap` + `estado_proyecto` + documentos de contexto se hace en el mismo bloque. Si se aplaza, el coste de reconstruir el contexto en el siguiente chat es más alto que hacerlo bien la primera vez.
@@ -109,8 +109,8 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Suite de tests:** 422/422 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
-Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro opt-in
-declarado en `fix_spec`, propagación por toda la pipeline, wizard con
+Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
+declarado en `fix_spec`, propagación por toda la *pipeline*, wizard con
 combo y tabla de valores OK, tests E2E. Invariante C1: sin
 `population_col`, comportamiento idéntico al pre-3.3. Suite 384/384.
 
@@ -143,13 +143,13 @@ de la Fase 3.5).
 Última sub-fase de la Fase 3.5. Auditoría de los cuatro archivos de
 frontend (cero cambios obligatorios; tres cosméticos diferidos a H4),
 subsecciones §8.11-§8.14 en methodology.md, cierre documental.
-Fase 3.5 completa: pipeline de validación/reporte/monitoreo admite
+Fase 3.5 completa: *pipeline* de validación/reporte/monitoreo admite
 K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
-(validación con datasets públicos).
+(validación con *datasets* públicos).
 
 **Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
 
-**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). Próximo paso: 3.6.b (script de descarga + fixtures).
+**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). Próximo paso: 3.6.b (script de descarga + fixtures).
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -159,7 +159,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.6 (validación con datasets públicos: German
+- **Próximo paso:** Fase 3.6 (validación con *datasets* públicos: German
   Credit, UCI).
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
@@ -332,7 +332,7 @@ el ahorro en correcciones y en tokens de diagnóstico lo compensa.
 ### Privacidad
 - Moonshot AI es servicio de pago (NOVASCENT/Singapur), pero sigue siendo
   una API en la nube de terceros.
-- **Regla estricta:** solo código open source, docs públicas o datasets
+- **Regla estricta:** solo código *open source*, docs públicas o *datasets*
   sintéticos. Nunca datos bancarios reales, credenciales, contratos ni
   información interna — ni siquiera a APIs de pago.
 

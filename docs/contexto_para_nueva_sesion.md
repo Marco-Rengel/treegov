@@ -99,28 +99,28 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 2.3.e.4 | MetricsPanel funcional | ✅ |
 | 2.3.e.5 | Cableado MainWindow ↔ MetricsPanel | ✅ |
 | 2.3.f | Tests E2E + cierre (Fase 2.3 completa) | ✅ |
-| 2.4.a | Diseño estructural del panel de reportes | ✅ (01/10/2026) |
-| 2.4.b | Backend de reportes (GainsTable + ClassificationMatrix) | ✅ (03/10/2026) |
-| 2.4.c.1 | Métodos de reporte en Session | ✅ (03/10/2026) |
-| 2.4.c.2 | Panel de reportes funcional + cableado + export HTML + tests | ✅ (03/10/2026) |
-| 2.4.d | Tests E2E + cierre | ✅ (03/10/2026) |
-| 3.0 | Cierre de zona gris documental + 4 parámetros canónicos | ✅ (04/10/2026) |
-| 3.1.a | TreeNode/TreeModel tuple fields + TreeBuilder.target_class | ✅ (04/10/2026) |
+| 2.4.a | Diseño estructural del panel de reportes | ✅ |
+| 2.4.b | Backend de reportes (GainsTable + ClassificationMatrix) | ✅ |
+| 2.4.c.1 | Métodos de reporte en Session | ✅ |
+| 2.4.c.2 | Panel de reportes funcional + cableado + export HTML + tests | ✅ |
+| 2.4.d | Tests E2E + cierre | ✅ |
+| 3.0 | Cierre de zona gris documental + 4 parámetros canónicos | ✅ |
+| 3.1.a | TreeNode/TreeModel tuple fields + TreeBuilder.target_class | ✅ |
 | 3.1.b | Jeffreys multivariante + floor renormalizado + reordenamiento | ✅ (integrado en 3.1.a) |
-| 3.1.c | Session.fix_spec + SessionState + bloqueo C&RT/QUEST | ✅ (05/10/2026) |
-| 3.1.d | predict_pd 2D + bloqueos en validation/reporting/stability | ✅ (09/10/2026) |
-| 3.1.e | Wizard multiclase: tabla de clases + warning minoritaria | ✅ (09/10/2026) |
-| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ✅ (09/10/2026) |
-| **3.1** | **Multiclase (fase completa)** | **✅ Cerrada 09/10/2026** |
-| **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada 10/10/2026** |
-| **3.3** | **Categorías de población (Indet / Insufficient / No Perf)** | **✅ Cerrada 11/10/2026** |
-| **3.4** | **CRT/QUEST multiclase** | **✅ Cerrada 12/10/2026** |
-| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.c | Session multiclase (evaluate_oos, evaluate_oot, get_classification_matrix) | ✅ 15/10/2026 |
-| 3.5.d | Auditoría de frontend + methodology + cierre | ✅ 15/10/2026 |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada 15/10/2026 |
-| 3.6 | Validación con datasets públicos | ✅ (16/10/2026) |
+| 3.1.c | Session.fix_spec + SessionState + bloqueo C&RT/QUEST | ✅ |
+| 3.1.d | predict_pd 2D + bloqueos en validation/reporting/stability | ✅ |
+| 3.1.e | Wizard multiclase: tabla de clases + warning minoritaria | ✅ |
+| 3.1.f | MetricsPanel: badge Gini negativo + botón de reversión | ✅ |
+| **3.1** | **Multiclase (fase completa)** | **✅ Cerrada** |
+| **3.2** | **Ponderación por muestra (8 sub-fases a-h)** | **✅ Cerrada** |
+| **3.3** | **Categorías de población (Indet / Insufficient / No Perf)** | **✅ Cerrada** |
+| **3.4** | **CRT/QUEST multiclase** | **✅ Cerrada** |
+| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ |
+| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ |
+| 3.5.c | Session multiclase (evaluate_oos, evaluate_oot, get_classification_matrix) | ✅ |
+| 3.5.d | Auditoría de frontend + methodology + cierre | ✅ |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada |
+| 3.6 | Validación con datasets públicos | ✅ |
 | 3.6.b | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
@@ -278,9 +278,9 @@ Tras la resolución del pendiente Aider/build/twine (16/10/2026) NO se publicó 
 
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 
-> **Estado intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con datasets públicos: German Credit, UCI).
+> **Estado intermedio (mañana).** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con *datasets* públicos: German Credit, UCI).
 
-> **Estado intermedio 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + fixtures versionadas `tests/fixtures/uci/`).
+> **Estado intermedio (tarde).** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + fixtures versionadas `tests/fixtures/uci/`).
 
 **Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
 15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
@@ -290,7 +290,7 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Próximo paso**: Fase 3.6.e (Modo no-bancario y validación multi-dominio extensiva). La Fase 3.6 (validación con datasets públicos) está cerrada: 6 datasets UCI en 4 dominios validados, suite 422/422.
+**Próximo paso**: Fase 3.6.e (Modo no-bancario y validación multi-dominio extensiva). La Fase 3.6 (validación con *datasets* públicos) está cerrada: 6 *datasets* UCI en 4 dominios validados, suite 422/422.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

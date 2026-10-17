@@ -17,7 +17,7 @@ La gobernanza no es un añadido. Es el punto de partida:
 - Caja blanca matemática = fórmulas citables y verificables.
 - Bloqueo de librerías de caja negra = auditabilidad por diseño.
 
-## A quién sirve
+## ¿A quién sirve?
 
 - Analistas de riesgo de crédito que quieren dedicar tiempo al análisis, no a la programación.
 - Equipos de validación MRM que necesitan trazabilidad completa.

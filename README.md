@@ -19,7 +19,7 @@ TreeGov is an open-source analytical workbench for decision-tree segmentation. I
 
 The system implements CHAID, C&RT, and QUEST with white-box mathematics: every statistical formula is written explicitly and cited to its original publication. Governance is opt-in through two explicit modes. Regulatory mode (the default) applies the full MRM layer required by banks and credit bureaus: Jeffreys estimator, PD floor (BCBS CRE 20.39), and fingerprints that record the choice. Research mode produces raw empirical probabilities, opening the tool to domains such as health, biology, or social sciences. The choice is always explicit and never silent.
 
-Unlike general-purpose libraries (scikit-learn, statsmodels, R packages) that require programming, TreeGov provides a **graphical environment** where the analyst focuses on analysis rather than code. Unlike discontinued GUI tools, it is open source, actively maintained, and built from the ground up with regulatory traceability (SR 11-7, Basel, IFRS 9) as a first-class design principle.
+Traditional libraries (*scikit-learn*, *statsmodels*, or R packages) require writing code, which takes time away from analysis. Meanwhile, the visual tools that existed in the past were discontinued. TreeGov fills that void by combining an *open-source* visual environment with regulatory traceability (SR 11-7, Basel, IFRS 9) as a core design principle.
 
 ---
 
@@ -42,24 +42,6 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 *   The decisions: the architecture and *trade-offs* are documented to justify every choice.
 *   The model: every training run generates a unique *fingerprint* that acts as an immutable seal.
 *   The evidence: a transactional log records every step, and a suite of over 400 tests (including validated public *datasets*) guarantees reproducibility.
-
-```mermaid
-flowchart TD
-    subgraph Legacy [Tool Evolution]
-        A[Classic GUI Tools\nDiscontinued] -->|Governance Gap| B(Closed Corporate Suites\nCostly)
-    end
-
-    subgraph TreeGov [TreeGov]
-        C((Open Source\nAuditable)) --- D[Visual Environment\nNo coding]
-        C --- E[Native Governance\nMRM / IFRS 9]
-    end
-
-    B -.->|Democratized Alternative| C
-    A -.->|Inherits Visual Philosophy| D
-
-    style C fill:#2e7d32,stroke:#1b5e20,stroke-width:2px,color:#fff
-    style TreeGov fill:#e8f5e9,stroke:#a5d6a7,stroke-width:2px
-```
 
 ---
 

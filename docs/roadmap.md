@@ -19,7 +19,7 @@
   - Test suite: 128/128.
 - ✅ **Phase 2.1** (transactional wizard): 4-step QWizard (engine,
   predictors/target, validation scheme, MRM governance) feeding Session.
-  Governance Mode (Banking/Research) added: Banking is the default;
+  Governance Mode (Regulatory/Research) added: Regulatory is the default;
   Research disables Jeffreys + PD Floor for non-banking domains (health,
   social sciences). Backend gained Session.describe_dataset() /
   fix_spec(predictors=...) / train(engine by name) /
@@ -88,14 +88,14 @@ clasificación y exportación HTML autocontenido.
 | Sub-paso | Estado | Alcance |
 |---|---|---|
 | 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
-| 2.4.b Backend de reportes | ✅ (03/10/2026) | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; 5 tests con valores verificados a mano |
-| 2.4.c.1 Backend de Session | ✅ (03/10/2026) | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
-| 2.4.c.2.a Panel funcional | ✅ (03/10/2026) | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
-| 2.4.c.2.b Cableado MainWindow | ✅ (03/10/2026) | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
-| 2.4.c.2.c.1 Export HTML | ✅ (03/10/2026) | QDialog + QTextBrowser + save-as |
-| 2.4.c.2.c.2 Limpieza i18n | ✅ (03/10/2026) | 14 claves huérfanas eliminadas |
-| 2.4.c.2.c.3 Tests del panel | ✅ (03/10/2026) | 7 tests unitarios en `tests/test_reports_panel.py` |
-| 2.4.d Tests E2E + cierre | ✅ (03/10/2026) | 4 tests E2E en `test_e2e_reports.py`; screenshot diferido a 2.4.e |
+| 2.4.b Backend de reportes | ✅ Completada | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; 5 tests con valores verificados a mano |
+| 2.4.c.1 Backend de Session | ✅ Completada | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
+| 2.4.c.2.a Panel funcional | ✅ Completada | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
+| 2.4.c.2.b Cableado MainWindow | ✅ Completada | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
+| 2.4.c.2.c.1 Export HTML | ✅ Completada | QDialog + QTextBrowser + save-as |
+| 2.4.c.2.c.2 Limpieza i18n | ✅ Completada | 14 claves huérfanas eliminadas |
+| 2.4.c.2.c.3 Tests del panel | ✅ Completada | 7 tests unitarios en `tests/test_reports_panel.py` |
+| 2.4.d Tests E2E + cierre | ✅ Completada | 4 tests E2E en `test_e2e_reports.py`; screenshot diferido a 2.4.e |
 
 **Diseño acordado (30/09/2026):**
 
@@ -141,7 +141,7 @@ clasificación y exportación HTML autocontenido.
   ciencias sociales (referente: herramientas estadísticas clásicas de árboles de decisión, hoy descontinuadas).
 - **Fase 3.x — Ponderación por muestra.** Para replicar flujo de buró
   (Equifax, Experian) donde la muestra está sesgada y se reajusta por
-  pesos. No aplica a TreeGov hoy (datasets completos).
+  pesos. No aplica a TreeGov hoy (*datasets* completos).
 - **Fase 3.x — Categorías adicionales.** `Indet`, `Insufficient`,
   `No Perf` como metadatos de población (no entran al modelo). Relevante
   cuando se integre con sistemas de buró.
@@ -149,7 +149,7 @@ clasificación y exportación HTML autocontenido.
 ### ✅ Phase 3.1 — Multiclase (target + TreeNode + TreeBuilder + wizard + MetricsPanel)
 **Priority: HIGH** · **Cerrada el 09/10/2026**
 
-**Motivación.** Extiende la pipeline de construcción de árboles a targets
+**Motivación.** Extiende la *pipeline* de construcción de árboles a targets
 con K ≥ 2 clases (antes solo binario). Cubre la capa profunda
 (TreeNode/TreeModel/TreeBuilder), la sesión (fix_spec/SessionState), los
 consumidores downstream (validation/reporting/stability con bloqueo
@@ -194,13 +194,13 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Prioridad |
 |---|---|---|
-| 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada 04/10/2026 |
-| 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada 09/10/2026 |
-| 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada 10/10/2026 |
-| 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
-| 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | Completada 15/10/2026 |
-| 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | Completada 16/10/2026 |
+| 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada |
+| 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada |
+| 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada |
+| 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada |
+| 3.4 | CRT y QUEST multiclase | Completada |
+| 3.5 | Reportes adaptados (multiclase + ponderación) | Completada |
+| 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | Completada |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
 
@@ -208,42 +208,42 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ 16/10/2026 |
-| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ✅ 16/10/2026 |
-| 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ✅ 16/10/2026 |
-| 3.6.d | Cierre documental de la fase | ✅ 16/10/2026 |
+| 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ Completada |
+| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ✅ Completada |
+| 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ✅ Completada |
+| 3.6.d | Cierre documental de la fase | ✅ Completada |
 | 3.6.e | Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología) | ⏳ |
 
-**Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres datasets (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
+**Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres *datasets* (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
 
-**Ampliación de alcance (16/10/2026, tarde).** En la sesión del mismo día se decidió ampliar el conjunto de datasets de 3 datasets (todos bancarios o neutros) a 6 (cuatro dominios: banca, salud, biología, ciencias sociales). Motivo: el README declara seis dominios objetivo (banca, salud, ciencias sociales, marketing, biología, ecología) y 3.6 con 3 datasets cubría solo uno. Nuevas decisiones D10 (añadir Breast Cancer WDBC, Iris, Blood Transfusion) y D11 (diferir marketing y ecología a 3.6.e). Detalle en `docs/3.6_design_public_datasets.md` §2.4–§2.7 y `docs/audit_log.md` entrada del 16/10/2026.
+**Ampliación de alcance (16/10/2026, tarde).** En la sesión del mismo día se decidió ampliar el conjunto de *datasets* de 3 *datasets* (todos bancarios o neutros) a 6 (cuatro dominios: banca, salud, biología, ciencias sociales). Motivo: el README declara seis dominios objetivo (banca, salud, ciencias sociales, marketing, biología, ecología) y 3.6 con 3 *datasets* cubría solo uno. Nuevas decisiones D10 (añadir Breast Cancer WDBC, Iris, Blood Transfusion) y D11 (diferir marketing y ecología a 3.6.e). Detalle en `docs/3.6_design_public_datasets.md` §2.4–§2.7 y `docs/audit_log.md` entrada del 16/10/2026.
 
-**Cierre de la Fase 3.6.** Completada el 16/10/2026. Validación cruzada con 6 datasets en 4 dominios. Suite: 422/422 (416 previos + 6 tests de integración UCI).
+**Cierre de la Fase 3.6.** Completada el 16/10/2026. Validación cruzada con 6 *datasets* en 4 dominios. Suite: 422/422 (416 previos + 6 tests de integración UCI).
 
 **Desglose de la Fase 3.2:**
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.2.a | statistics.py ponderado (f_oneway, brown_forsythe) | ✅ 10/10/2026 |
-| 3.2.b | CHAID con conteos ponderados (χ²/F + merging + Cochran) | ✅ 10/10/2026 |
-| 3.2.c | C&RT con Gini/varianza ponderada + surrogates | ✅ 10/10/2026 |
-| 3.2.d | QUEST con Stage 1 + QDA ponderados | ✅ 10/10/2026 |
-| 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ✅ 10/10/2026 |
-| 3.2.f | Session (fix_spec + partition + train + reset) | ✅ 10/10/2026 |
-| 3.2.g | validation y reporting ponderados | ✅ 10/10/2026 |
-| 3.2.h | stability ponderado + wizard + E2E + cierre | ✅ 10/10/2026 |
+| 3.2.a | statistics.py ponderado (f_oneway, brown_forsythe) | ✅ Completada |
+| 3.2.b | CHAID con conteos ponderados (χ²/F + merging + Cochran) | ✅ Completada |
+| 3.2.c | C&RT con Gini/varianza ponderada + surrogates | ✅ Completada |
+| 3.2.d | QUEST con Stage 1 + QDA ponderados | ✅ Completada |
+| 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ✅ Completada |
+| 3.2.f | Session (fix_spec + partition + train + reset) | ✅ Completada |
+| 3.2.g | validation y reporting ponderados | ✅ Completada |
+| 3.2.h | stability ponderado + wizard + E2E + cierre | ✅ Completada |
 
-**Cierre de la Fase 3.2.** Las 8 sub-fases (a-h) quedan cerradas el 10/10/2026. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard. Invariante C1: sin pesos, comportamiento idéntico al pre-3.2. Tres parámetros nuevos en el fingerprint: weighted, weight_col, min_child_weight. Tres decisiones diferidas registradas en design_decisions.md §13.7 (KS/AUC/Gini del gains table sin ponderar), §13.8 (HL escala con la masa), §13.9 (nombre del parámetro weight_oot). Suite: 346/346 PASSED.
+**Cierre de la Fase 3.2.** Las 8 sub-fases (a-h) quedan cerradas el 10/10/2026. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard. Invariante C1: sin pesos, comportamiento idéntico al pre-3.2. Tres parámetros nuevos en el *fingerprint*: weighted, weight_col, min_child_weight. Tres decisiones diferidas registradas en design_decisions.md §13.7 (KS/AUC/Gini del gains table sin ponderar), §13.8 (HL escala con la masa), §13.9 (nombre del parámetro weight_oot). Suite: 346/346 PASSED.
 
 **Desglose de la Fase 3.3:**
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.3.a | SessionState + Session: campos, caches, fix_spec, partition, load_oot, reset, describe_population_column | ✅ 11/10/2026 |
-| 3.3.b | TreeBuilder: population_col y population_ok_values en fingerprint | ✅ 11/10/2026 |
-| 3.3.c | reporting.build_oos_oot_report: rename n_excluded → n_excluded_routing + nuevos contadores de población | ✅ 11/10/2026 |
-| 3.3.d | Wizard: combo de población, regla espejo, tabla de valores OK, i18n | ✅ 11/10/2026 |
-| 3.3.e | Tests E2E del flujo de población + cierre documental | ✅ 11/10/2026 |
+| 3.3.a | SessionState + Session: campos, caches, fix_spec, partition, load_oot, reset, describe_population_column | ✅ Completada |
+| 3.3.b | TreeBuilder: population_col y population_ok_values en fingerprint | ✅ Completada |
+| 3.3.c | reporting.build_oos_oot_report: rename n_excluded → n_excluded_routing + nuevos contadores de población | ✅ Completada |
+| 3.3.d | Wizard: combo de población, regla espejo, tabla de valores OK, i18n | ✅ Completada |
+| 3.3.e | Tests E2E del flujo de población + cierre documental | ✅ Completada |
 
 **Cierre de la Fase 3.3.** Las 5 sub-fases (a-e) quedan cerradas el 11/10/2026. La categoría de población es un filtro opt-in declarado en `fix_spec`: filas cuyo valor de columna de población no está en la whitelist declarada se excluyen antes del split, antes del train y antes de la evaluación OOS/OOT; se reportan en `n_excluded_population` y `population_breakdown`. Invariante C1: sin `population_col`, comportamiento idéntico al pre-3.3. Suite: 377/377 PASSED.
 
@@ -251,21 +251,21 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.4.a | C&RT multiclase: levantar el bloqueo en Session.train | ✅ 12/10/2026 |
-| 3.4.b | QUEST multiclase: Etapa 1 F de K grupos + tie-breaker BF K grupos; Etapa 2 QDA K=2 / barrido Gini K>2; retirar bloqueo; §3.8 en methodology | ✅ 12/10/2026 |
+| 3.4.a | C&RT multiclase: levantar el bloqueo en Session.train | ✅ Completada |
+| 3.4.b | QUEST multiclase: Etapa 1 F de K grupos + tie-breaker BF K grupos; Etapa 2 QDA K=2 / barrido Gini K>2; retirar bloqueo; §3.8 en methodology | ✅ Completada |
 
-**Cierre de la Fase 3.4.** Las dos sub-fases (a: C&RT; b: QUEST) quedan cerradas el 12/10/2026. Ningún motor bloquea ya targets con K > 2 en Session.train. Los bloqueos downstream (validation, reporting, stability) siguen activos hasta Fase 3.5. Invariante K=2: los motores producen modelos numéricamente idénticos al pre-3.4. Fingerprint sin cambios: la conducta multiclase se captura por `class_labels` / `n_classes` desde 3.1. Suite: 384/384 PASSED.
+**Cierre de la Fase 3.4.** Las dos sub-fases (a: C&RT; b: QUEST) quedan cerradas el 12/10/2026. Ningún motor bloquea ya targets con K > 2 en Session.train. Los bloqueos downstream (validation, reporting, stability) siguen activos hasta Fase 3.5. Invariante K=2: los motores producen modelos numéricamente idénticos al pre-3.4. *Fingerprint* sin cambios: la conducta multiclase se captura por `class_labels` / `n_classes` desde 3.1. Suite: 384/384 PASSED.
 
 **Desglose de la Fase 3.5:**
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ 15/10/2026 |
-| 3.5.c | stability + Session: evaluate_oot multiclase | ✅ 15/10/2026 |
-| 3.5.d | auditoría de frontend + methodology + cierre documental | ✅ 15/10/2026 |
+| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ Completada |
+| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ Completada |
+| 3.5.c | stability + Session: evaluate_oot multiclase | ✅ Completada |
+| 3.5.d | auditoría de frontend + methodology + cierre documental | ✅ Completada |
 
-**Cierre de la Fase 3.5.** Las cuatro sub-fases (a-d) cierran el pipeline
+**Cierre de la Fase 3.5.** Las cuatro sub-fases (a-d) cierran el *pipeline*
 completo de validación, reporte y monitoreo a targets multiclase
 (K ≥ 2) con composición ponderada. 3.5.a abrió compute_oos_metrics con
 D15-D17. 3.5.b abrió build_gains_table y build_classification_matrix
@@ -277,7 +277,7 @@ cosméticas diferidas a H4), publicó las subsecciones §8.11-§8.14 de
 methodology y cerró la documentación.
 
 **Invariante no negociable**: para K=2 con weights None o uniformes,
-todo el pipeline es idéntico bit a bit al pre-3.5, salvo por los campos
+todo el *pipeline* es idéntico bit a bit al pre-3.5, salvo por los campos
 aditivos de los DTOs que quedan vacíos (excepto accuracy, poblado en
 ambos modos). Suite: 411/411 PASSED.
 
@@ -583,5 +583,5 @@ when a mathematical formula or convention changes.
   MSI installer), digital signature, and distribution channel. To be
   decided before v1.0.
 - **Commercial license format** (if ever considered): the current Apache
-  2.0 is open source; a parallel commercial version would require
+  2.0 is *open source*; a parallel commercial version would require
   legal analysis.
