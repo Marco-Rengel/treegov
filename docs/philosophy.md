@@ -59,6 +59,8 @@ This distinction has consequences that the project explicitly assumes:
 
 Operational summary: during development, zero real data in AI APIs. In end use, the data remains on the analyst's desktop, under their responsibility and their institution's policies.
 
+Note on population stability: while model training applies strict filters (e.g., excluding Indet/No Perf categories), stability monitoring (PSI/CSI) can and should be evaluated on the entire incoming population to capture true drift.
+
 ## How this maps to the design
 
 The philosophy is not abstract: it translates into concrete design

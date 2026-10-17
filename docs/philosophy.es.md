@@ -59,6 +59,8 @@ Esta distinción tiene consecuencias que el proyecto asume explícitamente:
 
 Resumen operativo: durante el desarrollo, cero datos reales en APIs de IA. En uso final, los datos quedan en el escritorio del analista, bajo su responsabilidad y las políticas de su institución.
 
+Nota sobre estabilidad poblacional: aunque el entrenamiento aplica filtros estrictos (ej. excluir categorías Indet/No Perf), el monitoreo de estabilidad (PSI/CSI) puede y debe evaluarse sobre la población total de admisión para capturar la deriva real.
+
 ## Cómo se refleja esto en el diseño
 
 La filosofía no es abstracta: se traduce en decisiones de diseño

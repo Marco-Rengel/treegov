@@ -17,7 +17,7 @@
 
 TreeGov es una plataforma *open source* para construir, validar y auditar modelos basados en árboles de decisión en entornos regulados. Nace como heredera de las herramientas GUI clásicas (hoy descontinuadas) que permitían a los analistas construir modelos sin programar. A diferencia de las suites corporativas cerradas, TreeGov democratiza la gobernanza de modelos (MRM) y el cumplimiento de estándares como Basilea e IFRS 9.
 
-El sistema implementa CHAID, C&RT y QUEST con matemática de caja blanca: cada fórmula estadística está escrita explícitamente y citada a su publicación original. La gobernanza es *opt-in* a través de dos modos explícitos. El Modo Regulatorio (por defecto) aplica la capa completa de MRM requerida por bancos y burós de crédito: estimador de Jeffreys, PD floor (BCBS CRE 20.39) y huellas criptográficas que registran la elección. El Modo Investigación produce probabilidades empíricas crudas, abriendo la herramienta a dominios como salud, biología o ciencias sociales. La elección es siempre explícita y nunca silenciosa.
+El sistema implementa CHAID, C&RT y QUEST con matemática de caja blanca: cada fórmula estadística está escrita explícitamente y citada a su publicación original. La gobernanza es *opt-out* a través de dos modos explícitos. El Modo Regulatorio (por defecto) aplica la capa completa de MRM requerida por bancos y burós de crédito: estimador de Jeffreys, PD floor (BCBS CRE 20.39) y huellas criptográficas que registran la elección. El Modo Investigación produce probabilidades empíricas crudas, abriendo la herramienta a dominios como salud, biología o ciencias sociales. La elección es siempre explícita y nunca silenciosa.
 
 Las librerías tradicionales (*scikit-learn*, *statsmodels* o paquetes de R) exigen escribir código, lo que resta tiempo al análisis. Por otro lado, las herramientas visuales que existieron en el pasado fueron descontinuadas. TreeGov llena ese vacío combinando un entorno visual de código abierto con la trazabilidad regulatoria (SR 11-7, Basilea, IFRS 9) como principio de diseño fundamental.
 
@@ -59,7 +59,7 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 |---|---|---|---|
 | **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
 | **C&RT** | Breiman et al. (1984) | — | Impureza de Gini / varianza, *surrogate splits*, multiclase (K ≥ 2) |
-| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable, corte QDA para K=2, barrido de Gini para K > 2 |
+| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable, corte QDA para K=2, barrido de Gini para K > 2 (enfoque híbrido C&RT/QUEST para multiclase) |
 | **Soporte Multiclase** | Hand & Till (2001) | — | Entrenamiento y métricas para K ≥ 2 clases; Gini multiclase y KS por pares |
 | **Ponderación por muestra** | Heeringa et al. (2010) | SR 11-7 | Ajuste de sesgo muestral en todo el pipeline (motores, *split*, métricas) |
 | **Categorías de población** | — | — | Filtro *opt-in* para excluir categorías (Indet, No Perf) antes del entrenamiento |
@@ -94,8 +94,8 @@ TreeGov/
 │   ├── statistics.py        # chi2, F, Brown-Forsythe, Stirling, Kass
 │   ├── imputation.py        # TrainOnlyImputer (anti-leakage)
 │   ├── chaid_engine.py      # CHAID clásico + Exhaustive
-│   ├── crt_engine.py        # C&RT binario + surrogate splits
-│   ├── quest_engine.py      # QUEST binario + QDA univariante
+│   ├── crt_engine.py        # C&RT multiclase + surrogate splits
+│   ├── quest_engine.py      # QUEST multiclase + QDA/Gini
 │   ├── splitting.py         # Partición Hamilton-Hare
 │   ├── profiling.py         # Inferencia de tipos de predictor
 │   ├── tree_builder.py      # Construcción BFS + TreeModel
@@ -202,9 +202,10 @@ TreeGov/
 | **3.4** | Soporte multiclase en C&RT y QUEST | Completada |
 | **3.5** | Reportes adaptados para multiclase y ponderación | Completada |
 | **3.6.a** | Diseño del plan de validación con datasets públicos | Completada |
-| **3.6.b** | Script de descarga + fixtures versionadas | En progreso |
+| **3.6.b** | Script de descarga + fixtures versionadas | Completada |
+| **3.6.c** | Tests de integración + informe de validación | Completada |
+| **3.6.d** | Cierre documental de la fase | Completada |
 | **3.6.e** | Modo no-bancario y validación multi-dominio extensiva | Planificada |
-| **3.6** | Validación con datasets públicos | Completada |
 | **3.7** | Cierre Fase 3 + v1.0.0 estable | Planificada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |

@@ -17,7 +17,7 @@
 
 TreeGov is an open-source platform to build, validate, and audit decision-tree models in regulated environments. It is the successor to classic GUI tools (now discontinued) that allowed analysts to build models without programming. Unlike closed corporate suites, TreeGov democratizes model governance (MRM) and compliance with standards such as Basel and IFRS 9.
 
-The system implements CHAID, C&RT, and QUEST with white-box mathematics: every statistical formula is written explicitly and cited to its original publication. Governance is opt-in through two explicit modes. Regulatory mode (the default) applies the full MRM layer required by banks and credit bureaus: Jeffreys estimator, PD floor (BCBS CRE 20.39), and fingerprints that record the choice. Research mode produces raw empirical probabilities, opening the tool to domains such as health, biology, or social sciences. The choice is always explicit and never silent.
+The system implements CHAID, C&RT, and QUEST with white-box mathematics: every statistical formula is written explicitly and cited to its original publication. Governance is opt-out through two explicit modes. Regulatory mode (the default) applies the full MRM layer required by banks and credit bureaus: Jeffreys estimator, PD floor (BCBS CRE 20.39), and fingerprints that record the choice. Research mode produces raw empirical probabilities, opening the tool to domains such as health, biology, or social sciences. The choice is always explicit and never silent.
 
 Traditional libraries (*scikit-learn*, *statsmodels*, or R packages) require writing code, which takes time away from analysis. Meanwhile, the visual tools that existed in the past were discontinued. TreeGov fills that void by combining an *open-source* visual environment with regulatory traceability (SR 11-7, Basel, IFRS 9) as a core design principle.
 
@@ -59,7 +59,7 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 |---|---|---|---|
 | **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | — | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
 | **C&RT** | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits, multiclass (K ≥ 2) |
-| **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection, QDA split for K=2, Gini sweep for K > 2 |
+| **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection, QDA split for K=2, Gini sweep for K > 2 (hybrid C&RT/QUEST approach for multiclass) |
 | **Multiclass Support** | Hand & Till (2001) | — | Training and metrics for K ≥ 2 classes; multiclass Gini and pairwise KS |
 | **Sample Weighting** | Heeringa et al. (2010) | SR 11-7 | Sample bias adjustment across the pipeline (engines, split, metrics) |
 | **Population Categories** | — | — | *Opt-in* filter to exclude categories (Indet, No Perf) before training |
@@ -94,8 +94,8 @@ TreeGov/
 │   ├── statistics.py        # chi2, F, Brown-Forsythe, Stirling, Kass
 │   ├── imputation.py        # TrainOnlyImputer (anti-leakage)
 │   ├── chaid_engine.py      # CHAID classic + Exhaustive
-│   ├── crt_engine.py        # C&RT binary + surrogate splits
-│   ├── quest_engine.py      # QUEST binary + univariate QDA
+│   ├── crt_engine.py        # C&RT multiclass + surrogate splits
+│   ├── quest_engine.py      # QUEST multiclass + QDA/Gini
 │   ├── splitting.py         # Hamilton-Hare stratified split
 │   ├── profiling.py         # Predictor type inference
 │   ├── tree_builder.py      # BFS tree construction + TreeModel
@@ -145,14 +145,14 @@ TreeGov/
 
 ---
 
-## ¿Por qué TreeGov? / Why TreeGov?
+## Why TreeGov?
 
-| Si necesita... / If you need... | Utilice... / Use... |
-|---------------------------------|---------------------|
-| Decenas o cientos de algoritmos ML | *scikit-learn* |
-| *Deep Learning* | *PyTorch* o *TensorFlow* |
-| *Gradient Boosting* | *XGBoost* o *LightGBM* |
-| **Árboles auditables con gobernanza MRM** | **TreeGov** |
+| If you need... | Use... |
+|----------------|--------|
+| Dozens or hundreds of ML algorithms | *scikit-learn* |
+| *Deep Learning* | *PyTorch* or *TensorFlow* |
+| *Gradient Boosting* | *XGBoost* or *LightGBM* |
+| **Auditable trees with MRM governance** | **TreeGov** |
 
 ---
 
@@ -202,9 +202,10 @@ TreeGov/
 | **3.4** | Multiclass support in C&RT and QUEST | Completed |
 | **3.5** | Reports adapted for multiclass and weighting | Completed |
 | **3.6.a** | Design of public-dataset validation plan | Completed |
-| **3.6.b** | Fetch script + versioned fixtures | In progress |
+| **3.6.b** | Fetch script + versioned fixtures | Completed |
+| **3.6.c** | Integration tests + validation report | Completed |
+| **3.6.d** | Phase documentation closure | Completed |
 | **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned |
-| **3.6** | Validation with public datasets | Completed |
 | **3.7** | Phase 3 closure + v1.0.0 stable | Planned |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |

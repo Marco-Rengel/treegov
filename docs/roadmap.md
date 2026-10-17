@@ -203,6 +203,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | Completada |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
+| 3.7.a | Auditoría de seguridad y privacidad (retención de logs, advertencias GUI, modelo de amenazas) antes de la v1.0.0 | Alta |
 
 **Desglose de la Fase 3.6:**
 
