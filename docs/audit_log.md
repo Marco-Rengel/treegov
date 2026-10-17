@@ -4241,3 +4241,13 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 **Verificación**: El script escribió el CSV y un sidecar `.sha256` por cada dataset. La descarga verificó los hashes contra los valores hardcoded. Suite 416/416 intacta.
 
 ---
+
+### 16/10/2026 — Fase 3.6.c y 3.6.d: tests de integración y cierre
+
+**Estado**: ✅ Cerrada. Fase 3.6 completa.
+
+**Alcance**: Creado `tests/test_uci_integration.py` (6 tests que anclan los fingerprints exactos de los 6 datasets). Creado `docs/validation_results_3.6.md` con las métricas cuantitativas y comparación cualitativa con la literatura. Suite sube a 422/422.
+
+**Verificación**: Los 6 tests de integración pasan en verde.
+
+---

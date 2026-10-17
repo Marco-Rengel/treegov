@@ -106,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 416/416 PASSED.
+- **Suite de tests:** 422/422 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro opt-in
@@ -373,7 +373,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026 (tarde): Fases 0 a 3.5 cerradas, más la sub-fase 3.6.a (diseño del plan de validación con datasets públicos, `docs/3.6_design_public_datasets.md`). Suite 416/416. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6.b (script de descarga + fixtures versionadas). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026 (tarde): Fases 0 a 3.5 cerradas, más la Fase 3.6 completa (validación con 6 datasets públicos UCI en 4 dominios, `docs/3.6_design_public_datasets.md`). Suite 422/422. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6.e (Modo no-bancario y validación multi-dominio extensiva). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

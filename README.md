@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 416/416 passing
+**Test suite**: 422/422 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -184,14 +184,14 @@ TreeGov/
 | **3.6.a** | Design of public-dataset validation plan | Completed (16/10/2026) |
 | **3.6.b** | Fetch script + versioned fixtures | In progress |
 | **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned |
-| **3.6** | Validation with public datasets | In progress |
+| **3.6** | Validation with public datasets | Completed |
 | **3.7** | Phase 3 closure + v1.0.0 stable | Planned |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 416/416 passing.**
+**Test suite: 422/422 passing.**
 
 ---
 

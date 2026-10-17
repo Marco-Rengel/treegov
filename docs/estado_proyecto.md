@@ -271,8 +271,8 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.4** — CRT y QUEST multiclase. ✅ Cerrada 12/10/2026 (3.4.a C&RT + 3.4.b QUEST).
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Cerrada 15/10/2026 (4 sub-fases a-d).
 - **Fase 3.6.a** — Diseño del plan de validación con datasets públicos. ✅ Cerrada 16/10/2026 (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
-- **Fase 3.6** — Validación con datasets públicos (German Credit, Car Evaluation, Balance Scale). En progreso (3.6.b/c/d pendientes).
-- **Fase 3.6.b** — Modo no-bancario (terminología + ejemplos + docs)
+- **Fase 3.6** — Validación con datasets públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Cerrada 16/10/2026 (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
+- **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Pendiente.
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
@@ -436,9 +436,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
-| **Total** | **416** |
+| uci_integration | 6 |
+| **Total** | **422** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 416/416 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 422/422 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
