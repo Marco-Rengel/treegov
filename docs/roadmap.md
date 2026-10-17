@@ -200,7 +200,7 @@ y no-crédito (biología, ciencias sociales).
 | 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada 11/10/2026 |
 | 3.4 | CRT y QUEST multiclase | Completada 12/10/2026 |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Completada 15/10/2026 |
-| 3.6 | Validación con datasets públicos (German Credit, UCI) | En progreso (3.6.a ✅ 16/10/2026) |
+| 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | En progreso (3.6.a ✅ 16/10/2026) |
 | 3.6.b | Modo no-bancario (terminología + ejemplos + docs) | Media |
 | 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
 
@@ -208,12 +208,15 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.6.a | Diseño del plan de validación (3 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ 16/10/2026 |
+| 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ 16/10/2026 |
 | 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ⏳ |
 | 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ⏳ |
 | 3.6.d | Cierre documental de la fase | ⏳ |
+| 3.6.e | Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología) | ⏳ |
 
 **Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres datasets (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
+
+**Ampliación de alcance (16/10/2026, tarde).** En la sesión del mismo día se decidió ampliar el conjunto de datasets de 3 datasets (todos bancarios o neutros) a 6 (cuatro dominios: banca, salud, biología, ciencias sociales). Motivo: el README declara seis dominios objetivo (banca, salud, ciencias sociales, marketing, biología, ecología) y 3.6 con 3 datasets cubría solo uno. Nuevas decisiones D10 (añadir Breast Cancer WDBC, Iris, Blood Transfusion) y D11 (diferir marketing y ecología a 3.6.e). Detalle en `docs/3.6_design_public_datasets.md` §2.4–§2.7 y `docs/audit_log.md` entrada del 16/10/2026.
 
 **Desglose de la Fase 3.2:**
 

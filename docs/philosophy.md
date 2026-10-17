@@ -34,29 +34,29 @@ TreeGov does not compete on raw predictive accuracy. It competes on governance a
 - IFRS 9: staging and ECL.
 - SR 11-7 / OCC 2011-12: Model Risk Management.
 
-## Metodología de trabajo
+## Work methodology
 
-TreeGov se desarrolla con asistencia de IA bajo un flujo con disciplina MRM:
+TreeGov is developed with AI assistance under a workflow with MRM discipline:
 
-- **Rigor metodológico:** Diseñar, luego auditar el diseño, luego implementar, luego testear, luego documentar. Nunca se codifica sin auditar el diseño primero.
-- **Ráfagas cortas, verificación al final del bloque.** Los prompts de una sub-fase se agrupan; la suite de tests se ejecuta al cerrar cada bloque, no entre prompts. Esto preserva la caché del proveedor de IA, reduce el coste, y mantiene la verificación como un punto de control claro.
-- **Verificación empírica mayor que obediencia ciega.** El asistente de IA puede reportar éxito sin haber ejecutado la tarea. Por eso cada commit exige `pytest` verde, `git status` limpio y `git diff --stat` coherente antes de aceptar el cambio.
-- **Ningún agente corre solo durante horas o días.** Cada cambio afecta invariantes estructurales (por ejemplo, la paridad binaria K=2 desde la Fase 3.1, o los invariantes de `TreeModel`). El humano audita cada sub-fase. Los agentes de larga duración tienen su lugar en proyectos desechables o de bajo riesgo; no en un modelo auditable por un regulador.
-- **Documentación de cierre obligatoria.** Cada sub-fase cierra con la actualización sincronizada de los documentos de estado, contexto y bitácora. Nada se aplaza a la siguiente sesión.
+- **Methodological rigor:** Design, then audit the design, then implement, then test, then document. Code is never written without first auditing the design.
+- **Short bursts, verification at the end of the block.** The prompts for a sub-phase are grouped; the test suite is run when closing each block, not between prompts. This preserves the AI provider's cache, reduces cost, and keeps verification as a clear control point.
+- **Empirical verification over blind obedience.** The AI assistant may report success without having executed the task. Therefore, every commit requires a green `pytest`, a clean `git status`, and a coherent `git diff --stat` before accepting the change.
+- **No agent runs alone for hours or days.** Every change affects structural invariants (for example, the K=2 binary parity since Phase 3.1, or the `TreeModel` invariants). The human audits every sub-phase. Long-running agents have their place in disposable or low-risk projects; not in a model auditable by a regulator.
+- **Mandatory closure documentation.** Each sub-phase closes with the synchronized update of the status, context, and audit log documents. Nothing is deferred to the next session.
 
-## Desarrollo vs uso final: dos regímenes de datos distintos
+## Development vs end use: two different data regimes
 
-TreeGov se desarrolla hoy con datasets públicos (German Credit, UCI) y sintéticos. Durante el desarrollo, la regla de privacidad es estricta: nunca se envían datos reales a APIs de IA de terceros. Solo se comparte código open source, documentación pública y datos sintéticos.
+TreeGov is currently developed with public datasets (German Credit, UCI) and synthetic data. During development, the privacy rule is strict: no real data is ever sent to third-party AI APIs. Only open-source code, public documentation, and synthetic data are shared.
 
-Cuando TreeGov se use en producción, el escenario es otro: el analista carga su propio CSV con datos reales en su escritorio, y el modelo se entrena y evalúa localmente. Los datos nunca salen del equipo del analista. TreeGov no tiene servidor, ni autenticación remota, ni base de datos, ni conexión a internet en tiempo de ejecución.
+When TreeGov is used in production, the scenario is different: the analyst loads their own CSV with real data on their desktop, and the model is trained and evaluated locally. The data never leaves the analyst's machine. TreeGov has no server, no remote authentication, no database, and no internet connection at runtime.
 
-Esta distinción tiene consecuencias que el proyecto asume explícitamente:
+This distinction has consequences that the project explicitly assumes:
 
-- **Los logs DEBUG contienen información sensible.** Cuando se entrena sobre datos reales, el log registra PD por nodo, distribuciones de hojas, nombres de columnas del CSV real, fingerprint del modelo y rutas de archivo. El analista debe tratarlos como material confidencial.
-- **Los reports HTML exportados contienen información sensible.** Gains table, matriz de clasificación, conteos por segmento, PD por hoja. Compartir un reporte es compartir parte del modelo.
-- **La política de datos sensibles se trata como trabajo explícito.** Antes de declarar la versión 1.0.0 estable, el proyecto planifica un bloque específico de auditoría de seguridad y privacidad: retención y limpieza de logs, advertencias en la GUI, y un documento dedicado al modelo de amenazas.
+- **DEBUG logs contain sensitive information.** When training on real data, the log records PD per node, leaf distributions, real CSV column names, model fingerprint, and file paths. The analyst must treat them as confidential material.
+- **Exported HTML reports contain sensitive information.** Gains table, classification matrix, segment counts, PD per leaf. Sharing a report is sharing part of the model.
+- **The sensitive data policy is treated as explicit work.** Before declaring the stable 1.0.0 version, the project plans a specific security and privacy audit block: log retention and cleanup, GUI warnings, and a document dedicated to the threat model.
 
-Resumen operativo: durante el desarrollo, cero datos reales en APIs de IA. En uso final, los datos quedan en el escritorio del analista, bajo su responsabilidad y las políticas de su institución.
+Operational summary: during development, zero real data in AI APIs. In end use, the data remains on the analyst's desktop, under their responsibility and their institution's policies.
 
 ## How this maps to the design
 

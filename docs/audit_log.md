@@ -4191,3 +4191,33 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 **Referencias**: docs/3.6_design_public_datasets.md (documento principal); docs/3.5_design_multiclass_weighted_reports.md (plantilla estructural); docs/roadmap.md (sub-fases 3.6.a-d); commit 1df08b0.
 
 ---
+
+### 16/10/2026 (tarde) — Ampliación del alcance de Fase 3.6: 3 → 6 datasets
+
+**Estado**: ✅ Cerrada (enmienda del diseño 3.6.a, previa al arranque de 3.6.b).
+
+**Modelo**: N/A (autoría manual del asistente estratégico con aprobación explícita del revisor).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: al arrancar la sub-fase 3.6.b, el revisor planteó una pregunta de cobertura: el diseño de 3.6.a había seleccionado tres datasets (German Credit, Car Evaluation, Balance Scale) que cubrían únicamente el dominio bancario y dos dominios neutros sin aplicación real. Sin embargo, el README (refundación del 11/10/2026) declara explícitamente que TreeGov sirve a seis dominios: banca, salud, ciencias sociales, marketing, biología, ecología. La cobertura efectiva de 3.6 era del 16% de lo declarado. Esta inconsistencia entre el claim público y la validación se detectó al arrancar 3.6.b y se corrigió con dos enmiendas.
+
+**Enmiendas aprobadas**:
+
+- **D10** — Añadir tres datasets no-bancarios icónicos al alcance de 3.6:
+  - **Breast Cancer WDBC** (UCI 17) — salud, binario, 30 features numéricas continuas, 569 filas. Contrasta con German Credit (mixto) y Car Evaluation (categórico puro).
+  - **Iris** (UCI 53) — biología, multiclase K=3 balanceado, 4 features numéricas continuas, 150 filas. Ejercita Hand & Till AUC en condiciones óptimas.
+  - **Blood Transfusion** (UCI 176) — ciencias sociales / comportamiento, binario, marco RFM, 748 filas, 4 features numéricas con empates intensos.
+  Cobertura resultante: 4 de los 6 dominios declarados (banca, salud, biología, ciencias sociales).
+
+- **D11** — Diferir marketing y ecología a una sub-fase nueva, 3.6.e, recuperada del roadmap original (donde figuraba como "Modo no-bancario"). Motivo: no existen datasets icónicos y limpios en esos dominios que quepan en el budget de fixtures sin abrir decisiones de feature engineering fuera de alcance. Los candidatos razonables (Wholesale Customers para marketing, Abalone para ecología) tienen particularidades que requieren diseño propio.
+
+**Hashes verificados**: durante esta sesión se descargaron y verificaron los seis archivos fuente desde `archive.ics.uci.edu`. Los SHA256 quedan documentados en `docs/3.6_design_public_datasets.md` §4.4 y se hardcodearán en `scripts/fetch_datasets.py` durante 3.6.b. Ninguna de las seis URLs legacy respondió con error.
+
+**Impacto en el diseño**: el documento `docs/3.6_design_public_datasets.md` se enmienda in situ (no se reescribe): §0.1 actualizado a "seis datasets"; §2 ampliado con tres subsecciones nuevas (§2.4–§2.6) y la subsección de exclusión renumerada a §2.7 con el bullet de Iris eliminado; §3 ampliado con tres subsecciones de normalización (§3.5–§3.7) y §3.5 renumerada a §3.8; §4.4 nueva con los hashes verificados; §5.1 con el nuevo budget de fixtures (~270 KB); §8.2 con la cobertura ampliada de riesgo. El header declara ahora once decisiones (D1–D11).
+
+**Regla de gobernanza observada**: la enmienda se documenta en el mismo bloque en que se decide, no se difiere. La regla "Phase closure documentation: never deferred" cubre también las ampliaciones de alcance de sub-fases en curso.
+
+**Referencias**: docs/3.6_design_public_datasets.md §2.4–§2.7, §3.5–§3.7, §4.4, §5.1; docs/roadmap.md sub-fase 3.6.e; README.md (claim multi-dominio del 11/10/2026); docs/design_decisions.md §0.2 (perfil biologist/social scientist).
+
+---
