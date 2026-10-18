@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treegov"
-version = "1.0.0a6"
+version = "1.0.0rc1"
 description = "Governed decision trees for credit risk — CHAID, C&RT, QUEST with native MRM/IFRS 9."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,7 +15,7 @@ authors = [
 ]
 keywords = ["credit-risk", "decision-trees", "chaid", "crt", "quest", "mrm", "ifrs9"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
