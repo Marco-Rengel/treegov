@@ -290,7 +290,7 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Próximo paso**: Fase 3.6.e (Modo no-bancario y validación multi-dominio extensiva). La Fase 3.6 (validación con *datasets* públicos) está cerrada: 6 *datasets* UCI en 4 dominios validados, suite 422/422.
+**Próximo paso**: Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Los pendientes cosméticos de READMEs y philosophy quedaron cerrados el 18/10/2026 (commit 7334f65). Quedan abiertos los cuatro pendientes estratégicos de la Fase 3.7 (a: auditoría de seguridad; b: simetrizar KS por pares; c: exponer min_child_weight; d: ampliar tests UCI con CHAID y QUEST). Fase 3.6.e (modo no-bancario) sigue pendiente y se planifica dentro de la Fase 3.7 o como bloque previo, a decidir.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

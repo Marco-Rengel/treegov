@@ -159,8 +159,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.6 (validación con *datasets* públicos: German
-  Credit, UCI).
+- **Próximo paso:** Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Los pendientes cosméticos de READMEs y philosophy quedaron cerrados el 18/10/2026 (commit 7334f65). Quedan los cuatro pendientes estratégicos de la Fase 3.7 (a: auditoría de seguridad; b: simetrizar KS por pares; c: exponer `min_child_weight` en `Session.train`; d: ampliar `tests/test_uci_integration.py` con CHAID y QUEST).
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -373,7 +372,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 16/10/2026 (tarde): Fases 0 a 3.5 cerradas, más la Fase 3.6 completa (validación con 6 datasets públicos UCI en 4 dominios, `docs/3.6_design_public_datasets.md`). Suite 422/422. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.6.e (Modo no-bancario y validación multi-dominio extensiva). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado al 18/10/2026: Fases 0 a 3.5 cerradas, más la Fase 3.6 completa (validación con 6 datasets públicos UCI en 4 dominios, `docs/3.6_design_public_datasets.md`). Suite 422/422. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.7 (a: auditoría de seguridad; b: simetrizar KS por pares; c: exponer `min_child_weight` en `Session.train`; d: ampliar `tests/test_uci_integration.py` con CHAID y QUEST). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
 
 ---
 

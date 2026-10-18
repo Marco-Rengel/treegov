@@ -4251,3 +4251,90 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 **Verificación**: Los 6 tests de integración pasan en verde.
 
 ---
+
+### 17/10/2026 — Auditoría cruzada, corrección terminológica y limpieza documental
+
+**Estado**: Cerrada. Documentación sincronizada con la realidad del repositorio. Sin cambios de código; suite 422/422 intacta.
+
+**Modelo**: Gemini y Copilot (auditoría cruzada); edición manual en VS Code (aplicación de correcciones).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: docs/design_decisions.md, docs/methodology.md, docs/philosophy.md, docs/philosophy.es.md, docs/estado_proyecto.md, docs/api.md, README.md, README.es.md.
+
+**Contexto**: Sesión de auditoría documental previa a la reanudación de los pendientes de la Fase 3.7. Se revisaron de forma cruzada los documentos estructurales del repositorio con dos asistentes externos (Gemini y Copilot) para detectar desajustes entre lo declarado y lo implementado. El objetivo era triple: (a) alinear la terminología con la preparación del modo no-bancario (Fase 3.6.e), (b) eliminar datos personales del dossier técnico, (c) cerrar las zonas grises matemáticas que quedaban en methodology.md y design_decisions.md.
+
+**Cambios aplicados**:
+
+1. Terminología. Se unificó el vocabulario hacia "Modo Regulatorio" (o "Regulatory mode") en la documentación externa, manteniendo `GovernanceMode.BANKING` como nombre del Enum de Python por compatibilidad histórica y de fingerprint. La aclaración se recoge en docs/design_decisions.md §0.3 y §10.2 (nota de terminología), en docs/api.md, y en docs/philosophy.md / docs/philosophy.es.md. El objetivo: que un lector externo no asocie la herramienta exclusivamente a banca, preparando el terreno para el modo no-bancario de la Fase 3.6.e, sin romper la cadena de compatibilidad de los fingerprints ya emitidos.
+
+2. Limpieza de datos personales en estado_proyecto.md. Se eliminaron referencias que no aportaban al dossier técnico y que comprometían la privacidad. El documento queda como dossier introductorio para un auditor/validador MRM, sin información personal innecesaria.
+
+3. Asimetría del KS. Se documentó formalmente la limitación del KS por pares en el path multiclase: el estadístico se calcula de forma unidireccional sobre la coordenada p_i para i < j (no simetrizado), a diferencia del AUC de Hand & Till que sí promedia ambas direcciones. La limitación está registrada en docs/design_decisions.md §7.7 ("Unidirectional pairwise KS in multiclass (deferred to Phase 3.7)") y en docs/methodology.md §8.11 ("Fidelity note on pairwise KS"), con la tarea 3.7.b como resolución programada (promediar KS_ij y KS_ji) antes de la v1.0.0 estable.
+
+4. PD Floor. Se documentó formalmente el comportamiento del suelo regulatorio en el path multiclase: la implementación aplica pd_temp[c] = max(pd_floor, pd_jeffreys[c]) componente a componente y renormaliza (pd_final = pd_temp / sum(pd_temp)), lo que produce un "soft floor" en lugar de un floor estricto por componente. La nota de que esta renormalización se aplica también para K=2 (con desviación numéricamente despreciable del floor estricto) quedó registrada explícitamente en docs/methodology.md §6.6. La justificación de diseño (soft floor simétrico y neutral para K≥2) está en docs/design_decisions.md §6.4 y en el diseño de la Fase 3.1.
+
+**Hallazgos**:
+
+- La auditoría cruzada con dos asistentes externos confirmó que la terminología "BANKING" en código y "Regulatory mode" en documentación era una fuente de fricción para un lector externo que no conociera el histórico del proyecto. La distinción quedó explícita en los cuatro sitios donde aparece.
+- El KS por pares asimétrico había sido detectado durante el diseño de la Fase 3.5 (decisión D4) pero no estaba formalmente documentado como limitación matemática con cita explícita a la tarea 3.7.b. La entrada actual lo cierra.
+- El PD Floor multiclase había quedado descrito de forma ambigua entre design_decisions.md y methodology.md (el diseño original asumía floor estricto; la implementación aplica soft-floor renormalizado). La entrada actual documenta el comportamiento real del código y elimina la ambigüedad.
+
+**Nota de gobernanza**: Esta sesión detectó un fallo de proceso: la auditoría del 17/10 no generó entrada en audit_log.md en su momento, aunque sí se reflejó en los documentos de contexto. La regla "Phase closure documentation: never deferred" cubre las sub-fases de código pero no explícitamente las sesiones de auditoría documental. Esta entrada cierra el hueco. Se refuerza la práctica: toda sesión que modifique documentación estructural del proyecto debe generar su entrada en audit_log.md en el mismo bloque.
+
+**Decisión PyPI (regla 12/10/2026)**: Los cambios en README.md y README.es.md dejan la página pública de PyPI (1.0.0a6) desincronizada hasta la próxima release. Decisión documentada: opción (b), esperar a la próxima release con cambios de código. No se publica 1.0.0a7 solo por cosmética. Si el autor decide lo contrario, el procedimiento es: bump de versión en pyproject.toml y frontend_v3/__init__.py, actualización de READMEs, build, twine check, twine upload, verificación en venv aislado. Sin decisión explícita, la sub-fase no se considera cerrada (regla del 12/10/2026).
+
+**Tests**: 422/422 PASSED (sin cambios de código; solo documentación).
+
+**Referencias**:
+- docs/philosophy.md y docs/philosophy.es.md (terminología).
+- docs/design_decisions.md §0.3, §6.4, §7.7, §10.2.
+- docs/methodology.md §6.6, §8.11.
+- docs/estado_proyecto.md (limpieza de datos personales).
+- docs/api.md (nota de terminología en GovernanceMode).
+- docs/audit_log.md entradas del 15/10/2026 (Fase 3.5) y 16/10/2026 (cierre de cosméticos + Fase 3.6).
+
+---
+
+### 18/10/2026 — Cierre del bloque cosmético de READMEs y philosophy
+
+**Estado**: Cerrada. Commit 7334f65. Suite 422/422 PASSED intacta.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: cierre de los tres pendientes inmediatos detectados en el móvil el 17/10/2026. Documentación pura: cero cambios en backend_v3/ ni frontend_v3/; cero cambios en tests; cero cambios de API.
+
+**Artefactos**:
+- README.md (2 líneas modificadas).
+- README.es.md (5 líneas modificadas).
+- docs/philosophy.md (2 líneas modificadas).
+
+**Cambios aplicados**:
+
+1. README.md — Resumen ejecutivo: se restauró la mención "CHAID (classic and Exhaustive)" en la frase del resumen. La mención se había perdido al reescribir el párrafo. Coincide ahora con la tabla de capacidades, que ya usaba "CHAID classic and Exhaustive".
+
+2. README.md — Sección Philosophy: las comillas rectas dobles de la frase central se sustituyeron por comillas tipográficas curvas U+201C (LEFT DOUBLE QUOTATION MARK) y U+201D (RIGHT DOUBLE QUOTATION MARK). Coherencia estética con philosophy.md y philosophy.es.md. El texto interno de la cita no cambió.
+
+3. README.es.md — Resumen ejecutivo: se restauró "CHAID (clásico y Exhaustive)" en la frase equivalente. "Exhaustive" se mantiene en inglés por ser el nombre propio de la variante y por coherencia con la tabla de capacidades.
+
+4. README.es.md — Sección "¿Por qué TreeGov?": eliminación del texto bilingüe remanente. Título pasa de "## ¿Por qué TreeGov? / Why TreeGov?" a "## ¿Por qué TreeGov?". Encabezados de tabla pasan de "| Si necesita... / If you need... | Utilice... / Use... |" a "| Si necesita... | Utilice... |". Descripciones de fila pasan de "Deep Learning" a "Aprendizaje profundo" y de "Gradient Boosting" a "Potenciación del gradiente". Nombres de herramienta (PyTorch, TensorFlow, XGBoost, LightGBM, scikit-learn) se mantienen por ser nombres propios.
+
+5. docs/philosophy.md — Título: "## Why TreeGov exists" pasa a "## Why does TreeGov exist?" (gramática correcta). Sección "The core sentence": comillas rectas sustituidas por tipográficas U+201C/U+201D, igual que en README.md.
+
+**Hallazgos y notas de gobernanza**:
+
+- Verificación UTF-8. El diff mostrado por PowerShell aparecía con mojibake por un problema ya documentado (audit_log 05/10/2026, AGENTS.md): la consola decodifica con codepage no UTF-8 y corrompe la salida, aunque el archivo en disco esté correcto. La tubería "git diff | Out-File -Encoding utf8" NO arregla el problema, porque la corrupción ocurre antes. Verificación fiable: script Python que lee los archivos con io.open(encoding="utf-8") y comprueba contenido y puntos de código (U+201C/U+201D). Alternativa más limpia para futuros diffs: "git diff --output=archivo.txt" (escribe bytes directamente, sin pasar por la tubería de strings de PowerShell). Esta lección queda reforzada en AGENTS.md sección Entorno.
+
+- Regla PyPI (12/10/2026). El README en PyPI está congelado en 1.0.0a6. El bloque actual modifica README.md y README.es.md. Decisión explícita (opción b, recomendada): esperar a la próxima release con cambios de código. No se publica 1.0.0a7 solo por cosmética. Si el autor decide lo contrario, el procedimiento es: bump de versión en pyproject.toml y frontend_v3/__init__.py, actualización de READMEs, build, twine check, twine upload, verificación en venv aislado. Sin decisión explícita, la sub-fase no se considera cerrada (regla del 12/10/2026).
+
+**Tests**: 422/422 PASSED. Cero regresiones.
+
+**Referencias**:
+- Commit 7334f65.
+- docs/audit_log.md entrada del 17/10/2026 (auditoría cruzada).
+- AGENTS.md sección Entorno (UTF-8 en PowerShell).
+- docs/roadmap.md sección "Recorded architectural decisions" (regla PyPI).
+
+---

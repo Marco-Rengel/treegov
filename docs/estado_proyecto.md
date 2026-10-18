@@ -505,6 +505,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] Firma digital + instalador PyInstaller/Inno Setup (Fase 4).
 - [ ] Licencia comercial paralela (análisis legal si se considera).
 - [ ] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8. Ver `docs/roadmap.md` sección Deferred. No bloquea el desarrollo actual.
+- [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
 
 ### Decisiones de largo plazo
 

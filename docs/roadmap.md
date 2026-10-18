@@ -555,6 +555,7 @@ Detalle completo en docs/audit_log.md entrada del 16/10/2026.
     09/10/2026 (migración OpenCode, hallazgo de caché), `.treegovrules`
     (política "no dejar cabos sueltos").
 - **Toda deuda detectada se registra en el roadmap (16/10/2026).** Cuando se detecta una deuda técnica o un pendiente, se registra en este documento (sección Deferred o Pending decisions) EN LA MISMA SESIÓN en que se detecta. No basta con mencionarlo en audit_log.md o en la conversación. Motivo: el pendiente Aider/build/twine del 12/10/2026 estuvo abierto 4 días sin trazabilidad en el roadmap; al retomarlo el 16/10 hubo que reconstruir el contexto desde cero. El roadmap es la fuente de verdad de deuda técnica del proyecto; el audit_log es la bitácora cronológica.
+- **Cierre de pendientes cosméticos (18/10/2026).** Los tres pendientes cosméticos detectados en el móvil el 17/10/2026 quedan cerrados en el commit 7334f65 (bloque de documentación pura, suite 422/422 intacta): (a) mención de CHAID Exhaustive restaurada en README.md y README.es.md; (b) tabla "¿Por qué TreeGov?" solo en español en README.es.md; (c) comillas tipográficas y título corregido en README.md y docs/philosophy.md. Ver docs/audit_log.md entrada del 18/10/2026.
 
 ## Releases
 

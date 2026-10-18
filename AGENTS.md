@@ -95,6 +95,13 @@ sub-fase futura excede $3, diagnosticar. Análisis completo en
 
 **Herramientas CLI: SIEMPRE vía pipx, nunca en el .venv del proyecto.** Las herramientas de desarrollo (Aider, build, twine, linters, formatters) NO se instalan con pip dentro del .venv del proyecto. Se instalan globalmente con pipx, que las aísla en su propio entorno. Motivo: instalar herramientas CLI dentro del .venv degrada las versiones de las librerías compartidas (numpy, scipy, packaging, rich) y rompe la compatibilidad verificada del proyecto. Esto ya ocurrió dos veces: el 27/09/2026 (Aider bajó numpy 2.4.6 → 1.26.4 y scipy 1.17.1 → 1.15.3) y el 12/10/2026 (build/twine subieron packaging 26.0 → 26.3 y rich 14.3.2 → 15.0.0, rompiendo los pins de Aider). Verificación obligatoria tras instalar cualquier herramienta CLI: ejecutar pip show <tool> y confirmar que Location apunta a C:\Users\maren\AppData\Local\pipx\pipx\venvs\..., no al .venv del proyecto.
 
+**UTF-8 en PowerShell (lección 18/10/2026).** Al verificar archivos con caracteres no-ASCII (acentos, comillas tipográficas, `§`, `≥`, guiones largos), `git diff` en la consola de PowerShell puede mostrar mojibake aunque el archivo en disco esté correcto. Motivo: PowerShell decodifica stdout con un codepage no UTF-8 y la corrupción ocurre en la tubería, no en el archivo. `git diff | Out-File -Encoding utf8` NO arregla el problema, porque el daño ocurre antes del `Out-File`.
+
+Verificación fiable (una de dos):
+
+1. Script Python que lee los archivos con `io.open(encoding="utf-8")` y comprueba contenido y puntos de código.
+2. `git --no-pager diff --output=diff_utf8.txt <archivos>`, que escribe bytes directamente a disco sin pasar por la tubería de strings de PowerShell. Abrir `diff_utf8.txt` en Notepad o VS Code para revisión visual.
+
 ## Herramienta de desarrollo: OpenCode
 
 - **Versión:** 1.19.0 (global vía `npm`).
