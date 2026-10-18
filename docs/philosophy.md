@@ -2,9 +2,9 @@
 
 ## The core sentence
 
-> "Python gives you the engine. TreeGov gives you the engine, the brakes, the dashboard, the seatbelt, and the maintenance log. Which would you choose for a model that will be audited by the regulator?"
+> “Python gives you the engine. TreeGov gives you the engine, the brakes, the dashboard, the seatbelt, and the maintenance log. Which would you choose for a model that will be audited by the regulator?”
 
-## Why TreeGov exists
+## Why does TreeGov exist?
 
 There is a generation of risk analysts who need GUI tools to build auditable trees, and the tools that existed were discontinued without replacement. Statistical libraries and scripting environments offer analytical power, but not native governance. TreeGov fills that void.
 
