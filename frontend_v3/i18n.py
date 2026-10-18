@@ -80,6 +80,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_title": "Step 2 — Predictors and target",
         "step2_subtitle": "Pick the binary target and at least one predictor.",
         "step2_target_label": "Target (binary 0/1):",
+        "step2_target_placeholder": "— Select target column —",   # bloque "en"
+        "step2_target_placeholder": "— Seleccione columna target —",  # bloque "es"
         "step2_available": "Available predictors",
         "step2_selected": "Selected predictors",
         "step2_hint_min_one": "Select at least one predictor to continue.",
@@ -361,6 +363,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_title": "Paso 2 — Predictores y objetivo",
         "step2_subtitle": "Elija el objetivo binario y al menos un predictor.",
         "step2_target_label": "Objetivo (binario 0/1):",
+        "step2_target_placeholder": "— Select target column —",   # bloque "en"
+        "step2_target_placeholder": "— Seleccione columna target —",  # bloque "es"
         "step2_available": "Predictores disponibles",
         "step2_selected": "Predictores seleccionados",
         "step2_hint_min_one": "Seleccione al menos un predictor para continuar.",

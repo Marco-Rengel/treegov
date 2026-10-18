@@ -496,12 +496,25 @@ class TreeBuilder:
                     for k_c in w_counts
                 )
             if self.pd_floor is not None:
-                # Component-wise soft floor + renormalization (design 3.1
-                # section 3.3): preserves sum(pd_final) == 1 for any K.
-                temp = np.array(
-                    [max(self.pd_floor, p) for p in pd_j_tuple], dtype=float
-                )
-                pd_f_tuple = tuple(float(x) for x in (temp / temp.sum()))
+                if K == 2:
+                    # Phase 3.7.e (pre-1.0.0rc1): hard floor in binary.
+                    # Applying the soft-floor renormalization to K=2 can push
+                    # the class-of-interest PD BELOW pd_floor (BCBS CRE 20.39
+                    # is a hard lower bound). In binary, assign the complement
+                    # directly without renormalizing.
+                    p0 = max(self.pd_floor, pd_j_tuple[0])
+                    p1 = 1.0 - p0
+                    if p1 < self.pd_floor:
+                        p1 = self.pd_floor
+                        p0 = 1.0 - p1
+                    pd_f_tuple = (float(p0), float(p1))
+                else:
+                    # Multivariate soft floor + renormalization (design 3.1
+                    # section 3.3, unchanged for K > 2).
+                    temp = np.array(
+                        [max(self.pd_floor, p) for p in pd_j_tuple], dtype=float
+                    )
+                    pd_f_tuple = tuple(float(x) for x in (temp / temp.sum()))
             else:
                 pd_f_tuple = pd_j_tuple
 

@@ -98,3 +98,26 @@ QLabel[status="unknown"] {
     color: $STATUS_UNKNOWN;
     font-weight: bold;
 }
+
+/* Phase 3.7.e (pre-1.0.0rc1): H1 — restore radio button indicator visibility.
+   The global QWidget background rule paints over the native Windows
+   indicator. Explicit ::indicator styling restores it using theme tokens
+   (works in both light and dark). */
+QRadioButton {
+    spacing: 8px;
+    background: transparent;
+}
+QRadioButton::indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 7px;
+    border: 2px solid $FG;
+    background: $BG;
+}
+QRadioButton::indicator:checked {
+    background: $ACCENT;
+    border: 2px solid $ACCENT;
+}
+QRadioButton::indicator:hover {
+    border: 2px solid $ACCENT;
+}

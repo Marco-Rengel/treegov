@@ -732,6 +732,34 @@ def test_fingerprint_differs_by_population_ok_values():
     assert fp_a != fp_b
 
 
+def test_pd_floor_hard_bound_binary():
+    """Fase 3.7.e: floor duro en K=2.
+
+    Fixture: 100 filas, split perfecto en x=1.5. Ambas hojas son puras:
+    la izquierda tiene 0 eventos de la clase objetivo (pd_jeffreys[0] =
+    0.5/51 = 0.0098 < 0.01) y la derecha 0 de la otra clase (idem para
+    pd_jeffreys[1]). Con la renormalizacion suave pre-fix, pd_final podia
+    quedar por debajo del floor (0.01/1.000196 = 0.009998). Con el floor
+    duro, toda componente de toda hoja es >= pd_floor y la suma es 1.0.
+    """
+    x = pd.Series([1.0] * 50 + [2.0] * 50)
+    y = pd.Series([0] * 50 + [1] * 50)
+    X = pd.DataFrame({"x": x})
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"), max_depth=4,
+                     min_child_size=2, pd_floor=0.01, apply_jeffreys=True)
+    m = tb.build(X, y, {"x": _CONT})
+
+    assert len(m.nodes) == 3                      # raiz + 2 hojas puras
+    hojas = [nd for nd in m.nodes if nd.is_leaf]
+    assert len(hojas) == 2
+    assert hojas[0].n_events == (0, 50)           # 0 eventos clase objetivo
+    assert hojas[1].n_events == (50, 0)
+    for leaf in hojas:
+        assert min(leaf.pd_final) >= 0.01
+        assert math.isclose(sum(leaf.pd_final), 1.0, abs_tol=1e-12)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

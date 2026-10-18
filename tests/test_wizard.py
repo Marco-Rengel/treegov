@@ -94,6 +94,14 @@ def _select_first_predictor(wiz: ModelWizard) -> str:
     return page.selected_predictors()[0]
 
 
+def _select_target(wiz: ModelWizard, col: str) -> None:
+    """Elige la columna col como target (Phase 3.7.e: H2 fijo)."""
+    idx = wiz.page_predictors._combo_target.findData(col)
+    if idx <= 0:
+        raise AssertionError(f"target {col} no encontrado en el combo")
+    wiz.page_predictors._combo_target.setCurrentIndex(idx)
+
+
 # ---------------------------------------------------------------------------
 # 1-3: construccion, navegacion, validacion de Step 2
 # ---------------------------------------------------------------------------
@@ -116,10 +124,13 @@ def test_wizard_navigation():
     assert wiz.currentId() == 0
     wiz.next()
     assert wiz.currentId() == 1
-    # Step 2 sin predictores: el boton Next (gate real de la UI) deshabilitado
+    # Step 2 sin target ni predictores: Next deshabilitado (gate real de la UI)
     app = _get_app()
     app.processEvents()
     assert btn_next.isEnabled() is False
+    _select_target(wiz, "default")
+    app.processEvents()
+    assert btn_next.isEnabled() is False            # aun sin predictores
     _select_first_predictor(wiz)
     app.processEvents()
     assert btn_next.isEnabled() is True
@@ -138,8 +149,16 @@ def test_wizard_navigation():
 def test_wizard_predictors_validation():
     wiz = _make_wizard()
     page = wiz.page_predictors
-    assert page.isComplete() is False              # 0 predictores
-    # el target inicial ("default") NO esta disponible como predictor
+    assert page.isComplete() is False              # sin target + 0 predictores
+    # sin target elegido (H2), TODAS las columnas estan disponibles
+    cols_avail = [
+        page._lst_available.item(i).data(_USER)
+        for i in range(page._lst_available.count())
+    ]
+    assert set(cols_avail) == {"default", "edad", "seg", "ingreso"}
+
+    _select_target(wiz, "default")
+    # el target elegido ("default") NO esta disponible como predictor
     cols_avail = [
         page._lst_available.item(i).data(_USER)
         for i in range(page._lst_available.count())
@@ -224,6 +243,7 @@ def test_wizard_chaid_disables_continuous():
 def test_wizard_finish_emits_config():
     wiz = _make_wizard()
     wiz.show()
+    _select_target(wiz, "default")
     _select_first_predictor(wiz)                   # "edad" (1er disponible)
     captured: list[dict] = []
     wiz.finished_with_config.connect(captured.append)

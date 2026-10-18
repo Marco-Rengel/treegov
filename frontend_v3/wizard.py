@@ -153,6 +153,12 @@ class PredictorsPage(QWizardPage):
         self._lbl_target = QLabel()
         self._combo_target = QComboBox()
         self._combo_target.setObjectName("comboTarget")
+        # Phase 3.7.e (pre-1.0.0rc1): H2 — do NOT default to the first CSV
+        # column. Add an explicit placeholder first; the analyst must choose
+        # the target explicitly. This eliminates the reported defect where
+        # the wizard opened with a continuous column as target (unusable for
+        # CHAID and semantically wrong for classification).
+        self._combo_target.addItem("", userData=None)
         for col in columns:
             self._combo_target.addItem(col, userData=col)
         target_row.addWidget(self._lbl_target)
@@ -621,6 +627,10 @@ class PredictorsPage(QWizardPage):
         self._on_target_change(self._combo_target.currentIndex())
 
     def isComplete(self) -> bool:
+        # Phase 3.7.e (pre-1.0.0rc1): H2 — Next stays disabled until the
+        # analyst has chosen a target explicitly (placeholder = no target).
+        if self._combo_target.currentData() is None:
+            return False
         return self._lst_selected.count() >= 1
 
     def validateCurrentPage(self) -> bool:
@@ -632,6 +642,7 @@ class PredictorsPage(QWizardPage):
         self.setTitle(tr("step2_title"))
         self.setSubTitle(tr("step2_subtitle"))
         self._lbl_target.setText(tr("step2_target_label"))
+        self._combo_target.setItemText(0, tr("step2_target_placeholder"))
         self._lbl_available.setText(tr("step2_available"))
         self._lbl_selected.setText(tr("step2_selected"))
         self._lbl_hint.setText(tr("step2_hint_min_one"))
