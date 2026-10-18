@@ -4405,3 +4405,28 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - `docs/roadmap.md` (fase 3.7.c)
 
 ---
+
+### 18/10/2026 — Fase 3.7.a: Auditoría de seguridad y privacidad
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio multi-archivo, requisito de release).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la Fase 3.7.a del roadmap exigía una auditoría de seguridad antes de la v1.0.0. El hallazgo H6 de la sesión de GUI (13/10/2026) ya había señalado que los logs DEBUG y los reports HTML contienen información sensible. Esta sub-fase formaliza el modelo de amenazas, la política de retención y las advertencias en la GUI.
+
+**Cambios aplicados**:
+- `docs/security_audit.md` (nuevo): documento formal que define el modelo de amenazas, la política de retención de logs, la sensibilidad de los reports HTML y la justificación de los avisos en la GUI.
+- `frontend_v3/i18n.py`: dos claves nuevas × dos idiomas (`security_warning_title`, `security_warning_body`).
+- `frontend_v3/main_window.py`: añadida la bandera `_security_warning_shown`. En `_load_dataset_path`, se muestra un `QMessageBox.warning` la primera vez que se carga un dataset en la sesión (suprimido bajo offscreen para no colgar el CI). El evento se registra en el log.
+
+**Tests**: 430/430 PASSED. Cero regresiones (el aviso está suprimido en el entorno offscreen, por lo que los tests E2E no se ven afectados).
+
+**Referencias**:
+- `docs/roadmap.md` (fase 3.7.a)
+- `docs/security_audit.md`
+- `docs/philosophy.md` §"Development vs end use"
+- `docs/audit_log.md` entrada del 13/10/2026 (hallazgo H6)
+
+---

@@ -276,6 +276,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
 - **Fase 3.7.b** — Simetrización del KS por pares en multiclase ✅ Completada (18/10/2026).
 - **Fase 3.7.c** — Exposición pública de `min_child_weight` en `Session.train` y wizard ✅ Completada (18/10/2026).
+- **Fase 3.7.a** — Auditoría de seguridad y privacidad ✅ Completada (18/10/2026).
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
 - **Fase 6** — Scoring batch y champion-challenger

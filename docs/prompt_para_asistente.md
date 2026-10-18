@@ -159,7 +159,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Las sub-fases 3.7.b (simetrizar KS por pares) y 3.7.c (exponer `min_child_weight` en `Session.train` y wizard) están cerradas. Quedan los pendientes 3.7.a (auditoría de seguridad) y 3.7.d (ampliar `tests/test_uci_integration.py` con CHAID y QUEST).
+- **Próximo paso:** Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Todas las sub-fases estratégicas (3.7.a auditoría de seguridad, 3.7.b simetrizar KS, 3.7.c exponer `min_child_weight`, 3.7.d tests UCI) están cerradas. Próximo hito: cierre documental final y publicación de la v1.0.0.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---

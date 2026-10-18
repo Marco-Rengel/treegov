@@ -78,6 +78,7 @@ class MainWindow(QMainWindow):
         # a class-of-interest inversion without reopening the wizard)
         self._last_train_cfg: dict | None = None
         self._mode_name: str = "—"
+        self._security_warning_shown: bool = False
 
         # Language before any widget text is built. QSettings without an
         # eager default: detect_system_language() runs only when unset,
@@ -404,6 +405,18 @@ class MainWindow(QMainWindow):
             self._session = Session()
         if not self._run_guarded(self._session.load_dataset, path):
             return False
+
+        if not self._security_warning_shown:
+            app = QApplication.instance()
+            if app is not None and app.platformName() != "offscreen":
+                QMessageBox.warning(
+                    self,
+                    tr("security_warning_title"),
+                    tr("security_warning_body"),
+                )
+            self._security_warning_shown = True
+            if self._logger is not None:
+                self._logger.info("[gui] security warning shown on first dataset load")
         columns, types = self._session.describe_dataset()
         self._dataset_info = (columns, types)
         self._act_new_wizard.setEnabled(True)
