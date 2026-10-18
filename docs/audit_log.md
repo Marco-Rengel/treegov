@@ -3621,8 +3621,8 @@ Correcciones:
 **Tests**: 384/384 PASSED.
 
 **Referencias**:
-- Commits: `3ccae9c`, `d206525`, `0f4f38d`, `8949fe5`, `8ef16c8`,
-  `b0215ac`, `87888b4`, más el commit de esta entrada.
+- Commits: `3ccae9c`, `d206525`, `0f4f38d` (release a3), `8949fe5`, `8ef16c8`, `5fa82ad` (release a4), `b0215ac`, `87888b4`, más el commit de esta entrada.
+- Nota (18/10/2026): la versión original de esta lista omitía el commit `5fa82ad` (release real de a4). Corregido en el commit de sincronización de tags retroactivos previo al rc1, detectado durante la auditoría de trazabilidad de tags.
 - `docs/prompt_para_asistente.md` sección 4 ("Cómo trabajamos") y
   sección 6 ("Herramientas y limitaciones"), actualizados con las
   dos reglas nuevas.
