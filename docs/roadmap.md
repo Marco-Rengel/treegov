@@ -293,11 +293,12 @@ y no-crédito (biología, ciencias sociales).
 | 3.5 | Reportes adaptados (multiclase + ponderación) | Completada |
 | 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | Completada |
 | 3.6.e | Modo no-bancario (terminología + ejemplos + docs) | Media |
-| 3.7 | Cierre Fase 3 + v1.0.0 estable | Alta |
-| 3.7.a | ✅ Auditoría de seguridad y privacidad (retención de logs, advertencias GUI, modelo de amenazas) antes de la v1.0.0 | Completada |
-| 3.7.b | ✅ Simetrizar el estadístico KS por pares en validation.py (promediar KS_ij y KS_ji) y actualizar methodology.md | Completada |
-| 3.7.c | ✅ Exponer `min_child_weight` en la firma de `Session.train` y cablearlo en el asistente gráfico (actualmente es un parámetro interno de TreeBuilder) | Completada |
-| 3.7.d | Ampliar tests/test_uci_integration.py para incluir aserciones de CHAID (Car Evaluation, Balance Scale) y QUEST (los 6 datasets) | Alta |
+| 3.7 | Cierre Fase 3 + v1.0.0rc1 | Alta | Completada |
+| 3.7.a | ✅ Auditoría de seguridad y privacidad | Completada |
+| 3.7.b | ✅ Simetrización KS por pares | Completada |
+| 3.7.c | ✅ min_child_weight en Session.train y wizard | Completada |
+| 3.7.d | ✅ Tests UCI ampliados (CHAID Car/Balance, QUEST 6) | Completada |
+| 3.7.e | ✅ Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
 
 **Desglose de la Fase 3.2:**
 
@@ -556,9 +557,11 @@ Detalle completo en docs/audit_log.md entrada del 16/10/2026.
     (política "no dejar cabos sueltos").
 - **Toda deuda detectada se registra en el roadmap (16/10/2026).** Cuando se detecta una deuda técnica o un pendiente, se registra en este documento (sección Deferred o Pending decisions) EN LA MISMA SESIÓN en que se detecta. No basta con mencionarlo en audit_log.md o en la conversación. Motivo: el pendiente Aider/build/twine del 12/10/2026 estuvo abierto 4 días sin trazabilidad en el roadmap; al retomarlo el 16/10 hubo que reconstruir el contexto desde cero. El roadmap es la fuente de verdad de deuda técnica del proyecto; el audit_log es la bitácora cronológica.
 - **Cierre de pendientes cosméticos (18/10/2026).** Los tres pendientes cosméticos detectados en el móvil el 17/10/2026 quedan cerrados en el commit 7334f65 (bloque de documentación pura, suite 422/422 intacta): (a) mención de CHAID Exhaustive restaurada en README.md y README.es.md; (b) tabla "¿Por qué TreeGov?" solo en español en README.es.md; (c) comillas tipográficas y título corregido en README.md y docs/philosophy.md. Ver docs/audit_log.md entrada del 18/10/2026.
+- **Fase 3.6.e fuera del alcance de 1.0.0 (18/10/2026).** El modo no-bancario extensivo (terminología neutral + validación en marketing y ecología) se aplaza a 1.1.0 o posterior. El "Research mode" de la Fase 2.1 cubre el uso no-bancario básico. Motivo: no bloquea la publicación de rc1; su inclusión retrasaría meses sin ganancia funcional.
 
 ## Releases
 
+- **v1.0.0rc1** (fecha de publicación pendiente) — Release candidate. Incluye los tres fixes de la sub-fase 3.7.e (H1 radio buttons, H2 target por defecto, pd_floor K=2) más la documentación sincronizada al estado real (431/431 tests). Los 5 claims del README no respaldados por el código se matizaron: IFRS 9 (Fase 7 planificada), sample weighting (parcial: split y gains table binaria no ponderan), cost-complexity pruning (API-only, no GUI), 3.7 Completed (con 3.6.e fuera de scope), estructura del repositorio actualizada. Clasificador PyPI: 4 - Beta.
 - **v1.0.0a1** (03/10/2026) — Primera publicación real en PyPI.
   Incluye `backend_v3` (capa analítica) y `frontend_v3` (GUI PySide6).
   URL: https://pypi.org/project/treegov/1.0.0a1/

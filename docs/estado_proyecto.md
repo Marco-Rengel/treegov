@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 16/10/2026 (Fase 3.6.a cerrada)
+**Fecha de última actualización:** 18/10/2026 (Fase 3.7 cerrada, release 1.0.0rc1)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0a6 (alpha) |
+| Versión | 1.0.0rc1 (release candidate) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0a6/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc1/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -273,10 +273,13 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.6.a** — Diseño del plan de validación con *datasets* públicos. ✅ Completada (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
 - **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
 - **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Pendiente.
-- **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
-- **Fase 3.7.b** — Simetrización del KS por pares en multiclase ✅ Completada (18/10/2026).
-- **Fase 3.7.c** — Exposición pública de `min_child_weight` en `Session.train` y wizard ✅ Completada (18/10/2026).
-- **Fase 3.7.a** — Auditoría de seguridad y privacidad ✅ Completada (18/10/2026).
+- **Fase 3.7** — Cierre Fase 3 + v1.0.0rc1 ✅ Completada (18/10/2026).
+- **Fase 3.7.a** — Auditoría de seguridad ✅.
+- **Fase 3.7.b** — Simetrización KS por pares ✅.
+- **Fase 3.7.c** — min_child_weight expuesto ✅.
+- **Fase 3.7.d** — Tests UCI ampliados ✅.
+- **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor ✅.
+- **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
 - **Fase 6** — Scoring batch y champion-challenger
@@ -428,7 +431,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 11 |
 | profiling.py | 3 |
-| tree_builder.py | 35 |
+| tree_builder.py | 36 |
 | session_state.py | 87 |
 | validation.py | 30 |
 | pruning.py | 6 |
@@ -441,10 +444,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
-| uci_integration | 6 |
-| **Total** | **422** |
+| uci_integration | 14 |
+| **Total** | **431** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 422/422 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 431/431 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -509,6 +512,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] Licencia comercial paralela (análisis legal si se considera).
 - [ ] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8. Ver `docs/roadmap.md` sección Deferred. No bloquea el desarrollo actual.
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
+- [ ] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición).
+- [ ] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` no integrado en Session ni GUI, y no ponderado (criterio de poda usa conteos físicos mientras el crecimiento usa Gini ponderado). Incoherencia estadística entre crecimiento y poda.
+- [ ] Deuda de trazabilidad: etiquetas de git `a1`–`a6` no creadas en el momento de la publicación. Identificar los commits correspondientes en audit_log y crear tags retroactivas si es posible. Tag `v1.0.0rc1` obligatorio en la próxima release.
 
 ### Decisiones de largo plazo
 

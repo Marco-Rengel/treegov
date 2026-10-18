@@ -4430,3 +4430,83 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - `docs/audit_log.md` entrada del 13/10/2026 (hallazgo H6)
 
 ---
+
+### 18/10/2026 — Fase 3.7.d: tests UCI con CHAID y QUEST (entrada retroactiva)
+
+**Estado**: ✅ Cerrada (entrada retroactiva; el código se cerró en el commit `c72df69` pero nunca se documentó en este archivo).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la sub-fase 3.7.d ampliaba `tests/test_uci_integration.py` más allá del motor C&RT. El trabajo se completó y commiteó (`c72df69`) pero su entrada de cierre en `docs/audit_log.md` se omitió, violando la regla "Phase closure documentation: never deferred". Esta entrada cierra el hueco en retrospectiva.
+
+**Cambios aplicados** (ya presentes en el repositorio desde `c72df69`):
+- `tests/test_uci_integration.py`: `_build_session` y `_check_dataset` refactorizados para aceptar el motor (`engine="CRT"` por defecto). Diccionarios nuevos `EXPECTED_CHAID` y `EXPECTED_QUEST` con fingerprints y conteos de nodos reales capturados de los AssertionError.
+- 8 tests nuevos: 2 con CHAID (Car Evaluation, Balance Scale) y 6 con QUEST (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion).
+
+**Tests**: la suite pasó de 422/422 a 430/430 PASSED. Cero regresiones.
+
+**Nota de gobernanza**: la omisión original de esta entrada violó la regla "Phase closure documentation: never deferred" (ver `docs/roadmap.md` sección "Recorded architectural decisions"). Se detectó durante el cierre formal de la Fase 3.7 y se documenta aquí en el mismo bloque.
+
+**Referencias**:
+- Commit `c72df69`.
+- `docs/roadmap.md` (fase 3.7.d).
+- `docs/audit_log.md` entrada del 16/10/2026 (Fases 3.6.c/d, donde se creó `tests/test_uci_integration.py` con los 6 tests C&RT originales).
+
+---
+
+### 18/10/2026 — Cierre formal de la Fase 3.7
+
+**Estado**: ✅ Fase 3.7 cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3.
+
+**Revisor**: Marco Rengel.
+
+**Recuento de sub-fases**:
+- **3.7.a** — Auditoría de seguridad y privacidad: `docs/security_audit.md` (modelo de amenazas, retención de logs, sensibilidad de reports HTML) + `QMessageBox` de aviso en la primera carga de dataset por sesión (`frontend_v3/main_window.py`, claves i18n `security_warning_title`/`security_warning_body`). Cerrada el 18/10/2026.
+- **3.7.b** — Simetrización del KS por pares en multiclase (`backend_v3/validation.py`). Cerrada el 18/10/2026.
+- **3.7.c** — Exposición pública de `min_child_weight` en `Session.train` y wizard. Cerrada el 18/10/2026.
+- **3.7.d** — Ampliación de tests UCI con CHAID y QUEST (8 tests nuevos). Cerrada en código el 18/10/2026 (commit `c72df69`); entrada retroactiva en este mismo bloque.
+- **3.7.e** — Correcciones pre-release tras auditoría externa (H1, H2, pd_floor K=2). Ver la entrada siguiente de este mismo bloque.
+
+**Alcance**: la Fase 3.6.e (modo no bancario) queda fuera del alcance de la v1.0.0; se planifica para la v1.1.0 o posterior.
+
+**Tests**: 431/431 PASSED.
+
+**Próximo paso**: bump a 1.0.0rc1 y publicación en PyPI.
+
+**Referencias**:
+- `docs/roadmap.md` (Fase 3.7).
+- Las entradas del 18/10/2026 de este archivo (3.7.a, 3.7.b, 3.7.c, 3.7.d retroactiva, 3.7.e).
+
+---
+
+### 18/10/2026 — Fase 3.7.e: correcciones pre-release
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: corrección de bugs y multi-archivo).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: tres fixes aplicados tras recibir una auditoría externa independiente (Gemini Argon MAX y Copilot Think Deeper, con el mismo prompt). Dos fixes provienen de los hallazgos H1 y H2 de la sesión de GUI del 13/10/2026; el tercero es un bug numérico del floor de PD en K=2 detectado por la auditoría externa.
+
+**Cambios aplicados**:
+
+(a) **H1 — radio buttons del wizard invisibles.** Fix en `frontend_v3/resources/styles.qss` con reglas `QRadioButton::indicator::checked` y `QRadioButton::indicator:hover`. Verificado con los tests E2E del wizard.
+
+(b) **H2 — target por defecto era la primera columna del CSV.** Fix en `frontend_v3/wizard.py`: el combo `_combo_target` de `PredictorsPage` arranca con un placeholder explícito (`currentData() == None`) y `isComplete()` exige target elegido. Clave i18n nueva `step2_target_placeholder` en EN/ES. Tres tests adaptados en `tests/test_wizard.py` (`test_wizard_navigation`, `test_wizard_predictors_validation`, `test_wizard_finish_emits_config`) más el helper nuevo `_select_target`.
+
+(c) **pd_floor en K=2.** La renormalización suave podía dejar `pd_final[0] < pd_floor`, violando BCBS CRE 20.39 (cota dura). Fix en `backend_v3/tree_builder.py`, rama `K == 2`: asignar `1 - pd_final[0]` directamente sin renormalizar. Test nuevo `test_pd_floor_hard_bound_binary` en `tests/test_tree_builder.py`, verificado numéricamente (fixture de 100 filas con hojas puras: `pd_jeffreys[0] = 0.5/51 ≈ 0.0098 < 0.01`; con la renormalización suave `pd_final[0]` quedaba en 0.009998; con el floor duro es ≥ 0.01 y la suma es 1.0 con tolerancia 1e-12).
+
+**Tests**: 431/431 PASSED. Cero regresiones.
+
+**Referencias**:
+- `docs/audit_log.md` entrada del 13/10/2026 (hallazgos H1 y H2).
+- `docs/methodology.md` §6.6 (PD floor).
+- `docs/design_decisions.md` §6.4 (justificación del floor).
+- BCBS CRE 20.39 (cota dura del floor de PD).
+
+---

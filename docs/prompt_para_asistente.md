@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 16/10/2026 (tarde)
+**Última actualización:** 18/10/2026
 
 ---
 
@@ -106,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 422/422 PASSED.
+- **Suite de tests:** 431/431 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -159,7 +159,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Próximo paso:** Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Todas las sub-fases estratégicas (3.7.a auditoría de seguridad, 3.7.b simetrizar KS, 3.7.c exponer `min_child_weight`, 3.7.d tests UCI) están cerradas. Próximo hito: cierre documental final y publicación de la v1.0.0.
+- **Estado al 18/10/2026:** Fase 3.7 cerrada completa (a, b, c, d, e). Suite 431/431. Próximo paso: publicación de `1.0.0rc1` en PyPI (build, twine check, twine upload, tag `v1.0.0rc1`, verificación en venv aislado). Después: recogida de feedback externo durante 2–4 semanas; si no aparecen bugs críticos, publicación de `1.0.0` estable. La Fase 3.6.e (modo no-bancario extensivo) queda fuera de 1.0.0, planificada para 1.1.0 o posterior.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -372,7 +372,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 18/10/2026: Fases 0 a 3.5 cerradas, más la Fase 3.6 completa (validación con 6 datasets públicos UCI en 4 dominios, `docs/3.6_design_public_datasets.md`). Suite 422/422. Los tres cosméticos del ReportsPanel diferidos a H4 (fila accuracy, fila "n por clase", título multiclase K>2) están cerrados. Aider vive exclusivamente en pipx como respaldo; OpenCode 1.19.0 es la herramienta activa (configuración corregida: moonshotai + plugin de caché). Próximo paso: Fase 3.7 (a: auditoría de seguridad; b: simetrizar KS por pares; c: exponer `min_child_weight` en `Session.train`; d: ampliar `tests/test_uci_integration.py` con CHAID y QUEST). Regla operativa: trabajar en ráfagas cortas. ¿Qué necesitas para darme contexto?"
+> "Retomamos TreeGov. Soy Marco. Estado al 18/10/2026: Fases 0 a 3.5 cerradas, Fase 3.6 completa (validación con 6 datasets públicos UCI), Fase 3.7 completa (auditoría de seguridad, simetrización KS, min_child_weight, tests UCI ampliados, correcciones pre-release H1/H2/pd_floor). Suite 431/431. Próximo paso: publicación de 1.0.0rc1 en PyPI. Deuda diferida a 1.0.0 estable: D13 (gains table binaria no ponderada), poda no integrada en Session/GUI y no ponderada, tags a1–a6 ausentes. Regla operativa: trabajar en ráfagas cortas con OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max para código, high para docs."
 
 ---
 

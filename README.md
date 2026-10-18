@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0a6
+**Version**: 1.0.0rc1
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 422/422 passing
+**Test suite**: 431/431 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -61,12 +61,12 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 | **C&RT** | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits, multiclass (K ≥ 2) |
 | **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection, QDA split for K=2, Gini sweep for K > 2 (hybrid C&RT/QUEST approach for multiclass) |
 | **Multiclass Support** | Hand & Till (2001) | — | Training and metrics for K ≥ 2 classes; multiclass Gini and pairwise KS |
-| **Sample Weighting** | Heeringa et al. (2010) | SR 11-7 | Sample bias adjustment across the pipeline (engines, split, metrics) |
+| **Sample Weighting** | Heeringa et al. (2010) | SR 11-7 | Sample bias adjustment across engines, tree construction, validation metrics and stability monitoring. Known limitation: the train/test split stratifies by physical row count (not weighted mass), surrogate agreement in C&RT is not weighted, and the binary gains table's global Gini/KS/AUC are unweighted (design_decisions.md §13.3, §13.6.2, §13.7). |
 | **Population Categories** | — | — | *Opt-in* filter to exclude categories (Indet, No Perf) before training |
 | **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test *split*, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
-| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing |
+| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing (API-only in `backend_v3/pruning.py`; not yet wired into the GUI or Session). |
 | **Out-of-Sample (OOS) / Out-of-Time (OOT) validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; *out-of-time* cohort support |
 | **Stability monitoring** | Siddiqi (2006) | Basel / EBA | Population Stability Index (PSI, leaves), Characteristic Stability Index (CSI, covariates), Gini Drop with traffic lights |
 | **UCI dataset validation** | UCI ML Repository | — | Reproducibility anchored to 6 *datasets* (German Credit, Breast Cancer, etc.) |
@@ -114,6 +114,9 @@ TreeGov/
 │   ├── 3.3_design_population_categories.md  # Phase 3.3 design (EN)
 │   ├── 3.4_design_multiclass_crt_quest.md  # Phase 3.4 design (EN)
 │   ├── 3.5_design_multiclass_weighted_reports.md  # Phase 3.5 design (EN)
+│   ├── 3.6_design_public_datasets.md  # Phase 3.6 design (EN)
+│   ├── validation_results_3.6.md  # UCI validation report (EN)
+│   ├── security_audit.md      # Security and privacy audit (EN)
 │   ├── api.md               # Public API (EN)
 │   ├── roadmap.md           # Phase plan (EN)
 │   ├── philosophy.md        # Project philosophy (EN)
@@ -205,14 +208,15 @@ TreeGov/
 | **3.6.b** | Fetch script + versioned fixtures | Completed |
 | **3.6.c** | Integration tests + validation report | Completed |
 | **3.6.d** | Phase documentation closure | Completed |
-| **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned |
-| **3.7** | Phase 3 closure + v1.0.0 stable | Planned |
+| **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned for 1.1.0 |
+| **3.7** | Phase 3 closure + v1.0.0rc1 | Completed |
+| **3.7.e** | Pre-release fixes (H1, H2, pd_floor K=2) | Completed |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 422/422 passing.**
+**Test suite: 431/431 passing.**
 
 ---
 
@@ -243,7 +247,7 @@ TreeGov/
 
 - **Basel (BCBS CRE 20.39)**: regulatory PD floors.
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: staging, ECL, and asymmetric threshold optimization.
+- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc1.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---

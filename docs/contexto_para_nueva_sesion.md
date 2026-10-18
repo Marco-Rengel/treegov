@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 16/10/2026
+**Fecha de última actualización:** 18/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -122,9 +122,9 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada |
 | 3.6 | Validación con datasets públicos | ✅ |
 | 3.6.e | Modo no-bancario | ⏳ |
-| 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
+| 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
 
-**Suite de tests:** 422/422 PASSED
+**Suite de tests:** 431/431 PASSED
 
 ## Entorno de desarrollo
 
@@ -290,7 +290,7 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Próximo paso**: Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización del KS por pares), 3.7.c (exposición pública de `min_child_weight`) y 3.7.d (tests UCI con CHAID y QUEST) han sido cerradas el 18/10/2026. La Fase 3.7 está completa a falta del cierre documental final y la publicación de la v1.0.0. Fase 3.6.e (modo no-bancario) sigue pendiente y se planifica para una versión posterior.
+**Fase 3.7 cerrada (18/10/2026).** Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización KS por pares), 3.7.c (min_child_weight expuesto), 3.7.d (tests UCI ampliados) y 3.7.e (correcciones pre-release H1, H2, pd_floor K=2) están cerradas. Suite: 431/431. Próximo hito: publicación de 1.0.0rc1 en PyPI (build, twine check, twine upload, tag v1.0.0rc1, verificación en venv aislado). Después: recogida de feedback externo durante 2–4 semanas; si no aparecen bugs críticos, 1.0.0 estable. Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.
