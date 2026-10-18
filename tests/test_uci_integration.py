@@ -76,7 +76,7 @@ EXPECTED = {
 }
 
 
-def _build_session(cfg):
+def _build_session(cfg, engine="CRT"):
     sess = Session()
     sess.load_dataset(str(FIXTURES / cfg["csv"]))
     cols, _ = sess.describe_dataset()
@@ -90,7 +90,7 @@ def _build_session(cfg):
     )
     sess.partition(train_frac=0.7, seed=cfg["seed"])
     sess.train(
-        engine="CRT",
+        engine=engine,
         max_depth=cfg["max_depth"],
         min_child_size=cfg["min_child_size"]
     )
@@ -98,10 +98,31 @@ def _build_session(cfg):
     return sess
 
 
-def _check_dataset(name):
+EXPECTED_CHAID = {
+    "car_evaluation": {"fingerprint": "762c7111d8f126a1", "nodes": 14},
+    "balance_scale": {"fingerprint": "d90c8261d6cd81ce", "nodes": 21},
+}
+
+EXPECTED_QUEST = {
+    "german_credit": {"fingerprint": "5966289fa7260670", "nodes": 7},
+    "car_evaluation": {"fingerprint": "3051ca8aace55146", "nodes": 7},
+    "balance_scale": {"fingerprint": "f33b1c24f1229f05", "nodes": 13},
+    "breast_cancer_wdbc": {"fingerprint": "7073c2c0722924b9", "nodes": 7},
+    "iris": {"fingerprint": "de3811bc0a1e7729", "nodes": 5},
+    "blood_transfusion": {"fingerprint": "35b6dc75a746ecd0", "nodes": 7},
+}
+
+
+def _check_dataset(name, engine="CRT"):
     cfg = CONFIGS[name]
-    exp = EXPECTED[name]
-    sess = _build_session(cfg)
+    if engine == "CHAID":
+        exp = EXPECTED_CHAID[name]
+    elif engine == "QUEST":
+        exp = EXPECTED_QUEST[name]
+    else:
+        exp = EXPECTED[name]
+
+    sess = _build_session(cfg, engine)
 
     tree = sess.state.tree
     metrics = sess.state.oos_metrics
@@ -133,6 +154,38 @@ def test_uci_iris():
 
 def test_uci_blood_transfusion():
     _check_dataset("blood_transfusion")
+
+
+def test_uci_car_evaluation_chaid():
+    _check_dataset("car_evaluation", "CHAID")
+
+
+def test_uci_balance_scale_chaid():
+    _check_dataset("balance_scale", "CHAID")
+
+
+def test_uci_german_credit_quest():
+    _check_dataset("german_credit", "QUEST")
+
+
+def test_uci_car_evaluation_quest():
+    _check_dataset("car_evaluation", "QUEST")
+
+
+def test_uci_balance_scale_quest():
+    _check_dataset("balance_scale", "QUEST")
+
+
+def test_uci_breast_cancer_wdbc_quest():
+    _check_dataset("breast_cancer_wdbc", "QUEST")
+
+
+def test_uci_iris_quest():
+    _check_dataset("iris", "QUEST")
+
+
+def test_uci_blood_transfusion_quest():
+    _check_dataset("blood_transfusion", "QUEST")
 
 
 # ---------------------------------------------------------------------------
