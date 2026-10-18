@@ -1092,11 +1092,11 @@ tuples expose the per-pair values; the reviewer sees which pair
 dominates.
 
 **Worst-case pairwise KS (decision D4).**
+ks_pair(i, j) computed over the pair (i, j), evaluated in both directions and symmetrized, following the same logic as Hand & Till's AUC:
 
-    ks_pair(i, j) computed over the pair (i, j): score = column i of p,
-    positives = rows with y == i, negatives = rows with y == j. Same
-    descending-score accumulation with whole tie blocks as the binary
-    KS (see §8.2).
+    ks_ij = KS with score = column i of p, positives = rows with y == i, negatives = rows with y == j.
+    ks_ji = KS with score = column j of p, positives = rows with y == j, negatives = rows with y == i.
+    ks_pair(i, j) = 0.5 * (ks_ij + ks_ji)
 
     ks = min over all pairs of ks_pair(i, j)
 
@@ -1126,14 +1126,6 @@ reported metric already satisfy that threshold. Row scoring through
 default `"error"` (a row that cannot be routed aborts the evaluation),
 while `Session.evaluate_oot` uses `"exclude"` and reports the count in
 `n_excluded`.
-
-**Fidelity note on pairwise KS.** Unlike Hand & Till's AUC, which
-symmetrizes the pair by averaging `A_ij` and `A_ji`, the implementation
-of `ks_pair(i, j)` for K > 2 evaluates only the unidirectional
-projection on coordinate `p_i` for `i < j`. Consequently, the
-statistic is sensitive to the indexing order of secondary classes.
-This is a known limitation and is scheduled for resolution in
-Phase 3.7 before the stable v1.0.0.
 
 ### 8.12 Multiclass calibration — Brier, BSS, Hosmer-Lemeshow block
 

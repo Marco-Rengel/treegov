@@ -456,7 +456,8 @@ def test_multiclass_k3_hand_till_auc():
 
 
 def test_multiclass_k3_worst_case_ks():
-    """KS multiclase = minimo de los KS por par (worst-case; decision D4).
+    """KS multiclase = minimo de los KS por par simetrizados (worst-case;
+    decision D4, simetrizado en 3.7.b).
 
     Fixture n=30 (10 por clase), probabilidades que suman 1:
       y=0 x10: [0.70, 0.20, 0.10]
@@ -464,15 +465,11 @@ def test_multiclass_k3_worst_case_ks():
       y=2  x5: [0.20, 0.30, 0.50]
       y=2  x5: [0.10, 0.80, 0.10]
 
-    Calculo a mano (CDFs empiricas por bloques, sobre la columna i):
-      Par (0,1), col0: clase0 {0.70} vs clase1 {0.10} -> KS = 1.0.
-      Par (0,2), col0: clase0 {0.70} vs clase2 {0.20, 0.10} -> KS = 1.0.
-      Par (1,2), col1: clase1 {0.70 x10} vs clase2 {0.80 x5, 0.30 x5}:
-        t=0.80: F_pos=0,   F_neg=0.5 -> |diff|=0.5
-        t=0.70: F_pos=1.0, F_neg=0.5 -> |diff|=0.5
-        t=0.30: F_pos=1.0, F_neg=1.0 -> 0
-        KS = 0.5.
-    El par (1,2) domina el worst-case: ks = min(1, 1, 0.5) = 0.5.
+    Calculo a mano (CDFs empiricas por bloques, simetrizado):
+      Par (0,1): col0 -> 1.0 ; col1 -> 1.0 ; sym = 1.0.
+      Par (0,2): col0 -> 1.0 ; col2 -> 0.5 ; sym = 0.75.
+      Par (1,2): col1 -> 0.5 ; col2 -> 0.5 ; sym = 0.5.
+    El par (1,2) domina el worst-case: ks = min(1, 0.75, 0.5) = 0.5.
     """
     p = np.array(
         [[0.70, 0.20, 0.10]] * 10
@@ -485,7 +482,7 @@ def test_multiclass_k3_worst_case_ks():
     assert [(i, j) for i, j, _ in m.ks_pairs] == [(0, 1), (0, 2), (1, 2)]
     vals = [v for _, _, v in m.ks_pairs]
     assert math.isclose(vals[0], 1.0, rel_tol=1e-12)
-    assert math.isclose(vals[1], 1.0, rel_tol=1e-12)
+    assert math.isclose(vals[1], 0.75, rel_tol=1e-12)
     assert math.isclose(vals[2], 0.5, rel_tol=1e-12)
     assert math.isclose(m.ks, min(vals), rel_tol=1e-12)
     assert math.isclose(m.ks, 0.5, rel_tol=1e-12)

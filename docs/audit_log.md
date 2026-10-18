@@ -4338,3 +4338,32 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - docs/roadmap.md sección "Recorded architectural decisions" (regla PyPI).
 
 ---
+
+### 18/10/2026 — Fase 3.7.b: Simetrización del KS por pares en multiclase
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio de lógica numérica y multi-archivo).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: El diseño de la Fase 3.5 (decisión D4) estableció el uso del mínimo de los KS por pares como worst-case para K > 2. Sin embargo, la implementación evaluaba el estadístico de forma unidireccional (usando solo la columna `p_i`), rompiendo la simetría con el AUC de Hand & Till, que sí promedia ambas direcciones. Esta asimetría quedó documentada en `design_decisions.md` §7.7 y se programó su resolución para la Fase 3.7.b.
+
+**Cambios aplicados**:
+- `backend_v3/validation.py`: en el bucle de cálculo multiclase, se captura el retorno de `ks` en la dirección inversa (`ks_ji`) y se promedia con el directo (`ks_ij`) antes de guardarlo en `ks_pairs`.
+- `tests/test_validation.py`: actualizado `test_multiclass_k3_worst_case_ks` para reflejar el nuevo valor simetrizado (0.75 en lugar de 1.0) del par (0,2). El peor caso (`min`) se mantiene en 0.5.
+- `docs/methodology.md` §8.11: actualizada la fórmula del KS para reflejar el promedio de ambas direcciones. Eliminado el párrafo de "Fidelity note" que documentaba la asimetría.
+- `docs/design_decisions.md` §7.7: actualizada la sección para reflejar la resolución del diferido.
+
+**Hallazgos**:
+- La simetrización altera numéricamente el payload de `ks_pairs` para K > 2, pero mantiene el invariante K=2 bit a bit (las dos direcciones son idénticas cuando `p_1 = 1 - p_0`).
+- No hay impacto en `Session` ni en la GUI, ya que el DTO consume los pares ya calculados.
+
+**Tests**: 422/422 PASSED. Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §7.7
+- `docs/methodology.md` §8.11
+- `docs/3.5_design_multiclass_weighted_reports.md` (decisión D4)
+
+---

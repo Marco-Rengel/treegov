@@ -274,6 +274,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
 - **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Pendiente.
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0 estable
+- **Fase 3.7.b** — Simetrización del KS por pares en multiclase ✅ Completada (18/10/2026).
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
 - **Fase 6** — Scoring batch y champion-challenger

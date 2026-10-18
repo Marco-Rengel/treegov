@@ -1011,27 +1011,15 @@ surface. The caller may override with `"exclude"` when transparency
 - Documented in `validation.py` and `session_state.py`. Item for
   `methodology.md` in Phase 3.0.c.
 
-### 7.7 Unidirectional pairwise KS in multiclass (deferred to Phase 3.7)
+### 7.7 Symmetrized pairwise KS in multiclass (resolved in Phase 3.7.b)
 
-**Context.** For K > 2, `compute_oos_metrics` reports per-pair KS
-values (`ks_pairs`) and their minimum as the aggregate `ks` (Phase
-3.5, decision D4). The Hand & Till AUC symmetrizes each pair by
-averaging both directions (`0.5 * (A_ij + A_ji)`), but the KS keeps
-only the unidirectional projection on coordinate `p_i` for `i < j`
-(see `backend_v3/validation.py`, multiclass path).
+**Context.** For K > 2, `compute_oos_metrics` reports per-pair KS values (`ks_pairs`) and their minimum as the aggregate `ks` (Phase 3.5, decision D4). Originally, the pairwise KS was computed unidirectionally (evaluating only `p_i` for `i < j`), which made it sensitive to the indexing order of secondary classes and asymmetric with respect to Hand & Till's AUC.
 
-**Decision.** Document the limitation rather than change the
-statistic mid-alpha. The pairwise KS is therefore sensitive to the
-indexing order of secondary classes. Symmetrization
-(`KS_ij = 0.5 * (KS(p_i) + KS(p_j))`) is scheduled as task 3.7.b of
-Phase 3.7, before the stable v1.0.0, and will update
-`docs/methodology.md` §8.11, the affected tests, and this entry in
-the same block.
+**Decision.** As of Phase 3.7.b, the pairwise KS is symmetrized by averaging both directions:
+`KS_ij = 0.5 * (KS(p_i) + KS(p_j))`.
+This aligns the KS with the Hand & Till AUC symmetrization logic.
 
-**Consequences.** Reported `ks_pairs` and the worst-case `ks` for
-K > 2 are reproducible but direction-dependent. For K = 2 the two
-directions coincide exactly (`p_1 = 1 - p_0`), so the binary KS is
-unaffected.
+**Consequences.** Reported `ks_pairs` and the worst-case `ks` for K > 2 are now direction-independent. For K = 2 the two directions coincide exactly (`p_1 = 1 - p_0`), so the binary KS is unaffected. This resolves the limitation previously scheduled for Phase 3.7.
 
 ---
 

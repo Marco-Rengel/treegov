@@ -553,11 +553,11 @@ def compute_oos_metrics(
             # A_ij: score = columna i, positivo = y==i, negativo = y==j
             a_ij, ks_ij = _pair_auc_ks(pv[m, i], ind_ij, w[m])
             # A_ji: score = columna j, positivo = y==j, negativo = y==i
-            a_ji, _ = _pair_auc_ks(pv[m, j], 1 - ind_ij, w[m])
+            a_ji, ks_ji = _pair_auc_ks(pv[m, j], 1 - ind_ij, w[m])
             if a_ij is not None and a_ji is not None:
                 auc_pairs.append((i, j, 0.5 * (a_ij + a_ji)))
-            if ks_ij is not None:
-                ks_pairs.append((i, j, ks_ij))
+            if ks_ij is not None and ks_ji is not None:
+                ks_pairs.append((i, j, 0.5 * (ks_ij + ks_ji)))
 
     if (class_mass <= 0.0).any():
         log.warning(
