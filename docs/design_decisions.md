@@ -84,7 +84,7 @@ constraints; needs a clear, honest tool.
 | **Continuous targets** (regression trees) | ❌ | `TargetType.CONTINUOUS` exists but blocked by `TreeBuilder.build()` |
 | **Class-imbalanced samples** | ❌ | Phase 3.2 (weighting) |
 | **Regression metrics** (RMSE, MAE) | ❌ | Only binary metrics implemented |
-| **Neutral vocabulary** (no "PD", "default", "bad/good") | ❌ | Phase 3.6.b |
+| **Neutral vocabulary** (no "PD", "default", "bad/good") | ❌ | Phase 3.6.e |
 | **Non-credit examples and datasets** | ❌ | Phase 3.6 |
 | **Domain-agnostic documentation** | ❌ | This section is the first step |
 
@@ -92,7 +92,7 @@ constraints; needs a clear, honest tool.
 real data today**. Reason: (a) multiclass is blocked by the builder,
 (b) vocabulary is credit-specific, (c) no regression support, (d) no
 non-credit example datasets. Fixing this requires Phase 3.1
-(multiclass) and Phase 3.6.b (neutral vocabulary + examples).
+(multiclass) and Phase 3.6.e (neutral vocabulary + examples).
 
 **Honesty rule.** The README's regulatory notice says "not fit for
 banking production". We should add an equivalent note for non-credit
@@ -136,7 +136,7 @@ parameter names) keep the credit-specific terminology for historical
 and backward-compatibility reasons. External surfaces (GUI labels, doc
 strings, report headers, user-facing messages) will use **neutral
 vocabulary** when the user selects a non-credit domain. This policy is
-implemented progressively; Phase 3.6.b is the first concrete step.
+implemented progressively; Phase 3.6.e is the first concrete step.
 
 **Rationale.** Renaming internal fields (e.g., `pd_final` → `score`)
 would break the public API (`docs/api.md`), invalidate cached
@@ -144,7 +144,7 @@ fingerprints, and touch every test. The cost/benefit is negative. But
 presenting a biologist with a GUI label that says "PD (final)" is also
 unacceptable. Hence the split: internal stays, external translates.
 
-**Neutral-vocabulary map (draft, to be finalised in 3.6.b):**
+**Neutral-vocabulary map (draft, to be finalised in 3.6.e):**
 
 | Internal (credit) | External (neutral) |
 |---|---|
@@ -165,7 +165,7 @@ identifiers stay credit-specific (backward compat, fingerprints,
 tests), while external *labels* — including the labels shown in
 the target-class combo, reports, and the fingerprint — become
 explicit user choices. This is the first concrete step toward the
-full neutral-vocabulary mode planned for Phase 3.6.b.
+full neutral-vocabulary mode planned for Phase 3.6.e.
 
 ---
 

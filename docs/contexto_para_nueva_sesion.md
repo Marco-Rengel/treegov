@@ -121,7 +121,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.5.d | Auditoría de frontend + methodology + cierre | ✅ |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada |
 | 3.6 | Validación con datasets públicos | ✅ |
-| 3.6.b | Modo no-bancario | ⏳ |
+| 3.6.e | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0 | ⏳ |
 
 **Suite de tests:** 422/422 PASSED

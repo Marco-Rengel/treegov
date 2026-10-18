@@ -78,7 +78,7 @@ decisions that are auditable in the source code.
   auditable evidence); `params_fingerprint` identifies every model
   uniquely; the DEBUG transactional logger records each decision.
 - Optional governance, regulatory mode by default → `GovernanceMode`
-  (REGULATORY / RESEARCH) makes the regulatory layer opt-out, opening the
+  (BANKING / RESEARCH) makes the regulatory layer opt-out, opening the
   tool to non-banking domains (health, social sciences) without
   sacrificing MRM rigor where it matters. Although born in credit risk,
   TreeGov can be used in any domain where traceability, explainability,

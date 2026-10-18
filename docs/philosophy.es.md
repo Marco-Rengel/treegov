@@ -79,7 +79,7 @@ concretas y auditables en el código.
   modelo de forma única; el logger transaccional DEBUG registra cada
   decisión.
 - Gobernanza opcional, modo regulatorio por defecto → `GovernanceMode`
-  (REGULATORY / RESEARCH) hace que la capa regulatoria sea opt-out,
+  (BANKING / RESEARCH) hace que la capa regulatoria sea opt-out,
   abriendo la herramienta a dominios no bancarios (salud, ciencias
   sociales) sin sacrificar el rigor MRM donde importa. Aunque nació en
   riesgo de crédito, TreeGov puede utilizarse en cualquier dominio donde

@@ -92,7 +92,7 @@ Módulos:
 
 Módulos:
 - `frontend_v3/wizard.py` — ModelWizard (4 pasos) con retraducción en caliente
-- `backend_v3/types.py` — GovernanceMode (REGULATORY / RESEARCH)
+- `backend_v3/types.py` — GovernanceMode (BANKING / RESEARCH)
 - `backend_v3/tree_builder.py` — apply_jeffreys, pd_floor anulable, fingerprint con governance_mode
 - `backend_v3/session_state.py` — describe_dataset, reset_to_data_loaded,
   fix_spec(predictors=...), train(engine por nombre, apply_jeffreys, pd_floor)

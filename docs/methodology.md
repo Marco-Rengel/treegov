@@ -1077,6 +1077,14 @@ is documented here.
     auc = M
     gini = 2*M - 1
 
+    M = (1 / (K*(K-1)/2)) * sum_{i<j} (A_ij + A_ji) / 2
+    Gini = 2*M - 1
+
+    where:
+      K  = number of classes
+      A_ij = P(score_i of class i > score_i of class j) + 0.5 * P(tie)
+      A_ji = P(score_j of class j > score_j of class i) + 0.5 * P(tie)
+
 The per-pair AUCs use the same direct pair-counting kernel as the
 binary path (concordant = 1, tied = 0.5, discordant = 0; with weights,
 over weighted class masses). The reported `ks_pairs` and `auc_pairs`
