@@ -4367,3 +4367,41 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - `docs/3.5_design_multiclass_weighted_reports.md` (decisión D4)
 
 ---
+
+### 18/10/2026 — Fase 3.7.c: Exposición pública de min_child_weight
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio de firma pública, multi-archivo, contrato del wizard).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la Fase 3.2.e introdujo `min_child_weight` como parámetro keyword-only de `TreeBuilder`, pero quedó fuera de la firma pública de `Session.train` y del asistente gráfico. La Fase 3.7.c cierra esa brecha: expone el parámetro en la API pública y en el paso 4 del wizard.
+
+**Cambios aplicados**:
+- `backend_v3/session_state.py`: `Session.train` gana `min_child_weight: float | None = None` (keyword-only); se propaga a `TreeBuilder`; el event log registra el valor cuando está activo.
+- `frontend_v3/wizard.py`: `GovernancePage` gana un `QDoubleSpinBox` con etiqueta y hint; `current_config()` expone `"min_child_weight"`; la convención es 0.0 = desactivado → `None` en el cfg.
+- `frontend_v3/main_window.py`: `_train_pipeline` propaga `cfg["min_child_weight"]` a `Session.train` (fail-fast, mismo patrón que `target_class` y `weight_col`).
+- `frontend_v3/i18n.py`: dos claves nuevas × dos idiomas (`step4_min_child_weight`, `step4_min_child_weight_hint`).
+- `tests/test_e2e_mainwindow.py` (2 dicts), `tests/test_e2e_reports.py` (1 dict), `tests/test_tree_view.py` (1 dict) y `tests/test_wizard.py` (1 dict + actualización del conjunto esperado de claves en `test_wizard_finish_emits_config`): añadida la clave `"min_child_weight": None` a los cinco cfg manuales, más el assert de contrato del wizard.
+- `docs/api.md`: firma pública actualizada.
+- `docs/design_decisions.md` §13.5: nota de actualización.
+
+**Invariantes**:
+- El default `None` preserva la paridad bit a bit con el comportamiento pre-3.2 (el fingerprint no cambia si el parámetro no se activa; los `TreeNode` y las métricas son idénticos).
+- Solo tiene efecto numérico cuando la sesión es ponderada (`weight_col` declarado). Sin pesos, la comprobación actúa sobre un vector de unos y resulta redundante con `min_child_size`; el hint del wizard lo advierte explícitamente.
+- El fingerprint ya incluía `"min_child_weight"` desde la Fase 3.2.e; no hay cambio en el contrato del fingerprint, solo en cómo se declara el valor.
+
+**Hallazgos**:
+- El fail-fast de `_train_pipeline` (sin `.get()` con defaults) obliga a actualizar todos los cfg manuales de los tests E2E en el mismo bloque. La iteración automática localizó y actualizó cuatro archivos (`test_e2e_mainwindow.py`, `test_e2e_reports.py`, `test_tree_view.py`, `test_wizard.py`), con cinco diccionarios en total, más el assert de conjunto exacto de claves del contrato del wizard en `test_wizard_finish_emits_config`.
+- El comportamiento con `min_child_weight` activo pero `weight_col=None` no se bloquea en el wizard (el analista puede activarlo sin declarar pesos). El hint lo advierte, pero es una decisión de diseño diferible: si en la Fase 3.7.a o posterior se decide endurecerlo, se puede añadir una validación cruzada en `Session.train`.
+
+**Tests**: 422/422 PASSED. Cero regresiones.
+
+**Referencias**:
+- `docs/design_decisions.md` §13.5
+- `docs/api.md`
+- `docs/audit_log.md` entrada del 10/10/2026 (Fase 3.2.e)
+- `docs/roadmap.md` (fase 3.7.c)
+
+---

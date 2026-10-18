@@ -785,14 +785,25 @@ class GovernancePage(QWizardPage):
         self._spin_child.setObjectName("spinMinChild")
         self._spin_child.setRange(10, 50000)
         self._spin_child.setValue(50)
+        self._spin_min_child_weight = QDoubleSpinBox()
+        self._spin_min_child_weight.setObjectName("spinMinChildWeight")
+        self._spin_min_child_weight.setDecimals(2)
+        self._spin_min_child_weight.setRange(0.0, 100000.0)
+        self._spin_min_child_weight.setSingleStep(1.0)
+        self._spin_min_child_weight.setValue(0.0)
         self._lbl_jeffreys = QLabel()
         self._lbl_floor = QLabel()
         self._lbl_depth = QLabel()
         self._lbl_child = QLabel()
+        self._lbl_min_child_weight = QLabel()
+        self._lbl_min_child_weight_hint = QLabel()
+        self._lbl_min_child_weight_hint.setWordWrap(True)
         form.addRow(self._lbl_jeffreys, self._chk_jeffreys)
         form.addRow(self._lbl_floor, self._spin_floor)
         form.addRow(self._lbl_depth, self._spin_depth)
         form.addRow(self._lbl_child, self._spin_child)
+        form.addRow(self._lbl_min_child_weight, self._spin_min_child_weight)
+        form.addRow("", self._lbl_min_child_weight_hint)
         layout.addLayout(form)
 
         self._lbl_summary_title = QLabel()
@@ -822,6 +833,11 @@ class GovernancePage(QWizardPage):
 
     def min_child_size(self) -> int:
         return int(self._spin_child.value())
+
+    def min_child_weight(self) -> float | None:
+        """Piso de MASA PONDERADA por rama (Fase 3.7.c). 0.0 = desactivado."""
+        v = float(self._spin_min_child_weight.value())
+        return None if v <= 0.0 else v
 
     def _sync_governance_controls(self) -> None:
         banking = self.is_banking()
@@ -873,6 +889,10 @@ class GovernancePage(QWizardPage):
         self._lbl_floor.setText(tr("step4_pd_floor"))
         self._lbl_depth.setText(tr("step4_max_depth"))
         self._lbl_child.setText(tr("step4_min_child"))
+        self._lbl_min_child_weight.setText(tr("step4_min_child_weight"))
+        self._lbl_min_child_weight_hint.setText(
+            tr("step4_min_child_weight_hint")
+        )
         self._lbl_summary_title.setText(tr("step4_summary_label"))
         self._refresh_summary()
 
@@ -943,6 +963,7 @@ class ModelWizard(QWizard):
             "seed": self.page_validation.seed(),
             "max_depth": self.page_governance.max_depth(),
             "min_child_size": self.page_governance.min_child_size(),
+            "min_child_weight": self.page_governance.min_child_weight(),
             "governance_mode": "BANKING" if banking else "RESEARCH",
             "apply_jeffreys": self.page_governance.apply_jeffreys(),
             "pd_floor": self.page_governance.pd_floor(),

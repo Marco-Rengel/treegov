@@ -82,14 +82,16 @@ underscore) are internal and may change without notice.
   `population_col` + `population_ok_values` (Phase 3.3) declare the
   opt-in population filter.
 - `Session.train(engine, *, target_type, max_depth, min_child_size,
-  pd_floor=0.0003, apply_jeffreys=True)` — `engine` accepts an engine
-  instance or its name ("CHAID" | "CHAID_EXHAUSTIVE" | "CRT" | "QUEST");
-  `pd_floor=None` + `apply_jeffreys=False` yields Research mode
-  (Phase 2.1). Multiclass targets (K > 2) are supported by all engines
-  since Phase 3.4; downstream metrics, reports and stability monitoring
-  support K > 2 since Phase 3.5. (The weighted-mass floor
-  `min_child_weight` is a `TreeBuilder`-level parameter and is not
-  exposed on this signature.)
+  min_child_weight=None, pd_floor=0.0003, apply_jeffreys=True)` —
+  `engine` accepts an engine instance or its name ("CHAID" |
+  "CHAID_EXHAUSTIVE" | "CRT" | "QUEST"); `pd_floor=None` +
+  `apply_jeffreys=False` yields Research mode (Phase 2.1). Multiclass
+  targets (K > 2) are supported by all engines since Phase 3.4;
+  downstream metrics, reports and stability monitoring support K > 2
+  since Phase 3.5. `min_child_weight` (Phase 3.7.c) is the weighted-mass
+  floor per branch, complementary to `min_child_size` (which measures
+  physical rows); it is only meaningful when a `weight_col` was declared
+  in `fix_spec`. `None` (default) disables the check.
 - `Session.get_gains_table(*, partition, by, n_buckets, tie, seed)` —
   flat DTO of a gains table for a routed partition (Phase 2.4.c.1).
   Supports K > 2 since Phase 3.5.

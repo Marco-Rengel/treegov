@@ -595,6 +595,7 @@ class MainWindow(QMainWindow):
             cfg["engine"],
             max_depth=cfg["max_depth"],
             min_child_size=cfg["min_child_size"],
+            min_child_weight=cfg["min_child_weight"],
             pd_floor=cfg["pd_floor"],
             apply_jeffreys=cfg["apply_jeffreys"],
         )

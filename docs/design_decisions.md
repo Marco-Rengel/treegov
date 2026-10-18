@@ -1602,6 +1602,17 @@ for backward-compatible extensions.
 `docs/design_decisions.md` §5.2 (pd_final tuple); `docs/audit_log.md`
 entry of 10/10/2026 (Phase 3.2.e).
 
+**Update (18/10/2026, Fase 3.7.c).** `min_child_weight`, introducido en
+la Fase 3.2.e como parámetro interno de `TreeBuilder`, se expone ahora
+en la firma pública de `Session.train` y en el asistente gráfico
+(paso 4, "Gobierno y parámetros"). Sigue siendo opcional y su default
+(`None`) preserva la paridad bit a bit con el comportamiento pre-3.2:
+solo tiene efecto numérico cuando la sesión es ponderada
+(`weight_col` declarado en `fix_spec`). En el wizard, el valor 0.0
+equivale a "desactivado" (el acceso `GovernancePage.min_child_weight()`
+devuelve `None` en ese caso), y la descripción emergente explica que
+la opción solo aplica con una columna de pesos declarada en el paso 2.
+
 ---
 
 ### 13.6 Session-level weighting decisions

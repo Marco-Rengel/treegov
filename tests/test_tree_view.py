@@ -362,6 +362,7 @@ def test_e2e_mainwindow():
                 "population_ok_values": (),
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
+            "min_child_weight": None,
             "governance_mode": "BANKING",
             "apply_jeffreys": True, "pd_floor": 0.0003,
         }

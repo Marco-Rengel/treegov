@@ -290,7 +290,7 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Próximo paso**: Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). La sub-fase 3.7.b (simetrización del KS por pares) ha sido cerrada el 18/10/2026. Quedan abiertos los pendientes 3.7.a (auditoría de seguridad), 3.7.c (exponer min_child_weight) y 3.7.d (ampliar tests UCI con CHAID y QUEST). Fase 3.6.e (modo no-bancario) sigue pendiente y se planifica dentro de la Fase 3.7 o como bloque previo, a decidir.
+**Próximo paso**: Fase 3.7 (Cierre Fase 3 + v1.0.0 estable). Las sub-fases 3.7.b (simetrización del KS por pares) y 3.7.c (exposición pública de `min_child_weight`) han sido cerradas el 18/10/2026. Quedan abiertos los pendientes 3.7.a (auditoría de seguridad) y 3.7.d (ampliar tests UCI con CHAID y QUEST). Fase 3.6.e (modo no-bancario) sigue pendiente y se planifica dentro de la Fase 3.7 o como bloque previo, a decidir.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

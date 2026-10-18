@@ -804,6 +804,7 @@ class Session:
         target_type: TargetType = TargetType.BINARY,
         max_depth: int = 4,
         min_child_size: int = 50,
+        min_child_weight: float | None = None,
         pd_floor: float | None = 0.0003,
         apply_jeffreys: bool = True,
     ) -> SessionState:
@@ -827,6 +828,13 @@ class Session:
         Fase 3.2: si la sesion esta ponderada (fix_spec con weight_col),
         los pesos de train (`_w_train`) se propagan a TreeBuilder junto
         con `weight_col` para el fingerprint.
+        Fase 3.7.c: `min_child_weight` (keyword-only, default None) es el
+        piso de MASA PONDERADA por rama, complementario a min_child_size
+        (que mide filas fisicas). Solo tiene efecto numerico cuando la
+        sesion es ponderada (weight_col declarado en fix_spec): con
+        weight_col=None el vector interno es de unos y min_child_weight
+        actua como un piso equivalente en filas, redundante con
+        min_child_size. None (default) desactiva la comprobacion.
         """
         self._require(FlowState.PARTITIONED, "train")
         st = self._state
@@ -877,6 +885,7 @@ class Session:
             min_child_size=min_child_size, pd_floor=pd_floor,
             apply_jeffreys=apply_jeffreys,
             weights=self._w_train, weight_col=self._w_col,
+            min_child_weight=min_child_weight,
             seed=st.seed, logger=get_logger("builder"),
         )
         modelo = builder.build(self._X_train, self._y_train, dict(st.spec))
@@ -884,6 +893,8 @@ class Session:
                   f"|fp={modelo.params_fingerprint}")
         if self._w_col is not None:
             evento += f"|weighted=true,weight_col={self._w_col}"
+        if min_child_weight is not None:
+            evento += f"|min_child_weight={min_child_weight}"
         return self._commit(
             FlowState.TRAINED,
             evento=evento,

@@ -233,6 +233,7 @@ def test_wizard_finish_emits_config():
     assert set(cfg) == {
         "engine", "target", "predictors", "target_class", "class_labels",
         "train_frac", "seed", "max_depth", "min_child_size",
+        "min_child_weight",
         "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
         "population_col", "population_ok_values",
     }
@@ -345,6 +346,7 @@ def test_mainwindow_wizard_config_trains():
             "population_ok_values": (),
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
+            "min_child_weight": None,
             "governance_mode": "BANKING",
             "apply_jeffreys": True, "pd_floor": 0.0003,
         }

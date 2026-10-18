@@ -77,6 +77,7 @@ def _cfg() -> dict:
         "seed": 42,
         "max_depth": 3,
         "min_child_size": 20,
+        "min_child_weight": None,
         "governance_mode": "BANKING",
         "apply_jeffreys": True,
         "pd_floor": 0.0003,
