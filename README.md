@@ -33,24 +33,24 @@ TreeGov starts from one premise: model governance is not a layer you add at the 
 
 ```mermaid
 flowchart TB
-    TG["<b>🌳 TreeGov</b><br/>Risk Segmentation Workbench<br/><i>por Marco Rengel</i>"]
+    TG["<b>🌳 TreeGov</b><br/>Risk Segmentation Workbench<br/><i>by Marco Rengel</i>"]
 
-    TG --> P["<b>🎯 Propósito</b><br/>Segmentación de riesgo<br/>con gobernanza MRM/IFRS 9"]
-    TG --> M["<b>🧮 Motores</b><br/>CHAID · C&RT · QUEST<br/>Caja blanca + citas"]
-    TG --> G["<b>🔒 Gobernanza</b><br/>SplitConfig frozen<br/>Fingerprint sha256<br/>Audit log"]
+    TG --> P["<b>🎯 Purpose</b><br/>Risk segmentation<br/>with MRM/IFRS 9 governance"]
+    TG --> M["<b>🧮 Engines</b><br/>CHAID · C&RT · QUEST<br/>White box + citations"]
+    TG --> G["<b>🔒 Governance</b><br/>SplitConfig frozen<br/>Fingerprint sha256<br/>Audit log"]
     TG --> S["<b>🛠️ Stack</b><br/>Python 3.11 · PySide6<br/>numpy · pandas · scipy<br/>Apache 2.0"]
 
-    P --> ARQ["<b>🏗️ Arquitectura</b><br/>Sala limpia estricta"]
+    P --> ARQ["<b>🏗️ Architecture</b><br/>Strict clean room"]
     M --> ARQ
     G --> ARQ
     S --> ARQ
 
-    ARQ --> BE["<b>backend_v3</b><br/>Capa analítica<br/>cero imports Qt"]
-    ARQ --> FE["<b>frontend_v3</b><br/>Capa de presentación<br/>cero imports numpy"]
+    ARQ --> BE["<b>backend_v3</b><br/>Analytical layer<br/>zero Qt imports"]
+    ARQ --> FE["<b>frontend_v3</b><br/>Presentation layer<br/>zero numpy imports"]
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.7 completas<br/>📦 v1.0.0rc1 publicada en PyPI<br/>🧪 431 / 431 tests PASSED<br/>📅 18 oct 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.7 complete<br/>📦 v1.0.0rc1 published on PyPI<br/>🧪 431 / 431 tests PASSED<br/>📅 Oct 18, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
