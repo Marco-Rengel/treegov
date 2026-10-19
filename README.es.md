@@ -31,6 +31,38 @@ TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añ
 
 *Lee la filosofía completa → [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md) · [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md)*
 
+```mermaid
+flowchart TB
+    TG["<b>🌳 TreeGov</b><br/>Risk Segmentation Workbench<br/><i>por Marco Rengel</i>"]
+
+    TG --> P["<b>🎯 Propósito</b><br/>Segmentación de riesgo<br/>con gobernanza MRM/IFRS 9"]
+    TG --> M["<b>🧮 Motores</b><br/>CHAID · C&RT · QUEST<br/>Caja blanca + citas"]
+    TG --> G["<b>🔒 Gobernanza</b><br/>SplitConfig frozen<br/>Fingerprint sha256<br/>Audit log"]
+    TG --> S["<b>🛠️ Stack</b><br/>Python 3.11 · PySide6<br/>numpy · pandas · scipy<br/>Apache 2.0"]
+
+    P --> ARQ["<b>🏗️ Arquitectura</b><br/>Sala limpia estricta"]
+    M --> ARQ
+    G --> ARQ
+    S --> ARQ
+
+    ARQ --> BE["<b>backend_v3</b><br/>Capa analítica<br/>cero imports Qt"]
+    ARQ --> FE["<b>frontend_v3</b><br/>Capa de presentación<br/>cero imports numpy"]
+
+    BE -.->|Session| FE
+
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.7 completas<br/>📦 v1.0.0rc1 publicada en PyPI<br/>🧪 431 / 431 tests PASSED<br/>📅 18 oct 2026"]
+
+    style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
+    style P fill:#2E7D32,color:#fff
+    style M fill:#2E7D32,color:#fff
+    style G fill:#2E7D32,color:#fff
+    style S fill:#2E7D32,color:#fff
+    style ARQ fill:#E65100,color:#fff
+    style BE fill:#37474F,color:#fff
+    style FE fill:#37474F,color:#fff
+    style ST fill:#1565C0,color:#fff
+```
+
 ---
 
 ## ¿Qué es TreeGov?
