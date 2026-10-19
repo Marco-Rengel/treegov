@@ -4510,3 +4510,21 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - BCBS CRE 20.39 (cota dura del floor de PD).
 
 ---
+
+### 18/10/2026 — Publicación de v1.0.0rc1 en PyPI y actualización visual de READMEs
+
+**Estado**: ✅ Cerrada.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3.
+
+**Revisor**: Marco Rengel.
+
+**Resumen**: publicada la Release Candidate v1.0.0rc1 en PyPI, incluyendo la corrección del PD_Floor en K=2 (cota dura BCBS CRE 20.39, ver entrada 3.7.e). Además, se añadieron gráficos de arquitectura Mermaid a los READMEs: bloque en español en `README.es.md` (commit `9bc4886`) y su versión en inglés en `README.md` (corregida en commit `71dbd27` tras detectar que el primer insert quedó en español).
+
+**Tests**: 431/431 PASSED.
+
+**Referencias**:
+- `docs/audit_log.md` entrada del 18/10/2026 (Fase 3.7.e).
+- `README.md`, `README.es.md` (sección Philosophy/Filosofía).
+
+---
