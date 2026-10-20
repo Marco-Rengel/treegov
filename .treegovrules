@@ -24,7 +24,7 @@
 
 ## MRM / IFRS 9 governance
 
-1. In Banking mode (default), any PD calculation must include the Jeffreys estimator and the PD Floor (BCBS CRE 20.39). In Research mode, PD is raw (k/n), with no Bayesian smoothing and no floor — see backend_v3.types.GovernanceMode. The choice of mode is explicit and is recorded in the model's params_fingerprint (BANKING / RESEARCH / CUSTOM). A model trained under one mode must never be silently reused under another.
+1. In Banking mode (default), any PD calculation must include the Jeffreys estimator and the PD Floor (BCBS CRE 32.4; 0.05% / 5 bps for non-sovereign exposures; the sovereign exception is not modelled and analysts with sovereign exposure must pass pd_floor=0.0003 explicitly). In Research mode, PD is raw (k/n), with no Bayesian smoothing and no floor — see backend_v3.types.GovernanceMode. The choice of mode is explicit and is recorded in the model's params_fingerprint (BANKING / RESEARCH / CUSTOM). A model trained under one mode must never be silently reused under another.
 2. Every model decision must be auditable: transactional DEBUG log per run.
 3. Tests must include reference values verified by hand (not just self-references).
 

@@ -53,7 +53,7 @@ class CutKind(Enum):
 class GovernanceMode(Enum):
     """Modo de gobernanza de la PD por hoja (TreeGov, Fase 2.1).
 
-    BANKING (defecto): estimador de Jeffreys + PD Floor (BCBS CRE 20.39);
+    BANKING (defecto): estimador de Jeffreys + PD Floor (BCBS CRE 32.4);
         capa MRM/IFRS 9 para modelos bancarios.
     RESEARCH: PD empirica cruda (k/n), sin suavizado bayesiano ni floor,
         para dominios no bancarios (salud, ciencias sociales, marketing)

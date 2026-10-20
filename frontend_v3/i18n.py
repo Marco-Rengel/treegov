@@ -81,7 +81,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_subtitle": "Pick the binary target and at least one predictor.",
         "step2_target_label": "Target (binary 0/1):",
         "step2_target_placeholder": "— Select target column —",   # bloque "en"
-        "step2_target_placeholder": "— Seleccione columna target —",  # bloque "es"
         "step2_available": "Available predictors",
         "step2_selected": "Selected predictors",
         "step2_hint_min_one": "Select at least one predictor to continue.",
@@ -142,7 +141,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step4_govmode_title": "Governance mode",
         "step4_govmode_banking": "Banking (MRM / IFRS 9)",
         "step4_govmode_banking_desc": (
-            "Jeffreys estimator ON · PD Floor 0.0003 (Basel 3 bps)"
+            "Jeffreys estimator ON · PD Floor 0.0005 (BCBS CRE 32.4, non-sovereign)"
         ),
         "step4_govmode_research": "Research (raw)",
         "step4_govmode_research_desc": "Jeffreys estimator OFF · no PD Floor",
@@ -187,7 +186,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tree_prop_depth": "Depth",
         "tree_prop_pd_jeffreys": "PD (Jeffreys)",
         "tree_prop_pd_final": "PD (final, operational on leaves)",
-        "tree_prop_floor_note": "PD floor binding (BCBS CRE 20.39)",
+        "tree_prop_floor_note": "PD floor binding (BCBS CRE 32.4)",
         "tree_prop_leaf": "Leaf reason",
         "tree_prop_predictor": "Predictor",
         "tree_prop_statistic": "Statistic",
@@ -363,7 +362,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_title": "Paso 2 — Predictores y objetivo",
         "step2_subtitle": "Elija el objetivo binario y al menos un predictor.",
         "step2_target_label": "Objetivo (binario 0/1):",
-        "step2_target_placeholder": "— Select target column —",   # bloque "en"
         "step2_target_placeholder": "— Seleccione columna target —",  # bloque "es"
         "step2_available": "Predictores disponibles",
         "step2_selected": "Predictores seleccionados",
@@ -428,7 +426,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step4_govmode_title": "Modo de gobernanza",
         "step4_govmode_banking": "Banca (MRM / IFRS 9)",
         "step4_govmode_banking_desc": (
-            "Estimador de Jeffreys ON · PD Floor 0.0003 (Basilea 3 bps)"
+            "Estimador de Jeffreys ON · PD Floor 0.0005 (BCBS CRE 32.4, no soberano)"
         ),
         "step4_govmode_research": "Investigación (crudo)",
         "step4_govmode_research_desc": (
@@ -475,7 +473,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tree_prop_depth": "Profundidad",
         "tree_prop_pd_jeffreys": "PD (Jeffreys)",
         "tree_prop_pd_final": "PD (final, operativa en hojas)",
-        "tree_prop_floor_note": "PD floor activo (BCBS CRE 20.39)",
+        "tree_prop_floor_note": "PD floor activo (BCBS CRE 32.4)",
         "tree_prop_leaf": "Motivo de hoja",
         "tree_prop_predictor": "Predictor",
         "tree_prop_statistic": "Estadístico",

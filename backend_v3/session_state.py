@@ -805,7 +805,7 @@ class Session:
         max_depth: int = 4,
         min_child_size: int = 50,
         min_child_weight: float | None = None,
-        pd_floor: float | None = 0.0003,
+        pd_floor: float | None = 0.0005,
         apply_jeffreys: bool = True,
     ) -> SessionState:
         """PARTITIONED -> TRAINED (TreeBuilder sobre train imputado).
@@ -816,7 +816,7 @@ class Session:
         importar motores (sala limpia).
 
         Gobernanza (types.GovernanceMode): los defaults son BANKING
-        (Jeffreys + PD Floor, BCBS CRE 20.39); apply_jeffreys=False con
+        (Jeffreys + PD Floor, BCBS CRE 32.4); apply_jeffreys=False con
         pd_floor=None produce el modo RESEARCH (PD cruda k/n).
 
         Fase 3.1.c: la clase de interes y las etiquetas canonicas se leen

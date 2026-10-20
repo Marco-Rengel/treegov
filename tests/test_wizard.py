@@ -266,7 +266,7 @@ def test_wizard_finish_emits_config():
     assert cfg["train_frac"] == 0.7 and cfg["seed"] == 42
     assert cfg["max_depth"] == 4 and cfg["min_child_size"] == 50
     assert cfg["governance_mode"] == "BANKING"
-    assert cfg["apply_jeffreys"] is True and cfg["pd_floor"] == 0.0003
+    assert cfg["apply_jeffreys"] is True and cfg["pd_floor"] == 0.0005
     assert cfg["weight_col"] is None  # default del wizard: sin pesos
     assert cfg["population_col"] is None
     assert cfg["population_ok_values"] == ()
@@ -368,7 +368,7 @@ def test_mainwindow_wizard_config_trains():
             "max_depth": 4, "min_child_size": 5,
             "min_child_weight": None,
             "governance_mode": "BANKING",
-            "apply_jeffreys": True, "pd_floor": 0.0003,
+            "apply_jeffreys": True, "pd_floor": 0.0005,
         }
         w._on_wizard_finished(cfg)
         st = w._session.state
@@ -626,6 +626,31 @@ def test_wizard_population_in_current_config():
     cfg1 = wiz.current_config()
     assert cfg1["population_col"] == "ingreso"
     assert cfg1["population_ok_values"] == ("OK", "INDET")
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_default_pd_floor_spinbox():
+    """Fase 3.8: el spin box del Step 4 arranca en 0.0005.
+
+    Verifica (a) el valor inicial del widget (lo que el analista ve
+    al abrir el wizard) y (b) que _sync_governance_controls restaura
+    0.0005 al volver de RESEARCH a BANKING. Nota: math no se importa
+    en este archivo, se usa la comparacion por diferencia absoluta.
+    """
+    wiz = _make_wizard()
+    page = wiz.page_governance
+    # (a) Valor inicial: 0.0005 (default rc2)
+    assert abs(page._spin_floor.value() - 0.0005) < 1e-12
+    # Cambiar a RESEARCH deshabilita los controles
+    page._rb_research.setChecked(True)
+    assert page._spin_floor.isEnabled() is False
+    # Manipular el valor mientras esta deshabilitado (setValue funciona
+    # sobre widgets deshabilitados; solo la interaccion de usuario esta
+    # bloqueada), y volver a BANKING: debe restaurar 0.0005.
+    page._spin_floor.setValue(0.0123)
+    page._rb_banking.setChecked(True)
+    assert abs(page._spin_floor.value() - 0.0005) < 1e-12
     wiz.close()
     wiz.deleteLater()
 

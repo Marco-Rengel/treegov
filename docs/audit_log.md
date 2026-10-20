@@ -4547,3 +4547,194 @@ Detectados huecos documentales menores y falta de registro formal de la deuda de
 **Tests**: 431/431 PASSED (sin cambios de código).
 
 **Referencias**: brief del 19/10/2026; regla del 16/10/2026 en `docs/roadmap.md`.
+
+---
+
+### 19/10/2026 (tarde) — Corrección de la atribución regulatoria del PD floor (BCBS CRE 32.4)
+
+**Estado**: ✅ Cerrada. Suite 434/434 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max
+(cambio transversal multi-archivo, cambio de firma pública de defaults,
+regeneración de artefacto MRM).
+
+**Revisor**: Marco Rengel.
+
+**Motivación**:
+
+Durante la sesión de inicio de la deuda post-rc1 se detectó, a partir de
+una auditoría externa (Copilot, con verificación contra el Basel Framework
+consolidado publicado por BIS), que la atribución regulatoria del piso de
+PD era **materialmente incorrecta en dos dimensiones**:
+
+1. **Referencia normativa**: el proyecto atribuía el floor de PD a
+   "BCBS CRE 20.39". Ese apartado regula *covered bonds* del enfoque
+   estándar, no el floor de PD del enfoque IRB. El floor vive en
+   **CRE 32.4**.
+2. **Valor**: el proyecto usaba 0.03% (3 bps). Ese es el floor de
+   **Basel II**. La reforma final de Basel III (diciembre 2017,
+   efectiva 2023) lo subió a **0.05%** (5 bps) para corporativos,
+   bancos y retail, con excepción soberana (0.03% o exención, según
+   jurisdicción).
+
+El proyecto se declara MRM. Una atribución regulatoria incorrecta no es
+una "desviación documentada"; es un hallazgo material. Se corrige.
+
+**Auditoría documental adicional detectada durante el bloque**:
+
+El mismo patrón de sobre-atribución normativa apareció en `stability.py`:
+los umbrales 0.10/0.25 del PSI/CSI se atribuían a "Basel/EBA", cuando son
+convención de la industria (Siddiqi 2006) y no prescripción regulatoria.
+Se corrige en el mismo bloque (decisión ZG-8 del revisor).
+
+**Decisiones del revisor**:
+
+- **(A) Opción A**: `pd_floor` default universal 0.0005 en modo BANKING,
+  con disclaimer explícito de que la excepción soberana (0.03%) no está
+  modelada y debe pasarse `pd_floor=0.0003` explícitamente.
+- **Regenerar y anotar** `docs/validation_results_3.6.md`: el informe se
+  regenera con el nuevo default, se añade una sección "Revision notes"
+  que explica el cambio, y el histórico anterior vive en el git log.
+- **Reconocer el error** en esta misma entrada, con esas palabras.
+- **Publicar `1.0.0rc2`**: la corrección es significativa (atribución
+  normativa + default regulatorio) y merece una nueva release candidate.
+
+**Cambios aplicados (3.8.a — backend)**:
+
+- `backend_v3/tree_builder.py`: default `pd_floor` 0.0003 → 0.0005;
+  docstrings y comentario con "BCBS CRE 20.39" → "BCBS CRE 32.4".
+- `backend_v3/session_state.py`: idem en `Session.train`.
+- `backend_v3/types.py`: docstring de `GovernanceMode.BANKING`.
+- `backend_v3/stability.py`: elimina "Basel/EBA" de docstrings de
+  `traffic_light()` y del módulo; el origen de los umbrales se atribuye
+  a Siddiqi (2006), y se añade negación explícita ("no prescrito por
+  Basilea ni EBA"). Umbrales numéricos (0.10, 0.25, 0.20, 0.40) intactos.
+
+**Cambios aplicados (3.8.b — frontend)**:
+
+- `frontend_v3/i18n.py`: `step4_govmode_banking_desc` (EN y ES) y
+  `tree_prop_floor_note` (EN y ES) reformulados con "PD Floor 0.0005
+  (BCBS CRE 32.4)" y "PD floor binding (BCBS CRE 32.4)".
+- `frontend_v3/i18n.py`: **bug preexistente corregido** — clave
+  `step2_target_placeholder` estaba duplicada en cada bloque (`en` y `es`),
+  de modo que el usuario en inglés veía el placeholder en español (la
+  segunda asignación gana en Python). Se conserva una única línea por
+  bloque con el texto correcto de su idioma.
+- `frontend_v3/wizard.py`: `_spin_floor.setValue(0.0003)` → `0.0005` en
+  `GovernancePage.__init__` y `_sync_governance_controls`.
+
+**Cambios aplicados (3.8.c — script + informe)**:
+
+- `scripts/validate_uci.py`:
+  - Sustituye `ENGINE_MATRIX` (heurística) por `VALID_ENGINES` (dict
+    explícito de pares dataset → motores). La cobertura es ahora de
+    **14 pares** (6 CRT + 2 CHAID + 6 QUEST), alineada con
+    `tests/test_uci_integration.py`.
+  - `_run_one` retorna `dict` con los campos del informe (o `{'error': ...}`).
+  - `run()` imprime a stdout y, si no hay errores, llama a
+    `_write_markdown(results)` para escribir
+    `docs/validation_results_3.6.md`.
+  - `_write_markdown` genera el md completo (tabla + Qualitative
+    Literature Comparison + Revision notes) desde constantes del
+    script. El md es reproducible bit-a-bit dado el código del
+    repositorio; la fecha y el commit que lo produjeron se consultan
+    con `git log -- docs/validation_results_3.6.md`.
+  - Nota de revisión corregida: la primera iteración decía "smallest
+    empirical leaf PD is approximately 0.043 for Iris" — error del
+    revisor, no del agente. La cifra real y el dataset con el mínimo
+    teórico son **0.96% para Car Evaluation** (K=4, min_child_size=50),
+    ~19× por encima del floor 0.05%.
+- `docs/validation_results_3.6.md` regenerado: 14 filas
+  (dataset, motor), fingerprints nuevos, sección "Revision notes"
+  con la motivación y el impacto.
+
+**Cambios aplicados (3.8.d — tests)**:
+
+- `tests/test_tree_builder.py::test_governance_banking_default`:
+  asertos actualizados a `0.0005` (valor y `max(...)`); docstring.
+- `tests/test_wizard.py::test_wizard_finish_emits_config`:
+  `assert cfg["pd_floor"] == 0.0005`.
+- `tests/test_wizard.py::test_mainwindow_wizard_config_trains`:
+  `cfg` manual con `"pd_floor": 0.0005`.
+- `tests/test_uci_integration.py`: los 14 fingerprints
+  (`EXPECTED`, `EXPECTED_CHAID`, `EXPECTED_QUEST`) recapturados.
+  Verificación cruzada uno a uno contra la tabla del md: 14/14
+  coinciden en fingerprint y en `nodes`.
+- `tests/test_e2e_mainwindow.py` (2 cfg), `tests/test_e2e_reports.py`
+  (1 cfg), `tests/test_tree_view.py` (1 cfg): `"pd_floor": 0.0005`
+  por consistencia con el nuevo default del wizard. No cambian
+  el conteo de tests, no cambian la lógica de los E2E.
+
+**Cambios aplicados (3.8.e — tests nuevos)**:
+
+- `tests/test_tree_builder.py::test_pd_floor_hard_bound_binary_default`:
+  verifica que con el default 0.0005, una hoja con
+  `pd_jeffreys[0] < 0.0005` recibe `pd_final[0] == 0.0005` exacto
+  (hard bound).
+- `tests/test_tree_builder.py::test_fingerprint_banking_default_vs_legacy_floor`:
+  verifica que el fingerprint distingue el default (0.0005) del
+  valor legacy de Basel II (0.0003).
+- `tests/test_wizard.py::test_wizard_default_pd_floor_spinbox`:
+  verifica que el spin box del Step 4 arranca en 0.0005 y que
+  `_sync_governance_controls` restaura 0.0005 al volver de RESEARCH
+  a BANKING.
+
+**Cambios aplicados (3.8.f — documentación + versión)**:
+
+- `docs/methodology.md`: §6.3, §6.4, §6.5, §6.6, §8.5 y referencias
+  regulatorias actualizadas (CRE 32.4; K=2 hard floor vs K>2 soft floor;
+  Siddiqi 2006).
+- `docs/api.md`: firma pública de `Session.train` con `pd_floor=0.0005`.
+- `docs/philosophy.md`, `docs/philosophy.es.md`, `docs/3.1_design_multiclass.md`,
+  `.treegovrules`, `docs/roadmap.md`, `docs/estado_proyecto.md`,
+  `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`,
+  `README.md`, `README.es.md`: alineados con la referencia correcta.
+- `pyproject.toml`, `frontend_v3/__init__.py`: bump a `1.0.0rc2`.
+
+**Invariante preservado**:
+
+- Las métricas numéricas reportadas en `docs/validation_results_3.6.md`
+  (Gini, KS, AUC, Accuracy) **no cambian**, porque el floor no se
+  activa en ningún dataset UCI bajo el `min_child_size` configurado.
+  Solo cambian los fingerprints, porque `pd_floor` entra en el
+  payload del `params_fingerprint`. Esto es exactamente lo que se
+  espera de un cambio de gobernanza sin cambio de comportamiento
+  numérico en la línea base publicada.
+- C1 de la Fase 3.2 (sin pesos → idéntico al pre-3.2) sigue vigente;
+  el cambio de `pd_floor` es ortogonal a la ponderación.
+
+**Zonas grises detectadas por el agente durante el bloque y resueltas**:
+
+- Contradicción funcional del wizard: el spin nativo pasaba `0.0003`
+  mientras la etiqueta anunciaba `0.0005` y el backend ya era `0.0005`.
+  Detectado por el agente antes de que se materializase en un bug de
+  usuario; resuelto en 3.8.b.
+- El `**Commit:** <HEAD>` embebido en el md apuntaba al commit padre
+  (con `pd_floor=0.0003`), no al commit que contiene el md. Resuelto
+  eliminando los campos `Generated:`/`Commit:`/`Python:` del md y
+  delegando la trazabilidad temporal a `git log`. Regla derivada:
+  **nunca embeber en un artefacto generado el commit que lo va a
+  contener** (autorreferencia imposible de estabilizar).
+- `docs/methodology.md` §6.6 desactualizado desde la Fase 3.7.e: el
+  texto afirmaba soft-floor renormalization en K=2, pero el código
+  aplica hard floor desde el 18/10. Detectado al preparar 3.8.f.
+  Corregido en el mismo bloque: §6.6 reformulado con el comportamiento
+  real (hard floor K=2, soft floor K>2) y referencia a los dos tests
+  que lo anclan (`test_pd_floor_hard_bound_binary` y
+  `test_pd_floor_hard_bound_binary_default`).
+- Ambigüedad en la instrucción de cierre de `contexto_para_nueva_sesion.md`
+  (párrafo 3.7/3.6.e): detectada por el agente, confirmada por el revisor
+  (opción 1: preservar histórico 3.7 y sustituir solo el "Próximo hito").
+
+**Tests**: 434/434 PASSED (antes del bloque: 431/431; +3 tests nuevos
+que anclan el comportamiento del nuevo default).
+
+**Referencias cruzadas**:
+
+- Basel Framework consolidado (BIS, CRE 20.39 — covered bonds; CRE 32.4
+  — floor de PD IRB).
+- Reforma final Basel III (diciembre 2017).
+- `docs/audit_log.md` 18/10/2026 (Fase 3.7.e, corrección previa del
+  hard floor en K=2, que citaba CRE 20.39 por la misma confusión).
+- `docs/validation_results_3.6.md` §Revision notes.
+- `docs/roadmap.md` sección "✅ Phase 3.8".

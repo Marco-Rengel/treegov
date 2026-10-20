@@ -19,7 +19,7 @@ Hard rules:
   - Per-node PD vector, by GovernanceMode (Phase 2.1, types.GovernanceMode):
       BANKING (default): multivariate Jeffreys (k_c + 0.5) / (n + K * 0.5)
           per class c (Jeffreys 1946; symmetric Dirichlet(0.5, ...) prior),
-          then component-wise soft floor + renormalization [BCBS CRE 20.39];
+          then component-wise soft floor + renormalization [BCBS CRE 32.4];
       RESEARCH: raw empirical proportions k_c / n, no floor.
     For K = 2 the Jeffreys formula reduces exactly to the binary
     (k + 0.5) / (n + 1.0). The OPERATIONAL PD lives on leaves
@@ -224,7 +224,7 @@ class TreeBuilder:
         class_labels: tuple[str, ...],
         max_depth: int | None = 4,
         min_child_size: int = 50,
-        pd_floor: float | None = 0.0003,
+        pd_floor: float | None = 0.0005,
         apply_jeffreys: bool = True,
         seed: int | None = None,
         logger: logging.Logger | None = None,
@@ -241,7 +241,7 @@ class TreeBuilder:
         default 4 (pre-pruning).
 
         pd_floor=None + apply_jeffreys=False -> modo RESEARCH (PD cruda
-        k/n, sin floor); los defaults son el modo BANKING (BCBS CRE 20.39).
+        k/n, sin floor); los defaults son el modo BANKING (BCBS CRE 32.4).
 
         target_class (Phase 3.1): mandatory class of interest. It is not
         used numerically by the engines; it fixes the canonical class
@@ -499,7 +499,7 @@ class TreeBuilder:
                 if K == 2:
                     # Phase 3.7.e (pre-1.0.0rc1): hard floor in binary.
                     # Applying the soft-floor renormalization to K=2 can push
-                    # the class-of-interest PD BELOW pd_floor (BCBS CRE 20.39
+                    # the class-of-interest PD BELOW pd_floor (BCBS CRE 32.4
                     # is a hard lower bound). In binary, assign the complement
                     # directly without renormalizing.
                     p0 = max(self.pd_floor, pd_j_tuple[0])

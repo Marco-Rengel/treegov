@@ -82,7 +82,7 @@ underscore) are internal and may change without notice.
   `population_col` + `population_ok_values` (Phase 3.3) declare the
   opt-in population filter.
 - `Session.train(engine, *, target_type, max_depth, min_child_size,
-  min_child_weight=None, pd_floor=0.0003, apply_jeffreys=True)` —
+  min_child_weight=None, pd_floor=0.0005, apply_jeffreys=True)` —
   `engine` accepts an engine instance or its name ("CHAID" |
   "CHAID_EXHAUSTIVE" | "CRT" | "QUEST"); `pd_floor=None` +
   `apply_jeffreys=False` yields Research mode (Phase 2.1). Multiclass

@@ -787,7 +787,7 @@ class GovernancePage(QWizardPage):
         self._spin_floor.setDecimals(4)
         self._spin_floor.setRange(0.0, 0.05)
         self._spin_floor.setSingleStep(0.0001)
-        self._spin_floor.setValue(0.0003)  # Basel PD floor (BCBS CRE 20.39)
+        self._spin_floor.setValue(0.0005)  # Basel PD floor (BCBS CRE 32.4, non-sovereign)
         self._spin_depth = QSpinBox()
         self._spin_depth.setObjectName("spinMaxDepth")
         self._spin_depth.setRange(2, 10)
@@ -856,7 +856,7 @@ class GovernancePage(QWizardPage):
         self._spin_floor.setEnabled(banking)
         if banking:  # restore regulatory defaults
             self._chk_jeffreys.setChecked(True)
-            self._spin_floor.setValue(0.0003)
+            self._spin_floor.setValue(0.0005)
 
     # --- Qt overrides ------------------------------------------------------
 

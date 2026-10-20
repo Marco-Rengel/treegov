@@ -80,7 +80,7 @@ def _cfg() -> dict:
         "min_child_weight": None,
         "governance_mode": "BANKING",
         "apply_jeffreys": True,
-        "pd_floor": 0.0003,
+        "pd_floor": 0.0005,
     }
 
 

@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Versión**: 1.0.0rc1
+**Versión**: 1.0.0rc2
 **Autor**: Marco Rengel
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 431/431 passing
+**Suite de tests**: 434/434 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -50,7 +50,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.7 completas<br/>📦 v1.0.0rc1 publicada en PyPI<br/>🧪 431 / 431 tests PASSED<br/>📅 18 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.7 completas<br/>📦 v1.0.0rc1 publicada en PyPI<br/>🧪 434 / 434 tests PASSED<br/>📅 18 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -95,7 +95,7 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 | **Soporte Multiclase** | Hand & Till (2001) | — | Entrenamiento y métricas para K ≥ 2 clases; Gini multiclase y KS por pares |
 | **Ponderación por muestra** | Heeringa et al. (2010) | SR 11-7 | Ajuste de sesgo muestral en motores, construcción del árbol, métricas de validación y monitoreo de estabilidad. Limitación conocida: el split train/test estratifica por conteo físico de filas (no por masa ponderada), el agreement de surrogates en C&RT no está ponderado, y el Gini/KS/AUC global de la gains table binaria no está ponderado (design_decisions.md §13.3, §13.6.2, §13.7). |
 | **Categorías de población** | — | — | Filtro *opt-in* para excluir categorías (Indet, No Perf) antes del entrenamiento |
-| **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
+| **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigación de probabilidades nulas en carteras de bajo impago |
 | **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto, sin sesgo de redondeo |
 | **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
 | **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos (solo API en `backend_v3/pruning.py`; aún no cableada en la GUI ni en Session, y usa conteos sin ponderar mientras el árbol crece con Gini ponderado). Planificada para 1.0.0 estable. |
@@ -248,7 +248,7 @@ TreeGov/
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 431/431 passing.**
+**Suite de tests: 434/434 passing.**
 
 ---
 
@@ -277,7 +277,8 @@ TreeGov/
 
 ## Referencias regulatorias
 
-- **Basilea (BCBS CRE 20.39)**: suelos regulatorios de PD.
+- **Basilea (BCBS CRE 32.4)**: suelos regulatorios de PD (0.05% para
+  corporativos, bancos y retail; 0.03% o exención para soberanos).
 - **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
 - **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc1.
 - **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).

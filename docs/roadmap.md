@@ -271,6 +271,43 @@ documentada en el diseño §1.2 y en audit_log (entrada 15/10/2026).
 
 **Cierre de la Fase 3.6.** Completada el 16/10/2026. Validación cruzada con 6 *datasets* en 4 dominios. Suite: 422/422 (416 previos + 6 tests de integración UCI).
 
+### ✅ Phase 3.7 — Phase 3 closure + v1.0.0rc1
+**Priority: HIGH** · **Cerrada el 18/10/2026**
+
+**Desglose de la sub-fase:**
+- 3.7.a: Auditoría de seguridad y privacidad (`docs/security_audit.md` + aviso GUI).
+- 3.7.b: Simetrización del KS por pares en multiclase (`validation.py`).
+- 3.7.c: Exposición pública de `min_child_weight` en `Session.train` y wizard.
+- 3.7.d: Ampliación de tests UCI con CHAID y QUEST (8 tests nuevos).
+- 3.7.e: Correcciones pre-release tras auditoría externa (H1, H2, pd_floor K=2).
+
+**Suite:** 431/431 PASSED.
+
+**Referencias:** `docs/audit_log.md` entradas del 18/10/2026.
+
+### ✅ Phase 3.8 — Regulatory attribution correction (v1.0.0rc2)
+**Priority: HIGH** · **Cerrada el 19/10/2026**
+
+Corrige la atribución del piso de PD del modo Banking: la referencia
+correcta es **BCBS CRE 32.4** (0.05% / 5 bps para corporativos, bancos
+y retail), no CRE 20.39 (que regula covered bonds) con 0.03% (Basel II).
+Los umbrales de PSI/CSI en `stability.py` se reatribuyen a Siddiqi (2006)
+como convención de la industria, no como prescripción de Basilea ni EBA.
+
+| Sub-fase | Estado | Alcance |
+|---|---|---|
+| 3.8.a | ✅ | Backend: default 0.0005 + docstrings + PSI en `stability.py` |
+| 3.8.b | ✅ | Frontend: i18n + wizard + bug `step2_target_placeholder` |
+| 3.8.c | ✅ | `scripts/validate_uci.py`: 14 pares + generación del md |
+| 3.8.d | ✅ | Tests: 16 asertos + 14 fingerprints UCI recapturados |
+| 3.8.e | ✅ | 3 tests nuevos (hard bound default, fingerprint, spin box) |
+| 3.8.f | ✅ | Documentación: 15 archivos + bump a `1.0.0rc2` |
+
+**Suite: 434/434 PASSED.**
+
+**Referencias:** `docs/audit_log.md` entrada del 19/10/2026 (tarde);
+`docs/validation_results_3.6.md` §Revision notes.
+
 ## Upcoming phases
 
 ### ⏳ Phase 3 — Advanced analytics + documentation closure
@@ -285,20 +322,7 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Prioridad |
 |---|---|---|
-| 3.0 | ✅ Documentación + parámetros canónicos vs TreeGov (design_decisions.md + 4 parámetros) | Completada |
-| 3.1 | ✅ Multiclase en el árbol (target + TreeNode + TreeBuilder + wizard + MetricsPanel) | Completada |
-| 3.2 | ✅ Ponderación por muestra (transversal al backend) | Completada |
-| 3.3 | ✅ Categorías de población (Indet / Insufficient / No Perf) | Completada |
-| 3.4 | CRT y QUEST multiclase | Completada |
-| 3.5 | Reportes adaptados (multiclase + ponderación) | Completada |
-| 3.6 | Validación con datasets públicos (6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion) | Completada |
 | 3.6.e | Modo no-bancario (terminología + ejemplos + docs) | Media |
-| 3.7 | Cierre Fase 3 + v1.0.0rc1 | Alta | Completada |
-| 3.7.a | ✅ Auditoría de seguridad y privacidad | Completada |
-| 3.7.b | ✅ Simetrización KS por pares | Completada |
-| 3.7.c | ✅ min_child_weight en Session.train y wizard | Completada |
-| 3.7.d | ✅ Tests UCI ampliados (CHAID Car/Balance, QUEST 6) | Completada |
-| 3.7.e | ✅ Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
 
 **Desglose de la Fase 3.2:**
 
@@ -568,6 +592,12 @@ Detalle completo en docs/audit_log.md entrada del 16/10/2026.
 
 ## Releases
 
+- **v1.0.0rc2** (19/10/2026) — Release candidate. Corrección de la
+  atribución regulatoria del PD floor: referencia y valor. Default
+  `pd_floor` pasa de 0.0003 a 0.0005 (BCBS CRE 32.4, no soberano).
+  Umbrales PSI/CSI reatribuidos a Siddiqi (2006). Informe de validación
+  UCI regenerado con 14 pares (dataset, motor). Bug `step2_target_placeholder`
+  corregido. Suite: 434/434.
 - **v1.0.0rc1** (fecha de publicación pendiente) — Release candidate. Incluye los tres fixes de la sub-fase 3.7.e (H1 radio buttons, H2 target por defecto, pd_floor K=2) más la documentación sincronizada al estado real (431/431 tests). Los 5 claims del README no respaldados por el código se matizaron: IFRS 9 (Fase 7 planificada), sample weighting (parcial: split y gains table binaria no ponderan), cost-complexity pruning (API-only, no GUI), 3.7 Completed (con 3.6.e fuera de scope), estructura del repositorio actualizada. Clasificador PyPI: 4 - Beta.
 - **v1.0.0a1** (03/10/2026) — Primera publicación real en PyPI.
   Incluye `backend_v3` (capa analítica) y `frontend_v3` (GUI PySide6).

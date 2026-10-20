@@ -106,7 +106,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 431/431 PASSED.
+- **Suite de tests:** 434/434 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -159,7 +159,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 18/10/2026:** Fase 3.7 cerrada completa (a, b, c, d, e). Suite 431/431. Próximo paso: publicación de `1.0.0rc1` en PyPI (build, twine check, twine upload, tag `v1.0.0rc1`, verificación en venv aislado). Después: recogida de feedback externo durante 2–4 semanas; si no aparecen bugs críticos, publicación de `1.0.0` estable. La Fase 3.6.e (modo no-bancario extensivo) queda fuera de 1.0.0, planificada para 1.1.0 o posterior.
+- **Estado al 19/10/2026:** Fases 0 a 3.8 cerradas. Fase 3.8 (corrección de la atribución regulatoria del PD floor: BCBS CRE 32.4, default 0.0005, no soberano) cerrada. Suite 434/434. Próximo paso: recogida de feedback de 1.0.0rc2. Deuda diferida a 1.0.0 estable: D13, poda no integrada, tags a1–a6.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -359,7 +359,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 5. `docs/estado_proyecto.md` — dossier completo.
 6. `docs/methodology.md` — metodología matemática con citas.
 7. `docs/design_decisions.md` — decisiones de implementación.
-8. `docs/3.1_design_multiclass.md` — diseño de Fase 3.1 (cerrada 09/10/2026).
+8. `docs/3.1_design_multiclass.md` — diseño de Fase 3.1 (cerrada 09/10/2026); `docs/validation_results_3.6.md` — informe de validación UCI, actualizado en Fase 3.8 (opcional).
 9. `docs/3.2_decisions_consolidated.md` — índice consolidado de Fase 3.2 (cerrada 10/10/2026).
 10. `docs/3.3_design_population_categories.md` — diseño de Fase 3.3 (cerrada 11/10/2026).
 11. `docs/3.4_design_multiclass_crt_quest.md` — diseño de Fase 3.4 (cerrada 12/10/2026).
@@ -372,7 +372,16 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 18/10/2026: Fases 0 a 3.5 cerradas, Fase 3.6 completa (validación con 6 datasets públicos UCI), Fase 3.7 completa (auditoría de seguridad, simetrización KS, min_child_weight, tests UCI ampliados, correcciones pre-release H1/H2/pd_floor). Suite 431/431. Próximo paso: publicación de 1.0.0rc1 en PyPI. Deuda diferida a 1.0.0 estable: D13 (gains table binaria no ponderada), poda no integrada en Session/GUI y no ponderada, tags a1–a6 ausentes. Regla operativa: trabajar en ráfagas cortas con OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max para código, high para docs."
+> "Retomamos TreeGov. Soy Marco. Estado al 19/10/2026: Fases 0 a
+> 3.8 cerradas. Suite 434/434. Fase 3.8 (corrección regulatoria:
+> BCBS CRE 32.4, pd_floor default 0.0005 en Banking mode, excepción
+> soberana no modelada; PSI/CSI reatribuido a Siddiqi 2006) cerrada
+> y publicada como 1.0.0rc2. Próximo paso: recogida de feedback
+> durante 2-4 semanas. Deuda diferida a 1.0.0 estable: D13 (gains
+> table binaria sin ponderar), poda no integrada en Session/GUI y
+> no ponderada, tags a1–a6 ausentes. Regla operativa: ráfagas cortas
+> con OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max para
+> código, high para docs."
 
 ---
 

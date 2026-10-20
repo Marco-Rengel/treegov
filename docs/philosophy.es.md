@@ -30,7 +30,7 @@ TreeGov compite en transparencia, gobernanza y defendibilidad regulatoria. La pr
 
 ## Referencias regulatorias
 
-- Basilea (BCBS CRE 20.39): PD Floors.
+- Basilea (BCBS CRE 32.4): PD Floors (0.05% para exposiciones no soberanas).
 - EBA/GL/2017/16: validación de parámetros PD/LGD.
 - IFRS 9: clasificación por etapas y ECL.
 - SR 11-7 / OCC 2011-12: Model Risk Management.

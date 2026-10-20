@@ -67,12 +67,12 @@ CONFIGS = {
 }
 
 EXPECTED = {
-    "german_credit": {"fingerprint": "33e52665fcba86d0", "nodes": 9},
-    "car_evaluation": {"fingerprint": "ca64aaf2f546ced0", "nodes": 7},
-    "balance_scale": {"fingerprint": "801e4cfc3cc54025", "nodes": 13},
-    "breast_cancer_wdbc": {"fingerprint": "5198672eb28fd02a", "nodes": 3},
-    "iris": {"fingerprint": "0fb371f1f41ed073", "nodes": 5},
-    "blood_transfusion": {"fingerprint": "dc12ca4e038802f0", "nodes": 11},
+    "german_credit": {"fingerprint": "85fc3fee3afe2015", "nodes": 9},
+    "car_evaluation": {"fingerprint": "5c9c4ac311a2efc5", "nodes": 7},
+    "balance_scale": {"fingerprint": "d06048e406f9b220", "nodes": 13},
+    "breast_cancer_wdbc": {"fingerprint": "e46011f55ed957bf", "nodes": 3},
+    "iris": {"fingerprint": "cbc4051bc41e628a", "nodes": 5},
+    "blood_transfusion": {"fingerprint": "4bbeec6ddda3d774", "nodes": 11},
 }
 
 
@@ -99,17 +99,17 @@ def _build_session(cfg, engine="CRT"):
 
 
 EXPECTED_CHAID = {
-    "car_evaluation": {"fingerprint": "762c7111d8f126a1", "nodes": 14},
-    "balance_scale": {"fingerprint": "d90c8261d6cd81ce", "nodes": 21},
+    "car_evaluation": {"fingerprint": "2fef573e713c8b5b", "nodes": 14},
+    "balance_scale": {"fingerprint": "464bb506b94b8e8b", "nodes": 21},
 }
 
 EXPECTED_QUEST = {
-    "german_credit": {"fingerprint": "5966289fa7260670", "nodes": 7},
-    "car_evaluation": {"fingerprint": "3051ca8aace55146", "nodes": 7},
-    "balance_scale": {"fingerprint": "f33b1c24f1229f05", "nodes": 13},
-    "breast_cancer_wdbc": {"fingerprint": "7073c2c0722924b9", "nodes": 7},
-    "iris": {"fingerprint": "de3811bc0a1e7729", "nodes": 5},
-    "blood_transfusion": {"fingerprint": "35b6dc75a746ecd0", "nodes": 7},
+    "german_credit": {"fingerprint": "4cb2415a6ce26776", "nodes": 7},
+    "car_evaluation": {"fingerprint": "d52401118ea2078b", "nodes": 7},
+    "balance_scale": {"fingerprint": "34678ed5eaa34241", "nodes": 13},
+    "breast_cancer_wdbc": {"fingerprint": "389f70f0fba1a180", "nodes": 7},
+    "iris": {"fingerprint": "32a5ee7f69260fed", "nodes": 5},
+    "blood_transfusion": {"fingerprint": "cd6b4399350c44e4", "nodes": 7},
 }
 
 

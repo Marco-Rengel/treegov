@@ -364,7 +364,7 @@ def test_e2e_mainwindow():
             "max_depth": 4, "min_child_size": 5,
             "min_child_weight": None,
             "governance_mode": "BANKING",
-            "apply_jeffreys": True, "pd_floor": 0.0003,
+            "apply_jeffreys": True, "pd_floor": 0.0005,
         }
         w._on_wizard_finished(cfg)
         model = w._session.state.tree

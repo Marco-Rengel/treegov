@@ -112,7 +112,7 @@ def _cfg() -> dict:
         "min_child_weight": None,
         "governance_mode": "BANKING",
         "apply_jeffreys": True,
-        "pd_floor": 0.0003,
+        "pd_floor": 0.0005,
     }
 
 
@@ -318,7 +318,7 @@ def test_e2e_weighted_full_flow():
             "min_child_weight": None,
             "governance_mode": "BANKING",
             "apply_jeffreys": True,
-            "pd_floor": 0.0003,
+            "pd_floor": 0.0005,
         }
 
         w0 = _open_window(csv)

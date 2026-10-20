@@ -649,17 +649,27 @@ Property: if k(t) = 0, PD_Jeffreys > 0 always.
 
 ### 6.3. Regulatory floor
 
-No exposure may have a PD below 0.03% (3 bps) as per Basel (BCBS CRE 20.39):
+No exposure may have a PD below the applicable regulatory floor. The
+Basel Framework consolidated (CRE 32.4) sets the floor at **0.05%
+(5 bps) for corporate, bank and retail exposures**; sovereign
+exposures are exempt (or 0.03% depending on the jurisdiction). The
+previous value (0.03% / 3 bps) was the Basel II floor and applied
+before the 2017 reform.
 
-PD_final(t) = max(PD_floor, PD_Jeffreys(t))
+PD_final(t) = max(PD_floor, PD_Jeffreys(t))    with PD_floor = 0.0005
+                                               (default in Banking mode)
 
-**Citation**: Basel (BCBS CRE 20.39), EBA/GL/2017/16, IFRS 9.
+**Sovereign exception not modelled.** TreeGov's default `pd_floor`
+is the CRE 32.4 value for non-sovereign exposures. Analysts with
+sovereign exposure must pass `pd_floor=0.0003` explicitly.
+
+**Citation**: Basel (BCBS CRE 32.4), EBA/GL/2017/16, IFRS 9.
 
 ### 6.4. Governance modes
 
 TreeGov supports two modes (`backend_v3.types.GovernanceMode`):
 
-- **Banking (default):** Jeffreys estimator + PD Floor (BCBS CRE 20.39).
+- **Banking (default):** Jeffreys estimator + PD Floor (BCBS CRE 32.4, non-sovereign).
 - **Research:** raw empirical PD (k/n) without Bayesian smoothing or
   floor, for non-banking domains (health, social sciences, marketing)
   where regulatory constraints do not apply.
@@ -688,7 +698,7 @@ population.
 (health, social sciences, marketing) where:
 - The prior information embedded in Jeffreys is not obviously
   justified.
-- The regulatory floor of 3 bps (BCBS CRE 20.39) does not apply.
+- The regulatory floor of 5 bps (BCBS CRE 32.4) does not apply.
 
 Making the mode explicit — and labelling it in the fingerprint —
 allows the same engine to serve two very different audiences without
@@ -744,12 +754,20 @@ component-wise and the vector is renormalised to preserve the invariant
 This is a **soft floor**: each component is guaranteed a minimum of
 `pd_floor / sum(pd_temp)`, not exactly `pd_floor`.
 
-**Note on K=2 reduction.** The implementation applies the soft-floor
-renormalization (`pd_temp / sum(pd_temp)`) for all K, including K=2.
-This introduces a numerically negligible deviation from the strict
-complementary assignment (`1 - max(pd_floor, pd_j[0])`) when the floor
-is active. This text reflects the actual code behavior; exact parity
-is not guaranteed.
+**Note on K=2 reduction (updated in Phase 3.7.e).** For K = 2 the
+implementation applies a **hard floor** (BCBS CRE 32.4), not the
+soft-floor renormalization used for K > 2. When the
+class-of-interest PD `pd_jeffreys[0]` falls below `pd_floor`, the
+implementation sets `pd_final[0] = pd_floor` and
+`pd_final[1] = 1 - pd_floor`. This guarantees that the
+class-of-interest component satisfies the regulatory floor exactly.
+For K > 2 the soft floor applies (see above): component-wise
+`max(pd_floor, pd_jeffreys[c])` followed by renormalization to
+`sum == 1`. The K=2 hard bound is enforced by
+`tests/test_tree_builder.py::test_pd_floor_hard_bound_binary` and
+`tests/test_tree_builder.py::test_pd_floor_hard_bound_binary_default`.
+For K > 2, the soft floor can leave `pd_final[c]` slightly below
+`pd_floor` after renormalization; this is by design and documented.
 
 **Citation:** Jeffreys, H. (1946). An invariant form for the prior
 probability in estimation problems. *Proceedings of the Royal Society
@@ -882,7 +900,8 @@ TreeGov policy:
   values); nominal variables use the train categories, and unseen OOT
   categories are grouped into `<OTHER>` with P_expected = ε.
 
-Regulatory traffic lights (Basel / EBA):
+Industry-standard monitoring thresholds (Siddiqi 2006; not prescribed
+by Basel or EBA):
 - PSI/CSI < 0.10 → STABLE.
 - 0.10 ≤ PSI/CSI < 0.25 → MODERATE.
 - PSI/CSI ≥ 0.25 → UNSTABLE.
@@ -1279,7 +1298,9 @@ D20; see `docs/3.5_design_multiclass_weighted_reports.md` §3 and §5.
 
 ## Reference regulatory standards
 
-- **Basel (BCBS CRE 20.39)**: Regulatory PD Floors.
+- **Basel (BCBS CRE 32.4)**: Regulatory PD floors for IRB exposures
+  (0.05% for corporate, bank and retail; 0.03% or exempt for
+  sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation and validation of PD/LGD parameters in IRB models.
 - **IFRS 9**: staging, ECL and threshold optimization.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.

@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc1 (release candidate) |
+| Versión | 1.0.0rc2 (release candidate) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc1/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc2/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -431,23 +431,23 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 11 |
 | profiling.py | 3 |
-| tree_builder.py | 36 |
+| tree_builder.py | 38 |
 | session_state.py | 87 |
 | validation.py | 30 |
 | pruning.py | 6 |
 | stability.py | 18 |
 | reporting.py | 27 |
 | gui_smoke (frontend) | 9 |
-| wizard (frontend) | 21 |
+| wizard (frontend) | 22 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 9 |
 | reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **431** |
+| **Total** | **434** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 431/431 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 434/434 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -455,7 +455,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 8. Estándares regulatorios cubiertos
 
-- **Basilea (BCBS CRE 20.39)** — PD Floors regulatorios (mínimo 0.03% / 3 bps)
+- **Basilea (BCBS CRE 32.4)** — PD Floors regulatorios (0.05% / 5 bps
+  para corporativos, bancos y retail; 0.03% / 3 bps o exención para
+  soberanos).
 - **EBA/GL/2017/16** — Validación de parámetros PD/LGD en modelos IRB
 - **IFRS 9 / NIIF 9** — Staging, ECL, optimización de umbrales asimétricos
 - **SR 11-7 / OCC 2011-12** — Model Risk Management (MRM)

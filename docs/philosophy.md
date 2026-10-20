@@ -30,7 +30,7 @@ TreeGov competes on transparency, governance, and regulatory defensibility. Pred
 
 ## Regulatory references
 
-- Basel (BCBS CRE 20.39): PD Floors.
+- Basel (BCBS CRE 32.4): PD floors (0.05% for non-sovereign exposures).
 - EBA/GL/2017/16: PD/LGD parameter validation.
 - IFRS 9: staging and ECL.
 - SR 11-7 / OCC 2011-12: Model Risk Management.

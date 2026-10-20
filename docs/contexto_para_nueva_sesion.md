@@ -123,8 +123,9 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.6 | Validación con datasets públicos | ✅ |
 | 3.6.e | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
+| 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
 
-**Suite de tests:** 431/431 PASSED
+**Suite de tests:** 434/434 PASSED
 
 ## Entorno de desarrollo
 
@@ -260,8 +261,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc1` en PyPI (18/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc1/
+**Última versión publicada:** `treegov 1.0.0rc2` en PyPI (19/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc2/
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -290,7 +291,14 @@ composición ponderada. Invariante K=2 bit a bit preservado. Suite
 9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
 documental.
 
-**Fase 3.7 cerrada (18/10/2026).** Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización KS por pares), 3.7.c (min_child_weight expuesto), 3.7.d (tests UCI ampliados) y 3.7.e (correcciones pre-release H1, H2, pd_floor K=2) están cerradas. Suite: 431/431. Próximo hito: publicación de 1.0.0rc1 en PyPI (build, twine check, twine upload, tag v1.0.0rc1, verificación en venv aislado). Después: recogida de feedback externo durante 2–4 semanas; si no aparecen bugs críticos, 1.0.0 estable. Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
+**Fase 3.7 cerrada (18/10/2026).** Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización KS por pares), 3.7.c (min_child_weight expuesto), 3.7.d (tests UCI ampliados) y 3.7.e (correcciones pre-release H1, H2, pd_floor K=2) están cerradas. Suite: 434/434.
+
+**Próximo paso:** recogida de feedback de `1.0.0rc2` durante 2-4
+semanas; si no aparecen bugs críticos, publicación de `1.0.0`
+estable. Deuda diferida a 1.0.0 estable: D13 (métricas ponderadas
+en gains table binaria), poda no integrada en Session/GUI y no
+ponderada, tags `a1`–`a6` ausentes. Fase 3.6.e (modo no-bancario
+extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

@@ -342,18 +342,18 @@ def test_guards_builder():
 
 
 def test_governance_banking_default():
-    """Default = BANKING: Jeffreys (k+0.5)/(n+1) y floor 0.0003."""
+    """Default = BANKING: Jeffreys (k+0.5)/(n+1) y floor 0.0005."""
     x = pd.Series([float(i) for i in range(1, 11)])
     X = pd.DataFrame({"x": x})
     y = pd.Series([0] * 5 + [1] * 5)
     tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
                      class_labels=("Event", "Non-event"),
                      max_depth=4, min_child_size=2)
-    assert tb.apply_jeffreys is True and tb.pd_floor == 0.0003
+    assert tb.apply_jeffreys is True and tb.pd_floor == 0.0005
     m = tb.build(X, y, {"x": _CONT})
     izq = m.nodes[1]                       # hoja pura: k=0, n=5
     assert math.isclose(izq.pd_jeffreys[0], 0.5 / 6.0, rel_tol=1e-12)
-    assert math.isclose(izq.pd_final[0], max(0.0003, 0.5 / 6.0), rel_tol=1e-12)
+    assert math.isclose(izq.pd_final[0], max(0.0005, 0.5 / 6.0), rel_tol=1e-12)
     assert tb._governance_label() == "BANKING"
 
 
@@ -758,6 +758,63 @@ def test_pd_floor_hard_bound_binary():
     for leaf in hojas:
         assert min(leaf.pd_final) >= 0.01
         assert math.isclose(sum(leaf.pd_final), 1.0, abs_tol=1e-12)
+
+
+def test_pd_floor_hard_bound_binary_default():
+    """Fase 3.8: hard floor con el NUEVO default pd_floor=0.0005.
+
+    Fixture: 1100 filas, split perfecto en x=0.5. La hoja izquierda
+    tiene 1000 filas puras de clase 0 (0 eventos de clase 1). Su
+    pd_jeffreys[0] = 0.5/(1000+2*0.5) = 0.5/1001 ~= 0.0004995,
+    ESTRICTAMENTE POR DEBAJO del default 0.0005. El hard bound
+    (Phase 3.7.e) debe elevar pd_final[0] exactamente a 0.0005.
+    Pre-fix soft floor habria dejado 0.0004995 (comportamiento
+    incorrecto para BCBS CRE 32.4, que es cota dura).
+    """
+    x = pd.Series([0.0] * 1000 + [1.0] * 100)
+    y = pd.Series([0] * 1000 + [1] * 100)
+    X = pd.DataFrame({"x": x})
+    tb = TreeBuilder(_crt(), target_type=_BIN, target_class=1,
+                     class_labels=("Event", "Non-event"),
+                     max_depth=4, min_child_size=2)
+    m = tb.build(X, y, {"x": _CONT})
+
+    assert len(m.nodes) == 3                    # raiz + 2 hojas puras
+    hojas = [nd for nd in m.nodes if nd.is_leaf]
+    assert len(hojas) == 2
+    left = min(hojas, key=lambda h: h.node_id)  # x <= 0.5 -> clase 0
+    assert left.n == 1000
+    assert left.n_events[0] == 0                # 0 eventos de clase 1
+    assert math.isclose(left.pd_jeffreys[0], 0.5 / 1001.0, rel_tol=1e-12)
+    # El default 0.0005 (BCBS CRE 32.4) es cota dura en K=2:
+    assert math.isclose(left.pd_final[0], 0.0005, rel_tol=1e-12)
+    for leaf in hojas:
+        assert min(leaf.pd_final) >= 0.0005
+        assert math.isclose(sum(leaf.pd_final), 1.0, abs_tol=1e-12)
+
+
+def test_fingerprint_banking_default_vs_legacy_floor():
+    """Fase 3.8: el fingerprint distingue el default (0.0005) del
+    valor legacy de Basel II (0.0003).
+
+    Evidencia MRM: la eleccion del piso regulatorio es auditable a
+    traves del params_fingerprint. Dos arboles identicos en todo
+    salvo el piso deben tener fingerprints distintos.
+    """
+    x = pd.Series([float(i) for i in range(1, 11)])
+    X = pd.DataFrame({"x": x})
+    y = pd.Series([0] * 5 + [1] * 5)
+    spec = {"x": _CONT}
+    base = dict(target_type=_BIN, target_class=1,
+                class_labels=("Event", "Non-event"),
+                max_depth=4, min_child_size=2)
+    fp_default = TreeBuilder(_crt(), **base).build(
+        X, y, spec
+    ).params_fingerprint
+    fp_legacy = TreeBuilder(_crt(), pd_floor=0.0003, **base).build(
+        X, y, spec
+    ).params_fingerprint
+    assert fp_default != fp_legacy
 
 
 if __name__ == "__main__":

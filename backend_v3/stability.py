@@ -12,8 +12,11 @@ log; ver nota en psi_index):
 
     Gini Drop = (Gini_train - Gini_X) / Gini_train   (X in {OOS, OOT})
 
-Semaforos Basel/EBA:  PSI/CSI < 0.10 -> STABLE;  [0.10, 0.25) -> MODERATE;
->= 0.25 -> UNSTABLE.  Gini Drop: > 0.20 -> preventivo; > 0.40 -> critico.
+Umbrales de monitoreo de TreeGov (convencion de la industria, no prescripcion
+regulatoria): PSI/CSI < 0.10 -> STABLE; [0.10, 0.25) -> MODERATE;
+>= 0.25 -> UNSTABLE. Gini Drop: > 0.20 -> WARNING; > 0.40 -> CRITICAL.
+Los umbrales de PSI/CSI son la convencion de Siddiqi (2006) para scorecards;
+no son un umbral prescrito por Basilea ni por EBA.
 
 La referencia ("expected") es SIEMPRE la particion train (la poblacion de
 desarrollo, por definicion). Los bins de CSI de variables continuas son los
@@ -32,7 +35,8 @@ Citas:
   Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing
     Intelligent Credit Scoring. Wiley. (PSI/CSI como herramienta de
     monitoreo de scorecards.)
-  Convencion Basel/EBA para los umbrales del semaforo.
+  Siddiqi, N. (2006), umbrales convencionales de PSI/CSI. No son
+    prescripcion de Basilea ni EBA; se mantienen como convencion operativa.
 
 Dependencias: numpy, pandas, stdlib. Reutiliza validation.predict_*.
 """
@@ -97,7 +101,7 @@ def _validated_weights(
 
 
 def traffic_light(value: float) -> str:
-    """Semaforo Basel/EBA: <0.10 STABLE; <0.25 MODERATE; >=0.25 UNSTABLE.
+    """Umbral de monitoreo convencional (Siddiqi 2006; no prescrito por Basilea/EBA): <0.10 STABLE; <0.25 MODERATE; >=0.25 UNSTABLE.
     NaN -> "UNDETERMINED" (no se clasifica)."""
     if not value == value:  # NaN -> no se clasifica
         return "UNDETERMINED"

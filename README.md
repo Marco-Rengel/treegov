@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc1
+**Version**: 1.0.0rc2
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 431/431 passing
+**Test suite**: 434/434 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -50,7 +50,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.7 complete<br/>📦 v1.0.0rc1 published on PyPI<br/>🧪 431 / 431 tests PASSED<br/>📅 Oct 18, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.7 complete<br/>📦 v1.0.0rc1 published on PyPI<br/>🧪 434 / 434 tests PASSED<br/>📅 Oct 18, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -95,7 +95,7 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 | **Multiclass Support** | Hand & Till (2001) | — | Training and metrics for K ≥ 2 classes; multiclass Gini and pairwise KS |
 | **Sample Weighting** | Heeringa et al. (2010) | SR 11-7 | Sample bias adjustment across engines, tree construction, validation metrics and stability monitoring. Known limitation: the train/test split stratifies by physical row count (not weighted mass), surrogate agreement in C&RT is not weighted, and the binary gains table's global Gini/KS/AUC are unweighted (design_decisions.md §13.3, §13.6.2, §13.7). |
 | **Population Categories** | — | — | *Opt-in* filter to exclude categories (Indet, No Perf) before training |
-| **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigation of zero probabilities in low-default portfolios |
+| **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigation of zero probabilities in low-default portfolios |
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test *split*, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
 | **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing (API-only in `backend_v3/pruning.py`; not yet wired into the GUI or Session, and uses unweighted counts while the tree grows with weighted Gini). Scheduled for 1.0.0 stable. |
@@ -248,7 +248,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 431/431 passing.**
+**Test suite: 434/434 passing.**
 
 ---
 
@@ -277,7 +277,8 @@ TreeGov/
 
 ## Regulatory references
 
-- **Basel (BCBS CRE 20.39)**: regulatory PD floors.
+- **Basel (BCBS CRE 32.4)**: regulatory PD floors (0.05% for
+  corporate, bank and retail; 0.03% or exempt for sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
 - **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc1.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
