@@ -260,8 +260,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0a6` en PyPI (17/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0a6/
+**Última versión publicada:** `treegov 1.0.0rc1` en PyPI (18/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc1/
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -319,6 +319,7 @@ Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
   "Deferred (no blocking current work)".
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
 - Fase 2.1.b — CV scheme + *guardrail* runtime de imports backend.
+- **Integración de la poda (pruning):** `backend_v3/pruning.py` no está cableado en `Session` ni en la GUI, y usa conteos físicos mientras el árbol crece con Gini ponderado. Target: 1.0.0 estable.
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.

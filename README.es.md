@@ -98,7 +98,7 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 | **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 20.39 | Mitigación de probabilidades nulas en carteras de bajo impago |
 | **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto, sin sesgo de redondeo |
 | **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
-| **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos (solo API en `backend_v3/pruning.py`; aún no cableada en la GUI ni en Session). |
+| **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos (solo API en `backend_v3/pruning.py`; aún no cableada en la GUI ni en Session, y usa conteos sin ponderar mientras el árbol crece con Gini ponderado). Planificada para 1.0.0 estable. |
 | **Validación Out-of-Sample (OOS) / Out-of-Time (OOT)** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; cohorte *out-of-time* |
 | **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | Population Stability Index (PSI, hojas), Characteristic Stability Index (CSI, covariables), Gini Drop con semáforos |
 | **Validación con datasets UCI** | UCI ML Repository | — | Reproducibilidad anclada a 6 *datasets* (German Credit, Breast Cancer, etc.) |

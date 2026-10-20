@@ -4528,3 +4528,22 @@ El pendiente quedó anotado en la conversación pero NO se registró en docs/roa
 - `README.md`, `README.es.md` (sección Philosophy/Filosofía).
 
 ---
+
+### 19/10/2026 — Cierre de deuda documental y registro de la poda en el roadmap
+
+**Estado**: Cerrada. Sin cambios de código. Suite 431/431 PASSED.
+
+**Motivación**:
+Detectados huecos documentales menores y falta de registro formal de la deuda de poda durante la sesión de inicio de la deuda post-rc1. Se aplica el checklist de cierre ampliado a 6 documentos definido el 12/10/2026.
+
+**Cambios aplicados**:
+- `docs/roadmap.md`: añadida subsección "Cost-complexity pruning (poda) integration" en la sección Deferred, con prioridad Alta para 1.0.0 estable.
+- `docs/contexto_para_nueva_sesion.md`: actualizada la versión publicada a 1.0.0rc1 y añadida la deuda de la poda a la lista de deudas diferidas.
+- `docs/estado_proyecto.md`: sin modificación. Verificada la deuda de poda ya presente en los pendientes estructurales (introducida en el commit `eb17b2f` del 18/10); Kimi detectó que el cambio ya estaba y el revisor confirmó no duplicarlo.
+- `docs/api.md`: añadida nota aclaratoria en `backend_v3.pruning` indicando que es API-only.
+- `README.md` y `README.es.md`: actualizada la fila de poda para reflejar que es API-only, no cableada, y que usa conteos sin ponderar.
+- `docs/audit_log.md`: esta misma entrada.
+
+**Tests**: 431/431 PASSED (sin cambios de código).
+
+**Referencias**: brief del 19/10/2026; regla del 16/10/2026 en `docs/roadmap.md`.

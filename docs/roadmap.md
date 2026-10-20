@@ -376,6 +376,13 @@ para las fases 2.4, 3, 4 o 5. Se retomarán si aparece una necesidad
 concreta (por ejemplo, auditoría externa que requiera CV formal, o
 incidente que exponga la ausencia del guardrail runtime).
 
+### ⏳ Cost-complexity pruning (poda) integration
+**Priority: HIGH (target: 1.0.0 stable)**
+
+El módulo `backend_v3/pruning.py` implementa la poda coste-complejidad de Breiman, pero actualmente tiene dos limitaciones críticas para 1.0.0:
+1. No está integrado en `Session` ni en la GUI (es API-only).
+2. Usa conteos físicos de filas (`r(t) = n - max(n_events)`), mientras que el crecimiento del árbol usa Gini ponderado. Esta incoherencia estadística debe resolverse antes de la versión estable.
+
 ### ⏳ E2E test fixture: target con señal real
 **Priority: LOW (deferred)**
 
