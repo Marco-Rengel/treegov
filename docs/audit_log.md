@@ -4838,3 +4838,37 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 **Tests**: 435/435 PASSED.
 
 **Referencias**: `docs/design_decisions.md` §13.7; `docs/estado_proyecto.md` (Pendientes).
+
+### 20/10/2026 — Saneamiento documental pre-Poda
+
+**Estado**: ✅ Cerrada. Suite 435/435 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: La auditoría previa al diseño de la Poda Interactiva detectó contradicciones documentales. Varios documentos afirmaban que `pruning.py` "no estaba integrado en Session", cuando `Session.prune(alpha)` existe desde la Fase 1.2. También se detectó una referencia a una "Phase 2.4" (poda) en los mensajes de i18n que nunca existió en el roadmap.
+
+**Cambios aplicados**:
+- `docs/roadmap.md`, `docs/api.md`, `docs/estado_proyecto.md`, `docs/contexto_para_nueva_sesion.md`: corregida la afirmación sobre la integración en Session (ahora reflejan que existe `Session.prune()`, pero falta la GUI).
+- `frontend_v3/i18n.py`: eliminada la referencia a "Phase 2.4" en el aviso de árbol grande (EN/ES).
+
+**Tests**: 435/435 PASSED (sin cambios de código, solo i18n).
+
+### 20/10/2026 — Diseño de la Fase 3.9 (Poda Interactiva y Ponderada)
+
+**Estado**: ✅ Cerrada. Suite 435/435 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Tras la auditoría de la Poda (que detectó contradicciones y carencias en la documentación), se ha redactado y aprobado el diseño completo para la Poda Interactiva y Ponderada.
+
+**Cambios aplicados**:
+- `docs/methodology.md` §7.1: Añadida la fórmula `r_w(t)` para árboles ponderados.
+- `docs/design_decisions.md` §8.5-8.7: Añadidas las decisiones de diseño (ponderación, `Session.get_prune_sequence()`, y GUI `PruneDialog`).
+- `docs/roadmap.md`: Registrada la Fase 3.9 como próxima implementación.
+- Documentos de contexto y `audit_log`: sincronizados.
+
+**Tests**: 435/435 PASSED (sin cambios de código).

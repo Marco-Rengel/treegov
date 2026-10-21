@@ -169,7 +169,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tree_hdr_fp": "Fingerprint",
         "tree_large_warning": (
             "Large tree ({n} nodes). Consider reducing max_depth or "
-            "pruning (Phase 2.4)."
+            "applying cost-complexity pruning."
         ),
         "tree_zoom_in": "Zoom in (Ctrl++)",
         "tree_zoom_out": "Zoom out (Ctrl+-)",
@@ -456,7 +456,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "tree_hdr_fp": "Huella",
         "tree_large_warning": (
             "Árbol grande ({n} nodos). Considere reducir max_depth o "
-            "podar (Fase 2.4)."
+            "aplicar poda coste-complejidad."
         ),
         "tree_zoom_in": "Acercar (Ctrl++)",
         "tree_zoom_out": "Alejar (Ctrl+-)",

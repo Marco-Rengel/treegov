@@ -1096,6 +1096,41 @@ growth order (`TreeBuilder`).
 created by pruning receive `leaf_reason="podado"` (in Spanish,
 consistent with the other leaf reasons). Documented in `pruning.py`.
 
+### 8.5 Weighted pruning (`r_w(t)`) over physical counts
+
+**Context.** The cost-complexity pruning originally used `r(t) = n - max(n_events)`. With the introduction of sample weights (Phase 3.2), the tree grows with weighted Gini, but the pruning still used physical counts. This created a statistical incoherence.
+
+**Decision.** If `TreeNode.w_events` is populated, the Pruner uses `r_w(t) = sum(w_events) - max(w_events)`. If `w_events` is empty, it uses the original `r(t)`.
+
+**Consequences.**
+- Trees built with `weights=None` retain exact parity with the pre-3.9 behavior.
+- Trees built with non-trivial weights now produce a pruning sequence coherent with their growth.
+- The `Pruner.sequence()` API does not change; only the internal calculation of `g(t)` is adjusted.
+
+### 8.6 `Session.get_prune_sequence()` — exposing the analyst's discretion
+
+**Context.** Classic interactive tree tools of the CART tradition allowed the analyst to see the cost-complexity sequence and decide where to stop. TreeGov's GUI had no such mechanism.
+
+**Decision.** `Session` gains a read-only method `get_prune_sequence()` that returns a list of dicts (a flat DTO) representing `Pruner.sequence(model)`. This exposes `alpha`, `n_leaves`, and `r_subtree` to the frontend without breaking the clean-room architecture.
+
+**Consequences.**
+- The GUI can display a table of alphas.
+- The analyst retains the discretion to choose the optimal tree size for their business case, complying with MRM human-in-the-loop principles.
+- Fingerprints of pruned trees are derived from the original tree's fingerprint plus the alpha.
+
+### 8.7 Interactive Pruning Dialog (GUI)
+
+**Context.** The user needs a way to visualize the pruning sequence and apply an alpha.
+
+**Decision.** The GUI implements a modal dialog `PruneDialog` accessible from the Model menu. The dialog presents a `QTableWidget` with the output of `Session.get_prune_sequence()`.
+- When the user selects a row and confirms, the GUI calls `Session.prune(alpha)`.
+- The tree viewer and metrics panel are refreshed.
+- A button allows the user to revert to the original tree (if a pruned tree exists).
+
+**Consequences.**
+- The GUI reflects the backend's mathematical rigor while giving the analyst interactive control.
+- No new analytical logic is introduced in `frontend_v3/`; it only consumes the DTO.
+
 ---
 
 ## §9. Reporting

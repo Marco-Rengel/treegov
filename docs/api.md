@@ -184,7 +184,7 @@ underscore) are internal and may change without notice.
 ## backend_v3.pruning
 
 - `Pruner`, `PruneStep`
-  *(Nota: API-only. No cableado en `Session` ni en la GUI. Ver `docs/roadmap.md` sección Deferred).*
+  *(Nota: `Session.prune()` existe, pero no está cableado en la GUI. Ver `docs/roadmap.md` sección Deferred).*
 
 ## backend_v3.splitting
 

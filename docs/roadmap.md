@@ -359,6 +359,13 @@ del 04/10/2026 separa esas familias:
   predictores) sigue pendiente de reemplazo por uno con señal real.
   Sin cambios en 3.5.a.
 
+### ⏳ Phase 3.9 — Interactive and Weighted Pruning
+**Priority: HIGH (target: 1.0.0 stable)**
+
+Implementación de la poda coste-complejidad interactiva y ponderada.
+- **Diseño aprobado** (20/10/2026): ver `docs/design_decisions.md` §8.5 a §8.7 y `docs/methodology.md` §7.1.
+- **Pendiente de implementación**: Backend (`pruning.py` ponderado con `w_events`), Session (`get_prune_sequence()`), GUI (`PruneDialog`).
+
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**
 
@@ -411,7 +418,7 @@ incidente que exponga la ausencia del guardrail runtime).
 **Priority: HIGH (target: 1.0.0 stable)**
 
 El módulo `backend_v3/pruning.py` implementa la poda coste-complejidad de Breiman, pero actualmente tiene dos limitaciones críticas para 1.0.0:
-1. No está integrado en `Session` ni en la GUI (es API-only).
+1. Está integrado en `Session` (vía `Session.prune()`), pero no está cableado en la GUI.
 2. Usa conteos físicos de filas (`r(t) = n - max(n_events)`), mientras que el crecimiento del árbol usa Gini ponderado. Esta incoherencia estadística debe resolverse antes de la versión estable.
 
 ### ⏳ E2E test fixture: target con señal real

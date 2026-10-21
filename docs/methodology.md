@@ -806,6 +806,12 @@ where:
 - `R(T_t)` — sum of `r(leaf)` over the live leaves of the subtree.
 - `|T_t|` — number of live leaves in the subtree.
 
+**Phase 3.9 (Weighted Pruning).** When the tree was built with sample weights (`w_events` is populated in `TreeNode`), the cost-complexity pruning must use the weighted mass to remain mathematically coherent with the tree's growth. The weighted formulation is:
+
+    r_w(t) = sum(w_events) - max(w_events)
+
+For K=2, this is identical to `min(w_events[0], w_events[1])`. If `TreeNode.w_events` is empty (unweighted trees), the original count form `r(t)` applies, preserving bit-for-bit parity with previous versions.
+
 **Convention: count form.** `r(t)` is expressed as a raw count, not the
 probability-weighted `p(t) · r(t)` of Breiman's original exposition.
 The two forms differ by a positive constant common to all nodes in the
