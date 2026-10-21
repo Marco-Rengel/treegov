@@ -63,13 +63,9 @@ Al cerrar una sub-fase, la sincronización documental exige:
 8. `docs/design_decisions.md`: nueva entrada si el cambio introdujo un nuevo default o alteró un contrato de API.
 Si alguno de los 8 no refleja el estado real, la sub-fase NO se considera cerrada. Motivo: el cierre de la Fase 3.8 el 19/10/2026 omitió la fila en el README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`, forzando un bloque de corrección post-cierre el 20/10/2026.
 
-**Regla PyPI (12/10/2026).** PyPI congela el README en el
-momento del upload. Si el README del repositorio cambia después
-de una publicación, la página pública queda desincronizada
-hasta la próxima release. Al modificar el README, decidir
-explícitamente: (a) publicar una nueva versión inmediatamente,
-o (b) esperar a la próxima release con cambios de código. Nunca
-dejar la decisión implícita.
+**Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README al subir. Para evitar inflación de versiones por cosmética:
+- **Cambios materiales** (código, defaults, contratos, citas regulatorias): publicar nueva versión inmediatamente.
+- **Cambios cosméticos** (fechas en diagramas, typos, tablas de estado, narrativa): NO publicar nueva versión. Esperar a la próxima release material y documentar la desincronización en `docs/roadmap.md` (sección Deferred).
 
 **Regla de ráfaga (refinada el 10/10/2026).** Dentro de una sub-fase:
 OpenCode abierto, los prompts de código, tests y documentación van

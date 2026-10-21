@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.7 completas<br/>📦 v1.0.0rc1 publicada en PyPI<br/>🧪 434 / 434 tests PASSED<br/>📅 18 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.8 completas<br/>📦 v1.0.0rc2 publicada en PyPI<br/>🧪 434 / 434 tests PASSED<br/>📅 20 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -245,7 +245,7 @@ TreeGov/
 | **3.6.e** | Modo no-bancario y validación multi-dominio extensiva | Planificada para 1.1.0 |
 | **3.7** | Cierre Fase 3 + v1.0.0rc1 | Completada |
 | **3.7.e** | Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
-| **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) | Completada |
+| **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |
@@ -283,7 +283,7 @@ TreeGov/
 - **Basilea (BCBS CRE 32.4)**: suelos regulatorios de PD (0.05% para
   corporativos, bancos y retail; 0.03% o exención para soberanos).
 - **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
-- **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc1.
+- **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc2.
 - **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).
 
 ---

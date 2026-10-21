@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 18/10/2026
+**Última actualización:** 20/10/2026
 
 ---
 
@@ -167,7 +167,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 19/10/2026:** Fases 0 a 3.8 cerradas. Suite 434/434. Próximo paso: recogida de feedback de 1.0.0rc2. Deuda diferida a 1.0.0 estable: D13, poda no integrada, tags a1–a6.
+- **Estado al 20/10/2026:** Fases 0 a 3.8 cerradas. Suite 434/434. Próximo paso: recogida de feedback de 1.0.0rc2. Deuda diferida a 1.0.0 estable: D13, poda no integrada, tags a1–a6.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -380,7 +380,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 19/10/2026: Fases 0 a
+> "Retomamos TreeGov. Soy Marco. Estado al 20/10/2026: Fases 0 a
 > 3.8 cerradas. Suite 434/434. Fase 3.8 (corrección regulatoria:
 > BCBS CRE 32.4, pd_floor default 0.0005 en Banking mode, excepción
 > soberana no modelada; PSI/CSI reatribuido a Siddiqi 2006) cerrada
@@ -412,3 +412,5 @@ Para evitar zonas grises, asunciones falsas y roturas de documentación, todo pr
 4. **Trazabilidad de Defaults:** Si un prompt altera un valor por defecto (ej. `pd_floor`), es OBLIGATORIO incluir explícitamente la actualización de `docs/design_decisions.md` en el mismo bloque de cambios. El grep superficial no es excusa; se está introduciendo una nueva decisión.
 5. **Prevención de Redundancia:** Al insertar bloques narrativos, incluir la instrucción de verificar que el resumen ejecutivo o los "próximos pasos" no repitan la misma información, manteniendo una única fuente de verdad para el detalle y otra para el resumen.
 6. **Sincronía de Protocolos:** Cuando se actualice un checklist, una regla o un protocolo, el prompt debe exigir actualizar TODAS las copias o reflejos de esa regla (ej. `.treegovrules` y `AGENTS.md`) en el mismo bloque, garantizando que sean idénticos.
+7. **Regla de PyPI:** Al cerrar un bloque, clasificar los cambios en materiales o cosméticos. Si son cosméticos (fechas, texto, diagramas), no publicar en PyPI; en su lugar, añadir una nota en `roadmap.md` indicando que PyPI se actualizará en la próxima release con código.
+8. **Consistencia de Idioma y Numeración:** Todo bloque insertado debe respetar el idioma predominante del documento (inglés para documentos técnicos, español para operativos). Verifica que la numeración de listas no tenga saltos ni duplicados.

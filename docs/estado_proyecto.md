@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 18/10/2026 (Fase 3.7 cerrada, release 1.0.0rc1)
+**Fecha de última actualización:** 20/10/2026 (Fase 3.8 cerrada, release 1.0.0rc2)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -308,6 +308,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.7.c** — min_child_weight expuesto ✅.
 - **Fase 3.7.d** — Tests UCI ampliados ✅.
 - **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor ✅.
+- **Fase 3.8** — Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 ✅ Completada (19/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
@@ -499,7 +500,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0a6/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc2/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |

@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 18/10/2026
+**Fecha de última actualización:** 20/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -266,13 +266,13 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 **Última versión publicada:** `treegov 1.0.0rc2` en PyPI (19/10/2026).
 URL: https://pypi.org/project/treegov/1.0.0rc2/
 
-**Regla PyPI (12/10/2026).** PyPI congela el README en el momento
+**Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
 publicación, la página pública queda desincronizada hasta la
 próxima release. Al modificar el README, decidir explícitamente:
 (a) publicar una nueva versión inmediatamente, o (b) esperar a la
 próxima release con cambios de código. Nunca dejar la decisión
-implícita.
+implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, los cambios puramente cosméticos (fechas, typos, diagramas) NO disparan una nueva release en PyPI; se difieren a la próxima release material y se documentan en `roadmap.md`.
 
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
@@ -280,7 +280,7 @@ PySide6). Verificación de instalación limpia completada.
 La espera decidida el 16/10/2026 quedó cerrada definitivamente. Tras la
 publicación de `1.0.0rc1` y la corrección regulatoria de la Fase 3.8, la
 versión actual es `1.0.0rc2`. El README de PyPI está sincronizado con el
-repo, reflejando 434/434 tests. Ver docs/roadmap.md, regla PyPI.
+repo, reflejando 434/434 tests. Ver docs/roadmap.md, protocolo PyPI.
 
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 

@@ -49,16 +49,10 @@
    Exceptions: provider outage (504/timeout, documented on return)
    or a one-line trivial change consolidated into the block entry.
 5. **Audit consumers before changing public function signatures.** When a function gains mandatory parameters, every consumer of that function must be found and adapted in the SAME work block. Not in the next sub-phase. Rationale: the 15 avoidable failures of Phase 3.3.d came from not auditing the `_cfg()` helpers of the E2E tests before changing `_train_pipeline`.
-6. **PyPI release rule.** PyPI freezes the README at upload
-   time. If the README of the repository changes after a
-   release, the public page stays out of sync until the next
-   release. When modifying the README, decide explicitly: (a)
-   publish a new version immediately, or (b) wait for the next
-   release with code changes. Never leave the decision implicit.
-   This rule was materialised on 12/10/2026: 1.0.0a3 was
-   published with the README in its pre-synchronization state;
-   the three subsequent README commits are visible on GitHub but
-   not on PyPI. Resolved by publishing 1.0.0a4.
+6. **PyPI release rule and sync protocol.** PyPI freezes the README at upload time. If the repository README changes after a release, the PyPI page stays out of sync until the next release. When modifying the README, decide explicitly:
+   (a) **Material changes** (code, numerical defaults, API contracts, regulatory citations): MUST publish a new version immediately (e.g., rc1 -> rc2).
+   (b) **Cosmetic/documentary changes** (fixing dates in diagrams, typos, phase table updates, narrative text): MUST NOT trigger a new release. Wait for the next material release. 
+   In case (b), explicitly document the deliberate sync delay in `docs/roadmap.md` under the "Deferred" section, stating that PyPI will be updated with the next code release.
 7. **Every detected technical debt or pending item is recorded in docs/roadmap.md (Deferred or Pending decisions) in the same session it is detected.** Mentioning it only in audit_log.md or in the chat is not sufficient. Rationale: the Aider/build/twine pending item detected on 12/10/2026 stayed open for 4 days without traceability in the roadmap; when it was resumed on 16/10/2026, the context had to be reconstructed from scratch. The roadmap is the project's source of truth for technical debt; the audit_log is the chronological log.
 
 Synchronization checklist (mandatory at every sub-phase closure,

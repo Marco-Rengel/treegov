@@ -388,6 +388,13 @@ del 04/10/2026 separa esas familias:
 
 ## Deferred (no blocking current work)
 
+### ⏳ PyPI synchronization (target: v1.0.0 stable)
+**Priority: LOW (deferred)**
+
+The repository README and Mermaid diagrams have been updated (dates to 20/10/2026, inclusion of phase 3.8, rc2 in the table). The version published on PyPI (`1.0.0rc2`) freezes the previous README before these cosmetic corrections.
+
+Under the new synchronization protocol (20/10/2026), an `rc3` is NOT published solely for documentary changes. The PyPI page will be updated with the next material release (v1.0.0 stable or the next version with code changes). In the meantime, the GitHub repository remains the source of truth.
+
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
 
@@ -421,7 +428,7 @@ fixture por uno con señal real (por ejemplo, `y = 1_{edad >= 40}` con
 Se difiere porque ningún test depende hoy de que el Gini sea
 significativo.
 
-### ⏳ PyPI refresh: publish 1.0.0a2
+### ✅ PyPI refresh: publish 1.0.0a2 (Resolved: superseded by 1.0.0rc2)
 **Priority: MEDIUM (deferred, target: after Phase 3.3 closes)**
 
 The PyPI page for treegov 1.0.0a1 still shows the README frozen at the
