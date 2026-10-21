@@ -4913,3 +4913,5 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - `tests/test_e2e_mainwindow.py`: Nuevo test E2E del flujo de poda.
 
 **Tests**: 438/438 PASSED.
+
+**Nota**: Publicada finalmente como 1.0.0rc4 en PyPI debido a un conflicto de inmutabilidad con la versión rc3, subida previamente con los cambios de D13.

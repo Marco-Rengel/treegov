@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc3
+**Version**: 1.0.0rc4
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.8 complete<br/>📦 v1.0.0rc3 published on PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 Oct 20, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.9 complete<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 Oct 20, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -284,7 +284,7 @@ TreeGov/
 - **Basel (BCBS CRE 32.4)**: regulatory PD floors (0.05% for
   corporate, bank and retail; 0.03% or exempt for sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc3.
+- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc4.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---

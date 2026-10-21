@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Versión**: 1.0.0rc3
+**Versión**: 1.0.0rc4
 **Autor**: Marco Rengel
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.8 completas<br/>📦 v1.0.0rc3 publicada en PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 20 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.9 completas<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 20 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -284,7 +284,7 @@ TreeGov/
 - **Basilea (BCBS CRE 32.4)**: suelos regulatorios de PD (0.05% para
   corporativos, bancos y retail; 0.03% o exención para soberanos).
 - **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
-- **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc3.
+- **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc4.
 - **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).
 
 ---

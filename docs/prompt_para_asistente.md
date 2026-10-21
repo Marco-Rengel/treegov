@@ -168,7 +168,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 20/10/2026:** Fases 0 a 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y Ponderada: backend `r_w(t)`, `Session.get_prune_sequence()`, GUI `PruneDialog`) completada el 20/10/2026. Próximo paso: recogida de feedback de 1.0.0rc2/rc3 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: tags a1–a6.
+- **Estado al 20/10/2026:** Fases 0 a 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y Ponderada: backend `r_w(t)`, `Session.get_prune_sequence()`, GUI `PruneDialog`) completada el 20/10/2026. Próximo paso: recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: tags a1–a6.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -382,13 +382,11 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
 > "Retomamos TreeGov. Soy Marco. Estado al 20/10/2026: Fases 0 a
-> 3.8 cerradas. Suite 438/438. Fase 3.8 (corrección regulatoria:
-> BCBS CRE 32.4, pd_floor default 0.0005 en Banking mode, excepción
-> soberana no modelada; PSI/CSI reatribuido a Siddiqi 2006) cerrada
-> y publicada como 1.0.0rc2. Próximo paso: recogida de feedback
-> durante 2-4 semanas. D13 resuelta el 20/10/2026. Deuda diferida a
-> 1.0.0 estable: poda integrada en Session (falta GUI) y diseño 3.9 aprobado,
-> tags a1–a6 ausentes. Regla operativa: ráfagas cortas
+> 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y
+> Ponderada: backend r_w(t), Session.get_prune_sequence(), GUI
+> PruneDialog) cerrada y publicada como 1.0.0rc4. Próximo paso:
+> recogida de feedback durante 2-4 semanas. Deuda diferida a
+> 1.0.0 estable: tags a1–a6 ausentes. Regla operativa: ráfagas cortas
 > con OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max para
 > código, high para docs."
 

@@ -124,6 +124,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.6.e | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
 | 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
+| 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 
 **Suite de tests:** 438/438 PASSED
 
@@ -263,8 +264,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc2` en PyPI (19/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc2/
+**Última versión publicada:** `treegov 1.0.0rc4` en PyPI (20/10/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc4/
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -278,9 +279,11 @@ Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
 La espera decidida el 16/10/2026 quedó cerrada definitivamente. Tras la
-publicación de `1.0.0rc1` y la corrección regulatoria de la Fase 3.8, la
-versión actual es `1.0.0rc2`. El README de PyPI está sincronizado con el
-repo, reflejando 434/434 tests. Ver docs/roadmap.md, protocolo PyPI.
+publicación de `1.0.0rc1`, la corrección regulatoria de la Fase 3.8 y el
+cierre de la Fase 3.9, la versión actual es `1.0.0rc4` (rc3 quedó
+quemada por un conflicto de inmutabilidad en PyPI: se subió solo con
+los cambios de D13). El README de PyPI está sincronizado con el
+repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
 
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 
@@ -300,7 +303,7 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso:** recogida de feedback de `1.0.0rc2` durante 2-4
+**Próximo paso:** recogida de feedback de `1.0.0rc4` durante 2-4
 semanas; si no aparecen bugs críticos, publicación de `1.0.0`
 estable. D13 (métricas ponderadas en gains table binaria) fue
 resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: poda
