@@ -4738,3 +4738,59 @@ que anclan el comportamiento del nuevo default).
   hard floor en K=2, que citaba CRE 20.39 por la misma confusión).
 - `docs/validation_results_3.6.md` §Revision notes.
 - `docs/roadmap.md` sección "✅ Phase 3.8".
+
+### 20/10/2026 — Mini-cierre: correcciones post-rc2, checklist de 8, protocolo PyPI, disciplina MRM y protocolo de mini-cierre
+
+**Estado**: ✅ Cerrada. Sin cambios de código analítico. Suite 434/434 PASSED al cierre del bloque.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high (documentación pura) para las correcciones de código; edición manual en VS Code para la redacción del protocolo de mini-cierre y del Protocolo de Redacción de Prompts (excepción documentada: creación inicial de bloques de gobernanza, ver CONVENTIONS.md).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: sesión de cierre documental tras la publicación de `1.0.0rc2` (19/10/2026). Se detectaron tres huecos post-cierre que exigían corrección inmediata: (a) la fila de la Fase 3.8 en los READMEs no se había actualizado; (b) los diagramas Mermaid de los READMEs tenían fechas y conteos desactualizados; (c) `design_decisions.md` no reflejaba el nuevo default de `pd_floor` ni la corrección regulatoria de la Fase 3.8. Adicionalmente, la sesión formalizó cuatro protocolos de gobernanza que ya operaban de facto, pero no estaban escritos como regla.
+
+**Cambios aplicados**:
+
+**1. Corrección cosmética de READMEs y Mermaid.**
+- `README.md` / `README.es.md`: fila de la tabla de fases para 3.8 actualizada a "Completed" / "Completada"; diagramas Mermaid actualizados a "Phases 0 → 3.8 complete" / "Fases 0 → 3.8 completas", "v1.0.0rc2 published on PyPI" / "v1.0.0rc2 publicada en PyPI", "434 / 434 tests PASSED", "Oct 20, 2026" / "20 oct 2026".
+- `docs/estado_proyecto.md`: fecha de actualización a 20/10/2026; bloque narrativo de la Fase 3.8 añadido (la versión previa solo tenía la entrada en `roadmap.md` y `audit_log.md`).
+- `docs/design_decisions.md`: nueva §10.4 ("Default PD floor value and the sovereign exception (Phase 3.8)") con `pd_floor = 0.0005` y cita a BCBS CRE 32.4.
+- `docs/methodology.md` §6.3: cita regulatoria corregida a CRE 32.4 y default `0.0005`.
+
+**2. Expansión del checklist de cierre a 8 documentos (para evitar saltos de profundidad).**
+El checklist pasa de 6 a 8 documentos. Los dos nuevos son:
+- `docs/api.md` (superficie pública de la API).
+- `docs/design_decisions.md` (nueva entrada si el cambio introdujo un nuevo default o alteró un contrato de API).
+Motivo: los tres huecos detectados en este cierre (fila del README, bloque narrativo en `estado_proyecto.md`, entrada en `design_decisions.md`) caen todos dentro del checklist ampliado. Con 8 entradas, el cierre de la Fase 3.8 los habría detectado. El cambio se propaga a `AGENTS.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md` y `.treegovrules`, todos en el mismo bloque.
+
+**3. Protocolo de Sincronización PyPI.**
+Regla registrada en `AGENTS.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md` y `docs/roadmap.md` (sección "Deferred"):
+- **Cambios materiales** (código, defaults, contratos, citas regulatorias): publicar nueva versión en PyPI inmediatamente.
+- **Cambios cosméticos** (fechas en diagramas, typos, tablas de estado, narrativa): NO publicar nueva versión. Diferir a la próxima release material y documentar la desincronización en `docs/roadmap.md` (sección "Deferred").
+Motivo: tras la publicación de `1.0.0rc2` el 19/10/2026, el README de PyPI queda congelado. Publicar una `1.0.0rc3` solo por cosmética habría inflado el historial de releases sin justificación. La regla evita esa inflación y hace explícita la decisión.
+
+**4. Declaración de Disciplina MRM en el software.**
+`docs/philosophy.md` y `docs/philosophy.es.md` ganan una sección "MRM Discipline in Software Development" / "Disciplina MRM en el Desarrollo de Software": TreeGov no solo implementa MRM, el software en sí mismo se construye bajo disciplina MRM (diseño antes del código, humano en el circuito, verificación adversarial, trazabilidad inmutable). Motivo: la filosofía del proyecto ya estaba escrita, pero la disciplina de desarrollo era implícita.
+
+**5. Protocolo de Mini-Cierre.**
+Nueva regla registrada en `.treegovrules`, `AGENTS.md` y `docs/prompt_para_asistente.md` (texto idéntico en los tres). Establece que toda corrección post-cierre, resolución de deuda diferida o actualización documental pura genera su propia entrada en `audit_log.md` con fecha, artefactos, hallazgos, estado de la suite y referencias cruzadas. Incluye cinco anti-patrones observados en sesiones recientes (saltarse la auditoría de diseño, asumir el estado de los documentos, proponer hallazgos sin revisar todos los documentos relevantes, verificación en una sola dirección, correcciones post-cierre sin entrada). Motivo: el cierre de la Fase 3.8 y su corrección del 20/10/2026 dejaron un hueco de trazabilidad que esta regla previene. Referencias cruzadas a `docs/roadmap.md` ("Phase closure documentation: never deferred") y a la entrada del 17/10/2026.
+
+**6. Nota de actualización en `design_decisions.md` §13.7 (saneamiento).**
+Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) una nota fechada el 20/10/2026 que aclara que la Fase 3.5.b (15/10/2026) ya resolvió la asimetría de D13 para el path multiclase, y que la asimetría restante es exclusiva del path binario (K=2). La nota de "Deferred" del 10/10/2026 se mantiene en lo esencial. Motivo: el cuerpo de §13.7 estaba desincronizado con el cierre de la Fase 3.5.b; la nota restaura la consistencia sin reescribir el histórico.
+
+**Hallazgos**:
+- **Protocolo ausente para correcciones post-cierre.** El cierre de la Fase 3.8 (19/10/2026) omitió la fila del README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`. El bloque de corrección del 20/10/2026 los corrigió, pero no generó entrada propia en `audit_log.md`. Se adopta el **Protocolo de Mini-Cierre** (texto canónico en `.treegovrules`, `AGENTS.md` y `docs/prompt_para_asistente.md`) para prevenir el hueco en futuras sesiones.
+- **Desincronización en `design_decisions.md` §13.7.** La decisión diferida D13 sigue sin nota de actualización en el cuerpo de §13.7, aunque la Fase 3.5.b (15/10/2026) ya resolvió la asimetría para el path multiclase. Se corrige en la nota de actualización del bloque 6.
+- **Riesgo de "hallazgos sin evidencia" en sesiones de auditoría.** Durante la sesión de auditoría previa a este mini-cierre se emitieron cuatro hallazgos de gobernanza; dos resultaron falsos (D13 no estaba en `roadmap` "Deferred" ni los tags `a1`–`a6` tampoco, sino en `estado_proyecto.md` §10), uno quedó reducido a consistencia (§13.7 sin nota in-place), y uno se confirmó (ausencia de entrada en `audit_log` para el 20/10/2026). El anti-patrón 2 del Protocolo de Mini-Cierre ("asumir el estado de los documentos") lo previene.
+- **Verificación en una sola dirección.** La sesión de auditoría reveló que el asistente estratégico también es falible y debe ser verificado contra el working tree, `git log` y los documentos. El anti-patrón 4 del Protocolo de Mini-Cierre lo codifica.
+
+**Tests**: 434/434 PASSED (sin cambios de código en este bloque; solo documentación).
+
+**Referencias**:
+- Commit `dd5e95e` (`docs: deep synchronization pass and PyPI protocol enforcement`), visible tip del bloque.
+- `docs/audit_log.md` entrada del 19/10/2026 (tarde) — cierre de la Fase 3.8.
+- `docs/roadmap.md` sección "Recorded architectural decisions" — regla "Phase closure documentation: never deferred".
+- `AGENTS.md` sección "Documentación obligatoria" — checklist de 8 documentos, Protocolo PyPI y Protocolo de Mini-Cierre.
+- `docs/prompt_para_asistente.md` Sección 11 — Protocolo de Redacción de Prompts.
+- `docs/philosophy.md` / `docs/philosophy.es.md` — Disciplina MRM en el Desarrollo de Software.
+- `docs/design_decisions.md` §13.7 — nota de actualización del 20/10/2026.

@@ -1773,6 +1773,12 @@ of the table rows ARE weighted; the aggregate summary
 **Cross-reference.** `backend_v3/reporting.py::_discrimination_metrics`;
 `docs/audit_log.md` entry of 10/10/2026 (Phase 3.2.g).
 
+**Update (20/10/2026, saneamiento documental).** La decisión diferida D13 sigue pendiente de implementación en código para el path binario: con pesos no triviales, los campos `ks`, `auc` y `gini` de `GainsTableResult` continúan calculándose sin ponderar, mientras que las columnas `w_*` por fila sí reflejan la masa ponderada. Esa asimetría es la que el panel OOS/OOT y los Reports/HTML exponen como contradicción numérica para la misma partición. La nota de "Deferred" del 10/10/2026 se mantiene en lo esencial.
+
+Lo que se aclara aquí es que la Fase 3.5.b (15/10/2026) **sí resolvió la asimetría para el path multiclase**: `build_gains_table` con K > 2 delega en `validation.compute_oos_metrics`, que sí pondera, cerrando el diferido para ese path. La asimetría restante es, por tanto, exclusiva del path binario (K = 2) y no se extiende al multiclase. La Fase 3.5.b no reabre D13: la acota. El diseño de D13 y su test de paridad deben formularse sobre el path binario, no sobre el multiclase.
+
+**Referencia cruzada.** `docs/3.5_design_multiclass_weighted_reports.md` §1.2 ("D13 closes the deferred §13.7 for the multiclass path only"), `docs/audit_log.md` entrada del 15/10/2026 (3.5.b), y `docs/estado_proyecto.md` §10 ("Deudas post-rc1").
+
 ---
 
 ### 13.8 Hosmer-Lemeshow scales linearly with total weight mass

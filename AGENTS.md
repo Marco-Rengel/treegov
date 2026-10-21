@@ -63,6 +63,35 @@ Al cerrar una sub-fase, la sincronización documental exige:
 8. `docs/design_decisions.md`: nueva entrada si el cambio introdujo un nuevo default o alteró un contrato de API.
 Si alguno de los 8 no refleja el estado real, la sub-fase NO se considera cerrada. Motivo: el cierre de la Fase 3.8 el 19/10/2026 omitió la fila en el README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`, forzando un bloque de corrección post-cierre el 20/10/2026.
 
+### Mini-cierre: correcciones post-cierre, deudas diferidas y documentación pura
+
+Cualquier corrección post-cierre, resolución de deuda técnica diferida o actualización documental pura (incluso si no hay cambios de código) DEBE ser tratada como un "mini-cierre" y DEBE generar su propia entrada en `docs/audit_log.md` con:
+
+- fecha,
+- artefactos tocados (por ruta exacta),
+- hallazgos: qué se corrigió, por qué, y qué evidencia lo respalda,
+- estado de la suite tras el bloque (`N/N PASSED`),
+- referencias cruzadas a los documentos que se actualizan como parte del mismo bloque.
+
+No basta con mencionar el cambio en la conversación, en el mensaje de commit o en otro documento. El `audit_log` es la bitácora cronológica del proyecto. Una sesión que modifica documentación estructural, resuelve una deuda diferida o corrige un cierre previo, y no genera entrada en el `audit_log`, deja un cabo suelto de trazabilidad.
+
+**Anti-patrones observados (lecciones de sesiones recientes, codificadas para que no se repitan).**
+
+1. **Saltarse la auditoría de diseño.** No se pide código fuente ni se redactan prompts de implementación antes de haber auditado el diseño documental y haber emitido veredicto explícito. Si un brief o un resumen parece suficiente, no lo es: el brief es un resumen, no la fuente de verdad. El orden es Diseñar → Auditar diseño → Implementar → Testear → Documentar.
+2. **Asumir el estado de los documentos.** No se afirma que una sección existe, que una decisión está registrada o que un documento está desincronizado sin haberlo leído o verificado con `grep`. Los hallazgos de gobernanza se emiten solo con cita textual del documento; sin cita, no hay hallazgo. Si no se tiene el archivo, se pide antes de opinar.
+3. **Proponer hallazgos sin revisar todos los documentos relevantes.** Un mismo hecho puede estar documentado en `estado_proyecto.md`, en `roadmap.md` o en `design_decisions.md` sin estarlo en la sección que el auditor esperaba. Antes de declarar un hueco, se busca en los cinco documentos canónicos (`roadmap`, `estado_proyecto`, `contexto_para_nueva_sesion`, `prompt_para_asistente`, `audit_log`) y en el documento específico de la fase.
+4. **Verificación en una sola dirección.** La regla "verificación empírica sobre obediencia ciega" aplica en ambas direcciones: el humano verifica al agente con `pytest`, `git status` y `git diff`; el agente (y el asistente estratégico) verifica al humano contra el working tree, `git log` y los documentos. Ninguno de los dos lados del par humano-IA es infalible; el árbitro es el ground truth, no la autoridad de quien escribe.
+5. **Correcciones post-cierre sin entrada.** El cierre de una sub-fase está cubierto por la regla "Phase closure documentation: never deferred". Las correcciones que ocurren FUERA de un cierre de sub-fase (post-cierre, resolución de deuda diferida, saneamiento documental) no estaban cubiertas hasta la fecha. Esta regla las cubre.
+
+**Excepciones.** Solo dos, y ambas deben quedar registradas en la propia entrada (cuando se escriba):
+
+1. Indisponibilidad del proveedor de IA (504/timeout/quota) que impida redactar la entrada en el mismo bloque. La entrada se redacta en cuanto el servicio vuelva, con nota explícita de la excepción.
+2. Cambio trivial de una línea consolidado en una entrada de bloque mayor. La entrada consolidada debe nombrar el cambio trivial y su archivo.
+
+**Motivo.** El cierre de la Fase 3.8 (19/10/2026) omitió la fila del README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`; el bloque de corrección del 20/10/2026 los corrigió, pero no generó entrada propia en `audit_log.md` hasta que se adoptó este protocolo. El resultado es que un auditor que lea solo el `audit_log` no puede reconstruir qué pasó entre el 19 y el 20/10/2026. La regla "Phase closure documentation: never deferred" cubre los cierres de sub-fase; esta regla cubre todo lo que ocurre fuera de un cierre de sub-fase.
+
+**Referencias cruzadas.** `docs/roadmap.md` ("Recorded architectural decisions: Phase closure documentation: never deferred"), `docs/audit_log.md` entrada del 17/10/2026 (auditoría documental sin entrada en su momento), `docs/audit_log.md` entrada del 20/10/2026 (primer mini-cierre bajo este protocolo), `docs/prompt_para_asistente.md` Sección 11 (Protocolo de Redacción de Prompts).
+
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README al subir. Para evitar inflación de versiones por cosmética:
 - **Cambios materiales** (código, defaults, contratos, citas regulatorias): publicar nueva versión inmediatamente.
 - **Cambios cosméticos** (fechas en diagramas, typos, tablas de estado, narrativa): NO publicar nueva versión. Esperar a la próxima release material y documentar la desincronización en `docs/roadmap.md` (sección Deferred).
