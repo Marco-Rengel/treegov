@@ -51,16 +51,17 @@ volver), o cambio trivial de 1 línea consolidado en la entrada de
 bloque. Ver `docs/roadmap.md` sección "Recorded architectural
 decisions: Phase closure documentation: never deferred".
 
-**Checklist de cierre ampliado a 6 documentos (12/10/2026).**
-Al cerrar una sub-fase, además de los 4 documentos ya
-registrados (`audit_log.md`, `roadmap.md`, `estado_proyecto.md`,
-documentos de contexto), se actualizan también `README.md` /
-`README.es.md` (cuentan como uno) y `docs/api.md`. Motivo: los
-tres huecos detectados el 12/10/2026 (estructura del
-repositorio en READMEs, conteos individuales de tests en
-`estado_proyecto.md` §7, versión de PyPI en `estado_proyecto.md`
-§1) caen todos dentro del checklist ampliado. Si alguno queda
-desincronizado, la sub-fase NO se considera cerrada.
+**Checklist de cierre ampliado a 8 documentos (actualizado 20/10/2026).**
+Al cerrar una sub-fase, la sincronización documental exige:
+1. `docs/audit_log.md`: entrada de cierre.
+2. `docs/roadmap.md`: estado de la fase y sección narrativa.
+3. `docs/estado_proyecto.md`: conteo de tests real Y bloque narrativo de la fase cerrada.
+4. `docs/contexto_para_nueva_sesion.md`: próximo paso.
+5. `docs/prompt_para_asistente.md`: herramienta activa y estado.
+6. `README.md` / `README.es.md`: versión, conteo de tests Y fila en la tabla de fases.
+7. `docs/api.md`: superficie pública de la API.
+8. `docs/design_decisions.md`: nueva entrada si el cambio introdujo un nuevo default o alteró un contrato de API.
+Si alguno de los 8 no refleja el estado real, la sub-fase NO se considera cerrada. Motivo: el cierre de la Fase 3.8 el 19/10/2026 omitió la fila en el README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`, forzando un bloque de corrección post-cierre el 20/10/2026.
 
 **Regla PyPI (12/10/2026).** PyPI congela el README en el
 momento del upload. Si el README del repositorio cambia después

@@ -150,6 +150,14 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
 **Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
 
 **Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). Próximo paso: 3.6.b (script de descarga + fixtures).
+
+**Fase 3.8 (Corrección regulatoria): ✅ Cerrada (19/10/2026).**
+Se corrigió la atribución del PD floor: la referencia es BCBS CRE 32.4
+(0.05% para corporativos, bancos y retail) y no CRE 20.39 / Basel II
+(0.03%). El default de `pd_floor` pasó a `0.0005`. Los umbrales de PSI/CSI
+fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
+14 pares (dataset, motor). Suite: 434/434. Release `1.0.0rc2` publicada.
+
 - **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
@@ -159,7 +167,7 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 19/10/2026:** Fases 0 a 3.8 cerradas. Fase 3.8 (corrección de la atribución regulatoria del PD floor: BCBS CRE 32.4, default 0.0005, no soberano) cerrada. Suite 434/434. Próximo paso: recogida de feedback de 1.0.0rc2. Deuda diferida a 1.0.0 estable: D13, poda no integrada, tags a1–a6.
+- **Estado al 19/10/2026:** Fases 0 a 3.8 cerradas. Suite 434/434. Próximo paso: recogida de feedback de 1.0.0rc2. Deuda diferida a 1.0.0 estable: D13, poda no integrada, tags a1–a6.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -391,3 +399,16 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 - No usar jerga sin explicarla.
 - Respetar que el proyecto es para aprender, no para llegar rápido.
 - El objetivo es calidad auditada, no velocidad.
+
+---
+
+## 11. Protocolo de Redacción de Prompts (Lecciones de la Fase 3.8)
+
+Para evitar zonas grises, asunciones falsas y roturas de documentación, todo prompt generado por el asistente para OpenCode (Kimi K3) debe cumplir estas reglas estrictas:
+
+1. **Declaración de Nivel Obligatoria:** Todo prompt debe comenzar con `[Nivel: high]` (documentación, edición simple) o `[Nivel: max]` (código, firmas, multi-archivo). Omitirlo es una violación del protocolo.
+2. **Cero Anclas Asumidas:** Nunca instruir una inserción basándose en un texto o encabezado que no se haya verificado empíricamente en el archivo actual. Si no estás seguro del texto exacto del ancla, instruye a Kimi a insertar en una posición relativa segura (ej. "al final de la sección X", "antes del bloque Y") o pide al humano el fragmento exacto antes de redactar el prompt.
+3. **Mapeo Pre-Prompt (Grep Preventivo):** Antes de generar un prompt de cierre documental, el asistente debe solicitar al humano un barrido (`Select-String` o `grep`) de los valores antiguos (conteos de tests, versiones, citas regulatorias) para asegurar que no quedan residuos en archivos olvidados (`CONVENTIONS.md`, árboles de directorios, etc.).
+4. **Trazabilidad de Defaults:** Si un prompt altera un valor por defecto (ej. `pd_floor`), es OBLIGATORIO incluir explícitamente la actualización de `docs/design_decisions.md` en el mismo bloque de cambios. El grep superficial no es excusa; se está introduciendo una nueva decisión.
+5. **Prevención de Redundancia:** Al insertar bloques narrativos, incluir la instrucción de verificar que el resumen ejecutivo o los "próximos pasos" no repitan la misma información, manteniendo una única fuente de verdad para el detalle y otra para el resumen.
+6. **Sincronía de Protocolos:** Cuando se actualice un checklist, una regla o un protocolo, el prompt debe exigir actualizar TODAS las copias o reflejos de esa regla (ej. `.treegovrules` y `AGENTS.md`) en el mismo bloque, garantizando que sean idénticos.

@@ -1267,6 +1267,28 @@ version lives in the file log.
 hashable. The audit trail in the file log carries timestamps. This
 split is documented in `session_state.py` module docstring.
 
+### 10.4 Default PD floor value and the sovereign exception (Phase 3.8)
+
+**Context.** The Basel Framework (CRE 32.4) sets a hard PD floor of
+0.05% (5 bps) for corporate, bank, and retail exposures. Sovereign
+exposures are exempt or subject to a 0.03% floor depending on the
+jurisdiction.
+
+**Decision.** TreeGov's default `pd_floor` in Banking mode is **0.0005**
+(0.05%), applying to all non-sovereign exposures. The sovereign
+exception is deliberately **not modelled** as an automatic branch.
+
+**Rationale.** TreeGov is designed for banking and credit bureau use
+cases where corporate/retail exposures dominate. Hard-coding a
+sovereign branch would add API complexity for a niche case. Analysts
+with sovereign exposure must pass `pd_floor=0.0003` explicitly.
+
+**Consequences.**
+- Default fingerprints changed in Phase 3.8 (expected, as `pd_floor`
+  is part of the payload).
+- Analysts must be aware of the sovereign exception (documented in
+  `methodology.md` §6.3 and in the wizard's `step4_govmode_banking_desc`).
+
 ---
 
 ## §11. Decisions to expose as parameters (Phase 3.0.g scope)
@@ -2025,6 +2047,7 @@ a note in `docs/audit_log.md`.
 
 **Version.** This document was created on 04/10/2026 as part of Phase
 3.0, closing the "grey zone" of undocumented design decisions
-accumulated during Phases 0 through 2.4.
+accumulated during Phases 0 through 2.4. (Updated on 20/10/2026 to add
+§10.4 — Phase 3.8.)
 
 ---

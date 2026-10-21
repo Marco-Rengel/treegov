@@ -233,6 +233,8 @@ La autenticación con Moonshot AI ya está configurada
 (`~/.local/share/opencode/auth.json`). No requiere variables de
 entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
+**Regla de oro para la IA (Lecciones de la Fase 3.8):** No redactes prompts de modificación asumiendo el contenido de los archivos. El asistente (tú) ha cometido errores de anclaje y omisión de documentos (como `design_decisions.md` o `CONVENTIONS.md`). Antes de enviar una ráfaga de prompts documentales, exige al humano un `git status` y un `grep` de los valores obsoletos. Y recuerda: **todo prompt debe llevar su `[Nivel: high]` o `[Nivel: max]`**.
+
 ### Flujo con Aider (respaldo)
 
     cd "C:\Riesgos - copia\DecisionTree_Modeler"
@@ -275,7 +277,10 @@ implícita.
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-La espera decidida el 16/10/2026 (no publicar hasta tener cambios de código) quedó cerrada con esta release: 1.0.0a6 sincroniza en PyPI el README renovado (frase canónica, tabla "Why TreeGov?", capacidades expandidas) y el conteo real de tests (422/422). Ver docs/roadmap.md, regla PyPI.
+La espera decidida el 16/10/2026 quedó cerrada definitivamente. Tras la
+publicación de `1.0.0rc1` y la corrección regulatoria de la Fase 3.8, la
+versión actual es `1.0.0rc2`. El README de PyPI está sincronizado con el
+repo, reflejando 434/434 tests. Ver docs/roadmap.md, regla PyPI.
 
 ## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
 

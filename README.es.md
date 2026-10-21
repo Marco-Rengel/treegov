@@ -29,6 +29,8 @@ Las librerías tradicionales (*scikit-learn*, *statsmodels* o paquetes de R) exi
 
 TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añade al final, sino un principio que se teje en cada componente. Mientras que las librerías estadísticas y los entornos de *scripting* ofrecen el motor analítico, TreeGov ofrece además el freno (controles MRM), el tablero (visualización gráfica), el cinturón de seguridad (auditabilidad) y el registro de mantenimiento (bitácora inmutable). Para un modelo que será auditado por un regulador, la elección no es técnica: es de gobernanza.
 
+Más allá de usar MRM dentro de la herramienta, **el software en sí mismo se construye bajo disciplina MRM**: auditoría de diseño antes del código, supervisión humana en el circuito, verificación adversarial y trazabilidad inmutable para cada release.
+
 *Lee la filosofía completa → [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md) · [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md)*
 
 ```mermaid
@@ -243,6 +245,7 @@ TreeGov/
 | **3.6.e** | Modo no-bancario y validación multi-dominio extensiva | Planificada para 1.1.0 |
 | **3.7** | Cierre Fase 3 + v1.0.0rc1 | Completada |
 | **3.7.e** | Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
+| **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |

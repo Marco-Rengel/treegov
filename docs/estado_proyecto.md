@@ -258,6 +258,35 @@ diferidos a H4), publicó §8.11-§8.14 en methodology y cerró la
 documentación. Invariante K=2 bit a bit preservado. Suite 416/416
 PASSED.
 
+### Fase 3.8 — Corrección de atribución regulatoria (BCBS CRE 32.4) ✅ Completada
+
+**Motivación.** Una auditoría externa detectó que el proyecto atribuía
+el piso de PD (PD Floor) a "BCBS CRE 20.39" con un valor de 0.03%.
+Ambas dimensiones eran incorrectas: CRE 20.39 regula *covered bonds*,
+no el piso de PD; y 0.03% era el piso de Basel II, no el vigente. La
+reforma de Basel III (2017) estableció el piso en 0.05% para
+corporativos, bancos y retail en el apartado CRE 32.4 (con excepción
+soberana de 0.03%).
+
+**Cambios aplicados.**
+- Default de `pd_floor` en `Session.train` y `TreeBuilder` actualizado
+  de `0.0003` a `0.0005`.
+- Atribución normativa corregida a BCBS CRE 32.4 en todo el código y
+  documentación.
+- PSI/CSI (`stability.py`) reatribuido de "Basel/EBA" a Siddiqi (2006)
+  como convención de la industria.
+- Wizard e i18n alineados con el nuevo default y cita.
+- 14 fingerprints de UCI recapturados; métricas numéricas intactas
+  (el floor no se activa bajo el `min_child_size` actual).
+- 3 tests nuevos para anclar el comportamiento del nuevo default.
+
+**Nota sobre la excepción soberana.** La excepción (0.03%) no está
+modelada por defecto; analistas con exposición soberana deben pasar
+`pd_floor=0.0003` explícitamente. El disclaimer está documentado en
+el código y en `docs/methodology.md` §6.3.
+
+**Suite:** 434/434 PASSED.
+
 ### Cierre intermedio 16/10/2026
 
 Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente de herramientas CLI duplicadas en el .venv del proyecto (aider-chat, build, twine; ver docs/audit_log.md entrada del 16/10/2026). Sin cambios de código analítico.
@@ -306,7 +335,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (422 tests)
+├── tests/ # Suite de tests (434 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md

@@ -62,20 +62,16 @@
 7. **Every detected technical debt or pending item is recorded in docs/roadmap.md (Deferred or Pending decisions) in the same session it is detected.** Mentioning it only in audit_log.md or in the chat is not sufficient. Rationale: the Aider/build/twine pending item detected on 12/10/2026 stayed open for 4 days without traceability in the roadmap; when it was resumed on 16/10/2026, the context had to be reconstructed from scratch. The roadmap is the project's source of truth for technical debt; the audit_log is the chronological log.
 
 Synchronization checklist (mandatory at every sub-phase closure,
-expanded to 6 documents on 12/10/2026): (a) docs/roadmap.md
-reflects the new status; (b) docs/estado_proyecto.md reflects
-the real test count; (c) docs/contexto_para_nueva_sesion.md
-reflects the next step; (d) docs/prompt_para_asistente.md
-reflects the active tool and current phase; (e) README.md /
-README.es.md reflect the current version, the phase table
-status, and the test suite count; (f) docs/api.md reflects the
-current public API surface and does not carry stale statements
-about blocking behaviour. Any sub-phase whose closure leaves any
-of the six out of sync is not considered closed. Motive: three
-documentation gaps were detected on 12/10/2026 (repository
-structure in READMEs, per-file test counts in estado_proyecto
-§7, PyPI version in estado_proyecto §1) that the previous
-four-document checklist did not cover.
+expanded to 8 documents on 20/10/2026 to enforce narrative depth and API sync):
+(a) docs/audit_log.md: entry of closure.
+(b) docs/roadmap.md: state AND narrative section.
+(c) docs/estado_proyecto.md: real test count AND narrative block of the phase.
+(d) docs/contexto_para_nueva_sesion.md: next step.
+(e) docs/prompt_para_asistente.md: active tool and state.
+(f) README.md / README.es.md: version, test count, AND phase table row.
+(g) docs/api.md: public API surface.
+(h) docs/design_decisions.md: new entry if the change introduced a new default or altered an API contract.
+Any sub-phase whose closure leaves any of the eight out of sync is not considered closed.
 
 ## Language
 

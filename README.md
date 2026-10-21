@@ -29,6 +29,8 @@ Traditional libraries (*scikit-learn*, *statsmodels*, or R packages) require wri
 
 TreeGov starts from one premise: model governance is not a layer you add at the end, but a principle woven into every component. While statistical libraries and *scripting* environments provide the analytical engine, TreeGov provides in addition the brakes (MRM controls), the dashboard (graphical display), the seatbelt (auditability), and the maintenance log (the immutable audit trail). For a model that will be audited by a regulator, the choice is not technical: it is about governance.
 
+Beyond using MRM inside the tool, **the software itself is built under MRM discipline**: design audits before code, human-in-the-loop supervision, adversarial verification, and immutable traceability for every release.
+
 *Read the full project philosophy → [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md) · [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md)*
 
 ```mermaid
@@ -243,6 +245,7 @@ TreeGov/
 | **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned for 1.1.0 |
 | **3.7** | Phase 3 closure + v1.0.0rc1 | Completed |
 | **3.7.e** | Pre-release fixes (H1, H2, pd_floor K=2) | Completed |
+| **3.8** | Regulatory attribution correction (BCBS CRE 32.4) | Completed |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |

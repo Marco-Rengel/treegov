@@ -45,6 +45,14 @@ TreeGov is developed with AI assistance under a workflow with MRM discipline:
 - No agent runs alone for hours or days. Every change affects structural invariants (for example, the K=2 binary parity since Phase 3.1, or the `TreeModel` invariants). The human audits every sub-phase. Long-running agents have their place in disposable or low-risk projects; not in a model auditable by a regulator.
 - Mandatory closure documentation. Each sub-phase closes with the synchronized update of the status, context, and audit log documents. Nothing is deferred to the next session.
 
+## MRM Discipline in Software Development
+
+TreeGov is not just a tool that *implements* MRM; the software itself is *built* under the same MRM discipline. This means:
+- **Design before Code**: Every phase or sub-phase requires a formal design audit before a single line of code is written. The design document is the source of truth.
+- **Human-in-the-Loop**: No autonomous agent runs unchecked. Every architectural decision, every state transition, and every numerical default is explicitly reviewed, challenged, and approved by the human modeller.
+- **Adversarial Verification**: We assume the AI assistant can hallucinate. The AI is used as a co-auditor to challenge the human, but empirical verification (pytest, git diff, isolated environment tests) is always the final arbiter.
+- **Immutable Traceability**: Every release, every change to a default, and every bug fix is documented in the audit log with its rationale, numerical impact, and regulatory citation before the commit is accepted.
+
 ## Development vs end use: two different data regimes
 
 TreeGov is currently developed with public datasets (German Credit, UCI) and synthetic data. During development, the privacy rule is strict: no real data is ever sent to third-party AI APIs. Only *open-source* code, public documentation, and synthetic data are shared.

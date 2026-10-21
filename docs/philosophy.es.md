@@ -45,6 +45,14 @@ TreeGov se desarrolla con asistencia de IA bajo un flujo con disciplina MRM:
 - Ningún agente corre solo durante horas o días. Cada cambio afecta invariantes estructurales (por ejemplo, la paridad binaria K=2 desde la Fase 3.1, o los invariantes de `TreeModel`). El humano audita cada sub-fase. Los agentes de larga duración tienen su lugar en proyectos desechables o de bajo riesgo; no en un modelo auditable por un regulador.
 - Documentación de cierre obligatoria. Cada sub-fase cierra con la actualización sincronizada de los documentos de estado, contexto y bitácora. Nada se aplaza a la siguiente sesión.
 
+## Disciplina MRM en el Desarrollo de Software
+
+TreeGov no es solo una herramienta que *implementa* MRM; el software en sí mismo se *construye* bajo la misma disciplina MRM. Esto implica:
+- **Diseño antes que Código**: Cada fase o sub-fase exige una auditoría formal del diseño antes de escribir una sola línea de código. El documento de diseño es la fuente de verdad.
+- **Humano en el Circuito**: Ningún agente autónomo corre sin supervisión. Cada decisión arquitectónica, cada transición de estado y cada valor por defecto numérico es revisado, desafiado y aprobado explícitamente por el modelador humano.
+- **Verificación Adversarial**: Asumimos que el asistente de IA puede alucinar. La IA se utiliza como co-auditor para desafiar al humano, pero la verificación empírica (pytest, git diff, pruebas en entornos aislados) es siempre el árbitro final.
+- **Trazabilidad Inmutable**: Cada release, cada cambio en un valor por defecto y cada corrección de error se documenta en la bitácora con su justificación, impacto numérico y cita regulatoria antes de aceptar el commit.
+
 ## Desarrollo vs uso final: dos regímenes de datos distintos
 
 TreeGov se desarrolla hoy con datasets públicos (German Credit, UCI) y sintéticos. Durante el desarrollo, la regla de privacidad es estricta: nunca se envían datos reales a APIs de IA de terceros. Solo se comparte código *open source*, documentación pública y datos sintéticos.
