@@ -107,7 +107,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 435/435 PASSED.
+- **Suite de tests:** 438/438 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -168,7 +168,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 20/10/2026:** Fases 0 a 3.8 cerradas. Suite 435/435. Próximo paso: implementar la Fase 3.9 (Poda Interactiva y Ponderada; diseño aprobado el 20/10/2026 en `design_decisions.md` §8.5-8.7 y `methodology.md` §7.1) y recogida de feedback de 1.0.0rc2. D13 resuelta el 20/10/2026 (gains table binaria ya pondera vía `validation._pair_auc_ks`). Deuda diferida a 1.0.0 estable: poda sin GUI ni ponderación (ya con diseño 3.9 aprobado), tags a1–a6.
+- **Estado al 20/10/2026:** Fases 0 a 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y Ponderada: backend `r_w(t)`, `Session.get_prune_sequence()`, GUI `PruneDialog`) completada el 20/10/2026. Próximo paso: recogida de feedback de 1.0.0rc2/rc3 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: tags a1–a6.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---
@@ -382,7 +382,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
 > "Retomamos TreeGov. Soy Marco. Estado al 20/10/2026: Fases 0 a
-> 3.8 cerradas. Suite 435/435. Fase 3.8 (corrección regulatoria:
+> 3.8 cerradas. Suite 438/438. Fase 3.8 (corrección regulatoria:
 > BCBS CRE 32.4, pd_floor default 0.0005 en Banking mode, excepción
 > soberana no modelada; PSI/CSI reatribuido a Siddiqi 2006) cerrada
 > y publicada como 1.0.0rc2. Próximo paso: recogida de feedback

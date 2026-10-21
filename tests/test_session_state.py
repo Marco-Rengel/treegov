@@ -246,6 +246,37 @@ def test_prune_flujo_completo():
         assert len(st3.tree.nodes) == len(st0.tree.nodes)
 
 
+def test_get_prune_sequence_returns_dicts():
+    """Fase 3.9: Session.get_prune_sequence devuelve DTO plano (dicts).
+
+    El frontend no importa dataclasses del backend: cada paso debe ser
+    un dict con claves alpha/n_leaves/r_subtree y valores nativos
+    (float/int), no objetos PruneStep.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        seq = s.get_prune_sequence()
+        assert isinstance(seq, list)
+        assert seq, "el fixture debe producir al menos un paso de poda"
+        for paso in seq:
+            assert isinstance(paso, dict)
+            assert set(paso) == {"alpha", "n_leaves", "r_subtree"}
+            assert type(paso["alpha"]) is float
+            assert type(paso["n_leaves"]) is int
+            assert type(paso["r_subtree"]) is float
+        # solo lectura: no commitea eventos ni muta el estado
+        assert s.state.event_log[-1].startswith("train:")
+    # guard: requiere TRAINED
+    s2 = Session(logger=_quiet_logger())
+    _assert_raises(ValueError, s2.get_prune_sequence)
+
+
 # ---------------------------------------------------------------------------
 # Fase 1.3: OOT + estabilidad
 # ---------------------------------------------------------------------------

@@ -25,6 +25,7 @@ from PySide6.QtCore import QSettings, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFileDialog,
     QFrame,
     QLabel,
@@ -54,6 +55,7 @@ from frontend_v3.tree_view import (
     node_detail_lines,
 )
 from frontend_v3.metrics_panel import MetricsPanel
+from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
 from frontend_v3.wizard import ModelWizard
 
@@ -118,6 +120,7 @@ class MainWindow(QMainWindow):
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
         self._act_load_oot.setText(tr("menu_model_load_oot"))
+        self._act_prune.setText(tr("menu_model_prune"))
 
         self._menu_theme.setTitle(tr("menu_view_theme"))
         self._act_theme_light.setText(tr("menu_view_theme_light"))
@@ -205,9 +208,12 @@ class MainWindow(QMainWindow):
             "act_load_oot", enabled=False
         )
         self._act_load_oot.triggered.connect(self._on_load_oot)
+        self._act_prune = self._new_action("act_prune", enabled=False)
+        self._act_prune.triggered.connect(self._on_prune)
         self._menu_model.addAction(self._act_train)
         self._menu_model.addAction(self._act_evaluate_oos)
         self._menu_model.addAction(self._act_load_oot)
+        self._menu_model.addAction(self._act_prune)
         bar.addMenu(self._menu_model)
 
         # --- View ---
@@ -654,6 +660,7 @@ class MainWindow(QMainWindow):
         )
         self._act_evaluate_oos.setEnabled(trained)
         self._act_load_oot.setEnabled(trained)
+        self._act_prune.setEnabled(trained)
         state = (
             self._session.state.state
             if self._session is not None
@@ -751,6 +758,42 @@ class MainWindow(QMainWindow):
     def _load_oot_pipeline(self, path: str) -> None:
         self._session.load_oot(path)
         self._session.evaluate_oot()
+
+    def _on_prune(self) -> None:
+        """Model > Prune Tree: interactive cost-complexity pruning (3.9).
+
+        The dialog applies Session.prune(alpha) itself; on Accepted the
+        viewer is RE-BOUND to the pruned tree (TreePanel.refresh() alone
+        would keep rendering the original model bound by set_model).
+        """
+        if self._session is None or self._session.state.tree is None:
+            return
+        dlg = PruneDialog(self._session, language_bus, self,
+                          logger=self._logger)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        st = self._session.state
+        tree = st.pruned_tree if st.pruned_tree is not None else st.tree
+        mode = (
+            self._last_train_cfg.get("governance_mode", "BANKING")
+            if self._last_train_cfg is not None
+            else "BANKING"
+        )
+        self._tree_panel.set_model(tree, mode)
+        self._metrics_panel.refresh()
+        self._refresh_reports_panel()
+        self._refresh_session_indicator()
+        if self._logger is not None:
+            self._logger.info(
+                "[gui] pruning applied: alpha=%s | nodos=%d",
+                st.prune_alpha, len(tree.nodes),
+            )
+        self.statusBar().showMessage(
+            tr("msg_model_pruned").format(
+                alpha=st.prune_alpha, n=len(tree.nodes)
+            ),
+            8000,
+        )
 
     def _on_reports_partition_changed(self, _partition: str) -> None:
         """Partition combo changed: recompute gains table and matrix."""

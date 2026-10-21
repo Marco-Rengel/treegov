@@ -953,6 +953,23 @@ class Session:
             pruned_tree=pruned, prune_alpha=float(alpha),
         )
 
+    def get_prune_sequence(self) -> list[dict[str, Any]]:
+        """TRAINED -> secuencia de poda coste-complejidad como DTO plano.
+
+        Fase 3.9 (Poda Interactiva): expone ``Pruner.sequence(tree)``
+        al frontend como lista de dicts (claves ``alpha``, ``n_leaves``,
+        ``r_subtree``) para que la GUI muestre la tabla de alphas y el
+        analista elija con discrecion (design_decisions.md §8.6).
+        Solo lectura: no muta el estado de la sesion ni commitea
+        eventos. El frontend no importa dataclasses del backend, por
+        eso se serializa con ``dataclasses.asdict``.
+        """
+        self._require(FlowState.TRAINED, "get_prune_sequence")
+        st = self._state
+        assert st.tree is not None
+        secuencia = Pruner(logger=get_logger("pruning")).sequence(st.tree)
+        return [asdict(paso) for paso in secuencia]
+
     def load_oot(self, csv_path: str, *, time_col: str | None = None) -> SessionState:
         """TRAINED -> OOT_LOADED: ingesta de la cohorte temporal posterior.
 

@@ -35,6 +35,12 @@ Dependencias: stdlib + numpy/pandas solo via estructuras del modelo.
 Fase 3.1 (multiclass): r(t) is defined as n - max(n_events), the
 number of rows that do not belong to the modal class. For K=2 this
 reduces exactly to min(k, n-k). See docs/3.1_design_multiclass.md §1.
+
+Fase 3.9 (weighted pruning): if ``TreeNode.w_events`` is populated,
+r(t) uses the weighted mass, r_w(t) = sum(w_events) - max(w_events),
+coherent with the weighted-Gini growth (Phase 3.2). If ``w_events``
+is empty (hand-built nodes), the original count form applies. With
+unit weights both forms coincide numerically (parity).
 """
 
 from __future__ import annotations
@@ -56,7 +62,9 @@ class PruneStep:
 
     alpha: float
     n_leaves: int      # hojas del arbol DESPUES de este paso
-    r_subtree: int     # errores totales del arbol DESPUES de este paso
+    r_subtree: float   # errores totales del arbol DESPUES de este paso
+                       # (int si el arbol no pondera; float si pondera,
+                       # Fase 3.9)
 
 
 class Pruner:
@@ -75,11 +83,25 @@ class Pruner:
         return {nd.node_id: list(nd.child_ids) for nd in model.nodes}
 
     @staticmethod
-    def _hojas_errores(model: TreeModel, children, nid: int) -> tuple[int, int]:
+    def _errores_nodo(nd: TreeNode) -> float:
+        """Errores del nodo como hoja (regla de mayoria).
+
+        Fase 3.9: si ``w_events`` esta poblado, usa la masa ponderada
+        r_w(t) = sum(w_events) - max(w_events) (coherente con el
+        crecimiento ponderado del arbol). Si esta vacio (nodos
+        construidos a mano en tests), usa el conteo fisico original
+        r(t) = n - max(n_events). Con pesos unitarios ambas formas
+        coinciden numericamente (paridad pre-3.9).
+        """
+        if nd.w_events:
+            return float(sum(nd.w_events) - max(nd.w_events))
+        return float(nd.n - max(nd.n_events))
+
+    @staticmethod
+    def _hojas_errores(model: TreeModel, children, nid: int) -> tuple[int, float]:
         """(n_hojas, errores) del subarbol vivo enraizado en nid."""
         if not children[nid]:
-            nd = model.nodes[nid]
-            return 1, nd.n - max(nd.n_events)
+            return 1, Pruner._errores_nodo(model.nodes[nid])
         hojas = 0
         err = 0
         for cid in children[nid]:
@@ -112,8 +134,7 @@ class Pruner:
             hojas, err_sub = self._hojas_errores(model, children, nid)
             if hojas <= 1:
                 continue
-            nd = model.nodes[nid]
-            r_t = nd.n - max(nd.n_events)
+            r_t = self._errores_nodo(model.nodes[nid])
             g_map[nid] = (r_t - err_sub) / (hojas - 1)
         if not g_map:
             return None
@@ -136,15 +157,14 @@ class Pruner:
                 self._eliminar_descendientes(children, nid)
             # medir el arbol vivo resultante
             if not children[model.root_id]:
-                nd_root = model.nodes[model.root_id]
-                n_hojas, err = 1, nd_root.n - max(nd_root.n_events)
+                n_hojas, err = 1, self._errores_nodo(model.nodes[model.root_id])
             else:
                 n_hojas, err = self._hojas_errores(
                     model, children, model.root_id
                 )
-            pasos.append(PruneStep(float(alpha_k), int(n_hojas), int(err)))
+            pasos.append(PruneStep(float(alpha_k), int(n_hojas), float(err)))
             self._log.debug(
-                "[prune] paso: alpha=%.6g -> %d hojas, R=%d (podados: %s)",
+                "[prune] paso: alpha=%.6g -> %d hojas, R=%.6g (podados: %s)",
                 alpha_k, n_hojas, err, podables,
             )
         return tuple(pasos)

@@ -416,6 +416,56 @@ def test_e2e_population_reset_clears_state():
 
 
 # ---------------------------------------------------------------------------
+# Phase 3.9: interactive pruning dialog (E2E)
+# ---------------------------------------------------------------------------
+
+
+def test_e2e_prune_dialog_flow():
+    """Fase 3.9 (§8.7): flujo completo del dialogo de poda.
+
+    Entrena, verifica que la accion se habilita, abre el dialogo con
+    exec() mockeado (offscreen: nunca bloquea), selecciona la primera
+    fila, aplica, y verifica que la sesion tiene pruned_tree y que el
+    visor se re-vincula al arbol podado.
+    """
+    from PySide6.QtWidgets import QDialog
+
+    from frontend_v3.prune_dialog import PruneDialog
+
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv(Path(td) / "mini.csv")
+        w = _open_window(csv)
+        try:
+            # antes de entrenar: la accion de poda esta deshabilitada
+            assert not w._act_prune.isEnabled()
+            w._on_wizard_finished(_cfg())
+            assert w._act_prune.isEnabled()
+
+            seq = w._session.get_prune_sequence()
+            assert seq, "el fixture debe producir un arbol podable"
+
+            def _fake_exec(dlg):
+                # offscreen: simular al usuario: fila 0 -> aplicar
+                assert dlg._table.rowCount() == len(seq)
+                dlg._table.selectRow(0)
+                assert dlg._btn_apply.isEnabled()
+                dlg._on_apply()
+                return QDialog.DialogCode.Accepted
+
+            with patch.object(PruneDialog, "exec", _fake_exec):
+                w._on_prune()
+
+            st = w._session.state
+            assert st.pruned_tree is not None
+            assert st.prune_alpha == seq[0]["alpha"]
+            # el visor queda vinculado al arbol podado (no al original)
+            assert w._tree_panel._model is st.pruned_tree
+        finally:
+            w.close()
+            w.deleteLater()
+
+
+# ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------
 

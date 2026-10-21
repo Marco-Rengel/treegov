@@ -100,6 +100,7 @@ underscore) are internal and may change without notice.
   Phase 3.5.c (see the extended entry below).
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
+- `Session.get_prune_sequence() -> list[dict[str, Any]]` — Read-only method that returns the cost-complexity pruning sequence for the trained model. Each dictionary contains `alpha` (float), `n_leaves` (int), and `r_subtree` (float). Returns an empty list if the model has no internal nodes. (Phase 3.9).
 - `Session.evaluate_oos(*, n_groups=10)` — supports K > 2 since
   Phase 3.5.c. Internally translates `y` to the internal canonical
   order via `_translate_y_to_internal` and calls

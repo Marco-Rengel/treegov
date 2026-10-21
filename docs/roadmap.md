@@ -359,12 +359,12 @@ del 04/10/2026 separa esas familias:
   predictores) sigue pendiente de reemplazo por uno con señal real.
   Sin cambios en 3.5.a.
 
-### ⏳ Phase 3.9 — Interactive and Weighted Pruning
-**Priority: HIGH (target: 1.0.0 stable)**
+### ✅ Phase 3.9 — Interactive and Weighted Pruning
+**Status**: ✅ Completed (20/10/2026).
 
 Implementación de la poda coste-complejidad interactiva y ponderada.
 - **Diseño aprobado** (20/10/2026): ver `docs/design_decisions.md` §8.5 a §8.7 y `docs/methodology.md` §7.1.
-- **Pendiente de implementación**: Backend (`pruning.py` ponderado con `w_events`), Session (`get_prune_sequence()`), GUI (`PruneDialog`).
+- **Implementado** (20/10/2026): Backend (`pruning.py` ponderado con `w_events`), Session (`get_prune_sequence()`) y GUI (`PruneDialog` cableado en el menú Model). Auditoría forense superada; test E2E del flujo de poda incluido.
 
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**

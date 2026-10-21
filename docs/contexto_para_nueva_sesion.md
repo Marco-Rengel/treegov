@@ -125,7 +125,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
 | 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
 
-**Suite de tests:** 434/434 PASSED
+**Suite de tests:** 438/438 PASSED
 
 ## Entorno de desarrollo
 
@@ -298,7 +298,7 @@ documental.
 
 **Fase 3.7 cerrada (18/10/2026).** Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización KS por pares), 3.7.c (min_child_weight expuesto), 3.7.d (tests UCI ampliados) y 3.7.e (correcciones pre-release H1, H2, pd_floor K=2) están cerradas. Suite: 434/434.
 
-**Próximo paso inmediato (20/10/2026):** Implementar la Fase 3.9 (Poda Interactiva y Ponderada). El diseño ya está auditado y aprobado en `design_decisions.md` §8.5-8.7.
+**Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
 **Próximo paso:** recogida de feedback de `1.0.0rc2` durante 2-4
 semanas; si no aparecen bugs críticos, publicación de `1.0.0`

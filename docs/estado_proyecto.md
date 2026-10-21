@@ -285,7 +285,7 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 434/434 PASSED.
+**Suite:** 438/438 PASSED.
 
 ### Cierre intermedio 16/10/2026
 
@@ -309,6 +309,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.7.d** — Tests UCI ampliados ✅.
 - **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor ✅.
 - **Fase 3.8** — Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 ✅ Completada (19/10/2026).
+- **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`) ✅ Completada (20/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
@@ -336,7 +337,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (434 tests)
+├── tests/ # Suite de tests (438 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -462,22 +463,22 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 38 |
-| session_state.py | 87 |
+| session_state.py | 88 |
 | validation.py | 30 |
-| pruning.py | 6 |
+| pruning.py | 7 |
 | stability.py | 18 |
-| reporting.py | 27 |
+| reporting.py | 28 |
 | gui_smoke (frontend) | 9 |
 | wizard (frontend) | 22 |
 | tree_view (frontend) | 10 |
 | metrics_panel (frontend) | 13 |
-| e2e_mainwindow (frontend) | 9 |
+| e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **434** |
+| **Total** | **438** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 434/434 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 438/438 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -545,7 +546,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8. Ver `docs/roadmap.md` sección Deferred. No bloquea el desarrollo actual.
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
 - [x] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición). **Resuelto el 20/10/2026** (ver audit_log y design_decisions §13.7).
-- [ ] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` integrado en Session (vía `Session.prune()`), pero no en la GUI. **Diseño 3.9 (Poda Interactiva y Ponderada) aprobado el 20/10/2026**; pendiente de implementación.
+- [x] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` integrado en Session (vía `Session.prune()`), pero no en la GUI. **Diseño 3.9 (Poda Interactiva y Ponderada) aprobado el 20/10/2026**. Implementación completa (backend, Session y GUI) el 20/10/2026.
 - [ ] Deuda de trazabilidad: etiquetas de git `a1`–`a6` no creadas en el momento de la publicación. Identificar los commits correspondientes en audit_log y crear tags retroactivas si es posible. Tag `v1.0.0rc1` obligatorio en la próxima release.
 
 ### Decisiones de largo plazo

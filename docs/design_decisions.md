@@ -1107,6 +1107,10 @@ consistent with the other leaf reasons). Documented in `pruning.py`.
 - Trees built with non-trivial weights now produce a pruning sequence coherent with their growth.
 - The `Pruner.sequence()` API does not change; only the internal calculation of `g(t)` is adjusted.
 
+**Nota sobre tipos (20/10/2026).** La anotación de `PruneStep.r_subtree` pasó de `int` a `float` para acomodar la masa ponderada. En árboles sin pesos, el valor sigue siendo numéricamente idéntico (paridad), aunque viaje como `float` (ej. `1.0` en lugar de `1`).
+
+**Status (20/10/2026).** Implemented in `backend_v3/pruning.py` and verified by `tests/test_pruning.py`.
+
 ### 8.6 `Session.get_prune_sequence()` — exposing the analyst's discretion
 
 **Context.** Classic interactive tree tools of the CART tradition allowed the analyst to see the cost-complexity sequence and decide where to stop. TreeGov's GUI had no such mechanism.
@@ -1130,6 +1134,8 @@ consistent with the other leaf reasons). Documented in `pruning.py`.
 **Consequences.**
 - The GUI reflects the backend's mathematical rigor while giving the analyst interactive control.
 - No new analytical logic is introduced in `frontend_v3/`; it only consumes the DTO.
+
+**Implementation Note (20/10/2026).** Al vincular el árbol podado al visor, se descubrió que `TreePanel.refresh()` solo re-renderiza el modelo existente. Para reflejar el nuevo `TreeModel` podado, el handler `_on_prune` del `MainWindow` debe llamar a `TreePanel.set_model(st.pruned_tree, mode)` en lugar de `refresh()`. Esta desviación está documentada en el docstring del handler y en el test E2E.
 
 ---
 

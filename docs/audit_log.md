@@ -4872,3 +4872,44 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - Documentos de contexto y `audit_log`: sincronizados.
 
 **Tests**: 435/435 PASSED (sin cambios de código).
+
+### 20/10/2026 — Implementación del Backend de la Poda (Fase 3.9)
+
+**Estado**: ✅ Cerrada. Suite 437/437 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Implementación del backend de la Poda Coste-Complejidad, siguiendo el diseño aprobado en `design_decisions.md` §8.5-8.6. El objetivo es que la poda utilice la masa ponderada (`w_events`) si el árbol creció con pesos, y exponer la secuencia en `Session` para su futuro uso en la GUI.
+
+**Cambios aplicados**:
+- `backend_v3/pruning.py`: Implementación del cálculo ponderado `r_w(t) = sum(w_events) - max(w_events)`. Si `w_events` está vacío, mantiene la paridad exacta con el cálculo de conteos físicos.
+- `backend_v3/session_state.py`: Añadido `Session.get_prune_sequence()` (DTO plano vía `dataclasses.asdict`) para que el frontend pueda leer la secuencia.
+- `tests/test_pruning.py` y `tests/test_session_state.py`: Añadidos tests de ponderación y de tipos de retorno.
+
+**Auditoría y Correcciones**:
+- Se realizó una auditoría forense del código (razonamiento=max) que detectó tres mejoras menores.
+- `pruning.py`: El formato del log DEBUG `R=%d` se cambió a `R=%.6g` para no truncar valores ponderados float.
+- `design_decisions.md` §8.5: Se añadió una nota aclarando que `r_subtree` ahora es `float` en el DTO.
+- `test_session_state.py`: La aserción de tipo para `r_subtree` se hizo estricta (`is float`).
+
+**Tests**: 437/437 PASSED.
+
+### 20/10/2026 — Implementación de la GUI de la Poda y cierre de la Fase 3.9
+
+**Estado**: ✅ Cerrada. Suite 438/438 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Implementación del diálogo interactivo `PruneDialog` (Fase 3.9 §8.7) para permitir al analista visualizar la secuencia de poda y elegir el `alpha` (discrecionalidad tipo CART). Esto cierra la Fase 3.9 completa.
+
+**Cambios aplicados**:
+- `frontend_v3/prune_dialog.py`: Nuevo diálogo con `QTableWidget` para mostrar la secuencia.
+- `frontend_v3/main_window.py`: Cableado en el menú Model. Se usó `set_model()` en lugar de `refresh()` en el `TreePanel` (desviación documentada) porque el árbol podado es un `TreeModel` nuevo.
+- `frontend_v3/i18n.py`: Añadidas las claves del diálogo y corregido un **bug latente**: faltaba la clave `tree_leaf_reason_podado`, que habría causado un `KeyError` al mostrar cualquier árbol podado.
+- `tests/test_e2e_mainwindow.py`: Nuevo test E2E del flujo de poda.
+
+**Tests**: 438/438 PASSED.
