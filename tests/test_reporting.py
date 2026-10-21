@@ -749,12 +749,14 @@ def test_binary_gains_table_parity_after_3_5_b() -> None:
     assert all(r.n_per_class == () for r in result.rows)
 
 
-def test_binary_gains_table_weights_do_not_affect_ks_auc_gini() -> None:
-    """D13 literal: el path binario NO pondera los ratios de cabecera.
+def test_binary_gains_table_uniform_weights_preserve_metrics() -> None:
+    """D13 resuelta: con pesos uniformes, ks/auc/gini se mantienen.
 
     Con pesos uniformes de valor 3, ks/auc/gini son identicos al caso
-    sin pesos (se computan por conteos), mientras que las columnas w_*
-    si reflejan los pesos (w_n x 3).
+    sin pesos porque los ratios son invariantes a la escala global de
+    los pesos, NO porque el codigo ignore los pesos (el path binario
+    ahora pondera via validation._pair_auc_ks). Las columnas w_* si
+    reflejan los pesos (w_n x 3).
     """
     r0 = build_gains_table(_model_3_leaves(), _standard_assign(), _standard_y())
     r1 = build_gains_table(
@@ -782,6 +784,30 @@ def test_validated_routed_with_n_classes() -> None:
     y_out = np.array([0, 1, 3, 0, 1, 2])
     with pytest.raises(ValueError):
         _validated_routed(assign, y_out, "x", n_classes=3)
+
+
+def test_binary_gains_table_non_uniform_weights_affect_metrics() -> None:
+    """D13: los pesos asimétricos alteran el AUC/KS/Gini en el path binario.
+
+    Al ponderar, la masa del evento de la primera fila (que es un bad)
+    aumenta drásticamente, lo que debe modificar la curva de discriminación.
+    """
+    assign = _standard_assign()
+    y = _standard_y()
+    # Vector de pesos: 10.0 para la primera fila, 1.0 para el resto.
+    w = np.ones(250)
+    w[0] = 10.0
+
+    r0 = build_gains_table(_model_3_leaves(), assign, y)
+    r1 = build_gains_table(_model_3_leaves(), assign, y, weights=w)
+
+    # Verificamos que los conteos físicos no cambian
+    assert r1.n_total == r0.n_total
+
+    # Verificamos que las métricas de discriminación SÍ cambian
+    assert abs(r1.ks - r0.ks) > 1e-4
+    assert abs(r1.auc - r0.auc) > 1e-4
+    assert abs(r1.gini - r0.gini) > 1e-4
 
 
 # ---------------------------------------------------------------------------

@@ -6,16 +6,19 @@ White-box (numpy only) and deterministic. Two report families:
   * Gains table and classification matrix over a fitted ``TreeModel``:
     ``build_gains_table`` and ``build_classification_matrix``.
 
-KS / AUC / Gini reuse the exact formulas documented in
-``backend_v3.validation`` (KS over the descending score accumulation; AUC by
-Wilcoxon-Mann-Whitney with mid-ranks, Hanley & McNeil 1982; Gini = 2*AUC - 1),
-reimplemented here on per-row PD: the Hosmer-Lemeshow ``n_groups`` logic of
-``compute_oos_metrics`` does not apply to gains tables.
+KS / AUC / Gini delegate to ``backend_v3.validation``: the binary
+header metrics come from ``validation._pair_auc_ks`` (weighted pair
+kernel; Gini = 2*AUC - 1), and the multiclass header metrics from
+``validation.compute_oos_metrics``. The Hosmer-Lemeshow ``n_groups``
+logic of ``compute_oos_metrics`` does not apply to gains tables, which
+is why the binary path uses the pair kernel directly.
 
 Phase 3.5.b (multiclass reports, D13/D18/D19/D20):
 ``build_gains_table`` dispatches on K = len(model.class_labels). The
-binary path (K = 2) is untouched (D13 literal: its header metrics stay
-unweighted even when ``weights`` is passed). The multiclass path
+binary path (K = 2) computes its header metrics through
+``validation._pair_auc_ks`` with the routed weights (D13 resolved:
+they are weighted; with uniform weights they match the unweighted
+values exactly). The multiclass path
 (K > 2) adds per-class count columns and computes the header
 discrimination metrics by calling ``validation.compute_oos_metrics``
 with the adaptive ``n_groups`` rule of D20 (None when fewer than 15
@@ -37,7 +40,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .validation import compute_oos_metrics
+from .validation import _pair_auc_ks, compute_oos_metrics
 
 if TYPE_CHECKING:  # type-checkers only; no runtime imports from these modules
     from .session_state import SessionState
@@ -296,44 +299,6 @@ def _validated_weights(
     return w
 
 
-def _discrimination_metrics(
-    pd_row: np.ndarray, y: np.ndarray, n_good: int, n_bad: int
-) -> tuple[float | None, float | None, float | None]:
-    """Return ``(ks, auc, gini)`` on per-row PD; ``(None, None, None)`` when a
-    class is absent.
-
-    Exact formulas of ``backend_v3.validation`` (see its module docstring):
-    KS over the descending score accumulation covering whole tie blocks; AUC
-    by Wilcoxon-Mann-Whitney with mid-ranks (Hanley & McNeil 1982);
-    Gini = 2*AUC - 1.
-    """
-    if n_good == 0 or n_bad == 0:
-        return None, None, None
-
-    # KS: descending score, cumulative counts taken at the END of each tie
-    # block (the threshold covers the whole block).
-    orden = np.argsort(-pd_row, kind="mergesort")
-    ys = y[orden]
-    ps = pd_row[orden]
-    finales = np.flatnonzero(np.r_[ps[1:] != ps[:-1], True])
-    tp_t = np.cumsum(ys)[finales]
-    fp_t = np.cumsum(1 - ys)[finales]
-    ks = float(np.max(np.abs(tp_t / n_bad - fp_t / n_good)))
-
-    # AUC by Wilcoxon-Mann-Whitney with mid-ranks (vectorized).
-    n = int(pd_row.size)
-    pos = np.argsort(pd_row, kind="mergesort")
-    p_sorted = pd_row[pos]
-    cambios = np.flatnonzero(np.r_[True, p_sorted[1:] != p_sorted[:-1], True])
-    starts, ends = cambios[:-1], cambios[1:]
-    mids = (starts + ends + 1) / 2.0  # mean of 1-based ranks per tie group
-    ranks = np.empty(n, dtype=float)
-    ranks[pos] = np.repeat(mids, ends - starts)
-    r1 = float(ranks[y == 1].sum())
-    auc = (r1 - n_bad * (n_bad + 1) / 2.0) / (n_bad * n_good)
-    return ks, float(auc), float(2.0 * auc - 1.0)
-
-
 def build_gains_table(
     model: TreeModel,
     leaf_assignment: np.ndarray,
@@ -366,9 +331,10 @@ def build_gains_table(
     parallel ``w_*`` columns with weighted mass per row
     (Heeringa, West & Berglund 2010, §5.3). With ``weights=None`` the
     ``w_*`` columns match their integer counterparts exactly (parity).
-    Deferred decision (D13 literal): in the binary path, the header
-    ``ks`` / ``auc`` / ``gini`` remain unweighted (row counts) even
-    when ``weights`` is passed; the binary path is untouched.
+    The header ``ks`` / ``auc`` / ``gini`` are computed by
+    ``validation._pair_auc_ks`` over the routed weights (D13 resolved:
+    they are weighted; with uniform weights they match the unweighted
+    values exactly, and ``None`` when a class mass is zero).
 
     Phase 3.5.b: dispatch on K = len(model.class_labels). With K = 2,
     the classic binary path. With K > 2, the multiclass path: each row
@@ -610,7 +576,8 @@ def build_gains_table(
             auc_pairs=auc_pairs,
         )
 
-    ks, auc, gini = _discrimination_metrics(pd_row, y_r, n_good, n_bad)
+    auc, ks = _pair_auc_ks(pd_row, bad_ind, w_r)
+    gini = None if auc is None else 2.0 * auc - 1.0
 
     return GainsTableResult(
         by=by,

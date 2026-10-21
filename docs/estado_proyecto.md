@@ -544,7 +544,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [ ] Licencia comercial paralela (análisis legal si se considera).
 - [ ] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8. Ver `docs/roadmap.md` sección Deferred. No bloquea el desarrollo actual.
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
-- [ ] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición).
+- [x] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición). **Resuelto el 20/10/2026** (ver audit_log y design_decisions §13.7).
 - [ ] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` no integrado en Session ni GUI, y no ponderado (criterio de poda usa conteos físicos mientras el crecimiento usa Gini ponderado). Incoherencia estadística entre crecimiento y poda.
 - [ ] Deuda de trazabilidad: etiquetas de git `a1`–`a6` no creadas en el momento de la publicación. Identificar los commits correspondientes en audit_log y crear tags retroactivas si es posible. Tag `v1.0.0rc1` obligatorio en la próxima release.
 

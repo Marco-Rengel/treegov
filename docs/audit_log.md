@@ -4794,3 +4794,47 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - `docs/prompt_para_asistente.md` Sección 11 — Protocolo de Redacción de Prompts.
 - `docs/philosophy.md` / `docs/philosophy.es.md` — Disciplina MRM en el Desarrollo de Software.
 - `docs/design_decisions.md` §13.7 — nota de actualización del 20/10/2026.
+
+### 20/10/2026 — Resolución de D13 (ponderación de métricas en Gains Table binaria)
+
+**Estado**: ✅ Cerrada. Suite 435/435 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Cierre de la deuda técnica D13, que dejaba las métricas de cabecera (KS/AUC/Gini) de la gains table binaria sin ponderar, creando una contradicción numérica con el panel OOS/OOT cuando la sesión usaba pesos de muestra.
+
+**Cambios aplicados**:
+- `backend_v3/reporting.py`: Se eliminó la función local `_discrimination_metrics` (que duplicaba la lógica de cálculo de AUC/KS y no soportaba pesos). En su lugar, `build_gains_table` ahora importa y utiliza `_pair_auc_ks` desde `validation.py`, que maneja pesos de forma nativa. Esto unifica la matemática, elimina código muerto y resuelve la asimetría del path binario.
+- `tests/test_reporting.py`: Se actualizó el test de paridad de pesos uniformes (renombrado a `test_binary_gains_table_uniform_weights_preserve_metrics`). Se añadió `test_binary_gains_table_non_uniform_weights_affect_metrics` para demostrar que los pesos asimétricos alteran el KS/AUC/Gini.
+
+**Hallazgos**:
+- La solución evita usar `compute_oos_metrics` para el path binario (lo que habría roto el cálculo en gains tables con menos de 15 filas al exigir `n_groups`). Al usar el kernel `_pair_auc_ks`, se mantiene la independencia de `n_groups` que tenía `_discrimination_metrics`, pero con soporte completo de ponderación.
+
+**Tests**: 435/435 PASSED.
+
+**Referencias**: `docs/design_decisions.md` §13.7; `docs/estado_proyecto.md` (Pendientes).
+
+### 20/10/2026 — Cierre documental D13 y bump a v1.0.0rc3
+
+**Estado**: ✅ Cerrada. Suite 435/435 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Mini-cierre documental para sincronizar todos los archivos tras la resolución de la deuda D13 (ponderación de métricas en la Gains Table binaria) y el bump de versión a `1.0.0rc3`. Kimi detectó cinco desincronizaciones residuales tras el primer bloque de cierre, las cuales se resuelven en esta entrada.
+
+**Cambios aplicados**:
+- `README.md` / `README.es.md`: Mermaid actualizado a `435/435` y `v1.0.0rc3`; nota IFRS 9 actualizada a `rc3`.
+- `docs/prompt_para_asistente.md`: conteo de tests actualizado a `435/435`.
+- `docs/roadmap.md`: narrativa de la Fase 3.5 anotada con la resolución de D13.
+- `docs/api.md`, `docs/contexto_para_nueva_sesion.md`, `pyproject.toml`, `frontend_v3/__init__.py`: actualizados en el bloque anterior.
+
+**Hallazgos**:
+- El uso del patrón `434/434` en mi prompt anterior falló en el Mermaid porque el archivo usaba `434 / 434` (con espacios). El agente (Kimi) lo detectó al revisar el archivo y no encontrarlo. Lección: usar `grep` o regex en lugar de confiar en un string literal para las sustituciones masivas.
+
+**Tests**: 435/435 PASSED.
+
+**Referencias**: `docs/design_decisions.md` §13.7; `docs/estado_proyecto.md` (Pendientes).

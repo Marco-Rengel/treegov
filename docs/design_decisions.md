@@ -1779,6 +1779,8 @@ Lo que se aclara aquí es que la Fase 3.5.b (15/10/2026) **sí resolvió la asim
 
 **Referencia cruzada.** `docs/3.5_design_multiclass_weighted_reports.md` §1.2 ("D13 closes the deferred §13.7 for the multiclass path only"), `docs/audit_log.md` entrada del 15/10/2026 (3.5.b), y `docs/estado_proyecto.md` §10 ("Deudas post-rc1").
 
+**Update (20/10/2026, cierre D13).** La deuda D13 queda resuelta. El path binario de `build_gains_table` ya no usa la implementación local `_discrimination_metrics`, sino que delega en `_pair_auc_ks` (de `validation.py`), que soporta ponderación de forma nativa. De este modo, las métricas de cabecera (KS, AUC, Gini) respetan los pesos de muestra en ambos paths (binario y multiclase), eliminando la contradicción numérica con el panel OOS/OOT. Se ha eliminado la duplicación de lógica de AUC/KS.
+
 ---
 
 ### 13.8 Hosmer-Lemeshow scales linearly with total weight mass

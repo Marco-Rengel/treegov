@@ -147,8 +147,8 @@ underscore) are internal and may change without notice.
   path.
 - `build_gains_table(model, leaf_assignment, y, *, by="leaf",
   n_buckets=10, tie="preserve", seed=None, weights=None)` — dispatch
-  by K since Phase 3.5.b. K=2 keeps the pre-3.5.b path (local
-  `_discrimination_metrics`, unweighted, D13 literal); K>2 uses
+  by K since Phase 3.5.b. K=2 keeps the pre-3.5.b path (weight-aware
+  via `validation._pair_auc_ks`); K>2 uses
   `validation.compute_oos_metrics` with adaptive `n_groups =
   min(10, max(3, n // 5))` and returns ks/auc/gini = None when
   n < 15 (D20).

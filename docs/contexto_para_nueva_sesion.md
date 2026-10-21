@@ -300,10 +300,10 @@ documental.
 
 **Próximo paso:** recogida de feedback de `1.0.0rc2` durante 2-4
 semanas; si no aparecen bugs críticos, publicación de `1.0.0`
-estable. Deuda diferida a 1.0.0 estable: D13 (métricas ponderadas
-en gains table binaria), poda no integrada en Session/GUI y no
-ponderada, tags `a1`–`a6` ausentes. Fase 3.6.e (modo no-bancario
-extensivo) va en 1.1.0 o posterior.
+estable. D13 (métricas ponderadas en gains table binaria) fue
+resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: poda no
+integrada en Session/GUI y no ponderada, tags `a1`–`a6` ausentes.
+Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

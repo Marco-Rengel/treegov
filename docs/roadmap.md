@@ -247,7 +247,7 @@ _translate_y_to_internal. No toca la firma pública de
 compute_oos_metrics ni de stability.py. En K=2 el helper no se
 invoca: el camino binario queda intacto bit a bit.
 
-**Asimetría diferida registrada (D13 literal).** El path binario de
+**Asimetría diferida registrada (D13 literal).** [Resuelta el 20/10/2026: D13 cerrada, ver audit_log y design_decisions §13.7] El path binario de
 build_gains_table conserva _discrimination_metrics sin ponderar incluso
 con pesos; el path multiclase llama a compute_oos_metrics que sí
 pondera. La asimetría respeta el invariante no negociable y está

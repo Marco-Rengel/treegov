@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc2
+**Version**: 1.0.0rc3
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 434/434 passing
+**Test suite**: 435/435 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.8 complete<br/>📦 v1.0.0rc2 published on PyPI<br/>🧪 434 / 434 tests PASSED<br/>📅 Oct 20, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.8 complete<br/>📦 v1.0.0rc3 published on PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 Oct 20, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -251,7 +251,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 434/434 passing.**
+**Test suite: 435/435 passing.**
 
 ---
 
@@ -283,7 +283,7 @@ TreeGov/
 - **Basel (BCBS CRE 32.4)**: regulatory PD floors (0.05% for
   corporate, bank and retail; 0.03% or exempt for sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc2.
+- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc3.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---
