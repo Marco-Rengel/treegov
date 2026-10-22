@@ -185,7 +185,7 @@ underscore) are internal and may change without notice.
 ## backend_v3.pruning
 
 - `Pruner`, `PruneStep`
-  *(Nota: `Session.prune()` existe, pero no está cableado en la GUI. Ver `docs/roadmap.md` sección Deferred).*
+  *(Note: since Phase 3.9, pruning is interactive and weighted — wired into the GUI via `PruneDialog` and exposed via `Session.get_prune_sequence()`.)*
 
 ## backend_v3.splitting
 

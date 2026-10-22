@@ -395,12 +395,9 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 ## Deferred (no blocking current work)
 
-### ⏳ PyPI synchronization (target: v1.0.0 stable)
-**Priority: LOW (deferred)**
+### ✅ PyPI synchronization (Resolved: 1.0.0rc4, 20/10/2026)
 
-The repository README and Mermaid diagrams have been updated (dates to 20/10/2026, inclusion of phase 3.8, rc2 in the table). The version published on PyPI (`1.0.0rc2`) freezes the previous README before these cosmetic corrections.
-
-Under the new synchronization protocol (20/10/2026), an `rc3` is NOT published solely for documentary changes. The PyPI page will be updated with the next material release (v1.0.0 stable or the next version with code changes). In the meantime, the GitHub repository remains the source of truth.
+La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -414,12 +411,9 @@ para las fases 2.4, 3, 4 o 5. Se retomarán si aparece una necesidad
 concreta (por ejemplo, auditoría externa que requiera CV formal, o
 incidente que exponga la ausencia del guardrail runtime).
 
-### ⏳ Cost-complexity pruning (poda) integration
-**Priority: HIGH (target: 1.0.0 stable)**
+### ✅ Cost-complexity pruning (poda) integration (Resolved: Phase 3.9, 20/10/2026)
 
-El módulo `backend_v3/pruning.py` implementa la poda coste-complejidad de Breiman, pero actualmente tiene dos limitaciones críticas para 1.0.0:
-1. Está integrado en `Session` (vía `Session.prune()`), pero no está cableado en la GUI.
-2. Usa conteos físicos de filas (`r(t) = n - max(n_events)`), mientras que el crecimiento del árbol usa Gini ponderado. Esta incoherencia estadística debe resolverse antes de la versión estable.
+Ambas limitaciones quedaron resueltas con la Fase 3.9 (Poda Interactiva y Ponderada): la poda se cableó en la GUI (`PruneDialog`, menú Model) y el error de poda es ponderado (`r_w(t)`) cuando el árbol lleva `w_events`. Ver `docs/3.9_design_interactive_weighted_pruning.md`.
 
 ### ⏳ E2E test fixture: target con señal real
 **Priority: LOW (deferred)**

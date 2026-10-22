@@ -4932,3 +4932,24 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - `docs/prompt_para_asistente.md`, `.treegovrules`, `AGENTS.md`: Actualizados para exigir la lectura del Playbook antes de generar prompts.
 
 **Tests**: 438/438 PASSED.
+
+### 21/10/2026 — Auditoría Forense y Saneamiento Global Documental
+
+**Estado**: ✅ Cerrada. Suite 438/438 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Tras la publicación de `1.0.0rc4`, una revisión visual del README reveló que persistían desincronizaciones (ej. `435 / 435` en el diagrama Mermaid, y la Poda descrita aún como "API-only"). Se ejecutó una auditoría forense en todos los `.md` activos para buscar cualquier rastro de estados anteriores.
+
+**Hallazgos y Correcciones**:
+- Se encontraron 9 desincronizaciones en 5 archivos (`README.md`, `README.es.md`, `docs/api.md`, `docs/roadmap.md`, `docs/contexto_para_nueva_sesion.md`).
+- Se actualizaron los conteos de tests a `438/438` (incluyendo variantes con espacios).
+- Se actualizaron las descripciones de la Poda (Fase 3.9) en los READMEs y en `api.md`, reflejando que es interactiva, ponderada y está en la GUI.
+- Se marcaron como "Resueltas" las deudas de Poda y PyPI en `roadmap.md`.
+- Se limpió la deuda de Poda en `contexto_para_nueva_sesion.md`.
+
+**Lección Aprendida (Gobernanza)**: Las búsquedas literales (ej. `435/435`) fallan si el documento usa espacios (`435 / 435`). El checklist de cierre de fase debe incluir un `grep` global de patrones obsoletos (con y sin espacios) para evitar que textos descriptivos o diagramas queden anclados en el pasado.
+
+**Tests**: 438/438 PASSED.

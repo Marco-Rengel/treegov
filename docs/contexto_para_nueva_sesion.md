@@ -306,9 +306,9 @@ documental.
 **Próximo paso:** recogida de feedback de `1.0.0rc4` durante 2-4
 semanas; si no aparecen bugs críticos, publicación de `1.0.0`
 estable. D13 (métricas ponderadas en gains table binaria) fue
-resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: poda
-integrada en Session pero no en la GUI y no ponderada (diseño de la
-Fase 3.9 aprobado el 20/10/2026), tags `a1`–`a6` ausentes.
+resuelta el 20/10/2026. La deuda de la poda quedó resuelta con la
+Fase 3.9 (GUI `PruneDialog` + poda ponderada, 20/10/2026). Deuda
+diferida a 1.0.0 estable: tags `a1`–`a6` ausentes.
 Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
@@ -338,7 +338,6 @@ Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
   "Deferred (no blocking current work)".
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
 - Fase 2.1.b — CV scheme + *guardrail* runtime de imports backend.
-- **Integración de la poda (pruning):** `backend_v3/pruning.py` está cableado en `Session` pero no en la GUI, y usa conteos físicos mientras el árbol crece con Gini ponderado. Target: 1.0.0 estable.
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.

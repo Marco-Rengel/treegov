@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.9 complete<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 435 / 435 tests PASSED<br/>📅 Oct 20, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.9 complete<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 438 / 438 tests PASSED<br/>📅 Oct 20, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -100,7 +100,7 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 | **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigation of zero probabilities in low-default portfolios |
 | **Hamilton-Hare partition** | — | — | Exact stratified train/test *split*, no rounding bias |
 | **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
-| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing (API-only in `backend_v3/pruning.py`; not yet wired into the GUI or Session, and uses unweighted counts while the tree grows with weighted Gini). Scheduled for 1.0.0 stable. |
+| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing. Interactive and weighted (Phase 3.9): weighted error `r_w(t)` when the tree carries sample weights, exposed via `Session.get_prune_sequence()` and the GUI `PruneDialog`. |
 | **Out-of-Sample (OOS) / Out-of-Time (OOT) validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; *out-of-time* cohort support |
 | **Stability monitoring** | Siddiqi (2006) | Basel / EBA | Population Stability Index (PSI, leaves), Characteristic Stability Index (CSI, covariates), Gini Drop with traffic lights |
 | **UCI dataset validation** | UCI ML Repository | — | Reproducibility anchored to 6 *datasets* (German Credit, Breast Cancer, etc.) |
