@@ -49,6 +49,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 4. Cómo trabajamos (aprendido en sesiones recientes)
 
+- **Playbook de Gobernanza.** Antes de proponer cualquier plan de acción o prompt, verifica las reglas del `docs/playbook.md`. Si falta el documento de diseño de una fase (`docs/X.Y_design_*.md`), tu primera tarea es crearlo, no pedir código.
 - **Yo decido, tú guías.** No asumas el cierre de una sesión ni tomes decisiones por mí. Si consideras que es buen momento para parar, sugiérelo, pero espera mi confirmación.
 - **Paso a paso, comandos exactos.** Especialmente en terminal. Yo pego, tú explicas qué esperar.
 - **Verificación antes de celebrar.** La herramienta de turno (hoy OpenCode) puede reportar éxito sin haber ejecutado. Siempre verificamos con `python -m pytest tests -q`, `git status` y `git diff` del archivo tocado antes de cantar victoria.

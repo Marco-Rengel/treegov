@@ -67,6 +67,8 @@ expanded to 8 documents on 20/10/2026 to enforce narrative depth and API sync):
 (h) docs/design_decisions.md: new entry if the change introduced a new default or altered an API contract.
 Any sub-phase whose closure leaves any of the eight out of sync is not considered closed.
 
+El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
+
 ## Language
 
 - Code: English.

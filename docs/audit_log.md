@@ -4915,3 +4915,20 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 **Tests**: 438/438 PASSED.
 
 **Nota**: Publicada finalmente como 1.0.0rc4 en PyPI debido a un conflicto de inmutabilidad con la versión rc3, subida previamente con los cambios de D13.
+
+### 21/10/2026 — Creación del Playbook de Gobernanza
+
+**Estado**: ✅ Cerrada. Suite 438/438 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Se detectó que las fases 3.7, 3.8 y 3.9 se habían implementado sin crear su archivo `docs/X.Y_design_*.md` correspondiente (un patrón de fallo que ya ocurrió en la Fase 3.2). Para prevenirlo, se ha creado un Playbook formal.
+
+**Cambios aplicados**:
+- `docs/playbook.md` (nuevo): Define los flujos obligatorios `/nueva_fase`, `/cierre_fase` y `/auditoria_max`.
+- Documentos de diseño retrospectivos: Creados `docs/3.7_design_pre_release_fixes.md`, `docs/3.8_design_regulatory_attribution.md` y `docs/3.9_design_interactive_weighted_pruning.md` para cerrar el hueco de gobernanza y alinear la estructura documental con el Playbook.
+- `docs/prompt_para_asistente.md`, `.treegovrules`, `AGENTS.md`: Actualizados para exigir la lectura del Playbook antes de generar prompts.
+
+**Tests**: 438/438 PASSED.

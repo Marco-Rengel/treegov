@@ -111,6 +111,8 @@ sub-fase de referencia: $2.29 (medido en la Fase 3.2). Si una
 sub-fase futura excede $3, diagnosticar. Análisis completo en
 `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 
+El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
+
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
