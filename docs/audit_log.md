@@ -4954,3 +4954,51 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 **Lección Aprendida (Gobernanza)**: Las búsquedas literales (ej. `435/435`) fallan si el documento usa espacios (`435 / 435`). El checklist de cierre de fase debe incluir un `grep` global de patrones obsoletos (con y sin espacios) para evitar que textos descriptivos o diagramas queden anclados en el pasado.
 
 **Tests**: 438/438 PASSED.
+
+---
+
+### 21/10/2026 — Mini-cierre documental pre-Fase 4.0 (UX)
+
+**Estado**: ✅ Cerrada. Sin cambios de código. Suite 438/438 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Auditoría del estado de partida para la Fase 4.0 (UX). La verificación cruzada entre código, documentación y terminal (pytest, git status, git log, git show-ref --tags) detectó siete inconsistencias documentales y confirmó que H1 (radio buttons) y H2 (target por defecto) están corregidos en código (Fase 3.7.e, 18/10/2026). H8 (tema oscuro sin jerarquía visual) sigue pendiente. Los tags v1.0.0a1 a v1.0.0a6 y v1.0.0rc1, rc2, rc4 existen y apuntan a commits válidos; v1.0.0rc3 no existe (consistente con la quema de rc3 por conflicto de inmutabilidad en PyPI).
+
+**Verificación empírica**:
+- `frontend_v3/resources/styles.qss`: contiene las reglas `QRadioButton::indicator`, `::indicator:checked` y `::indicator:hover` (Phase 3.7.e). H1 confirmado como resuelto.
+- `frontend_v3/wizard.py::PredictorsPage.__init__`: placeholder `userData=None` como primera opción del combo target. `isComplete()` bloquea Next hasta elección explícita. H2 confirmado como resuelto.
+- `frontend_v3/theme.py` paleta dark: `BG="#1E1E1E"`, `SURFACE="#2A2A2A"` (12 puntos). Sin `SURFACE_ELEVATED`, sin variante oscura suave. H8 sigue pendiente.
+- `git show-ref --tags`: los 9 tags existen y son consistentes.
+
+**Cambios aplicados (7 archivos, sin tocar código)**:
+
+1. `docs/roadmap.md` — H1 y H2 marcados como ✅ RESUELTO 18/10/2026 (Fase 3.7.e).
+2. `docs/contexto_para_nueva_sesion.md` — tabla de problemas conocidos actualizada (H1/H2 resueltos, H8 pendiente); checklist de cierre 6 → 8 documentos; nota de verificación de tags añadida en "Estado de release" (bloque reordenado: URL de PyPI junto a la versión, tags debajo); fecha a 21/10/2026.
+3. `README.md` — resumen ejecutivo: BCBS CRE 20.39 → 32.4; fila "Sample Weighting": D13 resuelta (20/10/2026).
+4. `README.es.md` — mismos dos cambios, en español.
+5. `docs/prompt_para_asistente.md` — OpenCode 1.18.35 → 1.19.0.
+6. `docs/estado_proyecto.md` — fecha a 21/10/2026; deuda de tags marcada como RESUELTA; línea 392 de §5 (GovernanceMode) corregida de "BCBS CRE 20.39" a "BCBS CRE 32.4" (atribución vigente, no narrativa histórica).
+7. `docs/audit_log.md` — esta entrada.
+
+**Hallazgos**:
+- Siete inconsistencias documentales corregidas.
+- La deuda de tags v1.0.0a1–a6 estaba registrada como pendiente; los tags ya existían. Corregido.
+- README citaba CRE 20.39 en el resumen ejecutivo; la Fase 3.8 lo corrigió a CRE 32.4 en referencias regulatorias pero no en el resumen. Corregido.
+- README afirmaba que el Gini/KS/AUC global binario no estaba ponderado; D13 se resolvió el 20/10/2026. Corregido.
+- `docs/estado_proyecto.md` §5 (tabla de decisiones arquitectónicas) seguía citando "BCBS CRE 20.39" como atribución vigente del PD Floor, cuando la Fase 3.8 (19/10/2026) la corrigió a CRE 32.4 en el resto del proyecto. Corregido.
+- La co-auditoría del agente Kimi (OpenCode 1.19.0) detectó el punto anterior dos veces (en los Prompts 4 y 6 del bloque), señalándolo explícitamente sin actuar. Es un ejemplo del patrón "verificación empírica en ambas direcciones" registrado en el audit_log del 09/10/2026: el agente que detecta un error del revisor y lo flaggea con evidencia vale más que el agente que obedece sin pensar. El hallazgo se incorporó al mini-cierre como corrección adicional.
+- H1 y H2 estaban resueltos en audit_log pero pendientes en roadmap y contexto. Alineado.
+
+**Tests**: 438/438 PASSED. Cero cambios de código.
+
+**Referencias cruzadas**:
+- `docs/audit_log.md` 18/10/2026 (Fase 3.7.e — fix H1 y H2).
+- `docs/audit_log.md` 20/10/2026 (D13 resuelta).
+- `docs/audit_log.md` 20/10/2026 (Protocolo de Mini-Cierre y Checklist de 8 documentos).
+- `docs/design_decisions.md` §13.7 (D13 resuelta).
+- `AGENTS.md` sección "Mini-cierre" (protocolo aplicado).
+- `docs/playbook.md` Skill 2 (`/cierre_fase`, checklist de 8 documentos).
+- `docs/audit_log.md` 09/10/2026 ("verificación empírica en ambas direcciones: el agente verifica al revisor").

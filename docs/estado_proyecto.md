@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 20/10/2026 (Fases 3.8 y 3.9 cerradas, release 1.0.0rc4)
+**Fecha de última actualización:** 21/10/2026 (Fases 3.8 y 3.9 cerradas, release 1.0.0rc4)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -389,7 +389,7 @@ TreeGov/
 | **Idioma de documentación** | Inglés por defecto (estándar *open source*); bilingüe README y philosophy; audit_log en español (histórico interno) |
 | **Anti-leakage** | TrainOnlyImputer exclusivo sobre fold de entrenamiento |
 | **OOT como archivo externo** | Nunca como partición aleatoria: validación temporal independiente |
-| **GovernanceMode opcional (Fase 2.1)** | REGULATORY por defecto (Jeffreys + PD Floor, BCBS CRE 20.39); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el *fingerprint* del modelo etiqueta el modo efectivo (REGULATORY/RESEARCH/CUSTOM) |
+| **GovernanceMode opcional (Fase 2.1)** | REGULATORY por defecto (Jeffreys + PD Floor, BCBS CRE 32.4); RESEARCH (PD cruda k/n sin floor) abre la herramienta a dominios no bancarios. Trazabilidad: el *fingerprint* del modelo etiqueta el modo efectivo (REGULATORY/RESEARCH/CUSTOM) |
 | **Herramienta CLI fuera del .venv** | Aider instalado vía pipx con Python 3.11.9 independiente. Lección del 27/09: instalar herramientas CLI dentro del .venv del proyecto degradó numpy/scipy |
 | **Proveedor de IA: Moonshot AI directo** | Migrado de NVIDIA NIM el 03/10/2026 por 504 recurrentes. Endpoint `https://api.moonshot.ai/v1`, costes $3/$15 por millón de tokens. Requiere `~/.aider.model.settings.yml` con `use_temperature: false` (Kimi K3 exige temperature=1). Cliente sigue siendo Aider (no OpenCode, no Kimi Code Desktop) |
 | **`.gitattributes` con `-text`** | Previene mezcla de line endings (CRLF/LF) que genera diffs ruidosos (1218/1151 en lugar de 68 líneas reales). `-text` le dice a git "no normalices este archivo". Ver commit `7040046` |
@@ -547,7 +547,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
 - [x] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición). **Resuelto el 20/10/2026** (ver audit_log y design_decisions §13.7).
 - [x] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` integrado en Session (vía `Session.prune()`), pero no en la GUI. **Diseño 3.9 (Poda Interactiva y Ponderada) aprobado el 20/10/2026**. Implementación completa (backend, Session y GUI) el 20/10/2026.
-- [ ] Deuda de trazabilidad: etiquetas de git `a1`–`a6` no creadas en el momento de la publicación. Identificar los commits correspondientes en audit_log y crear tags retroactivas si es posible. Tag `v1.0.0rc1` obligatorio en la próxima release.
+- [x] Deuda de trazabilidad: etiquetas de git `a1`–`a6` no creadas en el momento de la publicación. **RESUELTO 21/10/2026**: verificado con `git show-ref --tags`. Los tags `v1.0.0a1` a `v1.0.0a6` existen y apuntan a commits válidos; `v1.0.0rc1` y `v1.0.0rc2` también. El tag `v1.0.0rc3` no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI, se sustituyó por rc4).
 
 ### Decisiones de largo plazo
 

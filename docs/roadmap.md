@@ -523,8 +523,8 @@ Priority: Low (deferred, not blocking).
 
 La primera sesión de visualización end-to-end de la GUI (13/10/2026) identificó 8 hallazgos de usabilidad y estética. Ninguno es bug funcional. Se documentan aquí como deuda diferida. La fuente de verdad es la entrada del 13/10/2026 en `docs/audit_log.md`.
 
-- H1 — Radio buttons del asistente invisibles (motor en Paso 1, clase de interés en Paso 2). Prioridad Alta.
-- H2 — Target por defecto del asistente es la primera columna del CSV. Prioridad Alta.
+- H1 — Radio buttons del asistente invisibles (motor en Paso 1, clase de interés en Paso 2). Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.e; ver docs/audit_log.md).
+- H2 — Target por defecto del asistente es la primera columna del CSV. Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.e; ver docs/audit_log.md).
 - H3 — Botones de mover predictores se ven como texto plano. Prioridad Media.
 - H4 — Paleta y layout del visor del árbol y del panel de reportes frente al prototipo previo. Prioridad Media.
 - H5 — Opción Cross-validation del Paso 3 deshabilitada sin explicación al usuario. Prioridad Baja.

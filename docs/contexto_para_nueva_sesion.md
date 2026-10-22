@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 20/10/2026
+**Fecha de última actualización:** 21/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -27,15 +27,7 @@ reconstrucciones costosas al abrir un chat nuevo. Excepciones:
 504/timeout del proveedor de IA (se documenta al volver), o cambio
 trivial de 1 línea consolidado en la entrada de bloque.
 
-**Checklist ampliado (12/10/2026).** A los cuatro documentos
-actualizados en cada cierre de sub-fase (audit_log, roadmap,
-estado_proyecto, documentos de contexto) se añaden:
-`README.md` / `README.es.md` (cuentan como uno) y `docs/api.md`.
-Motivo: los tres huecos detectados el 12/10/2026 (estructura del
-repositorio en READMEs, conteos individuales de tests en
-estado_proyecto §7, versión de PyPI en estado_proyecto §1) caen
-todos dentro del checklist ampliado. Si alguno queda
-desincronizado, la sub-fase NO se considera cerrada.
+**Checklist ampliado (20/10/2026).** Al cerrar una sub-fase se actualizan 8 documentos: `audit_log`, `roadmap`, `estado_proyecto`, `contexto_para_nueva_sesion`, `prompt_para_asistente`, `README.md` / `README.es.md` (cuentan como uno), `docs/api.md` y `docs/design_decisions.md` (si el cambio introdujo un nuevo default o alteró un contrato de API). Ver `AGENTS.md` sección "Documentación obligatoria".
 
 ## Regla de oro de la caché de Moonshot (refinada el 10/10/2026)
 
@@ -219,7 +211,7 @@ WSL (bash):
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
 | **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
-| **Hallazgos UX pendientes de la primera sesión de GUI** (radio buttons invisibles en el asistente, target por defecto mal elegido, tema oscuro sin jerarquía visual, etcétera) | Ver `docs/roadmap.md` sección "Deferred (no blocking current work)" para los 8 hallazgos H1 a H8 y su prioridad. Ninguno bloquea el desarrollo actual. |
+| **Hallazgos UX pendientes** (tema oscuro sin jerarquía visual H8, y H3–H7 de prioridad Media/Baja) | Ver `docs/roadmap.md` sección "Deferred (no blocking current work)". H1 (radio buttons) y H2 (target por defecto) resueltos el 18/10/2026 (Fase 3.7.e). H8 sigue pendiente. |
 
 ## Cómo retomar el trabajo
 
@@ -266,6 +258,8 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 **Última versión publicada:** `treegov 1.0.0rc4` en PyPI (20/10/2026).
 URL: https://pypi.org/project/treegov/1.0.0rc4/
+
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2 y v1.0.0rc4 verificados el 21/10/2026 con `git show-ref --tags`. El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una

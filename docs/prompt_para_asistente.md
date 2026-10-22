@@ -160,7 +160,7 @@ Se corrigió la atribución del PD floor: la referencia es BCBS CRE 32.4
 fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
 14 pares (dataset, motor). Suite: 435/435. Release `1.0.0rc2` publicada.
 
-- **Herramienta:** OpenCode 1.18.35 + Kimi K3 vía Moonshot AI directo
+- **Herramienta:** OpenCode 1.19.0 + Kimi K3 vía Moonshot AI directo
   (key propia de Moonshot), con la configuración corregida
   (`moonshotai/kimi-k3` + plugin `@jimmyyen/opencode-context-cache`).
   Aider 0.86.2 como respaldo documentado.
