@@ -4949,6 +4949,7 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - Se actualizaron las descripciones de la Poda (Fase 3.9) en los READMEs y en `api.md`, reflejando que es interactiva, ponderada y está en la GUI.
 - Se marcaron como "Resueltas" las deudas de Poda y PyPI en `roadmap.md`.
 - Se limpió la deuda de Poda en `contexto_para_nueva_sesion.md`.
+- Se detectó que la estructura de directorios (`Repository structure`) en los READMEs (EN/ES) no incluía los archivos de diseño retrospectivos (3.7, 3.8, 3.9) ni el `playbook.md`. Ambos árboles fueron actualizados para reflejar la realidad del repositorio.
 
 **Lección Aprendida (Gobernanza)**: Las búsquedas literales (ej. `435/435`) fallan si el documento usa espacios (`435 / 435`). El checklist de cierre de fase debe incluir un `grep` global de patrones obsoletos (con y sin espacios) para evitar que textos descriptivos o diagramas queden anclados en el pasado.
 
