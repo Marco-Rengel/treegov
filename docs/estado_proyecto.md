@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 21/10/2026 (Fases 3.8 y 3.9 cerradas, release 1.0.0rc4)
+**Fecha de última actualización:** 22/10/2026 (Fases 3.8, 3.9 y 3.10.a cerradas, release 1.0.0rc4)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -310,6 +310,8 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor ✅.
 - **Fase 3.8** — Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 ✅ Completada (19/10/2026).
 - **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`) ✅ Completada (20/10/2026).
+- **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). ✅ Completada (22/10/2026).
+- **Fase 3.10.b** — Cortes candidatos en panel inferior (backend + frontend). ⏳ Planificada.
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP

@@ -245,5 +245,7 @@ is the presentation layer (no analytical logic); its modules
 (`app`, `main_window`, `wizard`, `theme`, `i18n`) are internal to the GUI
 and therefore not listed here.*
 
+Nota (Fase 3.10.a): La clase `TreePanel` expone ahora los métodos públicos `zoom_in()`, `zoom_out()` y `zoom_fit()` para que la `QToolBar` de `MainWindow` pueda controlar la vista sin acceder a atributos privados.
+
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.

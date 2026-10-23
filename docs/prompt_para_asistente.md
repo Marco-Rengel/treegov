@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 20/10/2026
+**Última actualización:** 22/10/2026
 
 ---
 
@@ -169,7 +169,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 20/10/2026:** Fases 0 a 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y Ponderada: backend `r_w(t)`, `Session.get_prune_sequence()`, GUI `PruneDialog`) completada el 20/10/2026. Próximo paso: recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Deuda diferida a 1.0.0 estable: tags a1–a6.
+- **Estado al 22/10/2026:** Fases 0 a 3.10.a cerradas. Suite 438/438. Fase 3.10.a (Rediseño Visual UI: toolbar, nodos enriquecidos con HTML, panel QGroupBox, tema oscuro VS Code Dark+) completada el 22/10/2026. Todos los hallazgos UX (H1-H8) resueltos. Próximo paso: Fase 3.10.b (cortes candidatos) o recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Tags a1-a6 verificados.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---

@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.9 completas<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 438 / 438 tests PASSED<br/>📅 20 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.10.a completas<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 438 / 438 tests PASSED<br/>📅 22 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -251,6 +251,7 @@ TreeGov/
 | **3.7.e** | Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
 | **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 | Completada |
 | **3.9** | Poda Interactiva y Ponderada | Completada |
+| **3.10.a** | Rediseño UX/UI: Toolbar, nodos enriquecidos, panel derecho, jerarquía de tema oscuro (H3-H8) | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |

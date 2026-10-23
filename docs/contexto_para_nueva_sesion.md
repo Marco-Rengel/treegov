@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 21/10/2026
+**Fecha de última actualización:** 22/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -117,6 +117,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
 | 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
+| **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
 **Suite de tests:** 438/438 PASSED
 
@@ -211,7 +212,7 @@ WSL (bash):
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
 | **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
-| **Hallazgos UX pendientes** (tema oscuro sin jerarquía visual H8, y H3–H7 de prioridad Media/Baja) | Ver `docs/roadmap.md` sección "Deferred (no blocking current work)". H1 (radio buttons) y H2 (target por defecto) resueltos el 18/10/2026 (Fase 3.7.e). H8 sigue pendiente. |
+| **Hallazgos UX pendientes** | Ninguno. Todos los hallazgos H1–H8 fueron resueltos entre las fases 3.7.e y 3.10.a. |
 
 ## Cómo retomar el trabajo
 
@@ -332,6 +333,7 @@ Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
   "Deferred (no blocking current work)".
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
 - Fase 2.1.b — CV scheme + *guardrail* runtime de imports backend.
+- Fase 3.10.b (Cortes candidatos en panel inferior, requiere backend). Ver `docs/roadmap.md`.
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.
