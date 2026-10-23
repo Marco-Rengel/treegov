@@ -350,7 +350,7 @@ def test_e2e_mainwindow():
         w = MainWindow()
         assert w._load_dataset_path(str(csv_path)) is True
         # sin modelo: placeholder en la pestaña Tree y HUD en estado vacio
-        assert tr("tree_prop_empty") in w._hud_body.text()
+        assert tr("tree_prop_empty") in w._hud_placeholder.text()
 
         cfg = {
             "engine": "CRT", "target": "default",
@@ -376,14 +376,15 @@ def test_e2e_mainwindow():
         assert len(items) == len(model.nodes)
         hdr = w._tree_panel._lbl_header.text()
         assert model.method in hdr and model.params_fingerprint in hdr
-        # HUD: resumen del modelo (sin seleccion)
-        assert model.params_fingerprint in w._hud_body.text()
+        # HUD: grupo Dataset poblado (sin seleccion)
+        assert w._hud_lbl_file.text() == "mini_gui.csv"
+        assert w._hud_lbl_rows.text() == "120"
         # seleccion de nodo -> tarjeta de detalle en el panel de propiedades
         w._tree_panel.select_node(1)
-        assert tr("tree_prop_node") in w._hud_body.text()
         assert model.nodes[1].split is None  # hoja identificable en detalle
+        assert w._hud_lbl_rule_var.text() == tr("tree_leaf_badge")
         w._tree_panel.select_node(0)
-        assert tr("tree_prop_predictor") in w._hud_body.text()
+        assert w._hud_lbl_rule_var.text() == model.nodes[0].split.predictor
         # entrenamiento fallido -> rollback: el visor no conserva arbol
         bad = dict(cfg, engine="MOTOR_INEXISTENTE")
         w._on_wizard_finished(bad)
@@ -391,7 +392,7 @@ def test_e2e_mainwindow():
         assert w._session.state.tree is None
         assert [i for i in w._tree_panel._scene.items()
                 if isinstance(i, NodeItem)] == []
-        assert tr("tree_prop_empty") in w._hud_body.text()
+        assert tr("tree_prop_empty") in w._hud_placeholder.text()
         w.close()
         w.deleteLater()
 

@@ -27,11 +27,14 @@ from PySide6.QtWidgets import (
     QApplication,
     QDialog,
     QFileDialog,
+    QFormLayout,
     QFrame,
+    QGroupBox,
     QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
+    QProgressBar,
     QSplitter,
     QStyle,
     QTabWidget,
@@ -77,6 +80,7 @@ class MainWindow(QMainWindow):
         self._theme_name: str = "light"
         # Phase 2.1: dataset profile (columns, types) and live wizard handle
         self._dataset_info: tuple[tuple[str, ...], dict[str, str]] | None = None
+        self._current_dataset_path: str | None = None
         self._wizard: ModelWizard | None = None
         # Phase 3.1.f: last successful wizard cfg (needed to retrain after
         # a class-of-interest inversion without reopening the wizard)
@@ -152,6 +156,10 @@ class MainWindow(QMainWindow):
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{self._theme_name}')}"
         )
+        self._hud_gb_dataset.setTitle(tr("hud_group_dataset"))
+        self._hud_gb_node.setTitle(tr("hud_group_node"))
+        self._hud_gb_rule.setTitle(tr("hud_group_rule"))
+        self._hud_placeholder.setText(tr("tree_prop_empty"))
         self._hud_reset()
 
     # ------------------------------------------------------------------
@@ -333,12 +341,8 @@ class MainWindow(QMainWindow):
 
         self._left_panel, self._left_title = self._make_panel("leftPanel")
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
-        # Properties body (Phase 2.2): node details / model summary
-        self._hud_body = QLabel()
-        self._hud_body.setObjectName("hudBody")
-        self._hud_body.setWordWrap(True)
-        self._hud_body.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._hud_panel.layout().insertWidget(1, self._hud_body)
+        # Phase 3.10.a: structured properties panel (Dataset / Node / Rule)
+        self._build_hud_panel_content(self._hud_panel.layout())
 
         self._tabs = QTabWidget()
         self._tabs.setObjectName("centralTabs")
@@ -406,6 +410,51 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return frame, title
 
+    def _build_hud_panel_content(self, layout: QVBoxLayout) -> None:
+        # 1. Dataset
+        self._hud_gb_dataset = QGroupBox()
+        form_ds = QFormLayout(self._hud_gb_dataset)
+        self._hud_lbl_file = QLabel("—")
+        self._hud_lbl_rows = QLabel("—")
+        self._hud_lbl_cols = QLabel("—")
+        form_ds.addRow("File:", self._hud_lbl_file)
+        form_ds.addRow("Rows:", self._hud_lbl_rows)
+        form_ds.addRow("Cols:", self._hud_lbl_cols)
+        layout.insertWidget(1, self._hud_gb_dataset)
+
+        # 2. Nodo
+        self._hud_gb_node = QGroupBox()
+        form_node = QFormLayout(self._hud_gb_node)
+        self._hud_lbl_pop = QLabel("—")
+        self._hud_lbl_events = QLabel("—")
+        self._hud_lbl_bad_rate = QLabel("—")
+        self._hud_bar = QProgressBar()
+        self._hud_bar.setTextVisible(False)
+        self._hud_bar.setFixedHeight(12)
+        form_node.addRow("Pop:", self._hud_lbl_pop)
+        form_node.addRow("Events:", self._hud_lbl_events)
+        form_node.addRow("Bad Rate:", self._hud_lbl_bad_rate)
+        form_node.addRow(self._hud_bar)
+        layout.insertWidget(2, self._hud_gb_node)
+
+        # 3. Regla
+        self._hud_gb_rule = QGroupBox()
+        form_rule = QFormLayout(self._hud_gb_rule)
+        self._hud_lbl_rule_var = QLabel("—")
+        self._hud_lbl_rule_cond = QLabel("—")
+        self._hud_lbl_rule_stat = QLabel("—")
+        self._hud_lbl_rule_p = QLabel("—")
+        form_rule.addRow("Var:", self._hud_lbl_rule_var)
+        form_rule.addRow("Cond:", self._hud_lbl_rule_cond)
+        form_rule.addRow("Stat:", self._hud_lbl_rule_stat)
+        form_rule.addRow("p-val:", self._hud_lbl_rule_p)
+        layout.insertWidget(3, self._hud_gb_rule)
+
+        self._hud_placeholder = QLabel()
+        self._hud_placeholder.setWordWrap(True)
+        layout.insertWidget(4, self._hud_placeholder)
+        layout.addStretch(1)
+
     def _build_statusbar(self) -> None:
         sb = self.statusBar()
         self._lbl_session = QLabel()
@@ -467,6 +516,7 @@ class MainWindow(QMainWindow):
                 self._logger.info("[gui] security warning shown on first dataset load")
         columns, types = self._session.describe_dataset()
         self._dataset_info = (columns, types)
+        self._current_dataset_path = path
         self._act_new_wizard.setEnabled(True)
         self._act_train.setEnabled(True)
         self._refresh_session_indicator()
@@ -730,35 +780,21 @@ class MainWindow(QMainWindow):
 
     def _on_tree_node_selected(self, node_id: int) -> None:
         """Show the selected node card (read-only, from the frozen tree)."""
-        model = (
-            self._session.state.tree if self._session is not None else None
-        )
+        model = self._session.state.tree if self._session is not None else None
         if model is None or not (0 <= node_id < len(model.nodes)):
             return
         node = model.nodes[node_id]
-        self._hud_body.setText("\n".join(node_detail_lines(node)))
+        self._update_hud_node(node)
         self.statusBar().showMessage(f"{tr('tree_prop_node')} #{node_id}", 5000)
-        if self._logger is not None:
-            self._logger.debug("[gui] node selected: %d", node_id)
 
     def _hud_reset(self) -> None:
-        """Properties panel default: node detail > model summary > empty."""
-        model = (
-            self._session.state.tree if self._session is not None else None
-        )
+        """Properties panel default: node detail if selected, else clear."""
+        model = self._session.state.tree if self._session is not None else None
         sel = self._tree_panel.selected_node_id()
-        if model is not None and (
-            sel is not None and 0 <= sel < len(model.nodes)
-        ):
-            self._hud_body.setText(
-                "\n".join(node_detail_lines(model.nodes[sel]))
-            )
-        elif model is not None:
-            self._hud_body.setText(
-                "\n".join(model_summary_lines(model, self._mode_name))
-            )
+        if model is not None and (sel is not None and 0 <= sel < len(model.nodes)):
+            self._update_hud_node(model.nodes[sel])
         else:
-            self._hud_body.setText(tr("tree_prop_empty"))
+            self._clear_hud()
 
     def _on_evaluate_oos(self) -> None:
         """Model > Evaluate OOS: runs evaluate_oos() on the trained model."""
@@ -905,6 +941,72 @@ class MainWindow(QMainWindow):
             tr("about_title"),
             tr("about_body").format(version=__version__),
         )
+
+    def _clear_hud(self) -> None:
+        self._hud_placeholder.setVisible(True)
+        self._hud_gb_node.setVisible(False)
+        self._hud_gb_rule.setVisible(False)
+        if self._session is not None and self._session.state.state is not None:
+            self._hud_gb_dataset.setVisible(True)
+            st = self._session.state
+            self._hud_lbl_file.setText(self._current_dataset_path.split("\\")[-1] if self._current_dataset_path else "—")
+            self._hud_lbl_rows.setText(str(st.n_rows))
+            self._hud_lbl_cols.setText(str(st.n_cols))
+        else:
+            self._hud_gb_dataset.setVisible(False)
+
+    def _update_hud_node(self, node) -> None:
+        self._hud_placeholder.setVisible(False)
+        self._hud_gb_node.setVisible(True)
+        self._hud_gb_rule.setVisible(True)
+        self._clear_hud_dataset_info()
+
+        # Populate Node
+        self._hud_lbl_pop.setText(str(node.n))
+        events = node.n_events[0] if node.n_events else 0
+        self._hud_lbl_events.setText(str(events))
+        pd_val = node.pd_final[0] if node.pd_final else 0.0
+        self._hud_lbl_bad_rate.setText(f"{pd_val * 100:.2f}%")
+
+        self._hud_bar.setMinimum(0)
+        self._hud_bar.setMaximum(100)
+        self._hud_bar.setValue(int(pd_val * 100))
+
+        # Style the bar (red for high PD, green for low)
+        color = "#2E7D32" if pd_val < 0.05 else ("#ED6C02" if pd_val < 0.15 else "#D32F2F")
+        self._hud_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: {color}; }}")
+
+        # Populate Rule
+        if node.is_leaf:
+            self._hud_lbl_rule_var.setText(tr("tree_leaf_badge"))
+            self._hud_lbl_rule_cond.setText(tr(f"tree_leaf_reason_{node.leaf_reason}"))
+            self._hud_lbl_rule_stat.setText("—")
+            self._hud_lbl_rule_p.setText("—")
+        else:
+            split = node.split
+            self._hud_lbl_rule_var.setText(str(split.predictor))
+            if split.threshold is not None:
+                cond = f"≤ {split.threshold:.4g}"
+            else:
+                cond = f"{len(split.branches or ())} groups"
+            self._hud_lbl_rule_cond.setText(cond)
+            self._hud_lbl_rule_stat.setText(f"{split.statistic_name} = {split.statistic:.4g}")
+            if split.p_value is not None:
+                p_str = f"{split.p_value:.4g}"
+                if split.p_value_adjusted is not None:
+                    p_str += f" (adj: {split.p_value_adjusted:.4g})"
+                self._hud_lbl_rule_p.setText(p_str)
+            else:
+                self._hud_lbl_rule_p.setText("—")
+
+    def _clear_hud_dataset_info(self) -> None:
+        self._hud_gb_dataset.setVisible(True)
+        st = self._session.state if self._session else None
+        if st:
+            fname = self._current_dataset_path.split("\\")[-1] if self._current_dataset_path else "—"
+            self._hud_lbl_file.setText(fname)
+            self._hud_lbl_rows.setText(str(st.n_rows))
+            self._hud_lbl_cols.setText(str(st.n_cols))
 
     # ------------------------------------------------------------------
     # Qt overrides
