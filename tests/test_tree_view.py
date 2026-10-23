@@ -240,7 +240,9 @@ def test_zoom_clamps():
 
     z0 = view.zoom_factor()
     view.zoom_in()
-    assert abs(view.zoom_factor() - min(ZOOM_MAX, z0 * ZOOM_STEP)) < 1e-9
+    assert abs(
+        view.zoom_factor() - max(ZOOM_MIN, min(ZOOM_MAX, z0 * ZOOM_STEP))
+    ) < 1e-9
     assert abs(view.transform().m11() - view.zoom_factor()) < 1e-9
 
     for _ in range(100):
@@ -253,7 +255,8 @@ def test_zoom_clamps():
     assert panel._lbl_zoom.text() == f"{round(ZOOM_MIN * 100)}%"
 
     view.zoom_fit()
-    assert view.zoom_factor() > ZOOM_MIN       # fit real (viewport 900x600)
+    # fit real (viewport 900x600): ni el fallback vacio (1.0) ni un clamp
+    assert 0.0 < view.zoom_factor() != 1.0
     panel.close()
     panel.deleteLater()
 

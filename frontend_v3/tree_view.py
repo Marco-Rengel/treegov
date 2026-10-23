@@ -84,8 +84,8 @@ __all__ = [
 ]
 
 # --- layout geometry (module constants, documented) -------------------------
-NODE_W = 150.0          # node box width (scene units == px at zoom 1.0)
-NODE_H = 64.0           # node box height
+NODE_W = 180.0          # node box width (scene units == px at zoom 1.0)
+NODE_H = 100.0          # node box height
 H_GAP = 24.0            # horizontal gap between leaf slots
 V_GAP = 48.0            # vertical gap between depth layers
 EDGE_LABEL_MAX = 24     # max characters on a categorical edge label
@@ -145,23 +145,79 @@ def _fmt_pct(x: float) -> str:
 
 
 def _node_label(node: TreeNode) -> str:
-    """Two/three-line box text; every label goes through tr()."""
-    lines: list[str] = []
+    """Returns an HTML string for the node box."""
+    def pct(x: float) -> str:
+        return f"{float(x) * 100:.1f}%"
+
+    # 1. Header
     if node.is_leaf:
-        lines.append(
-            f"{tr('tree_leaf_badge')} — {tr(f'tree_leaf_reason_{node.leaf_reason}')}"
-        )
+        pd = node.pd_final[0]
+        color = "#2E7D32" if pd < 0.05 else ("#ED6C02" if pd < 0.15 else "#D32F2F")
+        header_text = f"{tr('tree_leaf_badge')}"
     else:
+        color = "#1F6FEB"
         split = node.split
-        assert split is not None  # TreeModel invariant
-        lines.append(str(split.predictor))
-        if split.threshold is not None:
-            lines.append(f"x ≤ {_fmt_num(split.threshold)}")
+        header_text = str(split.predictor) if split else "Internal"
+
+    header_html = f"<div style='background-color:{color}; color:#FFFFFF; font-weight:bold; text-align:center; padding:2px; border-top-left-radius:4px; border-top-right-radius:4px;'>{header_text}</div>"
+
+    # 2. Body (mini bar)
+    # We assume binary for the mini-bar display (target class vs rest)
+    ev = node.n_events[0] if node.n_events else 0
+    n = node.n if node.n > 0 else 1
+    ev_pct = ev / n
+    good_pct = 1.0 - ev_pct
+
+    # Mini bar using inline spans
+    bar_w = 160
+    red_w = int(ev_pct * bar_w)
+    green_w = bar_w - red_w
+
+    bar_html = f"""
+    <div style='margin-top:4px; margin-bottom:4px;'>
+        <span style='background-color:#D32F2F; display:inline-block; width:{red_w}px; height:8px;'></span>
+        <span style='background-color:#2E7D32; display:inline-block; width:{green_w}px; height:8px;'></span>
+    </div>
+    """
+
+    # 3. Metrics
+    # Gini calculated purely for display (pandas-free)
+    gini = 1.0 - sum(p**2 for p in node.pd_final) if node.pd_final else 0.0
+    p_val = node.split.p_value if node.split and node.split.p_value is not None else None
+    stat = node.split.statistic if node.split else None
+
+    metrics_parts = [f"n={node.n} · ev={ev}"]
+    if stat is not None:
+        metrics_parts.append(f"stat={stat:.3g}")
+    if p_val is not None:
+        metrics_parts.append(f"p={p_val:.3g}")
+    metrics_parts.append(f"G={gini:.3f}")
+
+    metrics_str = " · ".join(metrics_parts)
+    metrics_html = f"<div style='font-size:10px; color:#888888; text-align:center;'>{metrics_str}</div>"
+
+    # 4. Rule description
+    if not node.is_leaf and node.split:
+        s = node.split
+        if s.threshold is not None:
+            rule_text = f"x ≤ {s.threshold:.4g}"
         else:
-            lines.append(f"{len(split.branches or ())} {tr('tree_groups')}")
-    lines.append(f"n={node.n} · {tr('tree_node_events')}={node.n_events[0]}")
-    lines.append(f"{tr('tree_node_pd')}={_fmt_pct(node.pd_final[0])}")
-    return "\n".join(lines)
+            rule_text = f"{len(s.branches or ())} groups"
+    else:
+        rule_text = tr(f"tree_leaf_reason_{node.leaf_reason}") if node.is_leaf else ""
+
+    rule_html = f"<div style='font-size:11px; text-align:center; margin-top:2px;'>{rule_text}</div>"
+
+    # Combine
+    return f"""
+    <div style='width:{NODE_W-4}px;'>
+        {header_html}
+        <div style='text-align:center; font-size:11px; margin-top:2px;'>{pct(node.pd_final[0])} PD</div>
+        {bar_html}
+        {metrics_html}
+        {rule_html}
+    </div>
+    """
 
 
 def _edge_label(split, branch_index: int) -> str:
@@ -275,9 +331,9 @@ class NodeItem(QGraphicsRectItem):
         opt.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         doc.setDefaultTextOption(opt)
         self._text.setDefaultTextColor(fg)
-        self._text.setPlainText(_node_label(node))
+        self._text.setHtml(_node_label(node))
         text_h = doc.size().height()
-        self._text.setPos(0.0, (NODE_H - text_h) / 2.0)
+        self._text.setPos(0.0, max(0.0, (NODE_H - text_h) / 2.0))
         self.setToolTip("\n".join(node_detail_lines(node)))
 
     def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value):
