@@ -22,7 +22,8 @@ _TOKEN_RE = re.compile(r"\$[A-Z_]+")
 PALETTES: dict[str, dict[str, str]] = {
     "light": {
         "BG": "#FFFFFF",
-        "SURFACE": "#F5F5F5",
+        "SURFACE": "#F3F3F3",
+        "SURFACE_ELEVATED": "#FFFFFF",
         "FG": "#1B1B1B",
         "BORDER": "#C8C8C8",
         "ACCENT": "#1F6FEB",
@@ -35,7 +36,8 @@ PALETTES: dict[str, dict[str, str]] = {
     },
     "dark": {
         "BG": "#1E1E1E",
-        "SURFACE": "#2A2A2A",
+        "SURFACE": "#252526",
+        "SURFACE_ELEVATED": "#333333",
         "FG": "#E6E6E6",
         "BORDER": "#454545",
         "ACCENT": "#4C9AFF",
