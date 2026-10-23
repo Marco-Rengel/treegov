@@ -6,6 +6,11 @@ QWidget {
     font-size: 13px;
 }
 
+QFrame#leftPanel, QFrame#hudPanel {
+    background: $SURFACE_ELEVATED;
+    border: 1px solid $BORDER;
+}
+
 QMainWindow::separator {
     background: $BORDER;
     width: 2px;
@@ -26,7 +31,7 @@ QMenuBar::item:selected {
 }
 
 QMenu {
-    background: $SURFACE;
+    background: $SURFACE_ELEVATED;
     border: 1px solid $BORDER;
 }
 
@@ -60,7 +65,7 @@ QStatusBar {
 }
 
 QToolTip {
-    background: $SURFACE;
+    background: $SURFACE_ELEVATED;
     color: $FG;
     border: 1px solid $BORDER;
 }
