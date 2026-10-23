@@ -5002,3 +5002,33 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 - `AGENTS.md` sección "Mini-cierre" (protocolo aplicado).
 - `docs/playbook.md` Skill 2 (`/cierre_fase`, checklist de 8 documentos).
 - `docs/audit_log.md` 09/10/2026 ("verificación empírica en ambas direcciones: el agente verifica al revisor").
+
+---
+
+### 22/10/2026 — Fase 3.10.a: Rediseño Visual UI (H3, H4, H5, H7, H8)
+
+**Estado**: ✅ Cerrada. Suite 438/438 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high/max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Cierre de la deuda UX (H3-H8) con referencia al prototipo Antigravity. Se dividió la Fase 3.10 en dos partes: 3.10.a (frontend puro) y 3.10.b (backend de cortes candidatos). Esta entrada documenta la 3.10.a.
+
+**Cambios aplicados**:
+- **H8 (Tema Oscuro)**: `theme.py` actualizado con paleta de 3 niveles (`BG`, `SURFACE`, `SURFACE_ELEVATED` inspirado en VS Code Dark+). `styles.qss` aplica el nuevo token a paneles laterales, menús y tooltips.
+- **H4 (Toolbar y Panel)**: Añadida `QToolBar` superior con iconos estándar y controles de zoom. El panel derecho se reestructuró de un `QLabel` plano a tres `QGroupBox` (Dataset, Nodo, Regla) con una `QProgressBar` que visualiza la PD con semáforo (verde/ámbar/rojo).
+- **H4 (Nodos Enriquecidos)**: `tree_view.py` migró de `setPlainText` a `setHtml`. Los nodos ahora tienen cabecera de color (rojo/naranja/verde por PD, azul para internos), mini-barras de proporción eventos/no-eventos, y un footer con métricas (Gini, KS, p-valor).
+- **H3 (Wizard)**: Botones de mover predictores cambiados a iconos Unicode (`→`, `⇒`, `←`, `⇐`) con tooltips.
+- **H5 (Wizard)**: Añadido tooltip explicativo al combo de Cross-validation.
+- **H7 (Reportes)**: Añadido warning amber no bloqueante si el umbral de clasificación deja el recall en 0.
+
+**Efectos colaterales en tests (adaptados)**:
+- `test_e2e_mainwindow`: Aserciones migradas de `_hud_body` a `_hud_lbl_file`, `_hud_lbl_rows`, `_hud_placeholder`.
+- `test_zoom_clamps`: Fórmula de auto-fit ajustada para incluir el `max(ZOOM_MIN, ...)` (el nuevo tamaño de nodo 180x100 hace que el fit por defecto caiga por debajo del mínimo anterior, pero el clamp inferior se respeta).
+
+**Tests**: 438/438 PASSED. Cero regresiones analíticas.
+
+**Referencias cruzadas**:
+- `docs/3.10_design_ux_redesign.md`
+- `docs/roadmap.md` (sección UX findings)

@@ -525,12 +525,12 @@ La primera sesión de visualización end-to-end de la GUI (13/10/2026) identific
 
 - H1 — Radio buttons del asistente invisibles (motor en Paso 1, clase de interés en Paso 2). Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.e; ver docs/audit_log.md).
 - H2 — Target por defecto del asistente es la primera columna del CSV. Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.e; ver docs/audit_log.md).
-- H3 — Botones de mover predictores se ven como texto plano. Prioridad Media.
-- H4 — Paleta y layout del visor del árbol y del panel de reportes frente al prototipo previo. Prioridad Media.
-- H5 — Opción Cross-validation del Paso 3 deshabilitada sin explicación al usuario. Prioridad Baja.
-- H6 — Datos sensibles en logs DEBUG y reports HTML exportados. Seguridad transversal y política de datos para v1.0.0. Prioridad Alta.
-- H7 — Matriz de clasificación con umbral 0.5 degenerada en targets con baja tasa de eventos. Prioridad Media.
-- H8 — Tema oscuro demasiado oscuro, sin jerarquía visual entre fondo y paneles. Prioridad Media.
+- H3 — Botones de mover predictores se ven como texto plano. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
+- H4 — Paleta y layout del visor del árbol y del panel de reportes frente al prototipo previo. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
+- H5 — Opción Cross-validation del Paso 3 deshabilitada sin explicación al usuario. Prioridad Baja. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
+- H6 — Datos sensibles en logs DEBUG y reports HTML exportados. Seguridad transversal y política de datos para v1.0.0. Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.a).
+- H7 — Matriz de clasificación con umbral 0.5 degenerada en targets con baja tasa de eventos. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
+- H8 — Tema oscuro demasiado oscuro, sin jerarquía visual entre fondo y paneles. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
 
 **Motivo del aplazamiento.** Ninguna de las fases pendientes (3.5, 3.6, 3.7) requiere cerrar estos hallazgos para avanzar. Se planifican en una sub-fase específica de rediseño UX posterior a la Fase 3.5, o como bloque pre-release dentro de la Fase 3.7 en el caso de H6 (seguridad y datos sensibles).
 
@@ -546,6 +546,11 @@ Hallazgo importante: Aider YA estaba correctamente instalado en pipx desde el 28
 Deuda residual: ~100 paquetes huérfanos en .venv (dependencias únicas de Aider/build/twine). No afectan runtime. Reconstrucción limpia del .venv diferida a sesión propia, con pip freeze previo.
 
 Detalle completo en docs/audit_log.md entrada del 16/10/2026.
+
+### ⏳ Phase 3.10.b — Cortes Candidatos (Backend + UI)
+**Priority: MEDIUM (deferred)**
+
+El prototipo Antigravity muestra un panel inferior con los cortes candidatos y métricas locales (WOE/IV/Odds). Para implementarlo, el backend (`tree_builder.py`) debe exponer los top-N candidatos por nodo. Planificado como sub-fase 3.10.b. Ver `docs/3.10_design_ux_redesign.md` §0.2.
 
 ## Recorded architectural decisions
 

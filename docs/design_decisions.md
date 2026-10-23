@@ -2071,6 +2071,20 @@ predictor.
 
 ---
 
+## §15. UI Presentation Decisions (Phase 3.10.a)
+
+### 15.1 3-level Palette Hierarchy in Dark Theme (H8)
+**Contexto:** El tema oscuro original tenía solo dos niveles (BG y SURFACE), lo que resultaba en una falta de jerarquía visual (los paneles no se distinguían del fondo).
+**Decisión:** Se introdujo un tercer nivel (`SURFACE_ELEVATED`) inspirado en VS Code Dark+. Las reglas QSS aplican este nivel a los paneles laterales, menús flotantes y tooltips.
+**Consecuencia:** Mayor claridad visual sin salir de la paleta oscura. Los tests de contraste se mantienen.
+
+### 15.2 Enriched Tree Nodes with HTML (H4)
+**Contexto:** Los nodos del árbol eran cajas de texto plano. El prototipo Antigravity sugería un diseño más denso en información.
+**Decisión:** Se migró `NodeItem` de `setPlainText` a `setHtml`. El HTML permite renderizar cabeceras de color, mini-barras de proporción y métricas adicionales (Gini, p-valor) dentro del nodo sin añadir lógica analítica en el frontend (los datos siguen viniendo precalculados del backend en el `TreeNode`).
+**Consecuencia:** Los nodos miden 180x100 (antes 150x64). El auto-fit del zoom se ajustó para respetar el `ZOOM_MIN` con la nueva geometría.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
