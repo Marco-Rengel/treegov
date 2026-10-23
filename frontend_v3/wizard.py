@@ -271,10 +271,14 @@ class PredictorsPage(QWizardPage):
         lists_row.addLayout(left_box, 1)
 
         btns = QVBoxLayout()
-        self._btn_add = QPushButton(">")
-        self._btn_remove = QPushButton("<")
-        self._btn_add_all = QPushButton(">>")
-        self._btn_remove_all = QPushButton("<<")
+        self._btn_add = QPushButton("→")
+        self._btn_add.setToolTip("Move selected")
+        self._btn_remove = QPushButton("←")
+        self._btn_remove.setToolTip("Move back selected")
+        self._btn_add_all = QPushButton("⇒")
+        self._btn_add_all.setToolTip("Move all")
+        self._btn_remove_all = QPushButton("⇐")
+        self._btn_remove_all.setToolTip("Move back all")
         for b in (self._btn_add, self._btn_remove,
                   self._btn_add_all, self._btn_remove_all):
             btns.addWidget(b)
@@ -695,6 +699,7 @@ class ValidationPage(QWizardPage):
         model.appendRow(self._item_holdout)
         model.appendRow(self._item_cv)
         self._combo_scheme.setModel(model)
+        self._combo_scheme.setToolTip(tr("step3_cv_tooltip"))
 
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setObjectName("sliderTrainFrac")

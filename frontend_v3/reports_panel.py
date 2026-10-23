@@ -262,6 +262,12 @@ class ReportsPanel(QWidget):
             grid.addWidget(cell, row, col)
             self._matrix_cells[key] = cell
         matrix_layout.addLayout(grid)
+        self._matrix_warning = QLabel(matrix)
+        self._matrix_warning.setObjectName("lblMatrixWarning")
+        self._matrix_warning.setWordWrap(True)
+        self._matrix_warning.setStyleSheet("color: #ED6C02; font-weight: bold;")
+        self._matrix_warning.setVisible(False)
+        matrix_layout.addWidget(self._matrix_warning)
         self._matrix_rows: dict[str, QLabel] = {}
         for key in self._MATRIX_METRICS:
             metric_label = QLabel(matrix)
@@ -519,6 +525,9 @@ class ReportsPanel(QWidget):
             {"leaf": tr("reports_view_leaf"), "bucket": tr("reports_view_bucket")},
         )
 
+        # Repaint warning if needed
+        if hasattr(self, "_matrix_warning"):
+            self._repaint_matrix()
         self._table.setHorizontalHeaderLabels([tr(key) for key in self._HEADER_KEYS])
         self.refresh()
 
@@ -566,6 +575,12 @@ class ReportsPanel(QWidget):
             cell.setText(_fmt(matrix.get(key)))
         for key, label in self._matrix_rows.items():
             label.setText(f"{tr('reports_matrix_' + key)}: {_fmt(matrix.get(key))}")
+        recall = matrix.get("recall")
+        if recall is not None and recall == 0.0:
+            self._matrix_warning.setText(tr("reports_warning_recall_zero"))
+            self._matrix_warning.setVisible(True)
+        else:
+            self._matrix_warning.setVisible(False)
 
     # ------------------------------------------------------------- Helpers
     @staticmethod
