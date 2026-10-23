@@ -33,7 +33,9 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QSplitter,
+    QStyle,
     QTabWidget,
+    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -90,6 +92,7 @@ class MainWindow(QMainWindow):
 
         self._build_menus()
         self._build_central()
+        self._build_toolbar()
         self._build_statusbar()
         self.retranslate_ui()
 
@@ -121,6 +124,9 @@ class MainWindow(QMainWindow):
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
         self._act_load_oot.setText(tr("menu_model_load_oot"))
         self._act_prune.setText(tr("menu_model_prune"))
+        self._act_zoom_in.setText(tr("tree_zoom_in"))
+        self._act_zoom_out.setText(tr("tree_zoom_out"))
+        self._act_zoom_fit.setText(tr("tree_zoom_fit"))
 
         self._menu_theme.setTitle(tr("menu_view_theme"))
         self._act_theme_light.setText(tr("menu_view_theme_light"))
@@ -284,6 +290,42 @@ class MainWindow(QMainWindow):
         current = get_language()
         self._act_lang_en.setChecked(current == "en")
         self._act_lang_es.setChecked(current == "es")
+
+    def _build_toolbar(self) -> None:
+        self._toolbar = QToolBar("Main Toolbar", self)
+        self._toolbar.setObjectName("mainToolbar")
+        self._toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.addToolBar(self._toolbar)
+
+        style = self.style()
+        self._act_open.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
+        self._act_new_wizard.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
+        self._act_train.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        self._act_evaluate_oos.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        self._act_prune.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
+
+        self._toolbar.addAction(self._act_open)
+        self._toolbar.addAction(self._act_new_wizard)
+        self._toolbar.addAction(self._act_train)
+        self._toolbar.addAction(self._act_evaluate_oos)
+        self._toolbar.addAction(self._act_load_oot)
+        self._toolbar.addAction(self._act_prune)
+        self._toolbar.addSeparator()
+
+        self._act_zoom_in = self._new_action("act_zoom_in")
+        self._act_zoom_in.triggered.connect(self._tree_panel.zoom_in)
+        self._act_zoom_out = self._new_action("act_zoom_out")
+        self._act_zoom_out.triggered.connect(self._tree_panel.zoom_out)
+        self._act_zoom_fit = self._new_action("act_zoom_fit")
+        self._act_zoom_fit.triggered.connect(self._tree_panel.zoom_fit)
+
+        self._act_zoom_in.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
+        self._act_zoom_out.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
+        self._act_zoom_fit.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
+
+        self._toolbar.addAction(self._act_zoom_in)
+        self._toolbar.addAction(self._act_zoom_out)
+        self._toolbar.addAction(self._act_zoom_fit)
 
     def _build_central(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
@@ -661,6 +703,11 @@ class MainWindow(QMainWindow):
         self._act_evaluate_oos.setEnabled(trained)
         self._act_load_oot.setEnabled(trained)
         self._act_prune.setEnabled(trained)
+        has_tree = self._session is not None and self._session.state.tree is not None
+        if hasattr(self, "_act_zoom_in"):
+            self._act_zoom_in.setEnabled(has_tree)
+            self._act_zoom_out.setEnabled(has_tree)
+            self._act_zoom_fit.setEnabled(has_tree)
         state = (
             self._session.state.state
             if self._session is not None

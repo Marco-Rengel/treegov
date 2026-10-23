@@ -126,3 +126,19 @@ QRadioButton::indicator:checked {
 QRadioButton::indicator:hover {
     border: 2px solid $ACCENT;
 }
+
+QToolBar {
+    background: $SURFACE_ELEVATED;
+    border-bottom: 1px solid $BORDER;
+    spacing: 4px;
+    padding: 4px;
+}
+
+QToolBar QToolButton {
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+QToolBar QToolButton:hover {
+    background: $BORDER;
+}

@@ -574,6 +574,15 @@ class TreePanel(QWidget):
     def select_node(self, node_id: int) -> None:
         self._scene.select_node(node_id)
 
+    def zoom_in(self) -> None:
+        self._view.zoom_in()
+
+    def zoom_out(self) -> None:
+        self._view.zoom_out()
+
+    def zoom_fit(self) -> None:
+        self._view.zoom_fit()
+
     def selected_node_id(self) -> int | None:
         return self._scene.selected_node_id()
 
