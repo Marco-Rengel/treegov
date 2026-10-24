@@ -8,8 +8,11 @@ Escala del predictor:
   - NOMINAL: cualquier par de grupos es fusionable; M = S(c, r)   (Stirling).
   - ORDINAL: solo pares de grupos ADYACENTES en el orden natural de las
     etiquetas observadas; M = C(c-1, r-1).
-  - CONTINUOUS: no admitido aqui (CHAID corta por grupos; el llamador debe
-    discretizar antes, p. ej. en cuantiles).
+  - CONTINUOUS (Fase 3.10.b, H14): binning automatico por deciles
+    (10 cortes de np.quantile -> 11 bins; np.digitize asigna cada fila a
+    un bin 0..10). Los bins tienen orden natural: la fusion sigue la
+    regla ORDINAL (adyacentes, M = C(c-1, r-1)) y los cortes viajan en
+    SplitConfig.bin_edges para routing por rangos (tree_builder).
 
 Naturaleza del target:
   - BINARY / CATEGORICAL: chi2 de Pearson sobre tabla c x K
@@ -179,12 +182,10 @@ class ChaidEngine:
         suficientes se pueblan sumando pesos (ver docstring del modulo).
         Con weights=None el comportamiento es identico al pre-3.2.
         Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+
+        Fase 3.10.b (H14): predictor_type=CONTINUOUS se admite via
+        binning automatico por deciles (ver _reduce_continuous_predictor).
         """
-        if predictor_type == PredictorType.CONTINUOUS:
-            raise ValueError(
-                f"[CHAID|{predictor!r}] predictor CONTINUOUS no admitido: "
-                "CHAID corta por grupos; discretice antes (p. ej. cuantiles)"
-            )
         if not isinstance(predictor_type, PredictorType):
             raise TypeError(f"predictor_type invalido: {predictor_type!r}")
         if not isinstance(target_type, TargetType):
@@ -230,19 +231,32 @@ class ChaidEngine:
         wd = w[mask] if weights is not None else None
         n_total = int(len(xd))
 
-        ordinal = predictor_type == PredictorType.ORDINAL
+        # TODO(zona_gris): un predictor CONTINUOUS binnado se trata como
+        # ORDINAL (bins con orden natural: fusiones solo adyacentes y
+        # Kass = C(c-1, r-1), convencion de Kass 1980 para categorias
+        # ordenadas). Resolver si se prefiere tratamiento NOMINAL.
+        ordinal = predictor_type in (PredictorType.ORDINAL, PredictorType.CONTINUOUS)
         continuo = target_type == TargetType.CONTINUOUS
 
         # -- reduccion O(N) unica: tabla (c, K) o sumas suficientes por categoria --
-        if continuo:
-            base = self._reduce_continuous(xd, yd, predictor, wd)
+        bin_edges: tuple[float, ...] = ()
+        if predictor_type == PredictorType.CONTINUOUS:
+            base_b = self._reduce_continuous_predictor(
+                xd, yd, predictor, wd, target_continuo=continuo
+            )
+            if base_b is None:
+                return self._finish_none(predictor, 0, 0, 0, True, n_dropped, ())
+            labels, matrix, counts, bin_edges = base_b
         else:
-            base = self._reduce_categorical(xd, yd, predictor, wd)
-        if base is None:
-            return self._finish_none(predictor, 0, 0, 0, True, n_dropped, ())
-        # labels: categorias ordenadas; matrix: (c, K) o (c, 3);
-        # counts: conteo FISICO de filas por categoria (para child_ns y df).
-        labels, matrix, counts = base
+            if continuo:
+                base = self._reduce_continuous(xd, yd, predictor, wd)
+            else:
+                base = self._reduce_categorical(xd, yd, predictor, wd)
+            if base is None:
+                return self._finish_none(predictor, 0, 0, 0, True, n_dropped, ())
+            # labels: categorias ordenadas; matrix: (c, K) o (c, 3);
+            # counts: conteo FISICO de filas por categoria (para child_ns y df).
+            labels, matrix, counts = base
         c = len(labels)
         self._require_hashable(labels, predictor)
 
@@ -287,7 +301,13 @@ class ChaidEngine:
         )
 
         # -- bucle de fusion --
-        groups: list[tuple[int, ...]] = [(i,) for i in range(c)]
+        if predictor_type == PredictorType.CONTINUOUS:
+            # Bins vacios (empates en los cuantiles): se pre-fusionan con el
+            # bin no vacio superior mas cercano. Garantiza child_ns > 0 y
+            # que las ramas cubren TODOS los bins (routing por bin_edges).
+            groups: list[tuple[int, ...]] = self._premerge_empty_bins(counts)
+        else:
+            groups = [(i,) for i in range(c)]
         steps: list[MergeStep] = []
         states: list[tuple[tuple[int, ...], ...]] = [tuple(groups)]
         n_forced = 0
@@ -414,6 +434,7 @@ class ChaidEngine:
             bonferroni_multiplier=m_kass,
             n_merges=c - r,
             branches=branches_labels,
+            bin_edges=bin_edges,
         )
         self._diagnostics = MergeDiagnostics(
             n_categories=c,
@@ -543,6 +564,93 @@ class ChaidEngine:
             q_i = np.bincount(codes, weights=weights * yv * yv, minlength=c)
         matrix = np.column_stack([n_i, s_i, q_i])
         return tuple(uniques), matrix, counts
+
+    def _reduce_continuous_predictor(
+        self, xd: pd.Series, yd: pd.Series, predictor: str,
+        weights: np.ndarray | None = None,
+        target_continuo: bool = False,
+    ) -> tuple[tuple, np.ndarray, np.ndarray, tuple[float, ...]] | None:
+        """Binning automatico por deciles de un predictor CONTINUOUS (H14).
+
+        10 cortes internos (cuantiles 1/11..10/11 via np.quantile,
+        deduplicados) -> hasta 11 bins; np.digitize asigna cada fila a un
+        bin 0..len(edges). Devuelve (labels, matrix, counts, bin_edges)
+        con la misma convencion que _reduce_categorical/_reduce_continuous:
+          - labels: ("bin_0", ..., "bin_c"), una por bin POSIBLE. Los bins
+            vacios (empates en los cuantiles) se CONSERVAN con fila de
+            ceros: las ramas deben cubrir todos los bins para que el
+            routing por rangos (bin_edges) sea exhaustivo en OOS; el
+            bucle de fusion los absorbe via _premerge_empty_bins.
+          - matrix: tabla (bins, K) de floats (target categorico; celdas
+            ponderadas si `weights` no es None) o suficientes
+            (n, sum, sumsq) por bin (target continuo).
+          - counts: conteo FISICO de filas por bin.
+          - bin_edges: cortes usados (tupla creciente de floats).
+        """
+        try:
+            xv = xd.to_numpy(dtype=float)
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"[CHAID|{predictor!r}] predictor CONTINUOUS no numerico: {e}"
+            ) from e
+        if xv.size == 0:
+            return None
+        edges = np.unique(np.quantile(xv, np.linspace(0.0, 1.0, 12)[1:-1]))
+        codes = np.digitize(xv, edges)                       # 0..len(edges)
+        c = int(edges.size) + 1
+        labels = tuple(f"bin_{i}" for i in range(c))
+        counts = np.bincount(codes, minlength=c).astype(float)
+        if target_continuo:
+            yv = yd.to_numpy(dtype=float)
+            if weights is None:
+                n_i = counts
+                s_i = np.bincount(codes, weights=yv, minlength=c)
+                q_i = np.bincount(codes, weights=yv * yv, minlength=c)
+            else:
+                n_i = np.bincount(codes, weights=weights, minlength=c)
+                s_i = np.bincount(codes, weights=weights * yv, minlength=c)
+                q_i = np.bincount(codes, weights=weights * yv * yv, minlength=c)
+            matrix = np.column_stack([n_i, s_i, q_i])
+        else:
+            try:
+                codes_y, _uniques_y = pd.factorize(yd, sort=True)
+            except TypeError as e:
+                raise ValueError(
+                    f"[CHAID|{predictor!r}] valores no tabulables en y: {e}"
+                ) from e
+            k = len(_uniques_y)
+            if weights is None:
+                matrix = np.bincount(
+                    codes * k + codes_y, minlength=c * k
+                ).reshape(c, k).astype(float)
+            else:
+                matrix = np.bincount(
+                    codes * k + codes_y, weights=weights, minlength=c * k
+                ).reshape(c, k)
+        return labels, matrix, counts, tuple(float(e) for e in edges)
+
+    @staticmethod
+    def _premerge_empty_bins(counts: np.ndarray) -> list[tuple[int, ...]]:
+        """Grupos iniciales para un predictor CONTINUOUS binnado.
+
+        Cada bin vacio se pre-fusiona con el bin no vacio inmediatamente
+        superior (el bin mas alto nunca esta vacio: contiene el maximo de
+        x). Determinista y respeta el orden natural de los bins; estas
+        fusiones estructurales CUENTAN dentro de c -> r para el
+        multiplicador de Kass (c es el nº total de bins).
+        """
+        c = len(counts)
+        grupos: list[list[int]] = []
+        pendientes: list[int] = []   # bins vacios a la espera de absorcion
+        for i in range(c):
+            if counts[i] > 0:
+                grupos.append([*pendientes, i])
+                pendientes = []
+            else:
+                pendientes.append(i)
+        if pendientes:               # salvaguarda (no alcanzable: ver docstring)
+            grupos[-1].extend(pendientes)
+        return [tuple(g) for g in grupos]
 
     # ------------------------------------------------------------------
     # algebra sobre grupos (todo opera sobre tabla/suficientes, nunca O(N))

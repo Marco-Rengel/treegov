@@ -213,6 +213,7 @@ WSL (bash):
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
 | **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
 | **Hallazgos UX pendientes** | Ninguno. Todos los hallazgos H1–H8 fueron resueltos entre las fases 3.7.e y 3.10.a. |
+| Agente se detiene o alucina por zona gris | El asistente estratégico debe buscar `# TODO(zona_gris)` en el diff. El agente debió aplicar la opción conservadora y continuar. |
 
 ## Cómo retomar el trabajo
 

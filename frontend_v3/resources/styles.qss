@@ -6,6 +6,10 @@ QWidget {
     font-size: 13px;
 }
 
+QDialog, QWizard {
+    background: $BG;
+}
+
 QFrame#leftPanel, QFrame#hudPanel {
     background: $SURFACE_ELEVATED;
     border: 1px solid $BORDER;
@@ -23,6 +27,12 @@ QSplitter::handle {
 QMenuBar {
     background: $SURFACE;
     border-bottom: 1px solid $BORDER;
+}
+
+QMenuBar::item {
+    background: transparent;
+    color: $FG;
+    padding: 4px 8px;
 }
 
 QMenuBar::item:selected {
@@ -137,6 +147,15 @@ QToolBar {
 QToolBar QToolButton {
     padding: 4px 8px;
     border-radius: 4px;
+}
+
+QToolBar::separator {
+    background: $BORDER;
+}
+
+QToolBar QToolButton {
+    background: transparent;
+    color: $FG;
 }
 
 QToolBar QToolButton:hover {

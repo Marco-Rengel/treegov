@@ -92,6 +92,8 @@ No basta con mencionar el cambio en la conversación, en el mensaje de commit o 
 
 **Referencias cruzadas.** `docs/roadmap.md` ("Recorded architectural decisions: Phase closure documentation: never deferred"), `docs/audit_log.md` entrada del 17/10/2026 (auditoría documental sin entrada en su momento), `docs/audit_log.md` entrada del 20/10/2026 (primer mini-cierre bajo este protocolo), `docs/prompt_para_asistente.md` Sección 11 (Protocolo de Redacción de Prompts).
 
+**Manejo de Zonas Grises en Ráfaga.** Cuando el agente detecte una ambigüedad (zona gris) durante un bloque de prompts seguidos (ráfaga), NO debe detenerse a preguntar (rompe el flujo y la caché). Debe tomar la decisión más conservadora (preservando paridad K=2, sala limpia o inmutabilidad), documentarla con un comentario `# TODO(zona_gris): [descripción]` en el archivo correspondiente, y continuar con la tarea. El asistente estratégico resolverá el TODO en el siguiente turno.
+
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README al subir. Para evitar inflación de versiones por cosmética:
 - **Cambios materiales** (código, defaults, contratos, citas regulatorias): publicar nueva versión inmediatamente.
 - **Cambios cosméticos** (fechas en diagramas, typos, tablas de estado, narrativa): NO publicar nueva versión. Esperar a la próxima release material y documentar la desincronización en `docs/roadmap.md` (sección Deferred).

@@ -70,6 +70,8 @@ Reglas operativas derivadas:
 
 **Refinamiento 11/10/2026.** La regla de ráfaga se refuerza: una sub-fase COMPLETA se manda en ráfaga (todos los prompts seguidos), y se verifica UNA sola vez al final. Enviar prompts de uno en uno con verificación intermedia rompe la caché y multiplica el coste. El desglose del Product Bill del 11/10/2026 confirma que la caché de Moonshot está operando al 93.8% de tokens servidos desde caché, y que los levers reales son: (1) respuestas cortas del modelo (output), (2) prompts quirúrgicos (input fresco), (3) no romper el TTL de 5 minutos con pausas largas. El tamaño del prefijo cacheado ya no es un lever significativo.
 
+**Zonas grises.** No detenerse a preguntar ante ambigüedades. Tomar la decisión más conservadora, dejar un `# TODO(zona_gris): [detalle]` en el código y continuar. El humano revisará el TODO al final del bloque.
+
 ## Comentarios y docs
 
 - Código: docstrings y comentarios en **inglés**.

@@ -138,7 +138,25 @@ def predict_leaf_assignment(
         cfg = nd.split
         assert cfg is not None
         col = X[cfg.predictor]
-        if cfg.threshold is not None:
+        if cfg.bin_edges:
+            # H14 (Fase 3.10.b): routing OOS/OOT por rangos numericos.
+            # np.digitize asigna cada fila a un bin 0..len(edges) y cada
+            # bin se mapea a su rama via las etiquetas "bin_i" de
+            # cfg.branches (misma convencion que TreeBuilder._partition).
+            # NaN -> sin ruta (-1); un bin sin rama (no deberia ocurrir:
+            # el motor cubre todos los bins) tambien queda sin ruta.
+            vals = col.iloc[idx].to_numpy(dtype=float)
+            valido = ~pd.isna(vals)
+            rama_map = np.full(len(cfg.bin_edges) + 1, -1, dtype=int)
+            for j, grupo in enumerate(cfg.branches or ()):
+                for lbl in grupo:
+                    rama_map[int(str(lbl)[4:])] = j
+            idx_val = idx[valido]
+            rama_fila = rama_map[np.digitize(vals[valido], cfg.bin_edges)]
+            for j, cid in enumerate(nd.child_ids):
+                cola.append((cid, idx_val[rama_fila == j]))
+            # NaN y bins sin rama quedan sin ruta (se resuelven abajo)
+        elif cfg.threshold is not None:
             vals = col.iloc[idx].to_numpy(dtype=float)
             valido = ~pd.isna(vals)  # NaN -> sin ruta
             izq = valido & (vals <= float(cfg.threshold))

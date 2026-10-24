@@ -84,6 +84,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   en estado pre-sincronización; los 3 commits posteriores de
   README solo se ven en GitHub, no en PyPI. Se resolvió
   publicando 1.0.0a4.
+- **Manejo de zonas grises en ráfaga.** Cuando el agente de código (OpenCode/Kimi) detecte una ambigüedad durante una ráfaga, no debe detenerse. Debe tomar la opción conservadora, dejar un `# TODO(zona_gris): [detalle]` en el código y continuar. El asistente estratégico (tú) es el responsable de leer esos TODO y resolverlos en el siguiente prompt.
 
 ---
 

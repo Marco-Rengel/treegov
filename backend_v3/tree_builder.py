@@ -605,7 +605,25 @@ class TreeBuilder:
         se detecta aqui (p. ej. NaN residual no imputado).
         """
         col = X[cfg.predictor]
-        if cfg.threshold is not None:
+        if cfg.bin_edges:
+            # H14 (Fase 3.10.b): routing por rangos numericos. np.digitize
+            # asigna cada fila a un bin 0..len(edges) y cada bin se mapea a
+            # su rama via las etiquetas "bin_i" de cfg.branches (las ramas
+            # llegan ya fusionadas del motor: una parte por RAMA, no por
+            # bin; la guarda de integridad de abajo detecta huerfanos).
+            # TODO(zona_gris): el prompt pedia una parte por BIN
+            # (range(len(bin_edges)+1)); eso desincronizaria el arbol de
+            # cfg.branches/cfg.child_ns. Resolver si se prefiere otra cosa.
+            vals = col.iloc[idx].to_numpy(dtype=float)
+            bin_idx = np.digitize(vals, cfg.bin_edges)
+            n_bins = len(cfg.bin_edges) + 1
+            mapa = np.full(n_bins, -1, dtype=int)
+            ramas = cfg.branches or ()
+            for j, grupo in enumerate(ramas):
+                for lbl in grupo:
+                    mapa[int(str(lbl)[4:])] = j
+            partes = [idx[mapa[bin_idx] == j] for j in range(len(ramas))]
+        elif cfg.threshold is not None:
             vals = col.iloc[idx].to_numpy(dtype=float)
             izq = vals <= float(cfg.threshold)
             partes = [idx[izq], idx[~izq]]

@@ -145,10 +145,7 @@ def _fmt_pct(x: float) -> str:
 
 
 def _node_label(node: TreeNode) -> str:
-    """Returns an HTML string for the node box."""
-    def pct(x: float) -> str:
-        return f"{float(x) * 100:.1f}%"
-
+    """Returns an HTML string for the node box (classic structure)."""
     # 1. Header
     if node.is_leaf:
         pd = node.pd_final[0]
@@ -161,61 +158,54 @@ def _node_label(node: TreeNode) -> str:
 
     header_html = f"<div style='background-color:{color}; color:#FFFFFF; font-weight:bold; text-align:center; padding:2px; border-top-left-radius:4px; border-top-right-radius:4px;'>{header_text}</div>"
 
-    # 2. Body (mini bar)
-    # We assume binary for the mini-bar display (target class vs rest)
+    # 2. Class table: Categoría | % | n (canonical class order)
+    rows: list[str] = []
+    for c, label in enumerate(node.class_labels):
+        k_c = node.n_events[c] if c < len(node.n_events) else 0
+        p_c = node.pd_final[c] if c < len(node.pd_final) else 0.0
+        rows.append(
+            f"<tr><td>{label}</td>"
+            f"<td style='text-align:right;'>{float(p_c) * 100:.1f}%</td>"
+            f"<td style='text-align:right;'>{k_c}</td></tr>"
+        )
+    table_html = (
+        '<table style="width:100%; border-collapse: collapse; font-size:10px;">'
+        "<tr><th>Categoría</th><th>%</th><th>n</th></tr>"
+        + "".join(rows)
+        + "</table>"
+    )
+
+    # 3. Thin proportion bar (target class vs rest)
     ev = node.n_events[0] if node.n_events else 0
     n = node.n if node.n > 0 else 1
     ev_pct = ev / n
-    good_pct = 1.0 - ev_pct
 
-    # Mini bar using inline spans
     bar_w = 160
     red_w = int(ev_pct * bar_w)
     green_w = bar_w - red_w
 
     bar_html = f"""
     <div style='margin-top:4px; margin-bottom:4px;'>
-        <span style='background-color:#D32F2F; display:inline-block; width:{red_w}px; height:8px;'></span>
-        <span style='background-color:#2E7D32; display:inline-block; width:{green_w}px; height:8px;'></span>
+        <span style='background-color:#D32F2F; display:inline-block; width:{red_w}px; height:4px;'></span>
+        <span style='background-color:#2E7D32; display:inline-block; width:{green_w}px; height:4px;'></span>
     </div>
     """
 
-    # 3. Metrics
+    # 4. Footer: Gini · p-value · n (grey)
     # Gini calculated purely for display (pandas-free)
     gini = 1.0 - sum(p**2 for p in node.pd_final) if node.pd_final else 0.0
     p_val = node.split.p_value if node.split and node.split.p_value is not None else None
-    stat = node.split.statistic if node.split else None
+    p_str = f"{p_val:.3g}" if p_val is not None else "—"
 
-    metrics_parts = [f"n={node.n} · ev={ev}"]
-    if stat is not None:
-        metrics_parts.append(f"stat={stat:.3g}")
-    if p_val is not None:
-        metrics_parts.append(f"p={p_val:.3g}")
-    metrics_parts.append(f"G={gini:.3f}")
+    footer_html = f"<div style='font-size:10px; color:#888888; text-align:center;'>Gini={gini:.3f} · p={p_str} · n={node.n}</div>"
 
-    metrics_str = " · ".join(metrics_parts)
-    metrics_html = f"<div style='font-size:10px; color:#888888; text-align:center;'>{metrics_str}</div>"
-
-    # 4. Rule description
-    if not node.is_leaf and node.split:
-        s = node.split
-        if s.threshold is not None:
-            rule_text = f"x ≤ {s.threshold:.4g}"
-        else:
-            rule_text = f"{len(s.branches or ())} groups"
-    else:
-        rule_text = tr(f"tree_leaf_reason_{node.leaf_reason}") if node.is_leaf else ""
-
-    rule_html = f"<div style='font-size:11px; text-align:center; margin-top:2px;'>{rule_text}</div>"
-
-    # Combine
+    # Combine (transparent background so the NodeItem rect paints through)
     return f"""
-    <div style='width:{NODE_W-4}px;'>
+    <div style='width:{NODE_W-4}px; background: transparent; color: #E6E6E6; font-family: sans-serif;'>
         {header_html}
-        <div style='text-align:center; font-size:11px; margin-top:2px;'>{pct(node.pd_final[0])} PD</div>
+        {table_html}
         {bar_html}
-        {metrics_html}
-        {rule_html}
+        {footer_html}
     </div>
     """
 
@@ -490,8 +480,8 @@ class TreeView(QGraphicsView):
             return
         self.resetTransform()
         self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
-        self._zoom = self.transform().m11()
-        self.zoom_changed.emit(self._zoom)
+        # H12: the fitted factor must respect [ZOOM_MIN, ZOOM_MAX]
+        self._set_zoom(self.transform().m11())
 
     def _set_zoom(self, factor: float) -> None:
         self._zoom = max(ZOOM_MIN, min(ZOOM_MAX, float(factor)))

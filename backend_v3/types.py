@@ -105,6 +105,9 @@ class SplitConfig:
     threshold: float | None = None
     branches: tuple[tuple[Hashable, ...], ...] | None = None
     impurity_gain: float | None = None
+    # Fase 3.10.b (H14): cortes del binning automatico de predictores
+    # continuos en CHAID (deciles). () = split categorico clasico.
+    bin_edges: tuple[float, ...] = ()
 
     # ---------------- validaciones estructurales ----------------
 
@@ -215,6 +218,24 @@ class SplitConfig:
           f"{head} len(child_ns)={len(self.child_ns)} != nº ramas={expected_k}")
         r(sum(int(c) for c in self.child_ns) <= int(self.parent_n),
           f"{head} sum(child_ns)={sum(self.child_ns)} excede parent_n={self.parent_n}")
+
+        # --- bin_edges: binning automatico de continuas (Fase 3.10.b) ---
+        r(isinstance(self.bin_edges, tuple),
+          f"{head} bin_edges debe ser tuple: {type(self.bin_edges).__name__!r}")
+        es: list[float] = []
+        for e in self.bin_edges:
+            r(isinstance(e, Real) and not isinstance(e, bool),
+              f"{head} bin_edges debe contener reales: {e!r}")
+            fe = float(e)
+            r(math.isfinite(fe), f"{head} bin_edges no finito: {e!r}")
+            es.append(fe)
+        r(all(es[i] < es[i + 1] for i in range(len(es) - 1)),
+          f"{head} bin_edges debe ser estrictamente creciente: {self.bin_edges!r}")
+        if self.bin_edges:
+            r(isinstance(self.method, str) and self.method.startswith("CHAID"),
+              f"{head} bin_edges solo aplica a CHAID (binning de continuas)")
+            r(self.branches is not None,
+              f"{head} bin_edges exige branches (routing por rangos)")
 
     @staticmethod
     def _require(cond: bool, msg: str) -> None:

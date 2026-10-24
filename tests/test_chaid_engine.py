@@ -539,12 +539,16 @@ def test_best_split():
 
 def test_guards():
     eng = _engine()
-    _assert_raises(
-        ValueError, eng.evaluate,
+    # Fase 3.10.b (H14): CONTINUOUS ya no lanza ValueError; el binning
+    # automatico por deciles produce un SplitConfig valido o None.
+    cfg_cont = eng.evaluate(
         pd.Series([1, 2, 3, 4]), pd.Series([0, 1, 0, 1]),
         predictor="pc", predictor_type=PredictorType.CONTINUOUS,
         target_type=_BINARY,
     )
+    assert cfg_cont is None or isinstance(cfg_cont, SplitConfig)
+    if cfg_cont is not None:
+        assert len(cfg_cont.bin_edges) > 0
     _assert_raises(
         ValueError, eng.evaluate,
         pd.Series(["a", "b"]), pd.Series([0, 1, 0]),
