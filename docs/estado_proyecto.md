@@ -303,6 +303,10 @@ compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío),
 y las sub-fases 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles
 Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e
 Interactividad). Diseño: `docs/3.11_design_interactive_tree.md`.
+As-built de la 3.11.a: `docs/3.11.a_design_colab_theme.md`. Diseños de
+las fases previas con estado as-built: `docs/3.10.a_design_ux_ui_redesign.md`
+(antes `3.10_design_ux_redesign.md`) y `docs/3.10.b_design_chaid_binning.md`
+(antes `3.10.b_design_chaid_continuous.md`), renombrados el 24/10/2026.
 
 ### Cierre intermedio 16/10/2026
 
@@ -329,7 +333,8 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`) ✅ Completada (20/10/2026).
 - **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). ✅ Completada (22/10/2026).
 - **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). ✅ Completada (23/10/2026).
-- **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. ✅ Completada (24/10/2026).
+- **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
+- **Fase 3.11.a.1** — Hotfix Visual: Toolbar compacta, Wizard Dark/Light, Paso 3 (holdout) modernizado, Nodos sin espacio vacío. 🟡 En progreso.
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP

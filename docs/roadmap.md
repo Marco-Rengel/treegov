@@ -369,7 +369,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 ### 🟡 Phase 3.11 — Rediseño Interactivo y Topología Visual
 **Status**: 🟡 En progreso (iniciada el 24/10/2026). Diseño: `docs/3.11_design_interactive_tree.md`. Recoge lo diferido desde 3.10.b (interactividad visual).
 
-- **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026).
+- **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
 - **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ⏳ Pendiente.
 - **3.11.b** Tree Map y Data Viewer. ⏳ Pendiente.
 - **3.11.c** Árboles Univariados y Matriz de Costos. ⏳ Pendiente.
@@ -568,9 +568,9 @@ Detalle completo en docs/audit_log.md entrada del 16/10/2026.
 ### ✅ Phase 3.10.b — Alineación CHAID Continuas
 **Priority: MEDIUM (closed 23/10/2026).**
 
-Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos: binning automático por deciles (10 cortes, 11 bins, `np.quantile` + `np.digitize`), nuevo campo `bin_edges` en `SplitConfig`, y routing por rangos numéricos en `TreeBuilder._partition` y `validation.predict_leaf_assignment`. Diseño en `docs/3.10.b_design_chaid_continuous.md`; cierre en `docs/audit_log.md` entrada del 23/10/2026.
+Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos: binning automático por cuantiles (10 cortes, hasta 11 bins, `np.quantile` + `np.digitize`), nuevo campo `bin_edges` en `SplitConfig`, y routing por rangos numéricos en `TreeBuilder._partition` y `validation.predict_leaf_assignment`. Diseño (con estado as-built §4) en `docs/3.10.b_design_chaid_binning.md` (renombrado el 24/10/2026 desde `docs/3.10.b_design_chaid_continuous.md`); cierre en `docs/audit_log.md` entrada del 23/10/2026.
 
-**Diferido a la Fase 3.11:** la interactividad visual (Tree Map, menú contextual) y el panel inferior de cortes candidatos (WOE/IV/Odds) descrito originalmente para esta sub-fase en `docs/3.10_design_ux_redesign.md` §0.2.
+**Diferido a la Fase 3.11:** la interactividad visual (Tree Map, menú contextual) y el panel inferior de cortes candidatos (WOE/IV/Odds) descrito originalmente para esta sub-fase en `docs/3.10.a_design_ux_ui_redesign.md` §0.2 (renombrado el 24/10/2026 desde `docs/3.10_design_ux_redesign.md`).
 
 ### ⏳ Barra superior con iconos detallados (estilo clásico 2001)
 **Priority: LOW (registered 24/10/2026).**

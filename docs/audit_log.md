@@ -5560,3 +5560,36 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 441/441 PASSED (sin cambios de código).
 
 **Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (creación del documento de referencia; corrección de gobernanza); `docs/3.11_classic_tree_ui_reference.md`.
+
+---
+
+### 24/10/2026 — Mini-cierre: alineación retroactiva de archivos de diseño (Fases 3.10.a, 3.10.b, 3.11.a) y saneamiento documental
+
+**Estado**: ✅ Cerrada. Documentación pura (renombres + un archivo nuevo + sincronización de 8 documentos; sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Contexto y discrepancia de premisa (registrada por transparencia)**: el prompt de la tarea asumía que faltaban los archivos de diseño de las fases 3.10.a/3.10.b/3.11.a, que el README estaba desactualizado y que el playbook tenía una "tabla de fases que termina en 3.9" (invocaba una "Regla 5 (Playbook)"). Verificación empírica previa: (a) los diseños existían como `docs/3.10_design_ux_redesign.md` y `docs/3.10.b_design_chaid_continuous.md`, y la 3.11.a estaba cubierta por `docs/3.11_design_interactive_tree.md`; (b) los READMEs ya estaban en v1.0.0rc4 / 441/441 con las filas 3.10.a, 3.10.b y 3.11.a; (c) `docs/playbook.md` no contiene tabla de fases ni "Regla 5" (tiene Skills 1-3). Decisión conservadora (regla de zonas grises en ráfaga): NO crear duplicados bifurcados; en su lugar, renombrar los archivos existentes a los nombres canónicos pedidos (git detecta el rename al commitear), crear solo el archivo genuinamente ausente (as-built 3.11.a) y añadir al playbook el registro fase→archivo que la tarea pedía.
+
+**Artefactos (por ruta exacta)**:
+
+1. `docs/3.10_design_ux_redesign.md` → **`docs/3.10.a_design_ux_ui_redesign.md`** (renombrado). Status → ✅ Completada (22/10/2026) + nueva §5 "Estado implementado (as-built, verificado 24/10/2026)" con referencias archivo:línea: toolbar `main_window.py:309-349` (icon-only desde 3.11.a), nodos H4 `tree_view.py:154-256`, HUD derecho (acotado 200-400 px en 3.11.a), tema H8 `theme.py:39-51` (divergencia `SURFACE_ELEVATED #2D2D2D` vs `#333333` del diseño, superseded por §17), H3 `wizard.py:283-290` (tooltips hardcodeados EN → TODO(zona_gris) para 3.11.a.1), H5 `wizard.py:695-699`, H7 `reports_panel.py`.
+2. `docs/3.10.b_design_chaid_continuous.md` → **`docs/3.10.b_design_chaid_binning.md`** (renombrado). Status → ✅ Completada (23/10/2026) + nueva §4 as-built: hotfix H9/H11-H13 (`styles.qss`, `app.py:35-36`, `tree_view.py:99,536-548`, `tree_view.py:154-256`); binning `chaid_engine.py:598-599` (cuantiles internos de `np.linspace(0,1,12)` → 10 cortes, hasta 11 bins; divergencia documentada: el diseño decía "deciles"); `_premerge_empty_bins` (`chaid_engine.py:632-653`); `bin_edges` (`types.py:108-110`, validación `types.py:222-238`); routing por rama (`tree_builder.py:608-625`) y espejo OOS (`validation.py:141-155`); cuantiles no ponderados (deuda registrada); TODO(zona_gris) vivos (`chaid_engine.py:234-237` CONT→ORDINAL; `tree_builder.py:614-616` rama vs bin). **Hallazgo**: la entrada del 23/10/2026 afirmaba "Nuevo test de routing por `bin_edges`"; verificación empírica: el único hit de `bin_edges` en `tests/` es `test_chaid_engine.py:551`. Hueco registrado con TODO(zona_gris) en §4.3.
+3. **`docs/3.11.a_design_colab_theme.md`** (NUEVO, as-built 3.11.a): paleta Colab light/dark con los 13 tokens y valores hex verificados (`theme.py:22-53`), fail-fast (`theme.py:65-76`), Fusion (`app.py:35-36`), pestañas Excel (`main_window.py:396-404`), splitter de tres zonas y HUD acotado (`main_window.py:351-418`), wizard redimensionado (`wizard.py:946-948` + banner `wizard.py:86-88`), nodos HTML estación clásica (`tree_view.py:154-256, 351-384`), claves i18n (`i18n.py:324-331, 641-648`), tests, y §7 de divergencias as-built (sin iconos SVG, fila Total sin `pct_global`, sin líneas surrogate punteadas, sin caché de `QTextDocument`, tooltips H3 sin i18n, panel izquierdo sin Explorer/TreeMap/DataViewer) cada una con su TODO(zona_gris) y asignación a 3.11.a.1 o sub-fases posteriores.
+4. `docs/3.11_design_interactive_tree.md` §8: referencia actualizada al renombrado 3.10.a + nueva viñeta al as-built 3.11.a.
+5. `docs/playbook.md`: nuevo **Skill 4 — Registro de archivos de diseño por fase** (tabla fase→archivo canónico→estado, 3.1 a 3.11.d; incluye 3.10.a, 3.10.b, 3.11.a ✅ y 3.11.a.1 🟡). Cubre lo que la tarea llamaba "tabla de fases del playbook" (inexistente hasta hoy).
+6. `README.md` / `README.es.md`: fila **3.11.a.1** (In progress / En progreso) en la tabla de fases; nodo Mermaid de estado con "🔧 Focus/Foco: Hotfix Visual 3.11.a.1"; árbol de `docs/` ampliado con los cinco archivos de diseño/referencia de 3.10-3.11 (el listado terminaba en 3.9).
+7. `docs/roadmap.md`: sección 3.11 enlaza el as-built `docs/3.11.a_design_colab_theme.md`; bloque 3.10.b actualizado a los nombres renombrados (con nota de renombre y precisión "cuantiles… hasta 11 bins").
+8. `docs/estado_proyecto.md`: bloque narrativo 3.11 enlaza los tres documentos canónicos; lista de fases gana la fila **3.11.a.1** 🟡 En progreso.
+9. `docs/contexto_para_nueva_sesion.md`: corregido el aviso OBSOLETO "todo el trabajo de la 3.11 está en el working tree PENDIENTE DE COMMIT (último commit 8af1b73)" → commiteado en `a85f4e9`; añadida la nota de renombres. **Hallazgo adicional**: el mismo párrafo afirmaba "Deuda diferida a 1.0.0 estable: tags `a1`–`a6` ausentes", contradicho por la propia sección "Tags de git" del documento y por `estado_proyecto.md` (RESUELTO 21/10/2026). Verificación empírica con `git show-ref --tags`: los tags v1.0.0a1–a6, rc1, rc2 y rc4 existen. Corregido.
+10. `docs/prompt_para_asistente.md` (Sección de estado): misma corrección del aviso de commit obsoleto + listado de archivos de diseño canónicos.
+
+**Checklist de 8 documentos**: (1) `audit_log.md` —esta entrada—; (2) `roadmap.md` ✔; (3) `estado_proyecto.md` ✔ (441/441 ya vigente; narrativa 3.11 actualizada); (4) `contexto_para_nueva_sesion.md` ✔; (5) `prompt_para_asistente.md` ✔; (6) `README.md`/`README.es.md` ✔; (7) `docs/api.md` —NO APLICA: sin cambios de API (superficie `bin_edges` ya documentada en `api.md` línea 13 desde el cierre 3.10.b)—; (8) `docs/design_decisions.md` —NO APLICA: sin nuevos defaults ni contratos (§16 cubre 3.10.b, §17 cubre 3.11.a)—.
+
+**Nota de trazabilidad sobre los renombres**: las entradas históricas de este audit_log anteriores al 24/10/2026 citan `docs/3.10_design_ux_redesign.md` y `docs/3.10.b_design_chaid_continuous.md`; ambas refieren a los mismos documentos hoy renombrados (registro inmutable: no se reescriben las entradas históricas). Los documentos vivos (`roadmap.md`, `3.11_design_interactive_tree.md`) sí se actualizaron a los nombres nuevos.
+
+**Tests**: 441/441 PASSED (sin cambios de código; renombres y ediciones solo en `docs/` y READMEs).
+
+**Referencias**: `docs/playbook.md` Skill 1 y Skill 4; AGENTS.md (mini-cierre de documentación pura; manejo de zonas grises en ráfaga); `docs/audit_log.md` entradas del 22-24/10/2026 (cierres 3.10.a, 3.10.b, 3.11.a).

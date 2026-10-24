@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.a completas<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 441 / 441 tests PASSED<br/>📅 24 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.a completas<br/>🔧 Foco: Hotfix Visual 3.11.a.1<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 441 / 441 tests PASSED<br/>📅 24 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -152,6 +152,11 @@ TreeGov/
 │   ├── 3.7_design_pre_release_fixes.md  # Diseño Fase 3.7 (EN)
 │   ├── 3.8_design_regulatory_attribution.md  # Diseño Fase 3.8 (EN)
 │   ├── 3.9_design_interactive_weighted_pruning.md  # Diseño Fase 3.9 (EN)
+│   ├── 3.10.a_design_ux_ui_redesign.md  # Diseño Fase 3.10.a + as-built (EN)
+│   ├── 3.10.b_design_chaid_binning.md  # Diseño Fase 3.10.b + as-built (EN)
+│   ├── 3.11_design_interactive_tree.md  # Diseño Fase 3.11 (EN)
+│   ├── 3.11.a_design_colab_theme.md  # As-built Fase 3.11.a (EN)
+│   ├── 3.11_classic_tree_ui_reference.md  # Referencia visual de estación de árboles clásica, circa 2001 (ES)
 │   ├── validation_results_3.6.md  # Informe de validación UCI (EN)
 │   ├── security_audit.md      # Auditoría de seguridad y privacidad (EN)
 │   ├── playbook.md          # Playbook de gobernanza (EN)
@@ -254,6 +259,7 @@ TreeGov/
 | **3.10.a** | Rediseño UX/UI: Toolbar, nodos enriquecidos, panel derecho, jerarquía de tema oscuro (H3-H8) | Completada |
 | **3.10.b** | Alineación CHAID con continuas: binning automático por deciles, `bin_edges` en `SplitConfig`, routing por `np.digitize` (H14) + hotfix visual (H9, H11-H13) | Completada |
 | **3.11.a** | Rediseño Base: Tema Colab, pestañas tipo Excel a página completa, Wizard redimensionado, nodos HTML estilo estación clásica | Completada |
+| **3.11.a.1** | Hotfix Visual: Toolbar compacta, Wizard en tema claro/oscuro, Paso 3 (holdout) modernizado, nodos HTML sin espacio vacío | En progreso |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |

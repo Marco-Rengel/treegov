@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a complete<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 441 / 441 tests PASSED<br/>📅 Oct 24, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a complete<br/>🔧 Focus: Visual Hotfix 3.11.a.1<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 441 / 441 tests PASSED<br/>📅 Oct 24, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -152,6 +152,11 @@ TreeGov/
 │   ├── 3.7_design_pre_release_fixes.md  # Phase 3.7 design (EN)
 │   ├── 3.8_design_regulatory_attribution.md  # Phase 3.8 design (EN)
 │   ├── 3.9_design_interactive_weighted_pruning.md  # Phase 3.9 design (EN)
+│   ├── 3.10.a_design_ux_ui_redesign.md  # Phase 3.10.a design + as-built (EN)
+│   ├── 3.10.b_design_chaid_binning.md  # Phase 3.10.b design + as-built (EN)
+│   ├── 3.11_design_interactive_tree.md  # Phase 3.11 design (EN)
+│   ├── 3.11.a_design_colab_theme.md  # Phase 3.11.a as-built (EN)
+│   ├── 3.11_classic_tree_ui_reference.md  # Classic tree-station visual reference, circa 2001 (ES)
 │   ├── validation_results_3.6.md  # UCI validation report (EN)
 │   ├── security_audit.md      # Security and privacy audit (EN)
 │   ├── playbook.md          # Governance playbook (EN)
@@ -254,6 +259,7 @@ TreeGov/
 | **3.10.a** | UX/UI Redesign: Toolbar, enriched tree nodes, right panel, dark theme hierarchy (H3-H8) | Completed |
 | **3.10.b** | CHAID continuous alignment: automatic decile binning, `bin_edges` in `SplitConfig`, `np.digitize` routing (H14) + visual hotfix (H9, H11-H13) | Completed |
 | **3.11.a** | Base Redesign: Colab theme, Excel-style full-page tabs, resized Wizard, classic tree-station HTML nodes | Completed |
+| **3.11.a.1** | Visual Hotfix: compact Toolbar, Wizard Dark/Light themes, modernized Holdout step (Wizard step 3), HTML nodes without empty space | In progress |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |

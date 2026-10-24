@@ -35,3 +35,25 @@
 2. El prompt debe llevar `[Nivel: max]`.
 3. El agente (Kimi) debe revisar empíricamente (leyendo el código) que se cumplen los invariantes matemáticos y de gobernanza.
 4. Si detecta fallos, los reporta y no se commitea hasta corregirlos.
+
+## Skill 4: Registro de archivos de diseño por fase (compliance del Skill 1)
+
+**Regla de oro:** Cada fase o sub-fase con código implementado tiene exactamente UN archivo de diseño canónico en `docs/`. La tabla siguiente es la fuente de verdad del mapeo fase → archivo; se actualiza en el mismo bloque que cierra la sub-fase (regla "Phase closure documentation: never deferred"). Si el archivo documenta el estado as-built, lleva una sección "Estado implementado (as-built)" con referencias `archivo:línea` verificadas contra el código.
+
+| Fase | Archivo de diseño canónico | Estado |
+|---|---|---|
+| **3.1** | `docs/3.1_design_multiclass.md` | ✅ Completed |
+| **3.2** | `docs/3.2_decisions_consolidated.md` | ✅ Completed |
+| **3.3** | `docs/3.3_design_population_categories.md` | ✅ Completed |
+| **3.4** | `docs/3.4_design_multiclass_crt_quest.md` | ✅ Completed |
+| **3.5** | `docs/3.5_design_multiclass_weighted_reports.md` | ✅ Completed |
+| **3.6** | `docs/3.6_design_public_datasets.md` | ✅ Completed |
+| **3.7** | `docs/3.7_design_pre_release_fixes.md` | ✅ Completed |
+| **3.8** | `docs/3.8_design_regulatory_attribution.md` | ✅ Completed |
+| **3.9** | `docs/3.9_design_interactive_weighted_pruning.md` | ✅ Completed |
+| **3.10.a** | `docs/3.10.a_design_ux_ui_redesign.md` | ✅ Completed (22/10/2026; as-built §5) |
+| **3.10.b** | `docs/3.10.b_design_chaid_binning.md` | ✅ Completed (23/10/2026; as-built §4) |
+| **3.11 (fase)** | `docs/3.11_design_interactive_tree.md` + referencia visual `docs/3.11_classic_tree_ui_reference.md` | 🟡 En progreso |
+| **3.11.a** | `docs/3.11.a_design_colab_theme.md` (as-built) | ✅ Completed (24/10/2026) |
+| **3.11.a.1** | Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío); especificación en `docs/3.11_classic_tree_ui_reference.md` | 🟡 En progreso |
+| **3.11.b–d** | Pendiente de diseño propio; alcance previsto en `docs/3.11_design_interactive_tree.md` §6 | ⏳ Pendiente |

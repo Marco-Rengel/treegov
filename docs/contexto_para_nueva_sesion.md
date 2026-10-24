@@ -304,15 +304,21 @@ documental.
 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página
 completa, Wizard redimensionado con banner de título, Nodos HTML
 estación clásica, HUD acotado y colapsable) quedó cerrada el 24/10/2026 con
-suite 441/441. **Aviso para la próxima sesión:** todo el trabajo de la
-3.11 (código + docs) está en el working tree PENDIENTE DE COMMIT
-(último commit: `8af1b73`, cierre 3.10); verificar con `git status`
-antes de editar. Después del hotfix siguen 3.11.b (Tree Map y Data
+suite 441/441. Todo el trabajo de la 3.11.a (código + docs) está
+commiteado (último commit: `a85f4e9`, cierre documental 3.11.a);
+verificar con `git status` antes de editar. Los archivos de diseño de
+las fases recientes quedaron alineados el 24/10/2026:
+`docs/3.10.a_design_ux_ui_redesign.md` (antes `3.10_design_ux_redesign.md`),
+`docs/3.10.b_design_chaid_binning.md` (antes `3.10.b_design_chaid_continuous.md`)
+y `docs/3.11.a_design_colab_theme.md` (nuevo, as-built). Después del
+hotfix siguen 3.11.b (Tree Map y Data
 Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d
 (Menú Contextual e Interactividad). En paralelo sigue la recogida de
 feedback de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs
-críticos, publicación de `1.0.0` estable. Deuda diferida a 1.0.0
-estable: tags `a1`–`a6` ausentes. Fase 3.6.e (modo no-bancario
+críticos, publicación de `1.0.0` estable. (La deuda de tags `a1`–`a6`
+quedó RESUELTA el 21/10/2026: los tags existen y apuntan a commits
+válidos —verificado con `git show-ref --tags`; ver la sección "Tags de
+git" de este mismo documento.) Fase 3.6.e (modo no-bancario
 extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
