@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 23/10/2026
+**Fecha de última actualización:** 24/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 438/438 PASSED
+**Suite de tests:** 441/441 PASSED
 
 ## Entorno de desarrollo
 
@@ -281,7 +281,7 @@ quemada por un conflicto de inmutabilidad en PyPI: se subió solo con
 los cambios de D13). El README de PyPI está sincronizado con el
 repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
 
-## Próximos pasos (Fase 3.6 — Validación con datasets públicos)
+## Próximos pasos (Fase 3.11 — Rediseño Interactivo y Topología Visual)
 
 > **Estado intermedio (mañana).** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con *datasets* públicos: German Credit, UCI).
 
@@ -299,18 +299,21 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso:** la **Fase 3.11 (Interactividad Avanzada y Tree Map)**
-es el siguiente hito: recoge el diferido de la 3.10.b (Tree Map, menú
-contextual y panel inferior de cortes candidatos con WOE/IV/Odds).
-La 3.10.b (23/10/2026) cerró el hotfix visual (H9, H11-H13) y la
-alineación CHAID con continuas (H14: binning por deciles, `bin_edges`,
-routing por `np.digitize`). En paralelo sigue la recogida de feedback
-de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs críticos,
-publicación de `1.0.0` estable. D13 (métricas ponderadas en gains
-table binaria) fue resuelta el 20/10/2026. La deuda de la poda quedó
-resuelta con la Fase 3.9 (GUI `PruneDialog` + poda ponderada,
-20/10/2026). Deuda diferida a 1.0.0 estable: tags `a1`–`a6` ausentes.
-Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
+**Próximo paso inmediato (24/10/2026):** el **Hotfix Visual 3.11.a.1**
+(corregir toolbar, wizard tema claro/oscuro, paso 3, nodos). La Fase
+3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página
+completa, Wizard redimensionado con banner de título, Nodos HTML
+estación clásica, HUD acotado y colapsable) quedó cerrada el 24/10/2026 con
+suite 441/441. **Aviso para la próxima sesión:** todo el trabajo de la
+3.11 (código + docs) está en el working tree PENDIENTE DE COMMIT
+(último commit: `8af1b73`, cierre 3.10); verificar con `git status`
+antes de editar. Después del hotfix siguen 3.11.b (Tree Map y Data
+Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d
+(Menú Contextual e Interactividad). En paralelo sigue la recogida de
+feedback de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs
+críticos, publicación de `1.0.0` estable. Deuda diferida a 1.0.0
+estable: tags `a1`–`a6` ausentes. Fase 3.6.e (modo no-bancario
+extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
 (a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.

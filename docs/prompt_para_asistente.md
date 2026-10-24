@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 22/10/2026
+**Última actualización:** 24/10/2026
 
 ---
 
@@ -109,7 +109,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 438/438 PASSED.
+- **Suite de tests:** 441/441 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -170,7 +170,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 23/10/2026:** Fases 0 a 3.10.b cerradas. Suite 438/438. Fase 3.10.a (Rediseño Visual UI: toolbar, nodos enriquecidos con HTML, panel QGroupBox, tema oscuro VS Code Dark+) completada el 22/10/2026; hotfix visual 3.10.a.1 (H9, H11-H13) y Fase 3.10.b (alineación CHAID con continuas, H14: binning por deciles + `bin_edges` + routing `np.digitize`) cerradas el 23/10/2026. Todos los hallazgos UX (H1-H14) resueltos. Próximo paso: Fase 3.11 (Interactividad Avanzada y Tree Map) o recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Tags a1-a6 verificados.
+- **Estado al 24/10/2026:** Fases 0 a 3.11.a cerradas. Suite 441/441. Próximo paso: Hotfix 3.11.a.1 (corregir toolbar, wizard tema claro/oscuro, paso 3, nodos). La 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página completa, Wizard redimensionado con banner de título, Nodos HTML estación clásica, HUD acotado y colapsable) cerró el 24/10/2026; después siguen 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e Interactividad). **Todo el trabajo de la 3.11 está en el working tree pendiente de commit** (último commit: `8af1b73`, cierre 3.10); verificar con `git status` antes de editar. En paralelo, recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. Ver `docs/roadmap.md` sección 3.11 y `docs/audit_log.md` entradas del 24/10/2026.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---

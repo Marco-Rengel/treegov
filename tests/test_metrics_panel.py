@@ -94,17 +94,23 @@ def test_metrics_panel_retranslate():
     panel.deleteLater()
 
 
-def test_mainwindow_has_four_tabs():
+def test_mainwindow_main_tabs():
     _get_app()
     w = MainWindow()
-    tabs = w._tabs
+    tabs = w._main_tabs
     assert tabs is not None
-    assert tabs.count() == 4, f"expected 4 tabs, got {tabs.count()}"
-    assert tabs.tabText(3) == tr("tab_reports_title")
-    # Tab indices: 0=Welcome, 1=Model tree, 2=OOS/OOT, 3=Reports
-    assert tabs.tabText(0) == tr("tab_welcome_title")
-    assert tabs.tabText(1) == tr("tab_tree_title")
-    assert tabs.tabText(2) == tr("tab_oos_oot_title")
+    assert tabs.count() == 5, f"expected 5 tabs, got {tabs.count()}"
+    # Tab indices: 0=Tree, 1=Gains, 2=Risks, 3=Rules, 4=Summary
+    # (Excel-style sheets filling the central area)
+    assert tabs.tabText(0) == tr("tab_tree")
+    assert tabs.tabText(1) == tr("tab_gains")
+    assert tabs.tabText(2) == tr("tab_risks")
+    assert tabs.tabText(3) == tr("tab_rules")
+    assert tabs.tabText(4) == tr("tab_summary")
+    # Tab 0 hosts the real tree canvas (no placeholder)
+    assert tabs.widget(0) is w._tree_panel
+    assert tabs.widget(1) is w._reports_panel
+    assert tabs.widget(2) is w._metrics_panel
     w.close()
     w.deleteLater()
 

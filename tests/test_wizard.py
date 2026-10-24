@@ -192,11 +192,12 @@ def test_wizard_predictors_validation():
 
 
 # ---------------------------------------------------------------------------
-# 4: regla espejo CHAID (<-> contrato chaid_engine: sin CONTINUOUS)
+# 4: contrato CHAID post-3.10.b (H14): [CONT] habilitados para TODO motor
+#    (el backend hace binning automatico; la regla espejo se elimino en 3.11)
 # ---------------------------------------------------------------------------
 
 
-def test_wizard_chaid_disables_continuous():
+def test_wizard_chaid_allows_continuous():
     wiz = _make_wizard()
     wiz.show()
     page0 = wiz.page_engine
@@ -210,16 +211,9 @@ def test_wizard_chaid_disables_continuous():
         bool(page._lst_available.item(i).flags() & _ENABLED)
         for i in range(page._lst_available.count())
     ]
-    cols = [
-        page._lst_available.item(i).data(_USER)
-        for i in range(page._lst_available.count())
-    ]
-    for col, enabled in zip(cols, flags):
-        if _TYPES[col] == "CONTINUOUS":
-            assert not enabled, f"{col} deberia estar deshabilitado con CHAID"
-        else:
-            assert enabled
-    # volver a C&RT: los [CONT] se rehabilitan
+    # con CHAID, los [CONT] tambien estan habilitados (binning automatico)
+    assert all(flags), "todo predictor debe estar habilitado con CHAID"
+    # paridad con C&RT: mismo comportamiento
     radio_crt = next(
         rb for rb in page0.findChildren(QRadioButton) if rb.text() == "C&RT"
     )
@@ -651,6 +645,42 @@ def test_wizard_default_pd_floor_spinbox():
     page._spin_floor.setValue(0.0123)
     page._rb_banking.setChecked(True)
     assert abs(page._spin_floor.value() - 0.0005) < 1e-12
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_size_and_title_banner():
+    """El wizard abre con tamaño adecuado (mínimo 800x600, inicial
+    950x700) y la EnginePage muestra el título de la app como banner
+    (objectName wizardTitle -> regla QSS con $ACCENT, legible en oscuro).
+    La etiqueta se construye UNA vez y solo se retraduce: un cambio de
+    idioma no la duplica."""
+    wiz = _make_wizard()
+    assert wiz.minimumWidth() == 800
+    assert wiz.minimumHeight() == 600
+    assert wiz.size().width() >= 950 and wiz.size().height() >= 700
+    lbl = wiz.page_engine._lbl_wizard_title
+    assert lbl.objectName() == "wizardTitle"
+    assert lbl.text() == tr("wizard_title")
+    # primer widget del layout de EnginePage
+    assert wiz.page_engine.layout().itemAt(0).widget() is lbl
+    # retraducción en caliente: texto ES, sin duplicar el widget
+    prev = "en"
+    try:
+        set_language("es")
+        language_bus.language_changed.emit("es")
+        assert lbl.text() == tr("wizard_title", "es")
+        n_titles = sum(
+            1 for i in range(wiz.page_engine.layout().count())
+            if wiz.page_engine.layout().itemAt(i).widget() is not None
+            and wiz.page_engine.layout().itemAt(i).widget().objectName()
+            == "wizardTitle"
+        )
+        assert n_titles == 1
+    finally:
+        set_language(prev)
+        language_bus.language_changed.emit(prev)
+    assert lbl.text() == tr("wizard_title", "en")
     wiz.close()
     wiz.deleteLater()
 

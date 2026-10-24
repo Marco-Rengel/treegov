@@ -53,6 +53,7 @@ from frontend_v3.tree_view import (  # noqa: E402
     NodeItem,
     TreePanel,
     _layout_tree,
+    _node_label,
 )
 
 _SLOT = NODE_W + H_GAP   # distancia entre slots de hojas (unidad del layout)
@@ -233,7 +234,7 @@ def test_selection_signal():
 
 def test_zoom_clamps():
     panel = _make_panel()
-    panel.set_model(_crt_model(), "BANKING")   # auto-fit ya ocurrio
+    panel.set_model(_crt_model(), "BANKING")   # zoom inicial 1.0 (3.11.a)
     view = panel._view
     factors: list[float] = []
     view.zoom_changed.connect(factors.append)
@@ -290,14 +291,41 @@ def test_theme_recolor_on_switch():
     w = MainWindow()
     w._tree_panel.set_model(_crt_model(), "BANKING")
     root_light = w._tree_panel._scene._items[0].brush().color()
-    assert root_light == QColor(PALETTES["light"]["SURFACE"])
+    # Estación clásica: cuerpo del nodo sólido NODE_BG (blanco/negro puro)
+    assert root_light == QColor(PALETTES["light"]["NODE_BG"])
     w._switch_theme("dark")
     root_dark = w._tree_panel._scene._items[0].brush().color()
-    assert root_dark == QColor(PALETTES["dark"]["SURFACE"])
+    assert root_dark == QColor(PALETTES["dark"]["NODE_BG"])
     w._switch_theme("light")                   # restaura (orden de la suite)
     assert w._tree_panel._scene._items[0].brush().color() == root_light
     w.close()
     w.deleteLater()
+
+
+def test_node_label_classic_station_design():
+    """Tarjeta de nodo estilo estación clásica: rejilla de tabla visible con el
+    BORDER de la paleta activa, y cabecera como bloque de color sólido
+    (verde/ámbar/rojo en hojas, azul en internos) con texto blanco."""
+    model = _crt_model()
+    leaf = model.nodes[1]
+    assert leaf.is_leaf and leaf.pd_final[0] < 0.05  # fixture -> semáforo verde
+    for theme in ("light", "dark"):
+        pal = PALETTES[theme]
+        html = _node_label(leaf, pal)
+        # 1. tabla con bordes visibles (regla CSS del bloque <style>)
+        assert "border-collapse: collapse" in html
+        assert "width: 100%" in html
+        assert f"border: 1px solid {pal['BORDER']}" in html
+        assert "padding: 2px" in html
+        # 2. texto del cuerpo con contraste: FG de la paleta activa
+        assert f"color: {pal['FG']}" in html
+        # 3. cabecera: bloque de color sólido con texto blanco
+        assert "color:#FFFFFF" in html
+        assert "background-color:#2E7D32" in html  # hoja PD<5% -> verde
+    # nodo interno: cabecera azul (Colab accent)
+    html_root = _node_label(model.nodes[0], PALETTES["light"])
+    assert "background-color:#1A73E8" in html_root
+    assert "color:#FFFFFF" in html_root
 
 
 # ---------------------------------------------------------------------------
@@ -372,8 +400,10 @@ def test_e2e_mainwindow():
         w._on_wizard_finished(cfg)
         model = w._session.state.tree
         assert model is not None
-        assert w._tabs.count() == 4
-        assert w._tabs.currentWidget() is w._tree_panel
+        # The tree canvas is tab 0 of the main tab widget (Excel-style
+        # sheets filling the whole central area; no vertical splitter)
+        assert w._main_tabs.count() == 5
+        assert w._main_tabs.widget(0) is w._tree_panel
         items = [i for i in w._tree_panel._scene.items()
                  if isinstance(i, NodeItem)]
         assert len(items) == len(model.nodes)

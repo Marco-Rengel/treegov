@@ -5052,3 +5052,511 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 **Tests**: 438/438 PASSED. Cero regresiones. Nuevo test de routing por `bin_edges`.
 
 **Referencias**: `docs/3.10.b_design_chaid_continuous.md`, `docs/design_decisions.md` §16.
+
+---
+
+### 24/10/2026 — Diseño de la Fase 3.11 (Rediseño Interactivo y Topología Visual)
+
+**Estado**: ✅ Cerrada (documento de diseño creado; pendiente de auditoría de diseño antes de implementación). Suite 438/438 PASSED (sin cambios de código).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Apertura formal de la Fase 3.11. El objetivo es alinear la usabilidad y la topología visual de la GUI con el estándar clásico de estaciones de árboles (circa 2001), modernizando la UI con la paleta de Google Colab y manteniendo la gobernanza MRM de TreeGov. Esta sesión produce únicamente el documento de diseño; no toca código ni tests.
+
+**Artefactos**:
+- `docs/3.11_design_interactive_tree.md` (nuevo): diseño estructural completo en 9 secciones (§0–§8): alcance, tema Colab (paletas Dark/Light, estilo Fusion, iconos SVG), layout de tres paneles (Project Explorer + Tree Map + Data Viewer | Canvas + pestañas Tree/Gains/Risks/Rules/Summary | Panel de Gobernanza MRM), topología de nodos HTML (tabla `Categoría | % | n`, fila Total, barras proporcionales, metadatos del split), interacción del Tree Map (panning sin zoom fit), líneas punteadas para surrogates, funcionalidades nuevas (definición manual de tipos `[CONT]`/`[ORD]`/`[NOM]`, árboles univariados en lote con exportación de puntos de corte, matriz de costos N×N), menú contextual del nodo (Grow/Prune/Select Predictor/Define Split) con Manual Override Log integrado en el `params_fingerprint` y distinción estricta BANKING vs RESEARCH, y plan de sub-fases 3.11.a–d.
+
+**Ampliación del mismo bloque (inicio de 3.11.a — tema Colab + Fusion)**:
+- `frontend_v3/theme.py`: paletas `light` y `dark` reemplazadas por los colores exactos de Google Colab. Light: `BG #FFFFFF`, `SURFACE #F8F9FA`, `SURFACE_ELEVATED #FFFFFF`, `FG #202124`, `BORDER #DADCE0`, `ACCENT #1A73E8`, `ACCENT_FG #FFFFFF`, `DISABLED #80868B`, `STATUS_OK #188038`, `STATUS_WARN #F29900`, `STATUS_CRIT #D93025`, `STATUS_UNKNOWN #5F6368`. Dark: `BG #1E1E1E`, `SURFACE #252526`, `SURFACE_ELEVATED #2D2D2D`, `FG #E0E0E0`, `BORDER #3C3C3C`, `ACCENT #4C9AFF`, `ACCENT_FG #1E1E1E`, `DISABLED #6E6E6E`, `STATUS_OK #4CAF50`, `STATUS_WARN #FF9800`, `STATUS_CRIT #F44336`, `STATUS_UNKNOWN #9E9E9E`. El mecanismo de tokens y la política fail-fast quedan intactos; solo cambian valores hex.
+- `frontend_v3/app.py`: `app.setStyle("Fusion")` añadido en `create_app()` justo tras instanciar `QApplication`, para que `QDialog` y `QWizard` respeten el QSS (diseño 3.11 §1).
+- Verificación adicional: smoke headless de la GUI (`QT_QPA_PLATFORM=offscreen`, `TREEGOV_GUI_AUTOQUIT_MS=2000`) arranca y cierra limpiamente (exit=0) con el estilo Fusion activo.
+
+**Verificación ex post del bloque tema Colab + Fusion (misma fecha, nivel max)**:
+- `git diff` confirma que los cambios coinciden exactamente con la especificación (24 valores hex sustituidos, 12 por paleta; `setStyle("Fusion")` en la línea correcta de `create_app()`).
+- **Hallazgo 1 (colores hardcodeados residuales):** la paleta antigua sigue hardcodeada inline fuera de `theme.py`: `frontend_v3/tree_view.py` (líneas 152, 155, 189-190, 204: `#2E7D32`, `#ED6C02`, `#D32F2F`, `#1F6FEB`, `#E6E6E6` en el HTML de los nodos y semáforo), `frontend_v3/main_window.py` (línea 976: semáforo de PD) y `frontend_v3/reports_panel.py` (línea 268: warning amber `#ED6C02`). Estos colores quedan desincronizados de la paleta Colab. Quedan registrados como pendiente dentro de la propia sub-fase 3.11.a (nodos HTML, §3 del diseño); no se corrigen en este bloque por ser cambio de comportamiento visual fuera del prompt aprobado.
+- **Hallazgo 2 (line endings):** `git ls-files --eol` mostró `frontend_v3/theme.py` con `w/crlf` (índice `i/lf`). El working copy se normalizó a LF para eliminar el warning de git y alinear el archivo con `.gitattributes` (`* text=auto eol=lf`); el índice ya era LF, sin cambio de contenido en repo. `docs/audit_log.md` conserva su excepción CRLF (`-text`) intacta.
+- **No-hallazgos:** `docs/3.10_design_ux_redesign.md` §1.4 cita `SURFACE_ELEVATED #333333` como decisión histórica de 3.10.a; se conserva (documento histórico, superseded por 3.11 §1). Los tests de tema (`test_gui_smoke.py`, `test_tree_view.py`) leen `PALETTES` dinámicamente y no hardcodean hex; cubren ambos temas y el fail-fast con tema desconocido. Los Mermaid de los READMEs usan `#2E7D32` con fines diagramáticos, sin relación con la paleta de la GUI.
+
+**Ampliación del mismo bloque (3.11.a — reestructura del layout principal)**:
+- `frontend_v3/main_window.py`:
+  - Eliminado el `QTabWidget` superior `_tabs` (pestañas Welcome/Tree/OOS-OOT/Reports) y el `_center_title` de bienvenida. El área central pasa a un `QSplitter` vertical (`centerSplitter`): arriba el canvas del árbol (`_tree_panel`, permanentemente visible), abajo el nuevo `_bottom_tabs` (`QTabWidget`, conserva `objectName="centralTabs"`) con 5 pestañas: `Tree` (placeholder), `Gains` (actual `ReportsPanel`), `Risks` (actual `MetricsPanel` OOS/OOT), `Rules` (placeholder), `Summary` (placeholder). Placeholders vía helper `_make_placeholder_tab()` (etiqueta "—" centrada); el contenido real llega en 3.11.b-d.
+  - Panel derecho: nuevo `QGroupBox` superior `_hud_gb_governance` con etiqueta de fingerprint (`_hud_lbl_gov_fp`, `TextSelectableByMouse` = copiable), etiqueta de modo (`_hud_lbl_gov_mode`) y botón `_hud_btn_view_audit` (placeholder deshabilitado hasta 3.11.d). Se puebla en `_on_wizard_finished` (fingerprint + `governance_mode` del cfg) y se resetea a "—" en la rama de reseteo de `_on_new_wizard`. Captions y títulos vía `tr()` con las claves del bloque i18n (`panel_governance`, `governance_fingerprint`, `governance_mode`, `governance_view_audit`).
+  - `_on_evaluate_oos` y `_on_load_oot` cambian de `_tabs.setCurrentWidget` a `_bottom_tabs.setCurrentWidget` (pestaña Risks). `_on_wizard_finished` ya no cambia de pestaña (canvas siempre visible).
+- Tests adaptados a la nueva interfaz (cambio estructural intencional, no de lógica):
+  - `tests/test_gui_smoke.py::test_layout_structure`: 4 → 5 pestañas (`centralTabs`).
+  - `tests/test_metrics_panel.py`: `test_mainwindow_has_four_tabs` renombrado a `test_mainwindow_bottom_tabs`; aserte `w._bottom_tabs` con los 5 títulos nuevos (`tab_tree_title`, `tab_gains`, `tab_risks`, `tab_rules`, `tab_summary`).
+  - `tests/test_tree_view.py`: reemplazadas las aserciones de `_tabs` por `_bottom_tabs.count() == 5` + verificación de que `centerSplitter.widget(0) is w._tree_panel` (import `QSplitter` añadido).
+  - `tests/test_e2e_mainwindow.py` (2 aserciones): `w._tabs.currentWidget()` → `w._bottom_tabs.currentWidget()`.
+- Zonas grises resueltas (conservador): las claves i18n `panel_center_title`, `tab_welcome_title`, `tab_oos_oot_title` y `tab_reports_title` quedan sin consumidores en el código pero se conservan en el diccionario (histórico, sin coste; su eliminación sería churn fuera de alcance). El botón "Ver Auditoría" se crea deshabilitado como placeholder (sin handler muerto).
+- Verificación: suite 438/438 PASSED; smoke headless de la GUI (offscreen + autoquit) arranca y cierra limpiamente (exit=0); grep confirma cero referencias residuales a `self._tabs` / `_center_title` en `frontend_v3/`.
+
+**Ampliación del mismo bloque (3.11.a — nodos HTML estilo estación clásica)**:
+- `frontend_v3/tree_view.py`:
+  - `NODE_W`/`NODE_H`: 180×100 → 220×140 para acomodar la tabla y el gráfico de barras. Los tests de layout (`_SLOT`/`_LAYER`) derivan de las constantes dinámicamente; `test_zoom_clamps` no hardcodea tamaño de nodo.
+  - `_node_label` reescrita: div externo `background: transparent; color: #E0E0E0; font-family: sans-serif; padding: 4px;`; cabecera con semáforo actual (azul `#1A73E8` Colab para internos; verde/naranja/rojo para hojas); tabla `Categoría | % | n` iterando `class_labels`/`pd_final`/`n_events` con fila final `Total | 100% | node.n`; gráfico de barras proporcional por clase (`span` inline, rojo/verde/azul/ámbar vía nueva constante `_CLASS_BAR_COLORS`, escalado a `NODE_W - 16`); footer pequeño: `Gini: {gini}` en hojas, `Adj. P: {p} | {statistic_name}: {stat}` en internos.
+- Desviación documentada (zona gris): el prompt especificaba el footer literal `Chi2: {statistic}`, pero se usa `split.statistic_name` dinámico. Motivo: en CRT/QUEST el estadístico es `gini_gain` (verificado empíricamente con la fixture `_crt_model`); hardcodear "Chi2" etiquetaría erróneamente los árboles no-CHAID en una herramienta MRM. En CHAID el nombre mostrado es el correcto (`Chi2`/`F`).
+- Zona gris 2: `Adj. P` muestra `p_value_adjusted` si existe, si no `p_value` (fallback documentado en el propio código).
+- Limitación conocida arrastrada (no introducida aquí): el color de texto del cuerpo del nodo (`#E0E0E0`) está hardcodeado pensando en fondo oscuro; en tema claro el contraste es pobre. Ya registrado como pendiente de 3.11.a en la verificación ex post del bloque de paletas (los colores de nodo deben parametrizarse por paleta en una iteración posterior de la sub-fase).
+- Verificación: suite 438/438 PASSED; aserción funcional directa sobre `_node_label` con fixture conocida (fila `Total`/`100%` presente, `Adj. P:` en interno, `Gini:` en hoja, número de barras == número de clases). El único test que inspecciona el texto del nodo (`test_retranslate_preserves_selection`, badge `HOJA`) sigue verde.
+
+**Ampliación del mismo bloque (3.11.a — styles.qss: pestañas, QGroupBox, splitter)**:
+- `frontend_v3/resources/styles.qss`:
+  - `QTabWidget::pane`: fondo `$SURFACE_ELEVATED` + borde `$BORDER`.
+  - `QTabBar::tab`: fondo `$BG` + borde `$BORDER`.
+  - `QGroupBox` / `QGroupBox::title`: reglas nuevas (borde `$BORDER`, radio 4px, título con `color: $ACCENT`) para el panel de gobernanza y los grupos del HUD.
+  - `QSplitter::handle`: regla existente ampliada con `height: 2px; width: 2px;`.
+- Zona gris resuelta (conservador): el prompt fijaba los fondos de pane (`$SURFACE_ELEVATED`) y tab (`$BG`), pero dejaba `QTabBar::tab:selected` sin especificar. Mantener el selected en `$BG` habría hecho la pestaña activa indistinguible. Se usa la convención Colab: la pestaña activa adopta el fondo del pane (`$SURFACE_ELEVATED`) y funde su borde inferior con él (`border-bottom-color: $SURFACE_ELEVATED`).
+- Verificación: suite 438/438 PASSED; smoke headless exit=0. El fail-fast de `render_stylesheet` (tokens residuales → `ValueError`) se ejerce en el arranque, por lo que el smoke test garantiza que la plantilla queda sin tokens sin resolver.
+
+**Ampliación del mismo bloque (3.11.a — eliminación de la regla espejo CHAID/[CONT] en el wizard)**:
+- Premisa verificada contra el backend antes de tocar el frontend: `backend_v3/chaid_engine.py` admite `PredictorType.CONTINUOUS` vía binning automático por deciles (Fase 3.10.b, H14) con routing por `SplitConfig.bin_edges` en `tree_builder.py` y `validation.py`. La regla espejo del wizard había quedado obsoleta.
+- `frontend_v3/wizard.py`:
+  - `_on_target_change`: eliminada la condición `disabled = self._is_chaid() and ... == "CONTINUOUS"`; todos los predictores se crean habilitados para cualquier motor.
+  - `initializePage`: eliminada la segunda pata de la regla espejo (expulsar los [CONT] ya seleccionados al entrar al Step 2 con CHAID). Dejarla habría hecho la regla inconsistente (permitir añadir pero expulsar al re-entrar).
+  - `retranslate_ui` + `__init__`: eliminada la nota `_lbl_chaid_note` ("CHAID rechaza predictores [CONT]"), ahora falsa.
+  - `_is_chaid`: eliminado (método muerto tras los tres cambios; grep confirma cero referencias residuales).
+  - Docstring de `PredictorsPage` actualizado: documenta el contrato nuevo (binning automático) en lugar de la regla espejo.
+- `frontend_v3/i18n.py`: clave `step2_chaid_cont_note` eliminada en EN y ES (el texto afirmaba un contrato ya falso; a diferencia de las claves históricas conservadas en bloques anteriores, esta era materialmente engañosa para un auditor).
+- `tests/test_wizard.py`: `test_wizard_chaid_disables_continuous` reescrito como `test_wizard_chaid_allows_continuous` (cambio de contrato intencional): con CHAID seleccionado, TODOS los predictores (incluidos [CONT]) están habilitados, en paridad con C&RT.
+- Verificación: suite 438/438 PASSED; grep global confirma cero referencias a `_is_chaid`, `_lbl_chaid_note` y `step2_chaid_cont_note`.
+
+**Ampliación del mismo bloque (3.11.a — optimización del espacio vertical)**:
+- `frontend_v3/main_window.py`:
+  - `_build_toolbar`: `ToolButtonTextBesideIcon` → `ToolButtonIconOnly`. Los textos de las `QAction` se conservan en `retranslate_ui` y actúan como tooltip (fallback nativo de Qt: `QAction::toolTip` sin establecer usa el texto de la acción).
+  - `_build_central`: `centerSplitter` pasa de stretch (3, 1) a (6, 1) con `setSizes([700, 150])` — el canvas del árbol domina (~85%/15%).
+- Verificación empírica headless: los 9 botones de acción de la toolbar tienen tooltip no vacío tras el cambio. El único `QToolButton` sin tooltip es el botón de overflow interno de Qt (sin `defaultAction()`); no es un botón de acción y no requiere tratamiento. (El mojibake "Podarrbol" en la consola es el artefacto conocido del codepage de PowerShell — lección UTF-8 del 18/10/2026 —; el archivo i18n en disco es correcto y los tests verifican las cadenas byte a byte.)
+- Verificación: suite 438/438 PASSED; smoke headless exit=0.
+
+**Ampliación del mismo bloque (3.11.a — suelo de legibilidad en zoom_fit)**:
+- `frontend_v3/tree_view.py`: nueva constante `ZOOM_FIT_MIN = 0.50`. `TreeView.zoom_fit` ahora aplica `max(factor_fit, ZOOM_FIT_MIN)`: si `fitInView` propone menos del 50% (árboles anchos con nodos de 220px), el auto-fit se fija en 50% y el usuario desplaza con scroll o aleja manualmente. Refina el fix H12 (que solo garantizaba `[ZOOM_MIN, ZOOM_MAX]`).
+- Invariante verificado empíricamente (fixture CRT de 9 nodos/5 hojas, viewport 900×600): el auto-fit queda en exactamente 0.5 (el fit natural caía por debajo); el zoom manual sigue llegando a `ZOOM_MIN` (0.10) — el suelo solo aplica al auto-fit, no al gesto del usuario.
+- Verificación: suite 438/438 PASSED (`test_zoom_clamps` sigue verde: el factor post-fit `> 0` y `!= 1.0` se mantiene).
+
+**Ampliación del mismo bloque (3.11.a — paleta Colab en elementos base: QWidget, escena, scrollbars)**:
+- `frontend_v3/resources/styles.qss`:
+  - Regla base `QWidget`: añadido `font-family: "Segoe UI", Arial, sans-serif;` (fondo `$BG` y color `$FG` ya estaban).
+  - Reglas nuevas `QGraphicsView { background: $BG; border: none; }` y `QScrollBar:vertical/horizontal { background: $SURFACE; border: none; }`.
+- `frontend_v3/tree_view.py`:
+  - `TreeScene.__init__`: `setBackgroundBrush` inicial con `PALETTES["light"]["BG"]` (default coherente con `TreePanel._palette`).
+  - `build_from_model` y `_build_placeholder`: el fondo de la escena se refresca desde la paleta activa en cada render (`palette["BG"]`).
+- Zona gris resuelta (alternativa explícita del prompt): el prompt pedía fondo oscuro fijo (`PALETTES["dark"]["BG"]`) "o la paleta activa". Se eligió la **paleta activa**: hardcodear dark habría roto el tema claro (los QGraphicsScene ignoran el QSS, igual que los items). Verificado empíricamente: el fondo sigue al tema en los cuatro caminos (inicial light → modelo → dark → placeholder → light).
+- Verificación: suite 438/438 PASSED (`test_theme_recolor_on_switch` intacto: aserta brushes de NODO, no de escena); smoke headless exit=0.
+
+**Ampliación del mismo bloque (3.11.a — nodos theme-aware, cierre del hallazgo de contraste)**:
+- `frontend_v3/tree_view.py`:
+  - `_node_label` gana el parámetro `palette` (pasado desde `NodeItem.__init__`). El div externo usa `color: {palette['FG']}; background-color: transparent;` — se elimina el `#E0E0E0` hardcodeado que hacía ilegible el tema claro (limitación registrada en bloques anteriores de esta misma fecha; queda cerrada).
+  - Footer: `#888888` hardcodeado → `palette['DISABLED']` (extensión menor del mismo principio: cero colores de texto hardcodeados en el cuerpo del nodo).
+  - Tabla interna: `font-size: 10px` → `11px` (legibilidad a zoom 50%/100%).
+  - `NodeItem`: el cuerpo del nodo usa `palette['SURFACE_ELEVATED']` para TODOS los nodos (antes: `SURFACE` en internos, tinte `ACCENT.lighter(165)` en hojas). Decisión documentada: la cabecera con semáforo (verde/naranja/rojo/azul) ya codifica el estado de la hoja; el cuerpo elevado unifica la legibilidad en ambos temas. El HTML mantiene fondo transparente para no tapar el rect.
+- `tests/test_tree_view.py::test_theme_recolor_on_switch`: aserciones actualizadas de `SURFACE` a `SURFACE_ELEVATED` (cambio intencional de la interfaz visual).
+- Verificación: suite 438/438 PASSED; chequeo empírico del HTML en ambos temas (FG de la paleta presente, fondo transparente, `font-size:11px`, DISABLED en footer, cero residuales hardcodeados).
+
+**Ampliación del mismo bloque (3.11.a — toolbar compacta icon-only)**:
+- `frontend_v3/main_window.py` (`_build_toolbar`):
+  - `setToolButtonStyle(ToolButtonIconOnly)` movido AL FINAL del método, tras añadir todas las acciones (garantiza que todos los botones heredan el estilo).
+  - Icono asignado a la acción que carecía de él: `_act_load_oot` → `SP_DirOpenIcon`. Las 9 acciones de la toolbar tienen ahora icono + tooltip.
+  - `setIconSize(QSize(24, 24))` añadido (import `QSize` desde `PySide6.QtCore`).
+- `frontend_v3/resources/styles.qss`: `QToolBar QToolButton` con `padding: 2px; margin: 0px;` (antes `4px 8px`).
+- Verificación empírica headless: `iconSize` 24×24, estilo `ToolButtonIconOnly` activo, 9/9 botones de acción con icono no nulo y tooltip no vacío. Suite 438/438 PASSED.
+
+**Ampliación del mismo bloque (3.11.a — legibilidad del Wizard)**:
+- `frontend_v3/resources/styles.qss`: reglas nuevas al final — `QWizardPage QLabel, QWizard QLabel { color: $FG; background: transparent; }`, `QWizardPage QGroupBox { color: $FG; font-weight: bold; }`, `QWizardPage QGroupBox::title { color: $ACCENT; }`, `QWizardPage QCheckBox, QWizardPage QRadioButton { color: $FG; }`. Causa: bajo Fusion, fondos nativos claros con texto heredado oscuro/claro dejaban etiquetas ilegibles.
+- `frontend_v3/wizard.py`: **verificado con grep que NO existe ningún `setStyleSheet`** que fuerce colores (ni "color: black" ni "background: white"); punto 2 de la tarea resuelto como no-hallazgo — no había nada que eliminar. Los únicos `setStyleSheet` con color del frontend viven en `main_window.py` (semáforo dinámico de `_hud_bar`, legítimo: depende de la PD) y `reports_panel.py` (warning amber H7), ya registrados como residuales semánticos, no cosméticos.
+- Verificación: suite 438/438 PASSED; smoke headless exit=0 (el arranque ejerce el fail-fast de tokens sobre la plantilla editada).
+
+**Ampliación del mismo bloque (3.11.a — pestañas ancladas y zoom inicial legible)**:
+- `frontend_v3/main_window.py` (`_build_central`):
+  - `_bottom_tabs.setMinimumHeight(100)` + `setMaximumHeight(200)` (pestañas inferiores ancladas).
+  - `centerSplitter`: `setSizes([700, 150])` → `[850, 150]` y `setCollapsible(0, False)` (el canvas nunca desaparece arrastrando el handle).
+- `frontend_v3/tree_view.py` (`TreePanel.set_model`): el zoom inicial tras entrenar/cargar pasa de `zoom_fit()` a `_set_zoom(1.0)` — escala legible al 100% por defecto; el fit sigue disponible vía Ctrl+0 / botón Fit (y respeta el suelo `ZOOM_FIT_MIN=0.5` del bloque anterior). Docstring actualizado.
+- `tests/test_tree_view.py::test_zoom_clamps`: comentario actualizado ("auto-fit ya ocurrió" → "zoom inicial 1.0 (3.11.a)"); la lógica del test es independiente del zoom inicial.
+- Verificación empírica headless: min/max de `_bottom_tabs` = 100/200; `centerSplitter.isCollapsible(0)` = False; zoom inicial tras `set_model` = 1.0; `zoom_fit` posterior disponible (cae al suelo 0.5 en la fixture ancha). Suite 438/438 PASSED.
+
+**Auditoría Visual Estática del bloque 3.11.a (misma fecha, nivel max)**:
+
+Verificación punto a punto contra el código real (rg + lectura directa):
+
+1. **Toolbar (`main_window.py`)** — ✅ PASS. `ToolButtonIconOnly` en la línea 348 (al final de `_build_toolbar`); las 9 acciones de la toolbar tienen `setIcon` (líneas 314-319, 336-338).
+2. **Wizard (`styles.qss` / `wizard.py`)** — ✅ PASS. Regla `QWizardPage QLabel, QWizard QLabel { color: $FG; background: transparent; }` presente (líneas 198-201). Cero `color: black` / `#000` / `background: white` / `setStyleSheet` en `wizard.py`.
+3. **Layout (`main_window.py` / `tree_view.py`)** — ✅ PASS. `_bottom_tabs.setMaximumHeight(200)` (+ mínimo 100); `set_model` usa `_set_zoom(1.0)` (línea 628). Los `zoom_fit()` restantes son el slot público del botón Fit y el fallback de escena vacía — correctos.
+4. **Tema (`theme.py`)** — ✅ PASS. Las 24 entradas de `PALETTES` coinciden byte a byte con la especificación Colab (light y dark).
+
+**Fallo encontrado y corregido en el mismo bloque**:
+- **F1: regla muerta `QLabel#hudBody { padding: 4px; }` en `styles.qss`.** Ningún widget con `objectName="hudBody"` existe desde la Fase 3.10.a (el HUD se reestructuró a `QGroupBox`); rg confirma que `hudBody` solo aparecía en el QSS. Residuo del layout antiguo. Regla eliminada; suite 438/438 y smoke headless exit=0 tras el fix.
+
+**Observaciones (NO fallos — colores semánticos, legibles en ambos temas, ya registrados)**:
+- `main_window.py:1039` y `tree_view.py:174`: semáforo de PD (`#2E7D32/#ED6C02/#D32F2F`) — colores de estado universales sobre `SURFACE_ELEVATED`.
+- `tree_view.py:154`: `_CLASS_BAR_COLORS` (rojo/verde/azul/ámbar por clase); `tree_view.py:177`: `#1A73E8` = ACCENT Colab light, legible con texto blanco en ambos temas.
+- `reports_panel.py:268`: amber H7 (`#ED6C02`); `reports_panel.py:384`: `th{background:#f0f0f0}` pertenece al **reporte HTML exportado** (documento standalone que se abre en navegador; el QSS de la app no lo alcanza). Fuera del alcance del tema de la GUI.
+- Cero residuales de la paleta pre-Colab (`#E6E6E6`, `#1F6FEB`, `#F3F3F3`, `#101010`, `#66BB6A`, `#FFA726`, `#EF5350`, `#454545`) en `frontend_v3/`.
+
+**Tests**: 438/438 PASSED. Smoke headless exit=0.
+
+**Ampliación del mismo bloque (paridad i18n EN/ES)**:
+- `frontend_v3/i18n.py`: 8 claves nuevas en ambos bloques (`en` y `es`), antes de `reports_no_model`: `tab_gains` (Gains/Ganancias), `tab_risks` (Risks/Riesgos), `tab_rules` (Rules/Reglas), `tab_summary` (Summary/Resumen), `panel_governance` (Governance/Gobernanza), `governance_fingerprint` (Fingerprint/Huella), `governance_mode` (Mode/Modo), `governance_view_audit` (View Audit Log/Ver Auditoría). Paridad EN/ES estricta.
+- `docs/3.11_design_interactive_tree.md`: nueva sección `§9. Internacionalización (i18n)` (antes de §8 Referencias): todos los textos nuevos pasan por `tr()` y responden al `language_bus`, con paridad estricta EN/ES.
+
+**Hallazgos**:
+- El documento referencia el estado real del código verificado durante la sesión: el mecanismo de tokens `$TOKENS` + `string.Template` en `frontend_v3/theme.py` se conserva intacto (solo cambian valores hex); los nodos ya usan `setHtml` desde la Fase 3.10.a; la maquinaria de poda interactiva de la Fase 3.9 es la base del menú contextual.
+- El diseño se marca como **Propuesto** a la espera de la auditoría de diseño obligatoria (regla: Diseñar → Auditar diseño → Implementar → Testear → Documentar).
+
+**Tests**: 438/438 PASSED (sin cambios de código; solo documentación).
+
+**Referencias**:
+- `docs/3.11_design_interactive_tree.md` (documento principal).
+- `docs/3.10_design_ux_redesign.md` (rediseño UX previo, H3-H8).
+- `docs/3.9_design_interactive_weighted_pruning.md` (poda interactiva).
+- `docs/playbook.md` (flujo `/nueva_fase`).
+
+---
+
+### 24/10/2026 — Reestructuración del panel central: pestañas tipo hoja Excel + HUD acotado
+
+**Estado**: ✅ Cerrada (cambio de código sin commit; decisión de commit pendiente del revisor, como todo el trabajo 3.11.a acumulado en el working tree).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: refactor estructural multi-archivo del layout principal).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: el layout de 3.11.a dejaba el canvas del árbol permanentemente visible sobre un `centerSplitter` vertical, con las pestañas (Ganancias/Riesgos/Reglas/Resumen) ancladas en una franja inferior de 100-200 px. Esa franja era demasiado estrecha para trabajar los reportes, y el panel de propiedades (HUD derecho) podía expandirse sin límite arrastrando el handle. Se reestructura el centro como un único `QTabWidget` a página completa (metáfora de hojas de Excel: cada pestaña ocupa TODO el área central) y se acota el HUD.
+
+**Cambios aplicados**:
+
+- `frontend_v3/main_window.py`:
+  - `_build_central`: eliminado el `centerSplitter` vertical y el `_bottom_tabs` anclado (100-200 px). Nuevo `_main_tabs` (`QTabWidget`, conserva `objectName="centralTabs"`) con 5 pestañas a página completa: 0=`_tree_panel` (Árbol, el canvas real — el placeholder `_tab_tree_text` desaparece), 1=`_reports_panel` (Ganancias), 2=`_metrics_panel` (Riesgos), 3=placeholder Reglas, 4=placeholder Resumen. El splitter horizontal principal recibe `_left_panel` / `_main_tabs` / `_hud_panel` con `setSizes([250, 800, 300])` (prioridad al centro).
+  - HUD acotado: `_hud_panel.setMinimumWidth(200)` + `setMaximumWidth(400)` — el splitter no puede estirarlo más allá de 400 px.
+  - Menú Ver: `_act_toggle_hud.toggled` → `_hud_panel.setVisible` (la conexión ya existía desde 3.11.a; se conserva y queda cubierta por test nuevo).
+  - `retranslate_ui`: textos de pestañas vía `tr("tab_tree")`, `tr("tab_gains")`, `tr("tab_risks")`, `tr("tab_rules")`, `tr("tab_summary")`.
+  - `_on_evaluate_oos` y `_on_load_oot`: `_bottom_tabs.setCurrentWidget` → `_main_tabs.setCurrentWidget` (siguen llevando al analista a la pestaña Riesgos).
+- `frontend_v3/i18n.py`: clave `tab_tree_title` ("Model tree"/"Árbol del modelo") renombrada a `tab_tree` con valor corto ("Tree"/"Árbol"), coherente con la metáfora de hoja Excel y con el patrón de las otras cuatro claves `tab_*`. Paridad EN/ES estricta. **Zona gris resuelta (conservador)**: el prompt pedía `tr("tab_tree")` pero la clave existente era `tab_tree_title`; se optó por renombrar (sin clave huérfana) en lugar de añadir una clave duplicada. La clave solo tenía dos consumidores (`main_window.py` y un test), ambos actualizados en el mismo bloque.
+- Tests:
+  - `tests/test_metrics_panel.py`: `test_mainwindow_bottom_tabs` → `test_mainwindow_main_tabs`; aserte `w._main_tabs`, los 5 títulos nuevos y que las pestañas 0-2 hospedan los paneles reales (`_tree_panel`, `_reports_panel`, `_metrics_panel`).
+  - `tests/test_tree_view.py`: reemplazadas las aserciones de `_bottom_tabs`/`centerSplitter` por `_main_tabs.count() == 5` + `_main_tabs.widget(0) is w._tree_panel`; import `QSplitter` eliminado (quedaba sin uso).
+  - `tests/test_e2e_mainwindow.py` (2 aserciones): `w._bottom_tabs.currentWidget()` → `w._main_tabs.currentWidget()`.
+  - `tests/test_gui_smoke.py`: `test_layout_structure` aserta además que `centralTabs` ES el panel central del splitter (`splitter.widget(1) is tabs`) y que la pestaña 0 es el canvas real. Test nuevo `test_hud_panel_bounded_and_toggleable`: min/max width del HUD = 200/400 y el toggle del menú Ver oculta/muestra el panel vía `setVisible()`. Docstring del módulo: 9 → 10 tests (7 smoke + 3 i18n).
+
+**Verificación**: suite **439/439 PASSED** (438 + 1 test nuevo). Smoke GUI headless (`TREEGOV_GUI_AUTOQUIT_MS=2000`): exit=0, cierre limpio. Grep global confirma cero referencias residuales a `_bottom_tabs`, `tab_tree_title`, `centerSplitter` y `tabTreeText` fuera de este archivo (registro histórico).
+
+**Nota de gobernanza**: el working tree arrastraba sin commitear todo el trabajo de la Fase 3.11.a (último commit: `8af1b73`, cierre 3.10). Este cambio se apila encima; el revisor decide el corte de commit(s). Al no ser cierre de sub-fase con commit, el checklist de 8 documentos no aplica; esta entrada es el mini-cierre exigido por la regla de correcciones/bloques fuera de cierre de sub-fase.
+
+**Referencias**:
+- `docs/audit_log.md` entradas del bloque 3.11.a (layout previo con `centerSplitter` y pestañas ancladas).
+- `docs/3.11_design_interactive_tree.md` (pestañas Tree/Gains/Risks/Rules/Summary).
+
+---
+
+### 24/10/2026 — Wizard: tamaño de apertura adecuado + título visible sobre fondo oscuro
+
+**Estado**: ✅ Cerrada (sin commit; decisión del revisor, como todo el trabajo 3.11 acumulado en el working tree).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio multi-archivo con QSS y tests).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: dos defectos de presentación del asistente de nuevo modelo: (a) abría con un tamaño insuficiente para las listas duales de predictores y el resumen de gobernanza; (b) el título de la aplicación no era legible sobre el fondo oscuro del tema dark.
+
+**Cambios aplicados**:
+
+- `frontend_v3/wizard.py`:
+  - `ModelWizard.__init__`: `setMinimumWidth(800)` + `setMinimumHeight(600)` + `resize(950, 700)` (tamaño inicial razonable; el usuario puede reducir hasta el mínimo).
+  - `EnginePage.__init__`: nuevo `QLabel` `_lbl_wizard_title` (`objectName="wizardTitle"`) como PRIMER widget del layout de la página.
+  - `EnginePage.retranslate_ui`: asigna `tr("wizard_title")` al banner. Al ser llamada desde `ModelWizard.retranslate_ui` (bucle de páginas), el texto se aplica en el arranque y en cada cambio de idioma por la misma vía.
+- `frontend_v3/resources/styles.qss`: regla nueva `QLabel#wizardTitle { font-size: 16px; font-weight: bold; color: $ACCENT; }`. El selector por ID tiene más especificidad que `QWizardPage QLabel` (color $FG), por lo que el banner usa el acento del tema activo. Verificado con `render_stylesheet`: light → `#1A73E8`, dark → `#4C9AFF` (legible sobre oscuro — el objetivo de la tarea). El fail-fast de tokens residuales se ejerce en el arranque y en `test_theme_switch_both`.
+- `tests/test_wizard.py`: nuevo `test_wizard_size_and_title_banner` — mínimos 800×600, tamaño inicial ≥950×700, banner con `objectName="wizardTitle"`, texto `tr("wizard_title")`, primer widget del layout, y retraducción EN→ES→EN sin duplicar el widget.
+
+**Zona gris resuelta (conservador)**: el prompt pedía «en `ModelWizard.retranslate_ui`, añade un QLabel al inicio del layout de EnginePage». Crear el widget DENTRO de `retranslate_ui` lo duplicaría en cada cambio de idioma (el método corre también en el arranque y en cada evento del `language_bus`). Se aplicó el patrón de fuente única de verdad del proyecto (construir vacío una vez en `__init__`, asignar texto en `retranslate_ui`), que es lo que el propio prompt describe para el resto del wizard. Igualmente, el estilo se implementó vía QSS con token `$ACCENT` (el prompt permitía «QSS o setStyleSheet»): un `setStyleSheet` con color fijo habría roto el cambio de tema en caliente, ya que `$ACCENT` difiere entre light (`#1A73E8`) y dark (`#4C9AFF`).
+
+**Verificación**: suite **440/440 PASSED** (439 + 1 test nuevo). Smoke GUI headless (`TREEGOV_GUI_AUTOQUIT_MS=2000`): exit=0, cierre limpio.
+
+**Referencias**:
+- `docs/audit_log.md` entrada del 24/10/2026 (reestructuración del panel central, mismo día).
+- `frontend_v3/resources/styles.qss` (sistema de tokens `$ACCENT`, `frontend_v3/theme.py`).
+
+---
+
+### 24/10/2026 — Diseño de estación clásica de los nodos: rejilla visible, cuerpo sólido blanco/negro, cabecera en bloque
+
+**Estado**: ✅ Cerrada (sin commit; decisión del revisor, como todo el trabajo 3.11 acumulado en el working tree).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio visual multi-archivo con nueva clave de paleta).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: las tarjetas de nodo de la Fase 3.11.a (H13) tenían la tabla interna sin bordes y el cuerpo en `SURFACE_ELEVATED` (gris oscuro `#2D2D2D` en tema dark). Se ajusta el diseño al estilo de estación clásica: rejilla de tabla visible, cuerpo sólido blanco/negro según tema, y cabecera como bloque de color con texto blanco (esta última ya existía desde 3.11.a; se verifica y se fija con test).
+
+**Verificación empírica previa al cambio (sondeo QTextDocument)**: antes de tocar el código se comprobó qué sintaxis de bordes honra el motor de rich text de Qt, midiendo píxeles del color BORDER en un `QImage` offscreen: CSS inline en `td/th` → 201 px; atributos HTML (`border`/`cellspacing`/`cellpadding`) → 67 px; bloque `<style>` con selectores → 213 px. **Qt SÍ soporta bloques `<style>` y bordes/padding en celdas**, así que la especificación del prompt se implementó casi literal (bloque `<style>`).
+
+**Cambios aplicados**:
+
+- `frontend_v3/theme.py`: nueva clave `NODE_BG` en ambas paletas — light `#FFFFFF` (blanco puro), dark `#000000` (negro puro). Clave aditiva: `render_stylesheet` solo falla por tokens de plantilla ausentes en la paleta, no por claves extra; `test_theme_switch_both` sigue verde.
+- `frontend_v3/tree_view.py`:
+  - `_node_label`: nuevo bloque `<style>` con las dos reglas pedidas — `table { border-collapse: collapse; width: 100%; }` y `th, td { border: 1px solid {palette['BORDER']}; padding: 2px; }` — con el BORDER de la paleta activa (light `#DADCE0`, dark `#3C3C3C`). La etiqueta `<table>` conserva solo `font-size:11px` inline (las reglas de layout viven ahora en el bloque). El div externo sigue transparente para que pinte el rect sólido del NodeItem.
+  - `NodeItem.__init__`: el relleno del cuerpo pasa de `SURFACE_ELEVATED` a `NODE_BG` (tarjeta plana blanca/negra). El texto del cuerpo sigue en `FG` de la paleta (contraste garantizado por el pareado de la paleta: `#202124`/blanco, `#E0E0E0`/negro). Docstring actualizado.
+  - Cabecera en bloque de color con texto blanco: ya implementada en 3.11.a (azul `#1A73E8` internos; semáforo verde/ámbar/rojo en hojas; `color:#FFFFFF`). Sin cambios; ahora cubierta por test.
+- `tests/test_tree_view.py`:
+  - `test_theme_recolor_on_switch`: aserciones actualizadas de `SURFACE_ELEVATED` a `NODE_BG` (cambio intencional de la interfaz visual); añadido `_node_label` a los imports.
+  - Nuevo `test_node_label_classic_station_design` (función pura, sin QApplication): en ambos temas aserta las reglas CSS de la rejilla con el BORDER de la paleta, el contraste del cuerpo (`color: {FG}`), la cabecera en bloque con texto blanco (`color:#FFFFFF` + `background-color:#2E7D32` en hoja verde del fixture) y la cabecera azul del interno.
+
+**Verificación pixel-level del resultado real** (sondeo con fixture CRT conocido, hoja PD<5%): `QTextDocument` con el HTML real de `_node_label` renderizado sobre el `NODE_BG` de cada tema → **867 píxeles** del color BORDER en ambos temas (rejilla visible) y texto blanco de cabecera presente (26121 px en light — incluye el fondo blanco — y 112 px en dark, que solo pueden ser el texto blanco de la cabecera sobre el bloque verde).
+
+**Tests**: suite **441/441 PASSED** (440 + 1 test nuevo). Smoke GUI headless (`TREEGOV_GUI_AUTOQUIT_MS=2000`): exit=0, cierre limpio.
+
+**Referencias**:
+- `docs/audit_log.md` entradas del bloque 3.11.a (H13: `_node_label` con tabla interna; nodos theme-aware).
+- `docs/3.10.b_design_chaid_continuous.md` (H13, origen de la tarjeta estación).
+- `frontend_v3/theme.py` (token `NODE_BG`).
+
+---
+
+### 24/10/2026 — Auditoría Visual Estática de los tres bloques del día (layout Excel, wizard, nodos estación clásica)
+
+**Estado**: ✅ Cerrada. Veredicto: **6/6 PASS**, cero fallos, cero correcciones necesarias. Auditoría pura (sin cambios de código); se registra por trazabilidad (precedente: auditoría visual del bloque 3.11.a).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Método**: verificación punto a punto contra el código real (rg con cita de línea + lectura directa) seguida de verificación funcional (los 6 tests que cubren cada punto, ejecutados con `-v`). Regla aplicada en ambas direcciones: ni la presencia textual basta (los tests la ejercen), ni la suite verde basta (las líneas concretas se citan).
+
+**Veredicto punto a punto**:
+
+1. **`main_window.py` (layout Excel + HUD acotado)** — ✅ PASS.
+   - `_main_tabs` (`QTabWidget`, objectName `centralTabs`) con las 5 pestañas en orden (`addTab`: líneas 398-404: `_tree_panel`, `_reports_panel`, `_metrics_panel`, `_tab_rules`, `_tab_summary`). Cero ocurrencias de `centerSplitter` en el archivo (el splitter vertical está eliminado). `_main_tabs` es el panel central del splitter horizontal (línea 407) con `setSizes([250, 800, 300])` (línea 413).
+   - `_hud_panel.setMaximumWidth(400)` (línea 362) + `setMinimumWidth(200)` (línea 361).
+   - `_act_toggle_hud.toggled.connect(self._hud_panel.setVisible)` (línea 417): el menú Ver oculta/muestra el panel.
+   - Evidencia funcional: `test_layout_structure`, `test_hud_panel_bounded_and_toggleable`, `test_mainwindow_main_tabs` → PASS.
+2. **`wizard.py` (tamaño + título visible)** — ✅ PASS.
+   - `setMinimumWidth(800)` / `setMinimumHeight(600)` / `resize(950, 700)` (líneas 946-948 de `ModelWizard.__init__`).
+   - Banner de título en la primera página: `_lbl_wizard_title` (`QLabel`, objectName `wizardTitle`) creado UNA vez como primer widget del layout de `EnginePage` (líneas 86-88); texto `tr("wizard_title")` asignado en `EnginePage.retranslate_ui` (línea 112); regla QSS `QLabel#wizardTitle` en `styles.qss:214` con `$ACCENT` por tema (light `#1A73E8`, dark `#4C9AFF` — verificado por `render_stylesheet` en el bloque original).
+   - Evidencia funcional: `test_wizard_size_and_title_banner` → PASS (incluye retraducción ES sin duplicar el widget).
+3. **`tree_view.py` (nodos estación clásica)** — ✅ PASS.
+   - Tabla con bordes: bloque `<style>` con `table { border-collapse: collapse; width: 100%; }` y `th, td { border: 1px solid " + palette["BORDER"] + "; padding: 2px; }` (líneas 191-192).
+   - Cabecera en bloque de color con texto blanco (`color:#FFFFFF`, línea 181); cuerpo sólido `NODE_BG` (línea 370) con tokens `NODE_BG` = `#FFFFFF`/`#000000` en `theme.py` (líneas 27 y 42). Evidencia pixel-level del bloque original: 867 px de rejilla en ambos temas.
+   - Evidencia funcional: `test_node_label_classic_station_design`, `test_theme_recolor_on_switch` → PASS.
+
+**Tests**: 6/6 targeted PASSED; suite completa 441/441 PASSED tras el registro de esta entrada.
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (reestructuración del panel central; wizard tamaño/título; nodos estación clásica).
+
+---
+
+### 24/10/2026 — Roadmap: desglose de la Fase 3.11 + diferido de la barra clásica
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/roadmap.md` (único archivo tocado, aparte de esta entrada).
+
+**Cambios aplicados**:
+
+1. Nueva sección `### 🟡 Phase 3.11 — Rediseño Interactivo y Topología Visual` en "Upcoming phases" (tras la 3.9, orden cronológico), con el desglose aprobado: **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML) ✅ Completada (24/10/2026); **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío) ⏳; **3.11.b** Tree Map y Data Viewer ⏳; **3.11.c** Árboles Univariados y Matriz de Costos ⏳; **3.11.d** Menú Contextual e Interactividad ⏳. La cabecera referencia el diseño (`docs/3.11_design_interactive_tree.md`) y el origen (interactividad diferida desde 3.10.b).
+2. Sección "Deferred": nueva subsección `### ⏳ Barra superior con iconos detallados (estilo clásico 2001)` — diferida a la Fase 4.0 o posterior (registrada el 24/10/2026).
+
+**Motivo**: el roadmap no tenía sección propia para la Fase 3.11 (solo la referencia "Diferido a la Fase 3.11" en el bloque 3.10.b). Con tres bloques de 3.11.a ya aplicados el 24/10/2026 (layout Excel, wizard, nodos estación clásica), la fase necesitaba anclaje formal en la fuente de verdad de deuda/estado (regla del 16/10/2026: "toda deuda detectada se registra en el roadmap").
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/roadmap.md` (secciones "Upcoming phases" y "Deferred"); `docs/audit_log.md` entradas del 24/10/2026 (los tres bloques implementados y su auditoría).
+
+---
+
+### 24/10/2026 — estado_proyecto.md sincronizado con la Fase 3.11.a
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/estado_proyecto.md` (único archivo tocado, aparte de esta entrada).
+
+**Cambios aplicados**:
+
+1. Cabecera: fecha de última actualización 23/10 → **24/10/2026** (Fase 3.11.a cerrada; release 1.0.0rc4).
+2. Lista de fases ("Fases pendientes"): nueva fila **Fase 3.11.a** — Rediseño Base (Tema Colab, Layout Excel, Wizard redimensionado, Nodos HTML estación clásica) ✅ Completada (24/10/2026), tras la fila 3.10.b.
+3. Nueva sección narrativa `### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso` (tras la 3.8): párrafo breve con lo implementado (Tema Colab, pestañas tipo Excel, redimensionamiento del Wizard, nodos estación clásica, HUD acotado) y lo pendiente (Hotfix Visual 3.11.a.1 + sub-fases b/c/d), con referencia al documento de diseño.
+4. Conteo de tests actualizado a **441/441** en los cuatro puntos donde aparece el conteo vigente: línea de suite del bloque narrativo, diagrama de directorios (`tests/` 438 → 441), tabla por módulos (gui_smoke 9→10, wizard 22→23, tree_view 10→11, **Total 438→441**) y línea de ejecución. Los conteos por módulo se verificaron empíricamente con `pytest --collect-only` (10/23/11) antes de escribirlos; los conteos históricos por fase (346, 384, 416, 422) se conservan intactos por ser registro de su cierre.
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (tres bloques de código + auditoría + roadmap); `docs/roadmap.md` sección 3.11.
+
+---
+
+### 24/10/2026 — Documentos de contexto sincronizados (próximo chat)
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`.
+
+**Cambios aplicados**:
+
+- `docs/contexto_para_nueva_sesion.md`:
+  - Fecha de última actualización: 23/10 → **24/10/2026**.
+  - Suite de tests: 438/438 → **441/441**.
+  - Encabezado de la sección de próximos pasos: "Fase 3.6" (cerrada hace una semana) → "Fase 3.11 — Rediseño Interactivo y Topología Visual".
+  - Párrafo "Próximo paso" reescrito: **Hotfix Visual 3.11.a.1** (corregir toolbar, wizard tema claro/oscuro, paso 3, nodos); registra el cierre de la 3.11.a (suite 441/441), el aviso de que TODO el trabajo 3.11 está en el working tree **pendiente de commit** (último commit `8af1b73`), y conserva la deuda vigente (tags `a1`–`a6` ausentes, 3.6.e a 1.1.0+, ventana de feedback de rc4). Las líneas de historia ya cerrada (D13, poda 3.9) se retiran del párrafo de próximos pasos (siguen en este audit_log).
+- `docs/prompt_para_asistente.md`:
+  - "Última actualización": 22/10 → **24/10/2026**.
+  - Suite de tests (sección 5): 438/438 → **441/441**.
+  - Bala de estado reemplazada: "**Estado al 24/10/2026:** Fases 0 a 3.11.a cerradas. Suite 441/441. Próximo paso: Hotfix 3.11.a.1", con el mismo aviso de working tree sin commitear y referencias cruzadas al roadmap y a este audit_log.
+
+**Motivo**: con los cuatro documentos estructurales ya sincronizados hoy (roadmap y estado_proyecto en bloques previos), los dos documentos de contexto eran los únicos que aún declaraban la 3.11 como "siguiente hito" y la suite en 438. Sin esta sincronización, el próximo chat habría arrancado con estado obsoleto (el patrón que la regla del 09/10/2026 prohíbe).
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (bloques de código, auditoría, roadmap, estado_proyecto); `docs/roadmap.md` sección 3.11.
+
+---
+
+### 24/10/2026 — READMEs sincronizados (Mermaid + tabla de fases) y nota de desincronización PyPI
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `README.md`, `README.es.md`, `docs/roadmap.md` (nota Deferred).
+
+**Cambios aplicados**:
+
+- `README.md` y `README.es.md` (cambios simétricos EN/ES):
+  - Diagrama Mermaid (nodo de estado): "Phases 0 → 3.10.b" → **"Phases 0 → 3.11.a complete"** / "Fases 0 → 3.11.a completas"; "438 / 438 tests PASSED" → **"441 / 441 tests PASSED"**; fecha "Oct 23, 2026" → **"Oct 24, 2026"** / "24 oct 2026".
+  - Tabla de fases: nueva fila **3.11.a** (Base Redesign / Rediseño Base: Tema Colab, pestañas tipo Excel a página completa, Wizard redimensionado, nodos HTML estación clásica) → Completed / Completada, tras la fila 3.10.b.
+  - Líneas de suite (cabecera y cierre de tabla): 438/438 → **441/441** en ambos archivos (4 puntos en total).
+- `docs/roadmap.md` (sección Deferred, bloque "PyPI synchronization"): nota de **desincronización vigente (24/10/2026)** — los READMEs del repo reflejan 3.11.a y 441/441, la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético: NO se publica nueva versión (regla PyPI del 20/10/2026); se sincroniza con la próxima release material.
+
+**Verificación**: script Python con `io.open(encoding="utf-8")` (lección UTF-8 del 18/10: la consola de PowerShell corrompe caracteres no-ASCII en la tubería): los 5 checks por archivo presentes, cero "438/438" residual, fila `3.11.a` exactamente una vez por archivo.
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/roadmap.md` (sección Deferred, nota PyPI); `docs/audit_log.md` entradas del 24/10/2026 (bloques previos del día); protocolo PyPI en `AGENTS.md` y `docs/roadmap.md` (Recorded architectural decisions).
+
+---
+
+### 24/10/2026 — design_decisions.md: §17 Layout and Theme Decisions (Phase 3.11.a)
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/design_decisions.md` (único archivo tocado, aparte de esta entrada).
+
+**Cambios aplicados**: nueva sección `## §17. Layout and Theme Decisions (Phase 3.11.a)` entre §16 y el bloque Maintenance (el trailer del documento conserva su posición final), con tres subsecciones en el formato Contexto/Decisión/Consecuencia de §15:
+
+- **§17.1 Google Colab Theme**: paleta Colab (Dark/Light) por familiaridad del analista (similar a VS Code/Colab) y estilo `Fusion` forzado para que los QDialog respeten el QSS. Claim verificado contra el código antes de escribirlo: `frontend_v3/app.py:36` (`app.setStyle("Fusion")`, comentario "Phase 3.11.a").
+- **§17.2 Excel-like Tabs**: `QSplitter` vertical → `QTabWidget` principal; cada pestaña ocupa todo el área central (hoja Excel); motivo: maximizar el espacio del árbol y eliminar el redimensionado manual.
+- **§17.3 Bounded Properties Panel**: HUD acotado a 200-400 px y conectado al menú Ver (`_act_toggle_hud` → `setVisible`); tamaños iniciales 250/800/300; prioridad al canvas.
+
+**Motivo**: la 3.11.a introdujo dos nuevos defaults de presentación (paleta Colab, layout de pestañas) y un contrato de layout (HUD acotado/colapsable). El checklist de cierre ampliado (ítem 8: `design_decisions.md` si el cambio introdujo un nuevo default o alteró un contrato) aplicaba; esta entrada lo cubre.
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (los tres bloques de código documentados); `frontend_v3/app.py`, `frontend_v3/main_window.py`, `frontend_v3/theme.py`.
+
+---
+
+### 24/10/2026 — Diseño 3.11 reconciliado con lo implementado en 3.11.a
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/3.11_design_interactive_tree.md` (único archivo tocado, aparte de esta entrada).
+
+**Cambios aplicados** (el documento se enmienda in situ, no se reescribe):
+
+1. **Status** (cabecera): "Propuesto. Pendiente de auditoría de diseño…" → "**Implementación parcial (3.11.a completada; 3.11.a.1 en curso)**".
+2. **§2.2 (Panel Central)**: las "Pestañas inferiores (`QTabWidget`)" pasan a "**Pestañas principales**: un único `QTabWidget` principal con pestañas a página completa (estilo Excel) ocupa todo el panel central; NO hay `QSplitter` vertical ni franja inferior anclada". El ítem del canvas registra que ahora vive como pestaña 0 (`Tree`) del tab widget. Lista de pestañas (Tree/Gains/Risks/Rules/Summary) intacta: coincide con lo implementado.
+3. **§2.3 (Panel Derecho)**: añadido que el panel tiene ancho acotado (mínimo 200 px, máximo 400 px) y se puede ocultar desde el menú Ver.
+4. **§3 (Nodos)**: la tabla de distribución registra los bordes visibles (`border: 1px solid` con el token `BORDER` de la paleta activa, vía bloque `<style>` soportado por `QTextDocument`) y el fondo sólido del cuerpo (`NODE_BG`: blanco puro en claro, negro puro en oscuro).
+
+**Motivo**: el diseño quedó escrito contra el layout previo (pestañas en franja inferior bajo `centerSplitter`). La 3.11.a implementó un layout distinto (hojas Excel) decidido durante la implementación; el documento de diseño debe reflejar la realidad para que las sub-fases 3.11.b-d partan del estado verdadero, no del boceto. Cada reconciliación lleva la marca "(Implementado en 3.11.a…)" para distinguir lo verificado en código de lo aún pendiente.
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (reestructuración del panel central, nodos estación clásica); `docs/design_decisions.md` §17 (las mismas decisiones, en formato Contexto/Decisión/Consecuencia).
+
+---
+
+### 24/10/2026 — Referencia visual del estándar clásico transcrita (docs/3.11_classic_tree_ui_reference.md)
+
+**Estado**: ✅ Cerrada. Documentación pura (archivo nuevo; sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/3.11_classic_tree_ui_reference.md` (nuevo, 5 secciones).
+
+**Contenido**: transcripción textual de la especificación visual del estándar clásico de estaciones de árboles (circa 2001): (1) toolbar compacta ≤30 px, icon-only, 16-24 px, con agrupación [Archivo | Vistas/Tablas | Zoom | Edición]; (2) layout de tres paneles (izquierdo vertical: Explorer/Tree Map/Data Viewer; central: canvas + pestañas; derecho: Propiedades/Gobernanza ≤400 px); (3) estructura del nodo (cabecera en bloque de color con texto blanco, tabla `Category | % | n` con cuadrado de color por clase, fila Total con línea superior, barras proporcionales, footer con metadatos, espaciado ajustado); (4) interactividad del Tree Map (panning con zoom preservado, sin fit automático); (5) menú contextual de nodo (Grow/Grow One Level/Select Predictor/Define Split/Remove Branch/Prune Branch) previsto para la 3.11.d.
+
+**Motivo**: la especificación visual vivía en imágenes externas (PDF/capturas del estándar clásico); sin transcripción textual, cada agente nuevo dependía de esas imágenes para implementar las sub-fases 3.11.a.1 a 3.11.d. El documento fija la referencia en el repo.
+
+**Nota de alcance (evita falsas contradicciones)**: el documento transcribe el estándar CLÁSICO; su §2 menciona "pestañas inferiores" porque así era el estándar de 2001. El estado implementado actual (pestañas tipo Excel a página completa, sin splitter vertical) está reconciliado en `docs/3.11_design_interactive_tree.md` §2.2 y decidido en `docs/design_decisions.md` §17.2. La referencia clásica NO es la fuente de verdad del estado actual; es la especificación de destino visual para las piezas aún pendientes (toolbar de 30 px, cuadrados de color por clase, fila Total con línea superior, Tree Map, menú contextual).
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/3.11_design_interactive_tree.md` (diseño reconciliado); `docs/design_decisions.md` §17.
+
+---
+
+### 24/10/2026 — Corrección de gobernanza: regla "Cero Software Privativo" en la referencia visual
+
+**Estado**: ✅ Cerrada. Corrección urgente de gobernanza; suite intacta.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Violación detectada (por el revisor)**: la referencia visual transcrita en el bloque anterior nombraba en el título y en el nombre del archivo la marca comercial del software de estaciones de árboles usado como estándar de referencia, violando la regla #3 (Cero Software Privativo; `CONVENTIONS.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`). La marca se había propagado en la misma sesión a READMEs, `estado_proyecto.md`, los dos documentos de contexto, comentarios de `tree_view.py`, el nombre de un test y las entradas de este audit_log del 24/10/2026 (todas sin commitear).
+
+**Acción aplicada (descontaminación completa)**:
+
+1. Eliminado el archivo con la marca en el nombre; creado `docs/3.11_classic_tree_ui_reference.md` con el mismo contenido y terminología neutra ("Estándar Clásico de Estaciones de Árboles (circa 2001)").
+2. `docs/3.11_design_interactive_tree.md` §3: el nodos ítem ya no remite a "el PDF de referencia" sino al nuevo archivo transcrito (el próximo agente no depende de imágenes externas). `docs/roadmap.md` y `docs/design_decisions.md`: verificado con rg que NUNCA contuvieron la marca (cero hits).
+3. Terminología neutralizada en: `README.md` / `README.es.md` (fila 3.11.a), `docs/estado_proyecto.md` (2 puntos), `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, comentarios de `frontend_v3/tree_view.py` (2), `tests/test_tree_view.py` (test renombrado a `test_node_label_classic_station_design` + comentarios) y las entradas del 24/10/2026 de este audit_log (sin commitear; se corrigen antes de que entren en la historia).
+4. Verificación: barrido rg repo-wide (excl. .venv/.git/logs) con `SPSS|AnswerTree|\bIBM\b|\bSAS\b`. Resultado tras la corrección: las únicas ocurrencias restantes son (a) el texto de la propia regla en los tres documentos de gobernanza (precedente Grupo A de la auditoría del 11/10/2026: "la regla necesita nombrar lo que prohíbe para ser operativa") y (b) menciones bibliográficas de convenciones estadísticas en entradas históricas COMMITEADAS de este audit_log (fases 3.1/3.2 y la propia auditoría del 11/10), que no se reescriben por ser registro inmutable de fases cerradas. Documentos activos: limpios.
+
+**Lección**: la regla aplica también al vocabulario introducido vía prompts de la sesión (el nombre llegó en un prompt de transcripción). Verificación de vocabulario prohibido incorporada al instinto de auditoría de cada bloque que transcriba material externo.
+
+**Tests**: 441/441 PASSED (test renombrado incluido).
+
+**Referencias**: `CONVENTIONS.md` (regla #3); `docs/audit_log.md` entrada del 11/10/2026 (auditoría previa y precedente Grupo A); `docs/3.11_classic_tree_ui_reference.md`.
+
+---
+
+### 24/10/2026 — Referencia visual clásica vinculada en los documentos estructurales
+
+**Estado**: ✅ Cerrada. Documentación pura (sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos**: `docs/3.11_design_interactive_tree.md`, `docs/roadmap.md`.
+
+**Cambios aplicados**:
+
+1. `docs/3.11_design_interactive_tree.md` §8 (Referencias): nueva viñeta final — "Referencia visual detallada: `docs/3.11_classic_tree_ui_reference.md` (transcripción de las capturas del estándar clásico circa 2001)".
+2. `docs/roadmap.md` (sección Phase 3.11): nota tras el desglose — "la especificación visual para todas las sub-fases 3.11.a.1 a 3.11.d vive en `docs/3.11_classic_tree_ui_reference.md`".
+
+**Motivo**: el documento de referencia (creado en el bloque anterior, ya con terminología neutra) quedaba huérfano: solo lo citaba el §3 del diseño. Con la vinculación en §8 y en el roadmap, el próximo chat lo descubre desde las dos fuentes de verdad estructurales sin depender de imágenes externas.
+
+**Tests**: 441/441 PASSED (sin cambios de código).
+
+**Referencias**: `docs/audit_log.md` entradas del 24/10/2026 (creación del documento de referencia; corrección de gobernanza); `docs/3.11_classic_tree_ui_reference.md`.

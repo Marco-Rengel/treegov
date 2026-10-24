@@ -93,9 +93,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_available": "Available predictors",
         "step2_selected": "Selected predictors",
         "step2_hint_min_one": "Select at least one predictor to continue.",
-        "step2_chaid_cont_note": (
-            "Note: CHAID engines reject [CONT] predictors by contract."
-        ),
         "step2_class_group_title": "Class of interest and labels",
         "step2_class_hint": (
             "Edit the human-readable label of each class and pick the "
@@ -173,7 +170,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "msg_model_trained": "Model trained: {method} ({n} nodes)",
         "msg_error_title": "TreeGov — Error",
         # --- Phase 2.2: interactive tree viewer ---
-        "tab_tree_title": "Model tree",
+        "tab_tree": "Tree",
         "tree_empty": "Train a model to display the tree (Ctrl+N).",
         "tree_hdr_nodes": "nodes",
         "tree_hdr_leaves": "leaves",
@@ -324,6 +321,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_matrix_title_multiclass": (
             "Classification matrix (class of interest vs rest)"
         ),
+        "tab_gains": "Gains",
+        "tab_risks": "Risks",
+        "tab_rules": "Rules",
+        "tab_summary": "Summary",
+        "panel_governance": "Governance",
+        "governance_fingerprint": "Fingerprint",
+        "governance_mode": "Mode",
+        "governance_view_audit": "View Audit Log",
         "reports_no_model": "Train a model to view reports.",
     },
     "es": {
@@ -400,9 +405,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_available": "Predictores disponibles",
         "step2_selected": "Predictores seleccionados",
         "step2_hint_min_one": "Seleccione al menos un predictor para continuar.",
-        "step2_chaid_cont_note": (
-            "Nota: los motores CHAID rechazan predictores [CONT] por contrato."
-        ),
         "step2_class_group_title": "Clase de interés y etiquetas",
         "step2_class_hint": (
             "Edite la etiqueta legible de cada clase y elija la clase "
@@ -485,7 +487,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "msg_model_trained": "Modelo entrenado: {method} ({n} nodos)",
         "msg_error_title": "TreeGov — Error",
         # --- Fase 2.2: visor interactivo de árbol ---
-        "tab_tree_title": "Árbol del modelo",
+        "tab_tree": "Árbol",
         "tree_empty": "Entrene un modelo para visualizar el árbol (Ctrl+N).",
         "tree_hdr_nodes": "nodos",
         "tree_hdr_leaves": "hojas",
@@ -636,6 +638,14 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_matrix_title_multiclass": (
             "Matriz de clasificación (clase de interés vs resto)"
         ),
+        "tab_gains": "Ganancias",
+        "tab_risks": "Riesgos",
+        "tab_rules": "Reglas",
+        "tab_summary": "Resumen",
+        "panel_governance": "Gobernanza",
+        "governance_fingerprint": "Huella",
+        "governance_mode": "Modo",
+        "governance_view_audit": "Ver Auditoría",
         "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }

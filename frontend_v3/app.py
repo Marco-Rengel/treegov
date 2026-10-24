@@ -32,6 +32,8 @@ _AUTOQUIT_ENV: str = "TREEGOV_GUI_AUTOQUIT_MS"
 def create_app(argv: Sequence[str] | None = None) -> QApplication:
     """Build the QApplication and fix org/app names for QSettings."""
     app = QApplication(list(argv) if argv is not None else sys.argv)
+    # Force Fusion so QDialog/QWizard honor the QSS (Phase 3.11.a).
+    app.setStyle("Fusion")
     QCoreApplication.setOrganizationName(_ORG_NAME)
     QCoreApplication.setApplicationName(_APP_NAME)
     return app

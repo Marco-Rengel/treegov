@@ -4,7 +4,7 @@
     .venv\\Scripts\\python tests\\test_gui_smoke.py
 
 Headless: QT_QPA_PLATFORM defaults to offscreen here (setdefault, so a
-real display session keeps its platform). 9 tests: 6 smoke + 3 i18n.
+real display session keeps its platform). 10 tests: 7 smoke + 3 i18n.
 """
 
 import ast
@@ -66,7 +66,7 @@ def _assert_raises(exc_type, fn, *args, **kwargs):
 
 
 # ---------------------------------------------------------------------------
-# Smoke tests (6)
+# Smoke tests (7)
 # ---------------------------------------------------------------------------
 
 
@@ -87,8 +87,31 @@ def test_layout_structure():
     assert splitter.widget(0) is w.findChild(QFrame, "leftPanel")
     assert splitter.widget(2) is w.findChild(QFrame, "hudPanel")
     tabs = w.findChild(QTabWidget, "centralTabs")
-    # 4 tabs desde Fase 2.4.a: Welcome (0) + Tree (1) + OOS/OOT (2) + Reports (3)
-    assert tabs is not None and tabs.count() == 4
+    # 5 main tabs (Excel-style sheets filling the central area):
+    # Tree (0) + Gains (1) + Risks (2) + Rules (3) + Summary (4)
+    assert tabs is not None and tabs.count() == 5
+    # the tab widget IS the central splitter pane (no vertical splitter)
+    assert splitter.widget(1) is tabs
+    assert tabs.widget(0) is w._tree_panel
+    w.close()
+    w.deleteLater()
+
+
+def test_hud_panel_bounded_and_toggleable():
+    """Properties panel: width capped (never oversized) and the View menu
+    action really hides/shows it via setVisible()."""
+    _get_app()
+    w = MainWindow()
+    assert w._hud_panel.minimumWidth() == 200
+    assert w._hud_panel.maximumWidth() == 400
+    act = w.findChild(QAction, "act_toggle_hud")
+    assert act is not None and act.isCheckable()
+    w.show()
+    assert w._hud_panel.isVisible()
+    act.setChecked(False)
+    assert not w._hud_panel.isVisible()
+    act.setChecked(True)
+    assert w._hud_panel.isVisible()
     w.close()
     w.deleteLater()
 

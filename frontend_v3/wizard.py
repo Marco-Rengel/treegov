@@ -79,6 +79,13 @@ class EnginePage(QWizardPage):
         self._radios: dict[str, QRadioButton] = {}
         self._descs: dict[str, QLabel] = {}
         layout = QVBoxLayout(self)
+        # Application title banner (legible over dark backgrounds via the
+        # QSS rule QLabel#wizardTitle, color $ACCENT). Built ONCE here;
+        # retranslate_ui only assigns the text, so a language switch
+        # never duplicates the widget (single-source-of-truth pattern).
+        self._lbl_wizard_title = QLabel()
+        self._lbl_wizard_title.setObjectName("wizardTitle")
+        layout.addWidget(self._lbl_wizard_title)
         for engine, desc_key in _ENGINES:
             radio = QRadioButton(_ENGINE_LABELS[engine])  # proper noun, fixed
             desc = QLabel()
@@ -102,6 +109,7 @@ class EnginePage(QWizardPage):
         return True  # the C&RT default always makes this step complete
 
     def retranslate_ui(self) -> None:
+        self._lbl_wizard_title.setText(tr("wizard_title"))
         self.setTitle(tr("step1_title"))
         self.setSubTitle(tr("step1_subtitle"))
         for engine, desc_key in _ENGINES:
@@ -116,9 +124,10 @@ class EnginePage(QWizardPage):
 class PredictorsPage(QWizardPage):
     """Target combo + dual predictor lists (available / selected).
 
-    CHAID mirror rule (backend contract, chaid_engine.py): CHAID engines
-    reject CONTINUOUS predictors, so [CONT] items are disabled here when a
-    CHAID engine was selected in Step 1.
+    Phase 3.10.b (H14) removed the CHAID mirror rule: the backend now
+    bins CONTINUOUS predictors automatically (SplitConfig.bin_edges), so
+    [CONT] items are enabled for EVERY engine, including CHAID and
+    CHAID_EXHAUSTIVE (Phase 3.11: legacy mirror rule deleted).
 
     Phase 3.2.h: weight-column combo. Mirror rule: the column chosen as
     weight column disappears from the available predictor list (and is
@@ -295,9 +304,7 @@ class PredictorsPage(QWizardPage):
         layout.addLayout(lists_row, 1)
 
         self._lbl_hint = QLabel()
-        self._lbl_chaid_note = QLabel()
         layout.addWidget(self._lbl_hint)
-        layout.addWidget(self._lbl_chaid_note)
 
         self._btn_add.clicked.connect(lambda: self._move(False, False))
         self._btn_remove.clicked.connect(lambda: self._move(True, False))
@@ -373,10 +380,6 @@ class PredictorsPage(QWizardPage):
                           & ~Qt.ItemFlag.ItemIsSelectable)
         return item
 
-    def _is_chaid(self) -> bool:
-        wiz = self.wizard()
-        return bool(wiz and wiz.selected_engine().startswith("CHAID"))
-
     def _on_target_change(self, _index: int) -> None:
         target = self.target()
         weight = self.weight_col()
@@ -396,8 +399,9 @@ class PredictorsPage(QWizardPage):
             if (col == target or col == weight or col == pop
                     or col in in_selected):
                 continue
-            disabled = self._is_chaid() and self._types[col] == "CONTINUOUS"
-            self._lst_available.addItem(self._make_item(col, not disabled))
+            # Phase 3.11: no engine-specific disabling; CHAID bins [CONT]
+            # automatically in the backend (Phase 3.10.b, H14).
+            self._lst_available.addItem(self._make_item(col))
         self._refresh_class_table()
         self.completeChanged.emit()
 
@@ -619,15 +623,11 @@ class PredictorsPage(QWizardPage):
     # --- Qt overrides ------------------------------------------------------
 
     def initializePage(self) -> None:
-        """Apply the CHAID mirror rule when entering the step."""
-        if self._is_chaid():
-            # disabled [CONT] items cannot stay selected either
-            for i in range(self._lst_selected.count() - 1, -1, -1):
-                item = self._lst_selected.item(i)
-                col = item.data(Qt.ItemDataRole.UserRole)
-                if self._types[col] == "CONTINUOUS":
-                    self._lst_selected.takeItem(i)
-                    self._lst_available.addItem(item)
+        """Refresh the available list when entering the step.
+
+        Phase 3.11: the CHAID mirror rule (evict selected [CONT] items)
+        is gone — the backend bins continuous predictors automatically.
+        """
         self._on_target_change(self._combo_target.currentIndex())
 
     def isComplete(self) -> bool:
@@ -650,9 +650,6 @@ class PredictorsPage(QWizardPage):
         self._lbl_available.setText(tr("step2_available"))
         self._lbl_selected.setText(tr("step2_selected"))
         self._lbl_hint.setText(tr("step2_hint_min_one"))
-        self._lbl_chaid_note.setText(
-            tr("step2_chaid_cont_note") if self._is_chaid() else ""
-        )
         self._group_class.setTitle(tr("step2_class_group_title"))
         self._lbl_class_hint.setText(tr("step2_class_hint"))
         self._tbl_classes.setHorizontalHeaderLabels([
@@ -942,6 +939,13 @@ class ModelWizard(QWizard):
         # Qt 6 (la opcion es HaveHelpButton; no existe "NoHelpButton" - ver
         # docs Qt6). Sin contenido de ayuda, basta no activarla.
         self.setModal(False)
+
+        # Reasonable opening size: wide enough for the dual predictor
+        # lists and tall enough for the governance summary without
+        # cramming (the user can still shrink down to 800x600).
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(600)
+        self.resize(950, 700)
 
         self.page_engine = EnginePage(self)
         self.page_predictors = PredictorsPage(

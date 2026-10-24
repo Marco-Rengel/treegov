@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 23/10/2026 (Fases 3.8, 3.9, 3.10.a y 3.10.b cerradas, release 1.0.0rc4)
+**Fecha de última actualización:** 24/10/2026 (Fase 3.11.a cerrada: Tema Colab, Layout Excel, Wizard y Nodos HTML; release 1.0.0rc4)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -285,7 +285,24 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 438/438 PASSED.
+**Suite:** 441/441 PASSED.
+
+### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
+
+**3.11.a — Rediseño Base** ✅ Completada (24/10/2026). Implementados el
+Tema Colab (paleta light/dark con tokens QSS), las pestañas tipo Excel
+(un único `QTabWidget` principal —Árbol, Ganancias, Riesgos, Reglas,
+Resumen— que ocupa todo el área central, sin splitter vertical; HUD de
+propiedades acotado a 200-400 px y colapsable desde el menú Ver) y el
+redimensionamiento del Wizard (mínimo 800×600, apertura 950×700, con
+banner de título visible sobre fondo oscuro). Los nodos del árbol pasan
+a tarjetas HTML estilo estación clásica (rejilla de tabla visible, cuerpo
+sólido blanco/negro según tema, cabecera en bloque de color con texto
+blanco). Queda pendiente el Hotfix Visual **3.11.a.1** (Toolbar
+compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío),
+y las sub-fases 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles
+Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e
+Interactividad). Diseño: `docs/3.11_design_interactive_tree.md`.
 
 ### Cierre intermedio 16/10/2026
 
@@ -312,6 +329,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`) ✅ Completada (20/10/2026).
 - **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). ✅ Completada (22/10/2026).
 - **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). ✅ Completada (23/10/2026).
+- **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. ✅ Completada (24/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
@@ -339,7 +357,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (438 tests)
+├── tests/ # Suite de tests (441 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -470,17 +488,17 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 9 |
-| wizard (frontend) | 22 |
-| tree_view (frontend) | 10 |
+| gui_smoke (frontend) | 10 |
+| wizard (frontend) | 23 |
+| tree_view (frontend) | 11 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 12 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **438** |
+| **Total** | **441** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 438/438 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 441/441 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

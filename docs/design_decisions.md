@@ -2098,6 +2098,25 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 ---
 
+## §17. Layout and Theme Decisions (Phase 3.11.a)
+
+### 17.1 Google Colab Theme
+**Contexto:** El tema oscuro previo (VS Code Dark+ con jerarquía de 3 niveles, §15.1) y el claro no compartían una paleta coherente, y los diálogos nativos (wizard, QMessageBox) ignoraban parcialmente el QSS bajo el estilo nativo de Windows.
+**Decisión:** Se eligió la paleta de Google Colab (Dark/Light) por su familiaridad para los analistas (similar a VS Code/Colab) y se forzó el estilo `Fusion` (`app.py`) para que los QDialog respeten el QSS. Las paletas viven en `frontend_v3/theme.py` (`PALETTES`) y se aplican por sustitución de tokens `$TOKEN` sobre `resources/styles.qss`, con fail-fast si queda algún token sin resolver.
+**Consecuencia:** Un único template QSS sirve a ambos temas; los `QGraphicsItem` (que ignoran el QSS) se recolorean explícitamente desde la paleta activa en cada render.
+
+### 17.2 Excel-like Tabs
+**Contexto:** El área central usaba un `QSplitter` vertical con el canvas del árbol arriba y las pestañas (Ganancias/Riesgos/Reglas/Resumen) ancladas en una franja inferior de 100-200 px, demasiado estrecha para trabajar los reportes.
+**Decisión:** Se sustituyó el `QSplitter` vertical por un `QTabWidget` principal. Motivo: maximizar el espacio del árbol y evitar que el usuario tenga que redimensionar manualmente los paneles. Cada pestaña (Árbol, Ganancias, Riesgos, Reglas, Resumen) ocupa TODO el área central, como una hoja de Excel; la pestaña 0 hospeda el canvas real del árbol.
+**Consecuencia:** Los reportes y métricas ganan toda la altura de la ventana; el canvas deja de competir por píxeles con la barra de pestañas. El cambio de pestaña programático (`setCurrentWidget`) sigue llevando al analista a "Riesgos" tras evaluar OOS/OOT.
+
+### 17.3 Bounded Properties Panel
+**Contexto:** El panel derecho de propiedades (HUD) podía expandirse sin límite arrastrando el handle del splitter, llegando a sobredimensionarse frente al área de trabajo.
+**Decisión:** El panel derecho se acotó a un máximo de 400px (mínimo 200px) y se conectó al menú Ver para poder ocultarlo (`_act_toggle_hud` → `setVisible`), priorizando el espacio del canvas. Tamaños iniciales del splitter principal: 250/800/300 (izquierda/centro/derecha).
+**Consecuencia:** El canvas central siempre conserva la mayor parte del ancho de la ventana; el HUD sigue accesible pero no puede dominar el layout.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

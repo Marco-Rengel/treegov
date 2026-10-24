@@ -21,7 +21,7 @@ import logging
 import os
 from typing import Callable
 
-from PySide6.QtCore import QSettings, Qt
+from PySide6.QtCore import QSettings, QSize, Qt
 from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -35,6 +35,7 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QProgressBar,
+    QPushButton,
     QSplitter,
     QStyle,
     QTabWidget,
@@ -144,18 +145,24 @@ class MainWindow(QMainWindow):
         self._act_about.setText(tr("menu_help_about"))
 
         self._left_title.setText(tr("panel_left_title"))
-        self._center_title.setText(tr("panel_center_title"))
         self._hud_title.setText(tr("panel_right_title"))
-        self._tabs.setTabText(0, tr("tab_welcome_title"))
-        self._tabs.setTabText(1, tr("tab_tree_title"))
-        self._tabs.setTabText(2, tr("tab_oos_oot_title"))
-        self._tabs.setTabText(3, tr("tab_reports_title"))
+        # Main tabs (Excel-style sheets): Tree / Gains / Risks / Rules /
+        # Summary — each tab fills the whole central area.
+        self._main_tabs.setTabText(0, tr("tab_tree"))
+        self._main_tabs.setTabText(1, tr("tab_gains"))
+        self._main_tabs.setTabText(2, tr("tab_risks"))
+        self._main_tabs.setTabText(3, tr("tab_rules"))
+        self._main_tabs.setTabText(4, tr("tab_summary"))
 
         self._refresh_session_indicator()
         self._lbl_mode.setText(f"{tr('status_mode')}: {self._mode_name}")
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{self._theme_name}')}"
         )
+        self._hud_gb_governance.setTitle(tr("panel_governance"))
+        self._hud_lbl_gov_fp_cap.setText(f"{tr('governance_fingerprint')}:")
+        self._hud_lbl_gov_mode_cap.setText(f"{tr('governance_mode')}:")
+        self._hud_btn_view_audit.setText(tr("governance_view_audit"))
         self._hud_gb_dataset.setTitle(tr("hud_group_dataset"))
         self._hud_gb_node.setTitle(tr("hud_group_node"))
         self._hud_gb_rule.setTitle(tr("hud_group_rule"))
@@ -302,7 +309,6 @@ class MainWindow(QMainWindow):
     def _build_toolbar(self) -> None:
         self._toolbar = QToolBar("Main Toolbar", self)
         self._toolbar.setObjectName("mainToolbar")
-        self._toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.addToolBar(self._toolbar)
 
         style = self.style()
@@ -310,6 +316,7 @@ class MainWindow(QMainWindow):
         self._act_new_wizard.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
         self._act_train.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self._act_evaluate_oos.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
+        self._act_load_oot.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon))
         self._act_prune.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
 
         self._toolbar.addAction(self._act_open)
@@ -335,6 +342,12 @@ class MainWindow(QMainWindow):
         self._toolbar.addAction(self._act_zoom_out)
         self._toolbar.addAction(self._act_zoom_fit)
 
+        # Phase 3.11.a: compact icon-only toolbar. Applied AFTER all
+        # actions are added so every button honors the style; the QAction
+        # texts set in retranslate_ui() double as tooltips.
+        self._toolbar.setIconSize(QSize(24, 24))
+        self._toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+
     def _build_central(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.setObjectName("centralSplitter")
@@ -343,37 +356,27 @@ class MainWindow(QMainWindow):
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
         # Phase 3.10.a: structured properties panel (Dataset / Node / Rule)
         self._build_hud_panel_content(self._hud_panel.layout())
+        # Bounded properties panel: collapsible via the View menu, and
+        # never oversized (the splitter cannot stretch it past 400 px).
+        self._hud_panel.setMinimumWidth(200)
+        self._hud_panel.setMaximumWidth(400)
 
-        self._tabs = QTabWidget()
-        self._tabs.setObjectName("centralTabs")
-        welcome = QWidget()
-        welcome_layout = QVBoxLayout(welcome)
-        self._center_title = QLabel()
-        self._center_title.setObjectName("panelTitle")
-        self._center_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        welcome_layout.addStretch(1)
-        welcome_layout.addWidget(self._center_title)
-        welcome_layout.addStretch(1)
-        self._tabs.addTab(welcome, "")
-
-        # Phase 2.2: interactive tree viewer tab (empty until TRAINED)
+        # Phase 2.2: interactive tree canvas (empty until TRAINED); it
+        # lives as tab 0 of the main tab widget (Excel-style sheet).
         self._tree_panel = TreePanel()
         self._tree_panel.setObjectName("treePanel")
-        self._tabs.addTab(self._tree_panel, "")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)
         self._tree_panel.selection_cleared.connect(self._hud_reset)
 
-        # Phase 2.3: OOS/OOT metrics panel
+        # Phase 2.3: OOS/OOT metrics panel (main "Risks" tab)
         self._metrics_panel = MetricsPanel()
         self._metrics_panel.setObjectName("metricsPanel")
-        self._tabs.addTab(self._metrics_panel, "")
         self._metrics_panel.inversion_requested.connect(
             self._on_inversion_requested
         )
 
         self._reports_panel = ReportsPanel()
         self._reports_panel.setObjectName("reportsPanel")
-        self._tabs.addTab(self._reports_panel, "")
         self._reports_panel.partition_changed.connect(
             self._on_reports_partition_changed
         )
@@ -387,13 +390,27 @@ class MainWindow(QMainWindow):
             self._refresh_reports_panel
         )
 
+        # Main tab bar (Excel-style sheets filling the central area):
+        # Tree / Gains / Risks / Rules / Summary. Rules and Summary are
+        # placeholders until sub-phases 3.11.b-d fill them.
+        self._main_tabs = QTabWidget()
+        self._main_tabs.setObjectName("centralTabs")
+        self._main_tabs.addTab(self._tree_panel, "")
+        self._main_tabs.addTab(self._reports_panel, "")
+        self._main_tabs.addTab(self._metrics_panel, "")
+        self._tab_rules = self._make_placeholder_tab("tabRules")
+        self._main_tabs.addTab(self._tab_rules, "")
+        self._tab_summary = self._make_placeholder_tab("tabSummary")
+        self._main_tabs.addTab(self._tab_summary, "")
+
         splitter.addWidget(self._left_panel)
-        splitter.addWidget(self._tabs)
+        splitter.addWidget(self._main_tabs)
         splitter.addWidget(self._hud_panel)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 4)
         splitter.setStretchFactor(2, 1)
-        splitter.setSizes([240, 760, 280])
+        # Priority to the center sheet; the HUD starts within its bounds.
+        splitter.setSizes([250, 800, 300])
         self.setCentralWidget(splitter)
 
         self._act_toggle_left.toggled.connect(self._left_panel.setVisible)
@@ -410,7 +427,38 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return frame, title
 
+    def _make_placeholder_tab(self, name: str) -> QWidget:
+        """Empty placeholder tab (Phase 3.11.a). Real content lands in
+        sub-phases 3.11.b-d."""
+        widget = QWidget()
+        widget.setObjectName(name)
+        lay = QVBoxLayout(widget)
+        lbl = QLabel("—")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(lbl)
+        return widget
+
     def _build_hud_panel_content(self, layout: QVBoxLayout) -> None:
+        # 0. Gobernanza MRM (Phase 3.11.a): fingerprint, mode, audit access
+        self._hud_gb_governance = QGroupBox()
+        form_gov = QFormLayout(self._hud_gb_governance)
+        self._hud_lbl_gov_fp_cap = QLabel()
+        self._hud_lbl_gov_fp = QLabel("—")
+        self._hud_lbl_gov_fp.setWordWrap(True)
+        # copiable: the fingerprint is auditor-facing data
+        self._hud_lbl_gov_fp.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self._hud_lbl_gov_mode_cap = QLabel()
+        self._hud_lbl_gov_mode = QLabel("—")
+        self._hud_btn_view_audit = QPushButton()
+        # placeholder: the audit viewer lands in Phase 3.11.d
+        self._hud_btn_view_audit.setEnabled(False)
+        form_gov.addRow(self._hud_lbl_gov_fp_cap, self._hud_lbl_gov_fp)
+        form_gov.addRow(self._hud_lbl_gov_mode_cap, self._hud_lbl_gov_mode)
+        form_gov.addRow(self._hud_btn_view_audit)
+        layout.insertWidget(1, self._hud_gb_governance)
+
         # 1. Dataset
         self._hud_gb_dataset = QGroupBox()
         form_ds = QFormLayout(self._hud_gb_dataset)
@@ -420,7 +468,7 @@ class MainWindow(QMainWindow):
         form_ds.addRow("File:", self._hud_lbl_file)
         form_ds.addRow("Rows:", self._hud_lbl_rows)
         form_ds.addRow("Cols:", self._hud_lbl_cols)
-        layout.insertWidget(1, self._hud_gb_dataset)
+        layout.insertWidget(2, self._hud_gb_dataset)
 
         # 2. Nodo
         self._hud_gb_node = QGroupBox()
@@ -435,7 +483,7 @@ class MainWindow(QMainWindow):
         form_node.addRow("Events:", self._hud_lbl_events)
         form_node.addRow("Bad Rate:", self._hud_lbl_bad_rate)
         form_node.addRow(self._hud_bar)
-        layout.insertWidget(2, self._hud_gb_node)
+        layout.insertWidget(3, self._hud_gb_node)
 
         # 3. Regla
         self._hud_gb_rule = QGroupBox()
@@ -448,11 +496,11 @@ class MainWindow(QMainWindow):
         form_rule.addRow("Cond:", self._hud_lbl_rule_cond)
         form_rule.addRow("Stat:", self._hud_lbl_rule_stat)
         form_rule.addRow("p-val:", self._hud_lbl_rule_p)
-        layout.insertWidget(3, self._hud_gb_rule)
+        layout.insertWidget(4, self._hud_gb_rule)
 
         self._hud_placeholder = QLabel()
         self._hud_placeholder.setWordWrap(True)
-        layout.insertWidget(4, self._hud_placeholder)
+        layout.insertWidget(5, self._hud_placeholder)
         layout.addStretch(1)
 
     def _build_statusbar(self) -> None:
@@ -541,6 +589,8 @@ class MainWindow(QMainWindow):
             self._metrics_panel.set_report(None)
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
+            self._hud_lbl_gov_fp.setText("—")
+            self._hud_lbl_gov_mode.setText("—")
             self._hud_reset()
         columns, types = self._dataset_info
         wiz = ModelWizard(
@@ -597,7 +647,9 @@ class MainWindow(QMainWindow):
         tree = st.tree
         if tree is not None:
             self._tree_panel.set_model(tree, cfg["governance_mode"])
-            self._tabs.setCurrentWidget(self._tree_panel)
+            # Phase 3.11.a: governance panel shows the model identity
+            self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
+            self._hud_lbl_gov_mode.setText(cfg["governance_mode"])
             self._hud_reset()
             if self._logger is not None:
                 self._logger.info(
@@ -809,7 +861,7 @@ class MainWindow(QMainWindow):
             return
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
-        self._tabs.setCurrentWidget(self._metrics_panel)
+        self._main_tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
         if self._logger is not None:
             self._logger.info("[gui] OOS evaluation done")
@@ -833,7 +885,7 @@ class MainWindow(QMainWindow):
             return
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
-        self._tabs.setCurrentWidget(self._metrics_panel)
+        self._main_tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
         if self._logger is not None:
             self._logger.info("[gui] OOT loaded and evaluated: %s", path)

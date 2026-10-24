@@ -191,7 +191,7 @@ def test_e2e_evaluate_oos_refreshes_panel():
             # OOT section should NOT appear (no cohort loaded yet)
             assert _STRINGS["en"]["oot_section_title"] not in texts
             # Tab switched to the metrics panel
-            assert w._tabs.currentWidget() is w._metrics_panel
+            assert w._main_tabs.currentWidget() is w._metrics_panel
         finally:
             w.close()
             w.deleteLater()
@@ -214,7 +214,7 @@ def test_e2e_load_oot_via_mocked_dialog():
             assert _STRINGS["en"]["oot_section_title"] in texts
             # OOT report has PSI + Gini Drop badges -> at least 2 badges
             assert len(_badges(w._metrics_panel)) >= 2
-            assert w._tabs.currentWidget() is w._metrics_panel
+            assert w._main_tabs.currentWidget() is w._metrics_panel
         finally:
             w.close()
             w.deleteLater()

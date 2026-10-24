@@ -366,6 +366,17 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - **Diseño aprobado** (20/10/2026): ver `docs/design_decisions.md` §8.5 a §8.7 y `docs/methodology.md` §7.1.
 - **Implementado** (20/10/2026): Backend (`pruning.py` ponderado con `w_events`), Session (`get_prune_sequence()`) y GUI (`PruneDialog` cableado en el menú Model). Auditoría forense superada; test E2E del flujo de poda incluido.
 
+### 🟡 Phase 3.11 — Rediseño Interactivo y Topología Visual
+**Status**: 🟡 En progreso (iniciada el 24/10/2026). Diseño: `docs/3.11_design_interactive_tree.md`. Recoge lo diferido desde 3.10.b (interactividad visual).
+
+- **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026).
+- **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ⏳ Pendiente.
+- **3.11.b** Tree Map y Data Viewer. ⏳ Pendiente.
+- **3.11.c** Árboles Univariados y Matriz de Costos. ⏳ Pendiente.
+- **3.11.d** Menú Contextual e Interactividad. ⏳ Pendiente.
+
+**Nota:** la especificación visual para todas las sub-fases 3.11.a.1 a 3.11.d vive en `docs/3.11_classic_tree_ui_reference.md`.
+
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**
 
@@ -398,6 +409,8 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 ### ✅ PyPI synchronization (Resolved: 1.0.0rc4, 20/10/2026)
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
+
+**Desincronización vigente (24/10/2026):** los READMEs del repo reflejan ahora la Fase 3.11.a y 441/441 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -558,6 +571,11 @@ Detalle completo en docs/audit_log.md entrada del 16/10/2026.
 Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos: binning automático por deciles (10 cortes, 11 bins, `np.quantile` + `np.digitize`), nuevo campo `bin_edges` en `SplitConfig`, y routing por rangos numéricos en `TreeBuilder._partition` y `validation.predict_leaf_assignment`. Diseño en `docs/3.10.b_design_chaid_continuous.md`; cierre en `docs/audit_log.md` entrada del 23/10/2026.
 
 **Diferido a la Fase 3.11:** la interactividad visual (Tree Map, menú contextual) y el panel inferior de cortes candidatos (WOE/IV/Odds) descrito originalmente para esta sub-fase en `docs/3.10_design_ux_redesign.md` §0.2.
+
+### ⏳ Barra superior con iconos detallados (estilo clásico 2001)
+**Priority: LOW (registered 24/10/2026).**
+
+Barra superior con iconos detallados (estilo clásico 2001) diferido a la Fase 4.0 o posterior.
 
 ## Recorded architectural decisions
 

@@ -3,6 +3,7 @@
 QWidget {
     background: $BG;
     color: $FG;
+    font-family: "Segoe UI", Arial, sans-serif;
     font-size: 13px;
 }
 
@@ -22,6 +23,8 @@ QMainWindow::separator {
 
 QSplitter::handle {
     background: $BORDER;
+    height: 2px;
+    width: 2px;
 }
 
 QMenuBar {
@@ -55,18 +58,19 @@ QMenu::item:disabled {
 }
 
 QTabWidget::pane {
+    background: $SURFACE_ELEVATED;
     border: 1px solid $BORDER;
 }
 
 QTabBar::tab {
-    background: $SURFACE;
+    background: $BG;
     padding: 6px 14px;
     border: 1px solid $BORDER;
 }
 
 QTabBar::tab:selected {
-    background: $BG;
-    border-bottom-color: $BG;
+    background: $SURFACE_ELEVATED;
+    border-bottom-color: $SURFACE_ELEVATED;
 }
 
 QStatusBar {
@@ -80,6 +84,21 @@ QToolTip {
     border: 1px solid $BORDER;
 }
 
+/* Phase 3.11.a: governance/properties group boxes (HUD panel) */
+QGroupBox {
+    border: 1px solid $BORDER;
+    border-radius: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 4px;
+    color: $ACCENT;
+}
+
 QLabel#panelTitle {
     font-weight: bold;
     color: $ACCENT;
@@ -88,10 +107,6 @@ QLabel#panelTitle {
 QLabel#treeLargeWarning {
     color: $ACCENT;
     font-weight: bold;
-}
-
-QLabel#hudBody {
-    padding: 4px;
 }
 
 QLabel[status="ok"] {
@@ -145,7 +160,8 @@ QToolBar {
 }
 
 QToolBar QToolButton {
-    padding: 4px 8px;
+    padding: 2px;
+    margin: 0px;
     border-radius: 4px;
 }
 
@@ -160,4 +176,43 @@ QToolBar QToolButton {
 
 QToolBar QToolButton:hover {
     background: $BORDER;
+}
+
+/* Phase 3.11.a: tree canvas and scrollbars integrated with the theme */
+QGraphicsView {
+    background: $BG;
+    border: none;
+}
+
+QScrollBar:vertical, QScrollBar:horizontal {
+    background: $SURFACE;
+    border: none;
+}
+
+/* Phase 3.11.a: wizard legibility — labels/checkboxes follow the theme
+   (a native bright background under Fusion left dark text unreadable) */
+QWizardPage QLabel, QWizard QLabel {
+    color: $FG;
+    background: transparent;
+}
+
+QWizardPage QGroupBox {
+    color: $FG;
+    font-weight: bold;
+}
+
+QWizardPage QGroupBox::title {
+    color: $ACCENT;
+}
+
+QWizardPage QCheckBox, QWizardPage QRadioButton {
+    color: $FG;
+}
+
+/* Wizard title banner (EnginePage): theme-aware accent, legible over
+   dark backgrounds. The ID selector outranks "QWizardPage QLabel". */
+QLabel#wizardTitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: $ACCENT;
 }
