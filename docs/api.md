@@ -10,6 +10,7 @@ underscore) are internal and may change without notice.
 ## backend_v3.types
 
 - `SplitConfig` (frozen dataclass) — common contract of the 4 engines.
+  - `SplitConfig.bin_edges`: tuple[float, ...] (nuevo en Fase 3.10.b). Almacena los cortes numéricos para predictores continuos binned. Vacío por defecto.
 - `TargetType`, `PredictorType`, `CutKind` (Enums).
 - `GovernanceMode` (Enum): `BANKING` (Jeffreys + PD Floor, default) |
   `RESEARCH` (raw k/n, no floor).

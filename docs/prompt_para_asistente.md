@@ -170,7 +170,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 22/10/2026:** Fases 0 a 3.10.a cerradas. Suite 438/438. Fase 3.10.a (Rediseño Visual UI: toolbar, nodos enriquecidos con HTML, panel QGroupBox, tema oscuro VS Code Dark+) completada el 22/10/2026. Todos los hallazgos UX (H1-H8) resueltos. Próximo paso: Fase 3.10.b (cortes candidatos) o recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Tags a1-a6 verificados.
+- **Estado al 23/10/2026:** Fases 0 a 3.10.b cerradas. Suite 438/438. Fase 3.10.a (Rediseño Visual UI: toolbar, nodos enriquecidos con HTML, panel QGroupBox, tema oscuro VS Code Dark+) completada el 22/10/2026; hotfix visual 3.10.a.1 (H9, H11-H13) y Fase 3.10.b (alineación CHAID con continuas, H14: binning por deciles + `bin_edges` + routing `np.digitize`) cerradas el 23/10/2026. Todos los hallazgos UX (H1-H14) resueltos. Próximo paso: Fase 3.11 (Interactividad Avanzada y Tree Map) o recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. D13 resuelta el 20/10/2026. Tags a1-a6 verificados.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---

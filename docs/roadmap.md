@@ -531,6 +531,11 @@ La primera sesión de visualización end-to-end de la GUI (13/10/2026) identific
 - H6 — Datos sensibles en logs DEBUG y reports HTML exportados. Seguridad transversal y política de datos para v1.0.0. Prioridad Alta. ✅ RESUELTO 18/10/2026 (Fase 3.7.a).
 - H7 — Matriz de clasificación con umbral 0.5 degenerada en targets con baja tasa de eventos. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
 - H8 — Tema oscuro demasiado oscuro, sin jerarquía visual entre fondo y paneles. Prioridad Media. ✅ RESUELTO 22/10/2026 (Fase 3.10.a).
+- H9 — Fondo blanco nativo del wizard (QDialog/QWizard sin token de tema). ✅ RESUELTO 23/10/2026 (Fase 3.10.a.1).
+- H11 — Barra superior negra (ítems de menú y botones de toolbar con fondo nativo del sistema). ✅ RESUELTO 23/10/2026 (Fase 3.10.a.1).
+- H12 — Zoom "fit" cae al 3% (`zoom_fit` no respetaba `ZOOM_MIN`). ✅ RESUELTO 23/10/2026 (Fase 3.10.a.1).
+- H13 — Nodos ilegibles (etiqueta HTML sin fondo transparente). ✅ RESUELTO 23/10/2026 (Fase 3.10.a.1).
+- H14 — CHAID / CHAID_EXHAUSTIVE rechazaban predictores continuos por contrato. ✅ RESUELTO 23/10/2026 (Fase 3.10.b: binning automático por deciles, `bin_edges` en SplitConfig, routing por `np.digitize`).
 
 **Motivo del aplazamiento.** Ninguna de las fases pendientes (3.5, 3.6, 3.7) requiere cerrar estos hallazgos para avanzar. Se planifican en una sub-fase específica de rediseño UX posterior a la Fase 3.5, o como bloque pre-release dentro de la Fase 3.7 en el caso de H6 (seguridad y datos sensibles).
 
@@ -547,10 +552,12 @@ Deuda residual: ~100 paquetes huérfanos en .venv (dependencias únicas de Aider
 
 Detalle completo en docs/audit_log.md entrada del 16/10/2026.
 
-### ⏳ Phase 3.10.b — Cortes Candidatos (Backend + UI)
-**Priority: MEDIUM (deferred)**
+### ✅ Phase 3.10.b — Alineación CHAID Continuas
+**Priority: MEDIUM (closed 23/10/2026).**
 
-El prototipo Antigravity muestra un panel inferior con los cortes candidatos y métricas locales (WOE/IV/Odds). Para implementarlo, el backend (`tree_builder.py`) debe exponer los top-N candidatos por nodo. Planificado como sub-fase 3.10.b. Ver `docs/3.10_design_ux_redesign.md` §0.2.
+Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos: binning automático por deciles (10 cortes, 11 bins, `np.quantile` + `np.digitize`), nuevo campo `bin_edges` en `SplitConfig`, y routing por rangos numéricos en `TreeBuilder._partition` y `validation.predict_leaf_assignment`. Diseño en `docs/3.10.b_design_chaid_continuous.md`; cierre en `docs/audit_log.md` entrada del 23/10/2026.
+
+**Diferido a la Fase 3.11:** la interactividad visual (Tree Map, menú contextual) y el panel inferior de cortes candidatos (WOE/IV/Odds) descrito originalmente para esta sub-fase en `docs/3.10_design_ux_redesign.md` §0.2.
 
 ## Recorded architectural decisions
 

@@ -2085,6 +2085,19 @@ predictor.
 
 ---
 
+## §16. CHAID continuous predictors — binning (Phase 3.10.b)
+
+### 16.1 Bins as ORDINAL
+Los predictores continuos binned se tratan internamente como variables ORDINAL. Esto permite la fusión de categorías adyacentes (convención de Kass 1980) y evita que el motor trate los intervalos numéricos como categorías sin orden.
+
+### 16.2 Binning without weights
+El cálculo de los cortes (deciles) usa `np.quantile` sin ponderar, incluso si la sesión es ponderada. Las métricas de asociación (χ²/F) y las matrices de contingencia sí usan los pesos. Se documenta como deuda técnica: en futuras iteraciones, si el sesgo muestral es extremo, se podría implementar un binning ponderado.
+
+### 16.3 Routing: bins to consolidated branches
+El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultaría en 11 hijos fijos). En su lugar, mapea cada bin a la rama consolidada que el motor CHAID determinó tras el proceso de fusión. Esto garantiza que el árbol construido refleje la estructura final y mantenga la integridad de `child_ns`.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

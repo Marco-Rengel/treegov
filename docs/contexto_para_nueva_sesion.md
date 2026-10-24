@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 22/10/2026
+**Fecha de última actualización:** 23/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -299,12 +299,17 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso:** recogida de feedback de `1.0.0rc4` durante 2-4
-semanas; si no aparecen bugs críticos, publicación de `1.0.0`
-estable. D13 (métricas ponderadas en gains table binaria) fue
-resuelta el 20/10/2026. La deuda de la poda quedó resuelta con la
-Fase 3.9 (GUI `PruneDialog` + poda ponderada, 20/10/2026). Deuda
-diferida a 1.0.0 estable: tags `a1`–`a6` ausentes.
+**Próximo paso:** la **Fase 3.11 (Interactividad Avanzada y Tree Map)**
+es el siguiente hito: recoge el diferido de la 3.10.b (Tree Map, menú
+contextual y panel inferior de cortes candidatos con WOE/IV/Odds).
+La 3.10.b (23/10/2026) cerró el hotfix visual (H9, H11-H13) y la
+alineación CHAID con continuas (H14: binning por deciles, `bin_edges`,
+routing por `np.digitize`). En paralelo sigue la recogida de feedback
+de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs críticos,
+publicación de `1.0.0` estable. D13 (métricas ponderadas en gains
+table binaria) fue resuelta el 20/10/2026. La deuda de la poda quedó
+resuelta con la Fase 3.9 (GUI `PruneDialog` + poda ponderada,
+20/10/2026). Deuda diferida a 1.0.0 estable: tags `a1`–`a6` ausentes.
 Fase 3.6.e (modo no-bancario extensivo) va en 1.1.0 o posterior.
 
 **Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases

@@ -5032,3 +5032,23 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 **Referencias cruzadas**:
 - `docs/3.10_design_ux_redesign.md`
 - `docs/roadmap.md` (sección UX findings)
+
+### 23/10/2026 — Hotfix Visual (H9-H13) y Alineación CHAID Continuas (H14)
+
+**Estado**: ✅ Cerrada. Suite 438/438 PASSED.
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max.
+**Revisor**: Marco Rengel.
+
+**Contexto**: Cierre del bloque de deuda visual y alineación del motor CHAID con variables continuas (binning automático).
+
+**Cambios aplicados**:
+- **H9 (Wizard fondo blanco)**: Regla `QDialog, QWizard { background: $BG; }` añadida a `styles.qss`.
+- **H11 (Barra superior negra)**: Reglas `QMenuBar::item` y `QToolBar QToolButton` añadidas para evitar el fondo nativo del sistema.
+- **H12 (Zoom al 3%)**: `zoom_fit()` en `tree_view.py` ahora pasa el factor por `_set_zoom()` respetando el `ZOOM_MIN`.
+- **H13 (Nodos ilegibles)**: `_node_label()` reescrita para usar HTML con fondo transparente, cabecera, tabla interna y footer (Gini, p-valor, n).
+- **H14 (CHAID Continuas)**: Binning automático implementado. `SplitConfig` gana el campo `bin_edges`. `TreeBuilder._partition` y `validation.predict_leaf_assignment` enrutan usando `np.digitize`.
+- **Zonas Grises resueltas**: (1) Los bins continuos se tratan como ORDINAL (adyacencia de Kass). (2) El binning usa cuantiles sin ponderar (la matriz χ²/F sí es ponderada). (3) El routing mapea bins a ramas consolidadas (evita árboles desincronizados).
+
+**Tests**: 438/438 PASSED. Cero regresiones. Nuevo test de routing por `bin_edges`.
+
+**Referencias**: `docs/3.10.b_design_chaid_continuous.md`, `docs/design_decisions.md` §16.
