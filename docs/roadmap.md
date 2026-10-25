@@ -263,7 +263,7 @@ documentada en el diseño §1.2 y en audit_log (entrada 15/10/2026).
 | 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ✅ Completada |
 | 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ✅ Completada |
 | 3.6.d | Cierre documental de la fase | ✅ Completada |
-| 3.6.e | Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología) | ⏳ |
+| 3.6.e | Modo no-bancario (terminología neutral dinámica vía `tr_term`; validación multi-dominio extensiva —marketing, ecología— diferida) | ✅ Completada (25/10/2026) |
 
 **Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres *datasets* (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
 
@@ -322,7 +322,7 @@ y no-crédito (biología, ciencias sociales).
 
 | Sub-fase | Alcance | Prioridad |
 |---|---|---|
-| 3.6.e | Modo no-bancario (terminología + ejemplos + docs) | Media |
+| 3.6.e | Modo no-bancario (terminología + ejemplos + docs) — ✅ cerrada 25/10/2026 | Media |
 
 **Desglose de la Fase 3.2:**
 
@@ -412,7 +412,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b completa (b.1–b.5) + 3.11.c completa (c.1–c.3) + 3.11.d completa (d.1–d.3) + el bloque de saneamiento post-auditoría externa (ZG-1/2/3/5) y 475/475 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b completa (b.1–b.5) + 3.11.c completa (c.1–c.3) + 3.11.d completa (d.1–d.3) + el bloque de saneamiento post-auditoría externa (ZG-1/2/3/5) + la Fase 3.6.e (modo no-bancario, terminología dinámica `tr_term`) y 477/477 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -606,6 +606,16 @@ Los ítems provenían de una auditoría externa posterior al cierre de la Fase 3
 - **Fugas frontend** — `esc()` del reporte HTML migrado a `html.escape(quote=True)` (`reports_panel.py`); `closeEvent` con disconnect del `language_bus` en `DataViewer` (`data_viewer.py`).
 
 Suite 474 → 475 (nuevo `tests/test_wizard.py::test_wizard_cost_matrix_multiclass`). Cierre: `docs/audit_log.md` entrada del 25/10/2026 (mini-cierre).
+
+### ⏳ Dataset real no-bancario (Wholesale Customers, UCI)
+**Priority: LOW (diferido por ZG-3 del diseño 3.6.e, registrado 25/10/2026).**
+
+La Fase 3.6.e se validó con un fixture sintético no-bancario (`edad`, `presion`, target `enfermo`; `tests/test_e2e_non_banking.py`). La integración del dataset real Wholesale Customers (UCI) para la validación multi-dominio extensiva (marketing/ecología, decisión D11 del diseño 3.6) queda diferida a la 1.1.0 o posterior. Ver `docs/3.6.e_design_non_banking.md` §3 (ZG-3).
+
+### ⏳ Término neutro para `reports_matrix_bad_capture_rate` en RESEARCH
+**Priority: LOW (registrado 25/10/2026, cierre de la Fase 3.6.e).**
+
+El export HTML en modo RESEARCH mantiene la etiqueta bancaria "Bad capture rate" (`reports_matrix_bad_capture_rate`): requiere una clave i18n neutra propia (p. ej. `term_research_capture_rate`). `TODO(zona_gris)` en `frontend_v3/reports_panel.py::_term_report_label`. No afecta a los asertos del E2E (`"Bad rate" ∉ html` pasa: "Bad capture rate" no contiene la subcadena).
 
 ## Recorded architectural decisions
 

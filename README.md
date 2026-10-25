@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 475/475 passing
+**Test suite**: 477/477 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 475 / 475 tests PASSED<br/>📅 Oct 25, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 477 / 477 tests PASSED<br/>📅 Oct 25, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -253,7 +253,7 @@ TreeGov/
 | **3.6.b** | Fetch script + versioned fixtures | Completed |
 | **3.6.c** | Integration tests + validation report | Completed |
 | **3.6.d** | Phase documentation closure | Completed |
-| **3.6.e** | Non-banking mode and extensive multi-domain validation | Planned for 1.1.0 |
+| **3.6.e** | Non-banking mode: dynamic terminology via `tr_term` (BANKING labels bit-identical; RESEARCH neutral) | Completed |
 | **3.7** | Phase 3 closure + v1.0.0rc1 | Completed |
 | **3.7.e** | Pre-release fixes (H1, H2, pd_floor K=2) | Completed |
 | **3.8** | Regulatory attribution correction (BCBS CRE 32.4) + v1.0.0rc2 | Completed |
@@ -276,7 +276,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 475/475 passing.**
+**Test suite: 477/477 passing.**
 
 ---
 

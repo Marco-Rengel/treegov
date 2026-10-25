@@ -2192,6 +2192,14 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 **Consecuencia:** La paridad K=2 de los modelos entrenados normalmente no se ve afectada (la intervención es una acción posterior al entrenamiento); el fingerprint sufijado deja traza inequívoca de que el modelo fue intervenido manualmente; el contrato público gana `Session.intervene_node(node_id, action, payload=None)` (ver `docs/api.md`). Las acciones Grow Tree / Select Predictor / Define Split quedan diferidas a una fase posterior (requieren crecimiento interactivo nodo a nodo del `TreeBuilder`).
 
+### 18.10 Terminología dinámica por modo de gobernanza (Phase 3.6.e)
+
+**Contexto:** El backend es agnóstico del dominio, pero la GUI hardcodeaba vocabulario bancario ("PD", "Bad rate", "Malo/Bueno") incluso en modo RESEARCH, donde el analista no trabaja con riesgo de crédito. La Fase 3.6.e separa la semántica de la presentación sin tocar los DTOs del backend (que siguen emitiendo `pd`, `bad_rate`, `n_bad`, …).
+
+**Decisión:** La terminología visible queda atada al `GovernanceMode` con el que se entrenó el modelo (congelado en el `params_fingerprint`); NO hay toggle en caliente (el modo tiene efectos numéricos reales —Jeffreys + PD floor— y un toggle cosmético presentaría una PD con floor BCBS CRE 32.4 como "probabilidad" neutra: riesgo de interpretación regulatoria incorrecta). El resolvedor `tr_term(concept, mode)` (`frontend_v3/i18n.py`) mapea conceptos a claves `term_banking_*` / `term_research_*` con paridad EN/ES; los paneles (`ReportsPanel`, `MetricsPanel`, `TreePanel`) exponen `set_governance_mode(mode)`, cableado en `MainWindow._on_wizard_finished`. En modo BANKING las etiquetas visibles se conservan bit a bit idénticas (los resolvedores devuelven `tr(key)` clásico; la invariante §5 del diseño); el mapeo neutro solo aplica en RESEARCH. El backend no cambia (cero impacto numérico; la paridad K=2 y la suite existente quedan intactas).
+
+**Consecuencia:** Un mismo número renderiza con dos cadenas (una por modo) a partir del mismo DTO; jamás se computa dos veces ni con fórmulas distintas. La cobertura RESEARCH de la Fase 3.6.e abarca: cabeceras de la gains table y del export HTML, resumen y matriz del export HTML, matriz de clasificación en pantalla y tooltips de los nodos. Deuda registrada en `docs/roadmap.md` (Deferred): término neutro propio para `reports_matrix_bad_capture_rate` y dataset real Wholesale Customers (validación multi-dominio extensiva, ZG-3 del diseño). Diseño aprobado: `docs/3.6.e_design_non_banking.md`; cierre: `docs/audit_log.md` entrada del 25/10/2026.
+
 ---
 
 ## Maintenance
@@ -2228,6 +2236,8 @@ vs RuntimeError in `get_data_preview`; on 25/10/2026 to add §18.8 —
 Phase 3.11.c.3, cost matrix in `SessionState` without fingerprint;
 on 25/10/2026 to add §18.9 — Phase 3.11.d, manual intervention
 rebuilds the TreeModel with BFS reindex and logs overrides in
-`SessionState.manual_overrides`.)
+`SessionState.manual_overrides`; on 25/10/2026 to add §18.10 — Phase
+3.6.e, dynamic terminology bound to the governance mode frozen in the
+fingerprint, BANKING labels bit-identical.)
 
 ---

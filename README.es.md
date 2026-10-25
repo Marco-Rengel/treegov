@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 475/475 passing
+**Suite de tests**: 477/477 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11 completas<br/>🔧 Foco: Fase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 475 / 475 tests PASSED<br/>📅 25 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11 completas<br/>🔧 Foco: Fase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 477 / 477 tests PASSED<br/>📅 25 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -253,7 +253,7 @@ TreeGov/
 | **3.6.b** | Script de descarga + fixtures versionadas | Completada |
 | **3.6.c** | Tests de integración + informe de validación | Completada |
 | **3.6.d** | Cierre documental de la fase | Completada |
-| **3.6.e** | Modo no-bancario y validación multi-dominio extensiva | Planificada para 1.1.0 |
+| **3.6.e** | Modo no-bancario: terminología dinámica vía `tr_term` (etiquetas BANKING intactas; RESEARCH neutras) | Completada |
 | **3.7** | Cierre Fase 3 + v1.0.0rc1 | Completada |
 | **3.7.e** | Correcciones pre-release (H1, H2, pd_floor K=2) | Completada |
 | **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 | Completada |
@@ -276,7 +276,7 @@ TreeGov/
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 475/475 passing.**
+**Suite de tests: 477/477 passing.**
 
 ---
 

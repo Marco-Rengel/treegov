@@ -299,15 +299,19 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso inmediato (25/10/2026):** el **bloque de saneamiento
+**Próximo paso inmediato (25/10/2026):** la recogida de feedback para
+la `1.0.0` estable o el inicio de la **Fase 4.0**. La **Fase 3.6.e
+(Modo No-Bancario y Terminología Neutral) quedó cerrada el 25/10/2026
+con suite 477/477** (ráfaga e.1+e.2+e.3: resolvedor `tr_term` con 24
+claves `term_banking_*`/`term_research_*`, paneles con
+`set_governance_mode` cableados al `GovernanceMode` del fingerprint,
+E2E con fixture no-bancario). El **bloque de saneamiento
 post-auditoría externa quedó cerrado el 25/10/2026** (ZG-1 fingerprint
 `-iN`, ZG-2 matriz de costos N×N dinámica, ZG-3 parámetros de `train()`
 propagados a univariados, ZG-5 `np.digitize(right=True)`, fugas frontend
-`html.escape` y `closeEvent` en DataViewer; suite 475/475). Sigue el
-diseño/implementación de la **Fase 3.6.e** (modo no-bancario extensivo).
-La **Fase
+`html.escape` y `closeEvent` en DataViewer). La **Fase
 3.11.d (Menú Contextual e Interactividad) quedó cerrada el 25/10/2026
-con suite 475/475** (cierre documental en bloque único, regla de
+con suite 477/477** (cierre documental en bloque único, regla de
 ráfaga): d.1 (Backend interactivo: `Session.intervene_node` con
 `prune_branch`, re-indexado BFS `_reindex_tree` —invariante
 `node_id == index`—, `SessionState.manual_overrides` inmutable y

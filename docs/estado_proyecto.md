@@ -477,8 +477,23 @@ documentada `(a, b]`). Fugas frontend: `html.escape(quote=True)` en el
 reporte HTML (`reports_panel.py`) y `closeEvent` con disconnect del bus
 i18n en `DataViewer`. 1 test nuevo (`test_wizard_cost_matrix_multiclass`).
 Suite 475/475.
-**Fase 3.11 completa y código saneado. Próximo paso: diseño e
-implementación de la Fase 3.6.e (modo no-bancario extensivo)**.
+
+**Fase 3.6.e — Modo No-Bancario y Terminología Neutral** ✅ Completada
+(25/10/2026). Terminología dinámica atada al `GovernanceMode` congelado
+en el `params_fingerprint` del modelo (sin toggle en caliente):
+resolvedor `tr_term(concepto, mode)` en `frontend_v3/i18n.py` con 24
+claves nuevas (`term_banking_*` / `term_research_*`, paridad EN/ES);
+`ReportsPanel`, `MetricsPanel` y `TreePanel` ganan `_mode` +
+`set_governance_mode`, cableado en `MainWindow._on_wizard_finished`;
+el modo BANKING queda bit a bit idéntico (paridad visual del diseño
+§5). E2E con fixture sintético no-bancario
+(`tests/test_e2e_non_banking.py`). Deuda diferida: dataset real
+Wholesale Customers y término neutro de `reports_matrix_bad_capture_rate`
+(`docs/roadmap.md`, Deferred). Diseño aprobado:
+`docs/3.6.e_design_non_banking.md`; decisión: `design_decisions.md`
+§18.10. 2 tests nuevos. Suite 477/477.
+**Próximo paso: recogida de feedback para la v1.0.0 estable o inicio de
+la Fase 4.0**.
 
 ### Cierre intermedio 16/10/2026
 
@@ -534,7 +549,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (475 tests)
+├── tests/ # Suite de tests (477 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -665,7 +680,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 12 |
+| gui_smoke (frontend) | 13 |
 | wizard (frontend) | 28 |
 | tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
@@ -675,12 +690,13 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | data_viewer (frontend) | 4 |
 | tree_map (frontend) | 3 |
 | e2e_reports (frontend) | 4 |
+| e2e_non_banking (frontend) | 1 |
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| **Total** | **475** |
+| **Total** | **477** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 475/475 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 477/477 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
