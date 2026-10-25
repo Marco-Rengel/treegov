@@ -2184,6 +2184,14 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 **Decisión:** La matriz se almacena en `SessionState` para trazabilidad y se expone en los reportes, pero NO entra en el `params_fingerprint` del TreeBuilder en esta fase, porque el motor de crecimiento actual no la utiliza: no altera la topología del árbol ni las PD por hoja, así que dos modelos con costos distintos son numéricamente idénticos bit a bit. Incluirla en el fingerprint sería una diferencia ficticia (mismo modelo, huella distinta). La matriz se incluirá en el fingerprint cuando el TreeBuilder implemente poda o crecimiento basado en costos (Fase 3.11.d o 4.0). Además, la tupla vacía `()` equivale a "sin costos" y no se valida (el endurecimiento de `fix_spec` —cuadrada N = nº de clases, diagonal fija a 0, valores finitos ≥ 0— solo aplica a matrices no vacías).
 **Consecuencia:** El contrato de `fix_spec` gana el parámetro keyword-only `cost_matrix=None` (ver `docs/api.md`); la topología y las métricas del modelo son independientes de la matriz en esta fase; los umbrales de clasificación óptimos basados en costos quedan como uso futuro documentado (diseño `docs/3.11.c_design_univariate_cost_matrix.md` §3.2).
 
+### 18.9 Intervención manual: nuevo TreeModel con re-indexado BFS (Phase 3.11.d)
+
+**Contexto:** La Fase 3.11.d introduce la intervención manual del analista sobre el árbol entrenado (menú contextual del canvas; `prune_branch` implementado, Grow/Select/Define diferidos). `TreeModel` es frozen y su `__post_init__` exige alcanzabilidad total desde la raíz, lo que prohíbe tanto mutar el modelo como construir intermedios con nodos huérfanos (la estrategia de "modelo temporal" del diseño original no era construible; zona gris resuelta en `audit_log.md`, entrada del 25/10/2026).
+
+**Decisión:** Toda intervención manual genera un `TreeModel` NUEVO (el original nunca se muta): se modifica la lista de nodos en memoria y se re-indexa en BFS completo (`Session._reindex_tree`, lógica simplificada de `pruning.py::_rebuild` sin depender del `Pruner`), preservando la invariante `node_id == index` y garantizando que no quedan nodos huérfanos. El fingerprint hereda el del modelo original con un sufijo de intervención manual incremental (`-pN`, N = contador de overrides de la sesión). Cada acción se registra en el log inmutable `SessionState.manual_overrides` —tupla `(timestamp, node_id, action, params_str, fp_before, fp_after)`—, consultable desde el botón "Ver Auditoría" del HUD (`ManualOverrideDialog`). En modo BANKING la GUI exige confirmación explícita (`QMessageBox`) antes de llamar a `Session.intervene_node`; en modo RESEARCH se aplica directamente (y queda igualmente registrada).
+
+**Consecuencia:** La paridad K=2 de los modelos entrenados normalmente no se ve afectada (la intervención es una acción posterior al entrenamiento); el fingerprint sufijado deja traza inequívoca de que el modelo fue intervenido manualmente; el contrato público gana `Session.intervene_node(node_id, action, payload=None)` (ver `docs/api.md`). Las acciones Grow Tree / Select Predictor / Define Split quedan diferidas a una fase posterior (requieren crecimiento interactivo nodo a nodo del `TreeBuilder`).
+
 ---
 
 ## Maintenance
@@ -2217,6 +2225,9 @@ Phase 3.11.a.1; on 25/10/2026 to add §0.5 — Clean-Room Development and
 Academic Provenance — and §18.5–§18.6 — mini-cierre de zonas grises de
 presentación; on 25/10/2026 to add §18.7 — Phase 3.11.b.1, empty dict
 vs RuntimeError in `get_data_preview`; on 25/10/2026 to add §18.8 —
-Phase 3.11.c.3, cost matrix in `SessionState` without fingerprint.)
+Phase 3.11.c.3, cost matrix in `SessionState` without fingerprint;
+on 25/10/2026 to add §18.9 — Phase 3.11.d, manual intervention
+rebuilds the TreeModel with BFS reindex and logs overrides in
+`SessionState.manual_overrides`.)
 
 ---

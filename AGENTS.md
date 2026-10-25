@@ -113,6 +113,18 @@ sub-fase de referencia: $2.29 (medido en la Fase 3.2). Si una
 sub-fase futura excede $3, diagnosticar. Análisis completo en
 `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 
+**Flujo de Ráfaga Estricto (regla desde 25/10/2026).** Toda sub-fase se
+ejecutará como UNA unidad atómica de trabajo: 1) todos los prompts de
+código seguidos (diseño → implementación → tests, sin cerrar el
+cliente), 2) un solo commit, 3) un solo prompt de documentación (el
+cierre del checklist completo de 8 documentos en un bloque), y 4) un
+solo push al final. Prohibido pedir commit/push entre micro-pasos de la
+misma sub-fase: los conteos de suite intermedios viven solo en el
+working tree y no generan commits ni entradas documentales separadas.
+Refina la "Regla de ráfaga" anterior; motivo: los micro-commits
+intermedios fragmentan la trazabilidad y multiplican el coste de
+tokens. Formalizado como Skill 5 en `docs/playbook.md`.
+
 El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
 
 ## Entorno

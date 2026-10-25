@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 470/470 passing
+**Suite de tests**: 474/474 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.c completas<br/>🔧 Foco: Fase 3.11.d<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 470 / 470 tests PASSED<br/>📅 25 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11 completas<br/>🔧 Foco: Fase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 474 / 474 tests PASSED<br/>📅 25 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -270,12 +270,13 @@ TreeGov/
 | **3.11.c.1** | Backend de árboles univariados en lote: `Session.get_univariate_trees(max_depth=3)` — un árbol por predictor con el mismo motor y gobernanza, DTO plano (`predictor`, `gini`, `ks`, `cut_points`) | Completada |
 | **3.11.c.2** | Frontend de árboles univariados: `UnivariateDialog` (Predictor \| Gini \| KS \| Cortes), Ctrl+C → TSV (REGLA 4.1.1), exportación CSV, acción del menú Análisis habilitada en TRAINED | Completada |
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
+| **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 470/470 passing.**
+**Suite de tests: 474/474 passing.**
 
 ---
 

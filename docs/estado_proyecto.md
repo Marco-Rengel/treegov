@@ -429,8 +429,42 @@ wiring `GovernancePage._cost_matrix` → `current_config()["cost_matrix"]`
 Hallazgo: la validación inicial rechazaba `()` (guard `is not None`)
 y rompió 5 tests e2e; fix a `if cost_matrix:` (`() ≡ sin costos`).
 2 tests nuevos (backend + wizard). Suite 470/470.
-**Fase 3.11.c completa. Próximo paso: Fase 3.11.d (Menú
-Contextual e Interactividad)**.
+**Fase 3.11.c completa (25/10/2026).**
+
+**3.11.d.1 — Backend interactivo** ✅ Completada (25/10/2026).
+`Session.intervene_node(node_id, action, payload)` en
+`backend_v3/session_state.py`: punto de entrada único de la
+intervención manual; implementa `prune_branch` (el nodo pasa a hoja
+con `leaf_reason="podado"` y sus descendientes se descartan). Campo
+inmutable `SessionState.manual_overrides` (timestamp, node_id, action,
+params_str, fp_before, fp_after) y fingerprint sufijado `-pN`.
+Zona gris resuelta (`# TODO(zona_gris)`): el `TreeModel` temporal
+intermedio del diseño no es construible (`__post_init__` rechaza nodos
+inalcanzables), así que `_reindex_tree` hace el BFS sobre la lista de
+nodos modificada directamente — invariante `node_id == index`
+preservada, modelo original intacto (frozen). 1 test nuevo
+(`test_intervene_prune`). Suite 471/471.
+
+**3.11.d.2 — Menú contextual** ✅ Completada (25/10/2026).
+Señal `TreeScene.node_context_menu = Signal(int)` y
+`TreeView.contextMenuEvent` (emite solo sobre un `NodeItem`) en
+`frontend_v3/tree_view.py`; slot `_on_tree_context_menu` en
+`main_window.py` con QMenu "Grow Tree" (solo hojas) / "Prune Branch"
+(solo internos), confirmación `QMessageBox.question` en modo BANKING y
+aplicación directa en RESEARCH, con refresco del canvas y del minimapa.
+1 test nuevo (`test_tree_context_menu_signal`). Suite 472/472.
+
+**3.11.d.3 — Manual Override Log** ✅ Completada (25/10/2026).
+`frontend_v3/manual_override_dialog.py` (nuevo): `ManualOverrideDialog`
+modal con tabla Time | Node | Action | FP Before | FP After, estado
+vacío con `override_empty`, Ctrl+C → TSV (REGLA 4.1.1 vía
+`ReportsPanel._copy_selection_to_clipboard`). 11 claves i18n nuevas
+(`menu_tree_*`, `override_*`) con paridad EN/ES. Botón "Ver Auditoría"
+del HUD (`_hud_btn_view_audit`) habilitado tras entrenar y conectado a
+`_on_view_audit`. 2 tests nuevos en `tests/test_manual_override.py`.
+Suite 474/474.
+**Fase 3.11 completa. Próximo paso: recogida de feedback para la
+v1.0.0 estable o inicio de la Fase 4.0**.
 
 ### Cierre intermedio 16/10/2026
 
@@ -612,14 +646,14 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 94 |
+| session_state.py | 95 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
 | gui_smoke (frontend) | 12 |
 | wizard (frontend) | 27 |
-| tree_view (frontend) | 15 |
+| tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 13 |
@@ -629,9 +663,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
-| **Total** | **470** |
+| manual_override (frontend) | 2 |
+| **Total** | **474** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 470/470 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 474/474 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

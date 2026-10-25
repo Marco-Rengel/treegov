@@ -53,9 +53,23 @@
 | **3.9** | `docs/3.9_design_interactive_weighted_pruning.md` | ✅ Completed |
 | **3.10.a** | `docs/3.10.a_design_ux_ui_redesign.md` | ✅ Completed (22/10/2026; as-built §5) |
 | **3.10.b** | `docs/3.10.b_design_chaid_binning.md` | ✅ Completed (23/10/2026; as-built §4) |
-| **3.11 (fase)** | `docs/3.11_design_interactive_tree.md` + referencia visual `docs/3.11_classic_tree_ui_reference.md` | 🟡 En progreso |
+| **3.11 (fase)** | `docs/3.11_design_interactive_tree.md` + referencia visual `docs/3.11_classic_tree_ui_reference.md` | ✅ Completed (25/10/2026) |
 | **3.11.a** | `docs/3.11.a_design_colab_theme.md` (as-built) | ✅ Completed (24/10/2026) |
 | **3.11.a.1** | Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío); especificación en `docs/3.11_classic_tree_ui_reference.md` | ✅ Completed (24/10/2026) |
-| **3.11.b–d** | Pendiente de diseño propio; alcance previsto en `docs/3.11_design_interactive_tree.md` §6 | ⏳ Pendiente |
+| **3.11.b** | `docs/3.11.b_design_treemap_dataviewer.md` | ✅ Completed (25/10/2026) |
+| **3.11.c** | `docs/3.11.c_design_univariate_cost_matrix.md` | ✅ Completed (25/10/2026) |
+| **3.11.d** | `docs/3.11.d_design_context_menu_interactivity.md` | ✅ Completed (25/10/2026) |
 
 **Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.
+
+## Skill 5: `/rafaga_estricta` (Flujo de Ráfaga Estricto)
+
+**Regla de oro:** Toda sub-fase se ejecuta como UNA unidad atómica de trabajo: código seguido, un commit, una documentación, un push.
+
+**Flujo obligatorio:**
+1. **Todos los prompts de código seguidos** (diseño → implementación → tests), sin cerrar el cliente entre ellos.
+2. **Un solo commit** al final del código, con la suite verde.
+3. **Un solo prompt de documentación** que cierra el checklist completo del Skill 2 en un único bloque.
+4. **Un solo push** al final de todo.
+
+**Prohibido** pedir commit/push entre micro-pasos de la misma sub-fase: los conteos de suite intermedios viven solo en el working tree y no generan commits ni entradas documentales separadas (refina la "Regla de ráfaga" de `AGENTS.md`; adoptada el 25/10/2026 al cierre de la Fase 3.11.d).

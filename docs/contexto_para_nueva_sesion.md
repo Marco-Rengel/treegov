@@ -299,22 +299,22 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso inmediato (25/10/2026):** la **Fase
-3.11.d (Menú Contextual e Interactividad)**. La **Fase
-3.11.c quedó cerrada el 25/10/2026 con suite 470/470**
-(cierre documental en bloque único, regla de ráfaga):
-c.1 (Backend univariado: `Session.get_univariate_trees(max_depth=3)`
-— un árbol por predictor con el mismo motor y gobernanza, DTO
-`{"predictor", "gini", "ks", "cut_points"}`), c.2 (Frontend
-univariado: `UnivariateDialog` con tabla Predictor | Gini | KS |
-Cortes, Ctrl+C → TSV —REGLA 4.1.1—, Exportar CSV, acción
-`act_univariate` en el menú Análisis habilitada en TRAINED) y c.3
-(Matriz de costos N×N: `SessionState.cost_matrix` inmutable,
-`fix_spec(cost_matrix=...)` con endurecimiento —cuadrada, diagonal
-0, valores ≥ 0—, pestaña "Costs" del `AdvancedOptionsDialog` con
-N=2 fijo; NO entra en `params_fingerprint` en esta fase —
-`design_decisions.md` §18.8). Diseño de referencia:
-`docs/3.11.c_design_univariate_cost_matrix.md` (auditado). La Fase
+**Próximo paso inmediato (25/10/2026):** la recogida de feedback
+para la `1.0.0` estable o el inicio de la **Fase 4.0**. La **Fase
+3.11.d (Menú Contextual e Interactividad) quedó cerrada el 25/10/2026
+con suite 474/474** (cierre documental en bloque único, regla de
+ráfaga): d.1 (Backend interactivo: `Session.intervene_node` con
+`prune_branch`, re-indexado BFS `_reindex_tree` —invariante
+`node_id == index`—, `SessionState.manual_overrides` inmutable y
+fingerprint sufijado `-pN`), d.2 (menú contextual del canvas: señal
+`node_context_menu`, QMenu Grow/Prune con confirmación BANKING vía
+`QMessageBox`) y d.3 (`ManualOverrideDialog` —tabla Time | Node |
+Action | FP Before | FP After, Ctrl+C → TSV— y botón "Ver Auditoría"
+del HUD habilitado tras entrenar). Con esto, la **Fase 3.11 queda
+cerrada por completo**. Diseño de referencia:
+`docs/3.11.d_design_context_menu_interactivity.md` (auditado). La
+Fase 3.11.c quedó cerrada el 25/10/2026 con suite 470/470 (misma
+jornada). La Fase
 3.11.b quedó cerrada el 25/10/2026 con suite 465/465 (commits
 `6e4c4b5`, `a856c2c`, el de la b.3 y `b5cb5e6` para b.4+b.5).
 

@@ -121,6 +121,18 @@ underscore) are internal and may change without notice.
   (list[tuple[str, float]] of internal-node thresholds). A failing
   predictor degrades to `0.0` metrics with a WARNING in the log.
   Requires a trained model (`ValueError` otherwise).
+- `Session.intervene_node(node_id, action, payload=None) -> SessionState` —
+  manual intervention entry point (Phase 3.11.d.1). Implemented action:
+  `"prune_branch"` (the node becomes a leaf with `leaf_reason="podado"`,
+  its descendants are dropped and the tree is BFS-reindexed via
+  `_reindex_tree`, preserving the `node_id == index` invariant). The
+  original frozen `TreeModel` is never mutated: a new one is built with
+  the fingerprint suffixed `-pN` (N = override counter) and the action
+  is appended to the immutable `SessionState.manual_overrides` log
+  `(timestamp, node_id, action, params_str, fp_before, fp_after)`
+  (see `docs/design_decisions.md` §18.9). Requires a trained model
+  (`ValueError` otherwise; also if the node does not exist or is
+  already a leaf). Unimplemented actions raise `NotImplementedError`.
 - `Session.fix_spec(..., cost_matrix=None)` — Phase 3.11.c.3 adds the
   keyword-only `cost_matrix` parameter: an immutable N×N
   misclassification-cost matrix (rows: actual class; columns: predicted
