@@ -108,6 +108,11 @@ class SessionState:
     oot_source: str | None = None            # origen declarado ('external-file')
     target_class: int | str | None = None    # Fase 3.1.c: clase de interes
     class_labels: tuple[tuple[int | str, str], ...] = ()  # (valor, etiqueta)
+    # Fase 3.11.c.3: matriz de costos N x N (inmutable; filas = clase real,
+    # columnas = clase predicha). () = sin costos. Se almacena para
+    # trazabilidad/reportes; NO entra en params_fingerprint en esta fase
+    # (el motor de crecimiento no la usa; ver design doc §3.2).
+    cost_matrix: tuple[tuple[float, ...], ...] = ()
     # Fase 3.3: columna de poblacion (segmento/categoria)
     population_col: str | None = None
     # Fase 3.3: whitelist de valores OK en la columna de poblacion
@@ -562,6 +567,7 @@ class Session:
         weight_col: str | None = None,
         population_col: str | None = None,
         population_ok_values: tuple[str, ...] | None = None,
+        cost_matrix: tuple[tuple[float, ...], ...] | None = None,
     ) -> SessionState:
         """DATA_LOADED -> SPEC_FIXED. Target binario 0/1 o multiclase (3.1.c).
 
@@ -755,6 +761,43 @@ class Session:
                 )
             self._pop_col = population_col
             self._pop_ok_values = tuple(population_ok_values)
+        # Fase 3.11.c.3: endurecimiento de la matriz de costos (misma
+        # filosofia que weight_col/population: validar ANTES de la
+        # transicion, atomicidad). N x N con N = nº de clases, diagonal
+        # fija a 0 y valores finitos >= 0. Una tupla vacia () equivale a
+        # "sin costos" (default del wizard) y NO se valida.
+        if cost_matrix:
+            n_clases = len(class_labels)
+            if len(cost_matrix) != n_clases or any(
+                len(fila) != n_clases for fila in cost_matrix
+            ):
+                raise ValueError(
+                    f"[session] cost_matrix debe ser {n_clases}x{n_clases} "
+                    f"(N = nº de clases del target); shape recibido: "
+                    f"{len(cost_matrix)}x"
+                    f"{[len(f) for f in cost_matrix]}"
+                )
+            for i, fila in enumerate(cost_matrix):
+                for j, v in enumerate(fila):
+                    if (isinstance(v, bool)
+                            or not isinstance(v, (int, float))
+                            or not np.isfinite(v)):
+                        raise ValueError(
+                            f"[session] cost_matrix[{i}][{j}] no es un "
+                            f"float finito: {v!r}"
+                        )
+                    if v < 0:
+                        raise ValueError(
+                            f"[session] cost_matrix[{i}][{j}] negativo: {v}"
+                        )
+                    if i == j and v != 0:
+                        raise ValueError(
+                            f"[session] cost_matrix[{i}][{i}] debe ser 0 "
+                            f"(diagonal fija); recibido: {v}"
+                        )
+            cost_matrix = tuple(
+                tuple(float(v) for v in fila) for fila in cost_matrix
+            )
         evento = f"fix_spec:{target}|predictores={len(spec)}"
         if self._w_col is not None:
             evento += f"|weight_col={self._w_col}"
@@ -772,6 +815,7 @@ class Session:
             spec=tuple(spec.items()),
             population_col=self._pop_col,
             population_ok_values=self._pop_ok_values or (),
+            cost_matrix=cost_matrix if cost_matrix else (),
         )
 
     def partition(self, train_frac: float = 0.7, seed: int = 42) -> SessionState:

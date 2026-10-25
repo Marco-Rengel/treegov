@@ -184,6 +184,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "adv_dialog_title": "Advanced Options",
         "adv_tab_stopping": "Stopping Rules",
         "adv_tab_chaid": "CHAID",
+        "adv_tab_costs": "Costs",
+        "adv_costs_hint": (
+            "Misclassification costs (rows: actual class; columns: "
+            "predicted class). The diagonal is fixed at 0 and values must "
+            "be >= 0. Binary targets only in this phase."
+        ),
         "adv_chaid_alpha_merge": "Alpha merge",
         "adv_chaid_alpha_split": "Alpha split",
         "adv_chaid_pending": (
@@ -547,6 +553,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "adv_dialog_title": "Opciones avanzadas",
         "adv_tab_stopping": "Reglas de parada",
         "adv_tab_chaid": "CHAID",
+        "adv_tab_costs": "Costes",
+        "adv_costs_hint": (
+            "Costes de clasificación errónea (filas: clase real; "
+            "columnas: clase predicha). La diagonal se fija a 0 y los "
+            "valores deben ser ≥ 0. Solo targets binarios en esta fase."
+        ),
         "adv_chaid_alpha_merge": "Alfa de fusión",
         "adv_chaid_alpha_split": "Alfa de partición",
         "adv_chaid_pending": (

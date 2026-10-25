@@ -895,6 +895,7 @@ class MainWindow(QMainWindow):
             weight_col=cfg["weight_col"],
             population_col=cfg["population_col"],
             population_ok_values=cfg["population_ok_values"],
+            cost_matrix=cfg.get("cost_matrix", ()),
         )
         self._session.partition(cfg["train_frac"], cfg["seed"])
         self._session.train(

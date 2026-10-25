@@ -249,7 +249,7 @@ def test_wizard_finish_emits_config():
         "train_frac", "seed", "max_depth", "min_child_size",
         "min_child_weight",
         "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
-        "population_col", "population_ok_values",
+        "population_col", "population_ok_values", "cost_matrix",
     }
     assert cfg["engine"] == "CRT"
     assert cfg["target"] == "default"
@@ -704,7 +704,7 @@ def test_wizard_advanced_options_update_config():
         parent=page,
     )
     assert dlg.isModal() is True
-    assert dlg._tabs.count() == 2                    # Stopping Rules + CHAID
+    assert dlg._tabs.count() == 3           # Stopping Rules + CHAID + Costs (3.11.c.3)
     assert dlg._spin_depth.value() == 4
     assert dlg._spin_child.value() == 50
     # pestaña CHAID presente pero deshabilitada (backend pendiente)
@@ -729,6 +729,9 @@ def test_wizard_advanced_options_update_config():
         def values(self):
             return (8, 200, 3.0)
 
+        def get_cost_matrix(self):
+            return ((0.0, 0.0), (0.0, 0.0))
+
     original = wz.AdvancedOptionsDialog
     wz.AdvancedOptionsDialog = _FakeDialog
     try:
@@ -739,6 +742,7 @@ def test_wizard_advanced_options_update_config():
     assert cfg2["max_depth"] == 8
     assert cfg2["min_child_size"] == 200
     assert cfg2["min_child_weight"] == 3.0
+    assert cfg2["cost_matrix"] == ((0.0, 0.0), (0.0, 0.0))  # 3.11.c.3 wiring
     assert f": 8" in page._lbl_summary.text()        # resumen refrescado
     wiz.close()
     wiz.deleteLater()
@@ -801,6 +805,34 @@ def test_wizard_size_and_title_banner():
         set_language(prev)
         language_bus.language_changed.emit(prev)
     assert lbl.text() == tr("wizard_title", "en")
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_cost_matrix_in_config():
+    """Fase 3.11.c.3: current_config() expone 'cost_matrix' (default ()).
+
+    La matriz se edita en AdvancedOptionsDialog (pestaña Costs, N=2 fijo
+    en esta fase) y fluye a Session.fix_spec via MainWindow.
+    """
+    wiz = _make_wizard()
+    cfg = wiz.current_config()
+    assert "cost_matrix" in cfg
+    assert cfg["cost_matrix"] == ()
+    # La pestaña Costs existe en el dialogo de opciones avanzadas y su
+    # matriz por defecto leida es 2x2 con ceros (diagonal incluida).
+    from frontend_v3.wizard import AdvancedOptionsDialog
+    dlg = AdvancedOptionsDialog(max_depth=4, min_child_size=50,
+                                min_child_weight=0.0)
+    tbl = dlg.findChild(type(dlg._tbl_costs), "tblCosts")
+    assert tbl is not None and tbl.rowCount() == 2
+    assert tbl.columnCount() == 2
+    assert dlg.get_cost_matrix() == ((0.0, 0.0), (0.0, 0.0))
+    # La diagonal es de solo lectura (ItemIsEditable desactivado).
+    diag_item = tbl.item(0, 0)
+    assert not (diag_item.flags() & Qt.ItemFlag.ItemIsEditable)
+    dlg.close()
+    dlg.deleteLater()
     wiz.close()
     wiz.deleteLater()
 

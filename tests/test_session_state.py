@@ -1919,6 +1919,49 @@ def test_get_univariate_trees():
         assert isinstance(trees[0]["cut_points"][0], tuple)
 
 
+def test_fix_spec_with_cost_matrix():
+    """Fase 3.11.c.3: fix_spec almacena la matriz N x N como tupla de tuplas.
+
+    La matriz es inmutable y NO entra en params_fingerprint en esta fase
+    (design doc §3.2); se valida antes de la transicion (cuadrada,
+    diagonal 0, valores finitos >= 0).
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        mat = ((0.0, 5.0), (1.0, 0.0))
+        st = s.fix_spec("default", predictors=["edad", "seg"], target_class=1,
+                        class_labels={0: "Bueno", 1: "Malo"},
+                        cost_matrix=mat)
+        assert st.cost_matrix == mat
+        assert isinstance(st.cost_matrix, tuple)
+        assert all(isinstance(fila, tuple) for fila in st.cost_matrix)
+
+        # Default: sin matriz -> ()
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(csv_path))
+        st2 = s2.fix_spec("default", predictors=["edad"], target_class=1,
+                          class_labels={0: "Bueno", 1: "Malo"})
+        assert st2.cost_matrix == ()
+
+        # Endurecimiento: diagonal != 0 y valores negativos se rechazan
+        s3 = Session(logger=_quiet_logger())
+        s3.load_dataset(str(csv_path))
+        _assert_raises(
+            ValueError, s3.fix_spec, "default", predictors=["edad"],
+            target_class=1, class_labels={0: "Bueno", 1: "Malo"},
+            cost_matrix=((1.0, 0.0), (0.0, 0.0)),
+        )
+        s4 = Session(logger=_quiet_logger())
+        s4.load_dataset(str(csv_path))
+        _assert_raises(
+            ValueError, s4.fix_spec, "default", predictors=["edad"],
+            target_class=1, class_labels={0: "Bueno", 1: "Malo"},
+            cost_matrix=((0.0, -2.0), (0.0, 0.0)),
+        )
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

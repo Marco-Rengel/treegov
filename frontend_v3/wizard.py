@@ -19,7 +19,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtGui import QCloseEvent, QPalette
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -912,6 +912,7 @@ class AdvancedOptionsDialog(QDialog):
         max_depth: int,
         min_child_size: int,
         min_child_weight: float,
+        cost_matrix: tuple[tuple[float, ...], ...] = (),
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -976,6 +977,40 @@ class AdvancedOptionsDialog(QDialog):
         form_chaid.addRow("", lbl_pending)
         self._tabs.addTab(tab_chaid, tr("adv_tab_chaid"))
 
+        # --- Tab 3: Costs (N x N misclassification cost matrix, 3.11.c.3) ---
+        # TODO(zona_gris): N fijo a 2 (binario) en esta fase; deducir el
+        # numero de clases del target cuando el wizard exponga esa info
+        # de forma fiable en Step 4 (Fase 3.11.d o 4.0).
+        tab_costs = QWidget()
+        tab_costs.setObjectName("tabCosts")
+        lay_costs = QVBoxLayout(tab_costs)
+        n_costs = 2
+        self._tbl_costs = QTableWidget(n_costs, n_costs)
+        self._tbl_costs.setObjectName("tblCosts")
+        diag_bg = self.palette().color(QPalette.ColorRole.AlternateBase)
+        for i in range(n_costs):
+            for j in range(n_costs):
+                valor = 0.0
+                if cost_matrix and len(cost_matrix) == n_costs:
+                    try:
+                        valor = float(cost_matrix[i][j])
+                    except (IndexError, TypeError, ValueError):
+                        valor = 0.0
+                item = QTableWidgetItem(f"{valor:.6g}")
+                if i == j:
+                    # Diagonal fija a 0: solo lectura y fondo atenuado.
+                    item = QTableWidgetItem("0")
+                    item.setBackground(diag_bg)
+                    item.setFlags(
+                        item.flags() & ~Qt.ItemFlag.ItemIsEditable
+                    )
+                self._tbl_costs.setItem(i, j, item)
+        lay_costs.addWidget(self._tbl_costs)
+        lbl_costs_hint = QLabel(tr("adv_costs_hint"))
+        lbl_costs_hint.setWordWrap(True)
+        lay_costs.addWidget(lbl_costs_hint)
+        self._tabs.addTab(tab_costs, tr("adv_tab_costs"))
+
         layout.addWidget(self._tabs)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok
@@ -992,6 +1027,26 @@ class AdvancedOptionsDialog(QDialog):
             int(self._spin_child.value()),
             float(self._spin_min_child_weight.value()),
         )
+
+    def get_cost_matrix(self) -> tuple[tuple[float, ...], ...]:
+        """Matriz N x N leida de la tabla (tupla de tuplas, inmutable).
+
+        Diagonal forzada a 0.0 y valores no parseables/negativos clampeados
+        a 0.0 (defensa; la validacion estricta vive en Session.fix_spec).
+        """
+        n = self._tbl_costs.rowCount()
+        mat: list[tuple[float, ...]] = []
+        for i in range(n):
+            fila: list[float] = []
+            for j in range(n):
+                item = self._tbl_costs.item(i, j)
+                try:
+                    v = float(item.text()) if item is not None else 0.0
+                except ValueError:
+                    v = 0.0
+                fila.append(0.0 if i == j else max(0.0, v))
+            mat.append(tuple(fila))
+        return tuple(mat)
 
 
 class GovernancePage(QWizardPage):
@@ -1017,6 +1072,9 @@ class GovernancePage(QWizardPage):
         self._max_depth: int = 4
         self._min_child_size: int = 50
         self._min_child_weight: float = 0.0
+        # Fase 3.11.c.3: matriz de costos N x N (() = sin costos; fluye a
+        # current_config() y de ahi a Session.fix_spec).
+        self._cost_matrix: tuple[tuple[float, ...], ...] = ()
 
         self._group_mode = QGroupBox()
         mode_box = QVBoxLayout(self._group_mode)
@@ -1113,6 +1171,7 @@ class GovernancePage(QWizardPage):
             max_depth=self._max_depth,
             min_child_size=self._min_child_size,
             min_child_weight=self._min_child_weight,
+            cost_matrix=self._cost_matrix,
             parent=self,
         )
         if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -1120,6 +1179,7 @@ class GovernancePage(QWizardPage):
         self._max_depth, self._min_child_size, self._min_child_weight = (
             dlg.values()
         )
+        self._cost_matrix = dlg.get_cost_matrix()
         self._refresh_summary()
 
     def _sync_governance_controls(self) -> None:
@@ -1289,6 +1349,7 @@ class ModelWizard(QWizard):
             "governance_mode": "BANKING" if banking else "RESEARCH",
             "apply_jeffreys": self.page_governance.apply_jeffreys(),
             "pd_floor": self.page_governance.pd_floor(),
+            "cost_matrix": self.page_governance._cost_matrix,
         }
 
     def retranslate_ui(self) -> None:
