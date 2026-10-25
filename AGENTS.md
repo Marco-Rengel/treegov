@@ -236,3 +236,5 @@ Verificación: la cabecera del chat de OpenCode muestra el nivel activo (p. ej. 
 ## Gobernanza
 
 Ver .treegovrules para principios completos. SplitConfig frozen, params_fingerprint único.
+
+**Design System GUI (regla desde 24/10/2026, post-mortem 3.11.a.1).** Para cualquier modificación de interfaz gráfica (GUI), es obligatorio leer y respetar `docs/3.11_gui_design_system.md`. No se aceptan prompts visuales sin este contexto. El documento es el contrato normativo as-built de tokens, tipografía, layout, tablas (incluida la REGLA CRÍTICA 4.1.1: Ctrl+C → TSV en toda tabla de datos), tarjetas, diálogos, nodos y aristas.

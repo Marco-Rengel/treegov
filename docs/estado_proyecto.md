@@ -285,7 +285,7 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 441/441 PASSED.
+**Suite:** 449/449 PASSED.
 
 ### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
 
@@ -298,15 +298,29 @@ redimensionamiento del Wizard (mínimo 800×600, apertura 950×700, con
 banner de título visible sobre fondo oscuro). Los nodos del árbol pasan
 a tarjetas HTML estilo estación clásica (rejilla de tabla visible, cuerpo
 sólido blanco/negro según tema, cabecera en bloque de color con texto
-blanco). Queda pendiente el Hotfix Visual **3.11.a.1** (Toolbar
-compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío),
-y las sub-fases 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles
-Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e
-Interactividad). Diseño: `docs/3.11_design_interactive_tree.md`.
+blanco). Diseño: `docs/3.11_design_interactive_tree.md`.
 As-built de la 3.11.a: `docs/3.11.a_design_colab_theme.md`. Diseños de
 las fases previas con estado as-built: `docs/3.10.a_design_ux_ui_redesign.md`
 (antes `3.10_design_ux_redesign.md`) y `docs/3.10.b_design_chaid_binning.md`
 (antes `3.10.b_design_chaid_continuous.md`), renombrados el 24/10/2026.
+
+**3.11.a.1 — Hotfix Visual** ✅ Completada (24/10/2026). Implementados el
+layout clásico de estación de árboles (barra de 8 menús
+File/Edit/View/Format/Analysis/Tree/Window/Help, toolbar compacta
+`IconOnly` 16×16 con tooltips, panel izquierdo con 3 bloques apilados
+—Project Explorer, Tree Map, Data Viewer—, pestañas inferiores
+`TabPosition.South` estilo Excel), los nodos del árbol reescritos de HTML
+a **QPainter puro** ("hoja de auditoría" de geometría fija 220×126: cuerpo
+blanco en ambos temas, cabecera de 26 px con semáforo, fila Total (N),
+barra apilada, footer de 20 px, sin espacio muerto), el tema oscuro
+forzado en ventanas nativas vía `QPalette` (`apply_palette` + wizard
+anclado a Fusion/ClassicStyle), las aristas ortogonales con etiquetas de
+corte numéricas (NUNCA `bin_0`) y la copia TSV al portapapeles (Ctrl+C)
+en la tabla de ganancias. Sistema de diseño normativo as-built:
+`docs/3.11_gui_design_system.md`. Decisiones: `docs/design_decisions.md`
+§18. Suite 449/449. **Próximo paso: Fase 3.11.b (Tree Map y Data Viewer
+en el panel izquierdo)**, y después 3.11.c (Árboles Univariados y Matriz
+de Costos) y 3.11.d (Menú Contextual e Interactividad).
 
 ### Cierre intermedio 16/10/2026
 
@@ -334,7 +348,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). ✅ Completada (22/10/2026).
 - **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). ✅ Completada (23/10/2026).
 - **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
-- **Fase 3.11.a.1** — Hotfix Visual: Toolbar compacta, Wizard Dark/Light, Paso 3 (holdout) modernizado, Nodos sin espacio vacío. 🟡 En progreso.
+- **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). ✅ Completada (24/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP
@@ -362,7 +376,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (441 tests)
+├── tests/ # Suite de tests (449 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -493,17 +507,17 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 10 |
-| wizard (frontend) | 23 |
-| tree_view (frontend) | 11 |
+| gui_smoke (frontend) | 11 |
+| wizard (frontend) | 26 |
+| tree_view (frontend) | 14 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
-| reports_panel (frontend) | 12 |
+| reports_panel (frontend) | 13 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **441** |
+| **Total** | **449** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 441/441 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 449/449 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

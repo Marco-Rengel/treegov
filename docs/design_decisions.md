@@ -2117,6 +2117,30 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 ---
 
+## §18. GUI Presentation Decisions (Phase 3.11.a.1)
+
+### 18.1 QPainter nodes (no HTML)
+**Contexto:** Los nodos HTML de la 3.11.a (`QGraphicsTextItem.setHtml()`) dependían del auto-ajuste del motor de rich text: la caja se medía DESPUÉS de renderizar el contenido, lo que dejaba huecos muertos dentro de la tarjeta, rompía la geometría fija del layout y obligaba a sondar `QTextDocument` para conocer el tamaño real. Además, cada cambio de zoom re-renderizaba HTML en todos los nodos.
+**Decisión:** `NodeItem` se reescribió pintándose ENTERAMENTE con `QPainter` (sin HTML), con geometría fija `NODE_W × NODE_H` (220×126 px): cabecera de 26 px (banda semáforo/`ACCENT`, texto blanco bold elidido), filas por clase, fila Total (N), barra apilada de 10 px y footer de 20 px, todas ancladas a coordenadas exactas dentro del bounding rect. El cuerpo es blanco puro en ambos temas (metáfora de "hoja de auditoría": el nodo es un documento, no un widget tematizado).
+**Consecuencia:** El layout (`_layout_tree`) usa las constantes del módulo directamente — cero medición de contenido, cero espacio vacío; el render es más barato (primitivas de pintura en lugar de documentos HTML) y cada banda tiene posición exacta y auditable. Verificado con tests pixel-level y de geometría en `tests/test_tree_view.py`.
+
+### 18.2 QPalette forzada en ventanas nativas
+**Contexto:** Bajo el estilo nativo de Windows, el chrome de `QWizard`/`QDialog` (cabecera, marcos de botones, texto deshabilitado) heredaba el modo claro/oscuro DEL SISTEMA OPERATIVO, no el tema de la aplicación: el wizard mostraba cabecera oscura en tema claro y texto ilegible en tema oscuro.
+**Decisión:** Además del QSS por tokens (§17.1), se fuerza una `QPalette` construida desde la paleta activa (`theme.apply_palette()`, roles Window/WindowText/Base/AlternateBase/Text/Button/ButtonText/Highlight/HighlightedText + grupo Disabled), aplicada en el arranque y en cada cambio de tema. El wizard se ancla además al estilo `Fusion` (`QStyleFactory.create("Fusion")` con referencia viva) y a `QWizard.WizardStyle.ClassicStyle`, porque `AeroStyle` delega la cabecera y la botonera al tema del SO.
+**Consecuencia:** Diálogos y asistente siguen el tema de la app en ambos modos, independientemente del modo de Windows. Misma política fail-fast que `render_stylesheet`: tema desconocido → `ValueError`.
+
+### 18.3 Copia TSV al portapapeles en tablas de datos
+**Contexto:** Las tablas de la GUI (tabla de ganancias, secuencia de poda) mostraban datos de auditoría que el analista necesitaba trasladar a Excel/Word; no existía vía de exportación rápida distinta del reporte HTML.
+**Decisión:** Toda tabla de datos soporta Ctrl+C vía `QShortcut(QKeySequence.StandardKey.Copy, tabla, context=WidgetWithChildrenShortcut)`, copiando la selección (o la tabla completa si no hay selección) como TSV: cabeceras en la primera línea, celdas separadas por `\t`, filas por `\n` (REGLA CRÍTICA 4.1.1 de `docs/3.11_gui_design_system.md`). El contexto acotado es obligatorio para no secuestrar Ctrl+C de otros widgets de la ventana.
+**Consecuencia:** Pegado directo en Excel/Word sin exportar archivo. Implementación de referencia genérica en `ReportsPanel._copy_selection_to_clipboard` (acepta cualquier `QTableWidget`); cobertura actual: tabla de ganancias ✅ (con test), `PruneDialog` ⏳ pendiente, matriz 2×2 exenta (`NoSelection`).
+
+### 18.4 Layout clásico con pestañas inferiores (sobre el "Excel puro")
+**Contexto:** La 3.11.a (§17.2) llevó las pestañas a página completa con la barra ARRIBA (posición por defecto de `QTabWidget`). La reescritura del diseño 3.11 al estándar clásico de estaciones de árboles (circa 2001) exigía la ergonomía operativa completa: barra de menús clásica, panel izquierdo de tres bloques y la barra de pestañas anclada ABAJO.
+**Decisión:** Se adoptó el layout clásico: barra de 8 menús (File, Edit, View, Format, Analysis, Tree, Window, Help — los cuatro últimos con placeholders deshabilitados asignados a 3.11.c/d), toolbar compacta `IconOnly` 16×16 con tooltips obligatorios, panel izquierdo `QSplitter` vertical con 3 `QGroupBox` apilados (Project Explorer / Tree Map / Data Viewer) y `QTabWidget` principal con `TabPosition.South` (pestañas inferiores, metáfora de hojas de Excel conservada pero ancladas abajo).
+**Consecuencia:** La disposición coincide con la referencia visual del estándar clásico (`docs/3.11_classic_tree_ui_reference.md`) y con el diseño 3.11 reescrito (§2); las pestañas siguen ocupando toda el área central (la ganancia de espacio de §17.2 se conserva) y la barra inferior deja la franja superior para menús y toolbar, como en la estación clásica.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2143,6 +2167,7 @@ a note in `docs/audit_log.md`.
 **Version.** This document was created on 04/10/2026 as part of Phase
 3.0, closing the "grey zone" of undocumented design decisions
 accumulated during Phases 0 through 2.4. (Updated on 20/10/2026 to add
-§10.4 — Phase 3.8.)
+§10.4 — Phase 3.8; on 24/10/2026 to add §17 — Phase 3.11.a — and §18 —
+Phase 3.11.a.1.)
 
 ---

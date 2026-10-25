@@ -248,5 +248,7 @@ and therefore not listed here.*
 
 Nota (Fase 3.10.a): La clase `TreePanel` expone ahora los métodos públicos `zoom_in()`, `zoom_out()` y `zoom_fit()` para que la `QToolBar` de `MainWindow` pueda controlar la vista sin acceder a atributos privados.
 
+Nota (Fase 3.11.a.1, 24/10/2026): fase puramente visual (frontend: layout clásico, nodos QPainter, tema forzado vía QPalette, copia TSV en tablas). No alteró la superficie de la API pública: `backend_v3/` intacto y ningún módulo de `frontend_v3` ganó símbolos públicos nuevos (el método de copia TSV es privado: `ReportsPanel._copy_selection_to_clipboard`).
+
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.

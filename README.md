@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 441/441 passing
+**Test suite**: 449/449 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -52,7 +52,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a complete<br/>🔧 Focus: Visual Hotfix 3.11.a.1<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 441 / 441 tests PASSED<br/>📅 Oct 24, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a.1 complete<br/>🔧 Focus: 3.11.b Tree Map & Data Viewer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 449 / 449 tests PASSED<br/>📅 Oct 24, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -259,13 +259,13 @@ TreeGov/
 | **3.10.a** | UX/UI Redesign: Toolbar, enriched tree nodes, right panel, dark theme hierarchy (H3-H8) | Completed |
 | **3.10.b** | CHAID continuous alignment: automatic decile binning, `bin_edges` in `SplitConfig`, `np.digitize` routing (H14) + visual hotfix (H9, H11-H13) | Completed |
 | **3.11.a** | Base Redesign: Colab theme, Excel-style full-page tabs, resized Wizard, classic tree-station HTML nodes | Completed |
-| **3.11.a.1** | Visual Hotfix: compact Toolbar, Wizard Dark/Light themes, modernized Holdout step (Wizard step 3), HTML nodes without empty space | In progress |
+| **3.11.a.1** | Visual Hotfix: classic layout (8-menu bar, compact icon-only toolbar, 3-block left panel, bottom Excel-style tabs), QPainter audit-sheet nodes, forced dark/light theme via QPalette, numeric cut labels on edges, TSV clipboard copy in tables, GUI Design System | Completed |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 441/441 passing.**
+**Test suite: 449/449 passing.**
 
 ---
 

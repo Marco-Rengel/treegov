@@ -7,7 +7,9 @@ arrive as plain dicts prepared by MainWindow from the backend DTOs.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDoubleSpinBox,
@@ -190,6 +192,15 @@ class ReportsPanel(QWidget):
             QHeaderView.ResizeMode.ResizeToContents
         )
         self._table.setSortingEnabled(True)
+        # Ctrl+C copia la seleccion (o toda la tabla si no hay seleccion)
+        # como TSV al portapapeles. Contexto WidgetWithChildren para no
+        # secuestrar Ctrl+C de otros widgets de la misma ventana.
+        self._copy_shortcut = QShortcut(
+            QKeySequence.StandardKey.Copy,
+            self._table,
+            context=Qt.ShortcutContext.WidgetWithChildrenShortcut,
+        )
+        self._copy_shortcut.activated.connect(self._copy_selection_to_clipboard)
         splitter.addWidget(self._table)
         splitter.addWidget(self._build_bottom_section())
         splitter.setStretchFactor(0, 3)
@@ -308,6 +319,38 @@ class ReportsPanel(QWidget):
 
     def _on_buckets_changed(self, value: int) -> None:
         self.view_changed.emit(self.current_view(), value)
+
+    def _copy_selection_to_clipboard(self, table: QTableWidget | None = None) -> None:
+        """Copia la seleccion al portapapeles como TSV (pega directa en Excel/Word).
+
+        Sin seleccion previa, selecciona toda la tabla. La primera linea
+        lleva las cabeceras de las columnas implicadas; cada fila es una
+        linea con valores separados por tabuladores. Generico: sirve para
+        cualquier QTableWidget pasado como argumento.
+        """
+        table = self._table if table is None else table
+        indexes = table.selectedIndexes()
+        if not indexes:
+            table.selectAll()
+            indexes = table.selectedIndexes()
+        if not indexes:
+            return
+        cols = sorted({index.column() for index in indexes})
+        rows: dict[int, dict[int, str]] = {}
+        for index in indexes:
+            item = table.item(index.row(), index.column())
+            rows.setdefault(index.row(), {})[index.column()] = (
+                item.text() if item is not None else ""
+            )
+        header = table.horizontalHeaderItem
+        lines = [
+            "\t".join(
+                header(c).text() if header(c) is not None else "" for c in cols
+            )
+        ]
+        for row_index in sorted(rows):
+            lines.append("\t".join(rows[row_index].get(c, "") for c in cols))
+        QApplication.clipboard().setText("\n".join(lines))
 
     # ---------------------------------------------------------- Public API
     def set_session_available(self, *, train: bool, oos: bool, oot: bool) -> None:

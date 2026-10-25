@@ -236,6 +236,34 @@ def test_summary_n_per_class_hidden_k2():
     panel.deleteLater()
 
 
+def test_copy_selection_to_clipboard():
+    _get_app()
+    panel = ReportsPanel()
+    panel.set_gains_table(_sample_gains_dto())
+    clipboard = QApplication.clipboard()
+    # Sin seleccion previa: copia toda la tabla con cabeceras.
+    panel._table.clearSelection()
+    panel._copy_selection_to_clipboard()
+    lines = clipboard.text().split("\n")
+    assert len(lines) == 2  # cabecera + 1 fila de datos
+    assert len(lines[0].split("\t")) == 13
+    assert len(lines[1].split("\t")) == 13
+    assert "L0" in lines[1]
+    # Con seleccion explicita: mismas columnas, mismas filas.
+    panel._table.selectRow(0)
+    panel._copy_selection_to_clipboard()
+    lines_sel = clipboard.text().split("\n")
+    assert lines_sel == lines
+    # Tabla vacia: no toca el portapapeles.
+    panel._table.setRowCount(0)
+    panel._table.clearSelection()
+    clipboard.setText("SENTINEL")
+    panel._copy_selection_to_clipboard()
+    assert clipboard.text() == "SENTINEL"
+    panel.close()
+    panel.deleteLater()
+
+
 def test_matrix_title_multiclass_when_k3():
     _get_app()
     panel = ReportsPanel()

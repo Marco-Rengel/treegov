@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 441/441 PASSED
+**Suite de tests:** 449/449 PASSED
 
 ## Entorno de desarrollo
 
@@ -299,20 +299,25 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso inmediato (24/10/2026):** el **Hotfix Visual 3.11.a.1**
-(corregir toolbar, wizard tema claro/oscuro, paso 3, nodos). La Fase
-3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página
-completa, Wizard redimensionado con banner de título, Nodos HTML
-estación clásica, HUD acotado y colapsable) quedó cerrada el 24/10/2026 con
-suite 441/441. Todo el trabajo de la 3.11.a (código + docs) está
-commiteado (último commit: `a85f4e9`, cierre documental 3.11.a);
-verificar con `git status` antes de editar. Los archivos de diseño de
-las fases recientes quedaron alineados el 24/10/2026:
+**Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
+Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema
+Colab, Layout Excel, Wizard redimensionado, Nodos HTML, HUD acotado) y
+la **3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar
+compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores
+estilo Excel, nodos QPainter "hoja de auditoría", tema oscuro forzado
+vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas)
+quedaron cerradas el 24/10/2026 con suite 449/449**. El sistema de
+diseño visual quedó estandarizado en `docs/3.11_gui_design_system.md`
+(normativo as-built; las sub-fases 3.11.b-d se implementan contra él).
+El código de la 3.11.a.1 está commiteado (`d8194dc`); los dos bloques
+posteriores del día (Ctrl+C TSV + Design System + este cierre
+documental) están en el working tree pendientes de commit —verificar
+con `git status` antes de editar. Los archivos de diseño de las fases
+recientes quedaron alineados el 24/10/2026:
 `docs/3.10.a_design_ux_ui_redesign.md` (antes `3.10_design_ux_redesign.md`),
 `docs/3.10.b_design_chaid_binning.md` (antes `3.10.b_design_chaid_continuous.md`)
-y `docs/3.11.a_design_colab_theme.md` (nuevo, as-built). Después del
-hotfix siguen 3.11.b (Tree Map y Data
-Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d
+y `docs/3.11.a_design_colab_theme.md` (nuevo, as-built). Después de
+3.11.b siguen 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d
 (Menú Contextual e Interactividad). En paralelo sigue la recogida de
 feedback de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs
 críticos, publicación de `1.0.0` estable. (La deuda de tags `a1`–`a6`

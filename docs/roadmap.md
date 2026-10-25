@@ -370,7 +370,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 **Status**: 🟡 En progreso (iniciada el 24/10/2026). Diseño: `docs/3.11_design_interactive_tree.md`. Recoge lo diferido desde 3.10.b (interactividad visual).
 
 - **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
-- **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ⏳ Pendiente.
+- **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ✅ Completada (24/10/2026). Implementados el layout clásico (barra de 8 menús, toolbar `IconOnly` 16×16 con tooltips, panel izquierdo de 3 bloques apilados, pestañas inferiores `TabPosition.South` estilo Excel), los nodos del árbol reescritos de HTML a **QPainter puro** ("hoja de auditoría" 220×126 sin espacio muerto), el tema oscuro forzado en ventanas nativas vía `QPalette` (`apply_palette` + wizard anclado a Fusion/ClassicStyle), las aristas ortogonales con cortes numéricos (NUNCA `bin_0`) y la copia TSV al portapapeles (Ctrl+C) en la tabla de ganancias. Sistema de diseño normativo: `docs/3.11_gui_design_system.md`. Decisiones: `docs/design_decisions.md` §18. Cierre: `docs/audit_log.md` 24/10/2026.
 - **3.11.b** Tree Map y Data Viewer. ⏳ Pendiente.
 - **3.11.c** Árboles Univariados y Matriz de Costos. ⏳ Pendiente.
 - **3.11.d** Menú Contextual e Interactividad. ⏳ Pendiente.
@@ -410,7 +410,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (24/10/2026):** los READMEs del repo reflejan ahora la Fase 3.11.a y 441/441 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (24/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 449/449 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -576,6 +576,21 @@ Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos
 **Priority: LOW (registered 24/10/2026).**
 
 Barra superior con iconos detallados (estilo clásico 2001) diferido a la Fase 4.0 o posterior.
+
+### ⏳ Iconos SVG personalizados (toolbar y wizard)
+**Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1).**
+
+La toolbar y el wizard usan iconos estándar de Qt (`QStyle.StandardPixmap`, `main_window.py:382-406`, `wizard.py:116`). El autor definirá un set de iconos SVG propios (coloreables vía tokens de tema) para la toolbar y el wizard en una fase futura. Referencia visual: `docs/3.11_classic_tree_ui_reference.md` §1. Divergencia as-built ya registrada en `docs/3.11.a_design_colab_theme.md` §7 (ítem 1).
+
+### ⏳ Copiado TSV en PruneDialog
+**Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1).**
+
+La tabla de ganancias soporta Ctrl+C → TSV (REGLA CRÍTICA 4.1.1 de `docs/3.11_gui_design_system.md`, implementada en `ReportsPanel._copy_selection_to_clipboard`, 24/10/2026), pero la tabla del diálogo de poda (`frontend_v3/prune_dialog.py`, `PruneDialog._table`) aún no. La implementación de referencia es genérica (acepta cualquier `QTableWidget`), por lo que el cumplimiento es un cableado trivial del `QShortcut`. Cobertura registrada en la tabla de cumplimiento §6 del Design System.
+
+### ⏳ Validación cruzada (Wizard, Paso 3)
+**Priority: MEDIUM (registered 24/10/2026, post-mortem 3.11.a.1; backend diferido a la Fase 2.1.b).**
+
+El radio "Cross-validation" del Paso 3 del wizard (`wizard.py:764`, `rbSchemeCV`) es seleccionable pero presentacional: al marcarlo se muestra el aviso `step3_cv_notice` ("La validación cruzada estará disponible en la Fase 2.1.b.") y `current_config()` sigue emitiendo la fracción de holdout, porque el backend (Session.partition → train) SIEMPRE aplica el holdout estratificado y no existe flujo de CV (`TODO(zona_gris)` en `wizard.py:746-750`). La deuda real es de backend (Fase 2.1.b, ya registrada arriba como "Hardening extras"); este asiento la vincula al control de UI que la expone.
 
 ## Recorded architectural decisions
 

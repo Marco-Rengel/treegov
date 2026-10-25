@@ -5617,3 +5617,119 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 441/441 PASSED (`python -m pytest tests -q`; sin cambios de código). Verificación Markdown: 0 code fences residuales, tabla §6 con columnas consistentes.
 
 **Referencias**: AGENTS.md (mini-cierre de documentación pura); `docs/3.11_classic_tree_ui_reference.md` (referencia visual transcrita); `docs/audit_log.md` entrada del 24/10/2026 (mini-cierre previo de alineación retroactiva).
+
+---
+
+### 24/10/2026 — Copiar tablas al portapapeles como TSV (Ctrl+C en la tabla de ganancias)
+
+**Estado**: ✅ Cerrada (sin commit; decisión del revisor). Suite **449/449 PASSED**.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (política AGENTS.md: cambio de comportamiento de widget + test nuevo).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: tarea puntual de UX — permitir al usuario copiar los datos de la tabla de ganancias (y, por diseño genérico, de cualquier `QTableWidget`) al portapapeles para pegarlos en Excel/Word. Formato TSV (Tab-Separated Values): celdas separadas por `\t`, filas por `\n`, primera línea con las cabeceras de columna.
+
+**Artefactos (por ruta exacta)**:
+
+1. `frontend_v3/reports_panel.py`:
+   - Imports: `QKeySequence`, `QShortcut` desde `PySide6.QtGui`; `QApplication` añadido a `PySide6.QtWidgets`.
+   - `_build_ui`: nuevo `QShortcut(QKeySequence.StandardKey.Copy, self._table, context=Qt.ShortcutContext.WidgetWithChildrenShortcut)` conectado a `activated → _copy_selection_to_clipboard`.
+   - Nuevo método `_copy_selection_to_clipboard(table: QTableWidget | None = None)`: obtiene `selectedIndexes()`; si no hay selección, `selectAll()`; si la tabla está vacía, retorna sin tocar el portapapeles. Primera línea = cabeceras de las columnas implicadas en la selección; luego una línea por fila con los textos de celda. Copia con `QApplication.clipboard().setText(...)`.
+2. `tests/test_reports_panel.py`: nuevo `test_copy_selection_to_clipboard` (test 13 del archivo) — (a) sin selección copia toda la tabla con cabeceras (2 líneas × 13 columnas, etiqueta `L0` presente); (b) con selección de fila explícita produce el mismo TSV; (c) tabla vacía deja el portapapeles intacto (centinela `SENTINEL`).
+
+**Zonas grises resueltas (conservador, regla de ráfaga)**:
+
+- **Contexto del atajo**: `QShortcut` usa `WindowShortcut` por defecto, lo que habría secuestrado Ctrl+C de TODOS los widgets de la ventana (incluidos campos de texto). Se fija `WidgetWithChildrenShortcut` para limitarlo a la tabla.
+- **"y cualquier otra QTableWidget"** (título de la tarea): la tabla de la matriz 2×2 tiene `SelectionMode.NoSelection`, así que un atajo allí sería inerte (handler muerto). Se optó por el método genérico con parámetro `table` (cualquier tabla futura puede reutilizarlo) y cablear el atajo solo en `self._table`, como pedían los pasos 1-3.
+- **Cabeceras**: se copian las de las columnas implicadas en la selección (no siempre las 13), para que un subconjunto de columnas quede alineado con sus cabeceras al pegar.
+
+**Hallazgo de gobernanza (ajeno a este cambio; detectado al preparar esta entrada, con evidencia)**:
+
+- **Desincronización del conteo de tests: documentado 441/441, real 448/448 en HEAD.** La suite actual con este cambio es 449 = 448 (HEAD, commit `d8194dc`) + 1 test nuevo de esta tarea. Verificación: `git status` muestra solo los 2 archivos de esta tarea modificados; `grep -r "448"` en `docs/` y READMEs: cero hits; el conteo vigente en `audit_log.md`, `estado_proyecto.md`, `contexto_para_nueva_sesion.md`, `prompt_para_asistente.md` y `roadmap.md` es 441/441. El commit `d8194dc` ("fix(ui): improve empty state, summary card, and matrix table styling", 24/10/2026 22:06) empaquetó trabajo de UI (16 archivos: `i18n.py` +87, `main_window.py` +165, `reports_panel.py` +140, `tree_view.py` +528, `wizard.py` +600, tests +596 líneas en 4 archivos) cuya entrada de audit_log solo documenta la reescritura del diseño 3.11 y declara "441/441 (sin cambios de código)". `grep "empty state|summary card|d8194dc"` en `audit_log.md`: cero hits → el bloque de código (empty state, summary card, matrix styling, ~7 tests nuevos) quedó sin entrada propia. **Se REGISTRA el hueco aquí; no se reconstruye retrospectivamente desde esta tarea** (fuera de alcance del portapapeles). Precedente para la reconstrucción retroactiva: entrada del 18/10/2026 (Fase 3.7.d). El revisor decide si se redacta la entrada retroactiva y se sincronizan los conteos 441→448 en los 5 documentos.
+
+**Verificación**: `pytest tests/test_reports_panel.py -q` → 13/13 PASSED. Suite completa: **449/449 PASSED** (cero regresiones).
+
+**Checklist de 8 documentos**: (1) `audit_log.md` —esta entrada— ✔; (2) `roadmap.md` — no aplica (tarea puntual de UX, no cierra sub-fase; el hueco 441→448 queda registrado aquí para su bloque corrector)—; (3) `estado_proyecto.md` — idem —; (4)(5) documentos de contexto — idem —; (6) READMEs — idem —; (7) `docs/api.md` — NO APLICA: sin cambios de API pública (método privado de panel)—; (8) `docs/design_decisions.md` — NO APLICA: sin nuevos defaults ni contratos (un atajo de teclado de presentación no es decisión de diseño analítica).
+
+**Referencias**: `docs/audit_log.md` entrada del 18/10/2026 (Fase 3.7.d, precedente de entrada retroactiva); entrada del 20/10/2026 (Protocolo de Mini-Cierre); commit `d8194dc` (origen del hueco 441→448).
+
+---
+
+### 24/10/2026 — Sistema de Diseño de la GUI: `docs/3.11_gui_design_system.md` (nuevo, as-built normativo)
+
+**Estado**: ✅ Cerrada (sin commit; decisión del revisor). Documentación pura (un archivo nuevo; sin cambios de código). Suite **449/449 PASSED**.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos (por ruta exacta)**:
+
+1. `docs/3.11_gui_design_system.md` (NUEVO, 153 líneas, 7 secciones): sistema de diseño visual normativo de la GUI — Propósito; Sistema de Temas (13 tokens `PALETTES` con valores hex verificados, mecanismo QSS+QPalette+Fusion, fail-fast, tabla de tipografía); Layout Principal (8 menús clásicos, toolbar IconOnly 16×16 con tooltips obligatorios, panel izquierdo de 3 bloques, pestañas inferiores `TabPosition.South` estilo Excel, HUD acotado 200-400 px, splitter raíz 250/800/300); Widgets y Controles (tablas QSS + **REGLA CRÍTICA 4.1.1 Ctrl+C→TSV**, tarjeta `QFrame#summaryCard`, diálogos); Canvas del Árbol (nodos 100% QPainter 220×126 con cuerpo blanco fijo, aristas ortogonales con **REGLA CRÍTICA 5.2.1 NUNCA `bin_0`**, empty state HTML con título en `$ACCENT`); Cumplimiento y divergencias; Referencias.
+
+**Método (anti-patrón 2 del Protocolo de Mini-Cierre)**: cada afirmación del brief se verificó contra el código ANTES de escribirla (lectura directa de `theme.py`, `styles.qss`, `main_window.py:228-602`, `tree_view.py:156-571/913-933`, `wizard.py:798-815/1215-1254`, `prune_dialog.py:55-126`, `app.py`; rg para `apply_palette`, tamaños de fuente y referencias). El documento cita archivo:línea o selector QSS en cada regla.
+
+**Hallazgos (as-built vs brief; documentados en §2.4 y §6 del propio documento)**:
+
+- **"Tablas 12px"**: el 12 px existe solo en el reporte HTML exportado (`reports_panel.py`, `th,td{font-size:12px}`); las tablas in-app heredan la base 13 px. El documento desambigua la convención en lugar de copiar el literal.
+- **Cobertura de la regla Ctrl+C→TSV**: implementada hoy en la tabla de ganancias (entrada previa de este mismo día); `PruneDialog._table` queda ⏳ pendiente y la matriz 2×2 exenta (`NoSelection`). La tabla de cumplimiento §6 lo registra.
+- **`NODE_BG`**: token vivo en `PALETTES` pero ya no alimenta el nodo (cuerpo blanco fijo por diseño QPainter, `_NODE_SHEET_BG`); registrado como divergencia 3.11.a → diseño actual.
+- El brief describe el ESTADO REAL del layout (menús clásicos File/Edit/View/Format/Analysis/Tree/Window/Help, tabs en South, panel izquierdo de 3 bloques, nodos QPainter con cabecera de 26 px): todo verificado presente en código (implementado en el trabajo 3.11.a.1 del commit `d8194dc`, cuyo hueco documental quedó registrado en la entrada previa de este día).
+
+**Tests**: 449/449 PASSED (sin cambios de código; solo documentación).
+
+**Referencias**: `docs/3.11_gui_design_system.md` (el propio documento); `docs/audit_log.md` entradas del 24/10/2026 (Ctrl+C TSV; hueco 441→448); `docs/3.11_design_interactive_tree.md`; `docs/3.11.a_design_colab_theme.md`; `docs/3.11_classic_tree_ui_reference.md`.
+
+---
+
+### 24/10/2026 — Cierre formal de la sub-fase 3.11.a.1 (Hotfix Visual): checklist de 8 documentos + resolución de la discrepancia 441→449
+
+**Estado**: ✅ Cerrada (sin commit; decisión del revisor). Documentación pura + consolidación. Suite **449/449 PASSED**.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: cierre documental formal de la sub-fase **3.11.a.1 (Hotfix Visual)**. El código de la sub-fase quedó implementado el 24/10/2026 en el commit `d8194dc` ("fix(ui): improve empty state, summary card, and matrix table styling") más los dos bloques posteriores sin commitear de este mismo día (Ctrl+C→TSV en tablas; `docs/3.11_gui_design_system.md`). Esta entrada cierra la sub-fase y resuelve la discrepancia de conteo detectada en la entrada del Ctrl+C.
+
+**Resolución de la discrepancia 441→449 (registrada con evidencia)**:
+
+- La documentación quedó en **441/441** tras el cierre de la 3.11.a, pero el commit `d8194dc` empaquetó el código de la 3.11.a.1 (menús clásicos, toolbar compacta, panel izquierdo de 3 bloques, pestañas inferiores South, wizard Dark/Light, nodos 100% QPainter, aristas con cortes numéricos, empty state HTML) con una entrada de audit_log que solo cubría la reescritura del diseño 3.11.
+- Conteo empírico por módulo (`pytest --collect-only`, 24/10/2026): `gui_smoke` 10→**11**, `wizard` 23→**26**, `tree_view` 11→**14** ⇒ 441+7 = **448** en HEAD `d8194dc`. El bloque Ctrl+C→TSV añadió `reports_panel` 12→**13** ⇒ **449/449** actual.
+- Con esta entrada, el trabajo de código de la 3.11.a.1 queda formalmente documentado y los 8 documentos del checklist se sincronizan a 449/449. El hueco queda cerrado; las entradas históricas NO se reescriben (registro inmutable).
+
+**Alcance implementado de la 3.11.a.1 (consolidado)**:
+
+- Layout clásico: barra de 8 menús (File, Edit, View, Format, Analysis, Tree, Window, Help), toolbar compacta `IconOnly` 16×16 con tooltips, panel izquierdo con 3 bloques apilados (Project Explorer / Tree Map / Data Viewer, vacíos hasta 3.11.b), pestañas inferiores `TabPosition.South` estilo Excel (Tree/Gains/Risks/Rules/Summary), HUD acotado 200-400 px.
+- Nodos del árbol reescritos de HTML a **QPainter puro** ("hoja de auditoría": geometría fija 220×126, cuerpo blanco en ambos temas, cabecera de 26 px con semáforo, fila Total (N), barra apilada, footer de 20 px; sin espacio muerto).
+- Tema oscuro forzado en ventanas nativas: `apply_palette()` (QPalette con tokens del tema) + wizard anclado a Fusion/`ClassicStyle`.
+- Aristas ortogonales con etiquetas de corte numéricas (`≤ 25.5`); las etiquetas `bin_<i>` de CHAID se resuelven siempre a cortes reales (NUNCA `bin_0`).
+- Copia TSV al portapapeles (Ctrl+C) en la tabla de ganancias (regla crítica 4.1.1 del Design System).
+- Nuevo `docs/3.11_gui_design_system.md`: sistema de diseño normativo as-built.
+
+**Checklist de 8 documentos (todos en este bloque)**:
+
+1. `docs/audit_log.md` — esta entrada.
+2. `docs/roadmap.md` — 3.11.a.1 marcada ✅ Completada (24/10/2026) con narrativa; nota PyPI Deferred actualizada a 449/449.
+3. `docs/estado_proyecto.md` — conteo 449/449 (línea de suite, árbol de directorios, tabla por módulos con los 4 módulos corregidos, línea de ejecución); fila 3.11.a.1 ✅; narrativa 3.11 con próximo paso 3.11.b.
+4. `docs/contexto_para_nueva_sesion.md` — suite 449/449; "Próximo paso" reescrito a Fase 3.11.b (Tree Map y Data Viewer).
+5. `docs/prompt_para_asistente.md` — bala de estado: 3.11.a.1 cerrada, suite 449/449, próximo paso 3.11.b; añadido `3.11_gui_design_system.md` a los archivos canónicos.
+6. `README.md` / `README.es.md` — 449/449 en cabecera, Mermaid y cierre de tabla; fila 3.11.a.1 → Completed/Completada con descripción real.
+7. `docs/api.md` — nota de fase puramente visual (sin cambios de API pública).
+8. `docs/design_decisions.md` — nueva §18 "GUI Presentation Decisions (Phase 3.11.a.1)" con 4 decisiones: (a) nodos QPainter, (b) QPalette para tema en ventanas nativas, (c) copia TSV en tablas, (d) layout clásico con pestañas inferiores sobre el "Excel puro".
+
+**Lección aprendida (registrada)**: la 3.11.a.1 acumuló deuda visual precisamente por NO tener reglas de diseño escritas (cada bloque improvisaba colores, tamaños y layouts, y el resultado se desvió del diseño aprobado sin que nadie lo detectara hasta la auditoría). La estandarización previa en `docs/3.11_gui_design_system.md` (tokens, tipografía, tablas, nodos, aristas) convierte la verificación visual en un checklist objetivo: las sub-fases 3.11.b-d se implementan contra el Design System, no contra la memoria. Lección hermana: una entrada de audit_log que declara "sin cambios de código" sobre un commit que SÍ los tiene deja el conteo de tests desincronizado sin señal de alarma; el conteo empírico por módulo (`--collect-only`) es la verificación barata que lo detecta.
+
+**Tests**: 449/449 PASSED (documentación pura en este bloque; el código ya estaba verde).
+
+**Referencias**: commit `d8194dc` (código 3.11.a.1); `docs/3.11_gui_design_system.md`; `docs/design_decisions.md` §18; `docs/audit_log.md` entradas del 24/10/2026 (Ctrl+C TSV con el hallazgo 441→448; Design System); entrada del 18/10/2026 (Fase 3.7.d, precedente de documentación retroactiva).
+
+**Lecciones Aprendidas (Post-Mortem UI 3.11.a.1)**:
+
+1. **Diseño antes que código.** La iteración reactiva ("parcha y pinta": corregir un defecto visual, descubrir dos más, repetir) costó múltiples prompts y retrabajo a lo largo de la sub-fase. La solución definitiva es el `docs/3.11_gui_design_system.md` creado al final del día: un contrato normativo as-built contra el que se implementa y se audita. Regla derivada (ya registrada en `AGENTS.md` y `.treegovrules` en este mismo bloque): **el Design System es de lectura obligatoria antes de tocar cualquier UI en fases futuras; no se aceptan prompts visuales sin este contexto.**
+2. **Requerimientos visuales explícitos.** Se perdió tiempo reinventando la rueda: los requerimientos visuales (layout clásico de estación, pestañas inferiores, nodos QPainter) debieron extraerse del estándar de referencia y documentarse ANTES de iniciar el código, en lugar de descubrirse por prueba y error durante la implementación. El orden correcto es el del playbook: Diseñar → Auditar diseño → Implementar → Testear → Documentar; la 3.11.a.1 lo recorrió en orden inverso y pagó el coste.
+3. **Caprichos de Qt (registrados para no redescubrirlos).** (a) El `QWizard` requiere `QPalette` explícita para el modo oscuro: bajo estilo nativo/AeroStyle ignora el QSS y hereda el modo del SO (solución: `apply_palette` + Fusion + `ClassicStyle`, §18.2 de `design_decisions.md`). (b) `QTextDocument` tiene un margen de documento oculto y auto-ajuste de contenido que rompe la geometría fija del nodo (huecos muertos, medición post-render); la solución fue migrar el nodo a `QPainter` puro con geometría fija (§18.1). (c) Las tablas no copian al portapapeles por defecto: requieren código explícito (`QShortcut` + construcción TSV, §18.3 y REGLA 4.1.1 del Design System).
+4. **Semántica de datos.** El frontend no debe asumir etiquetas humanas ("Bueno/Malo") si el backend no las exige: las etiquetas de clase que llegan en el DTO son las del dataset (p. ej. `0`/`1`), y mostrarlas tal cual es más seguro y auditable que traducirlas en la capa de presentación. La traducción de etiquetas es una decisión de dominio, no de UI.
+
+**Propagación de este post-mortem (mismo bloque)**: regla del Design System añadida a `AGENTS.md` (sección Gobernanza) y `.treegovrules` (nueva sección "GUI design system"); tres deudas registradas en `docs/roadmap.md` (Deferred): iconos SVG personalizados, copiado TSV en `PruneDialog`, y validación cruzada del Wizard Paso 3 (vinculada a la Fase 2.1.b). **Tests**: 449/449 PASSED (bloque de documentación pura; sin cambios de código).
