@@ -369,11 +369,36 @@ O6) y resaltado pasivo del nodo actual (refleja la selección del
 canvas, sin selección propia ni propagación). Cableado en
 `main_window.py`: reconstrucción tras entrenar y limpieza en la rama
 de reseteo. 3 tests nuevos headless en `tests/test_tree_map.py`.
-Suite 463/463. **Próximo paso: sub-fase 3.11.b.4 (Project
-Explorer)**, y después b.5 (`pct_global` en la fila Total del
-`NodeItem`, formato `Total (<pct_global>) <n>`), 3.11.c (Árboles
-Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e
-Interactividad).
+Suite 463/463.
+
+**3.11.b.4 — Project Explorer** ✅ Completada (25/10/2026). El
+bloque `gbProjectExplorer` del panel izquierdo muestra la
+identidad del modelo activo: `QLabel` (`_lbl_explorer_model`,
+word-wrap) que arranca en "—", se puebla en
+`_on_wizard_finished` con `{method} · {params_fingerprint[:8]}`
+y vuelve a "—" en la rama de reseteo de `_on_new_wizard`. 1
+test nuevo headless (`test_project_explorer_updates`, ciclo
+completo con sesión/árbol MagicMock; la configuración del mock
+requirió una decisión de zona gris documentada en el propio
+test: cfg completo + stub de `_dataset_info` + paneles
+mockeados + `patch` de `ModelWizard`). Suite 464/464.
+
+**3.11.b.5 — pct_global en la fila Total del NodeItem** ✅
+Completada (25/10/2026). `NodeItem.__init__` acepta
+`pct_global: float` obligatorio (cuota del nodo sobre la
+población raíz); la fila Total pinta
+`Total (<pct_global>)` a 2 decimales vía la clave i18n nueva
+`tree_node_total` (paridad EN/ES) con el `n` en su columna
+derecha (formato final `Total (<pct_global>) <n>`).
+`TreeScene.build_from_model` calcula `total_n` de la raíz con
+guarda `total_n == 0` → 0.0. La firma obligatoria rompió 11
+call sites preexistentes del propio test; se corrigieron
+añadiendo solo el tercer argumento (regla de refactor: sin
+tocar su lógica). 1 test nuevo (`test_node_total_pct_global`:
+raíz = 1.0, hoja = 0.5 sobre `_crt_model`). Suite 465/465.
+**Fase 3.11.b completa. Próximo paso: Fase 3.11.c (Árboles
+Univariados y Matriz de Costos)**, y después 3.11.d (Menú
+Contextual e Interactividad).
 
 ### Cierre intermedio 16/10/2026
 
@@ -429,7 +454,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (463 tests)
+├── tests/ # Suite de tests (465 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -560,9 +585,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 11 |
+| gui_smoke (frontend) | 12 |
 | wizard (frontend) | 26 |
-| tree_view (frontend) | 14 |
+| tree_view (frontend) | 15 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 13 |
@@ -571,9 +596,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_map (frontend) | 3 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **463** |
+| **Total** | **465** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 463/463 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 465/465 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

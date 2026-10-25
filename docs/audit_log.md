@@ -5966,3 +5966,35 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 463/463 PASSED (`python -m pytest tests -q`; 460 + 3 nuevos en `tests/test_tree_map.py`).
 
 **Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D2 + corrección O6; `docs/3.11_design_interactive_tree.md` §3/§7; `docs/3.11_classic_tree_ui_reference.md` §2; mini-cierres 3.11.b.1 y 3.11.b.2 (entradas anteriores de este día); checklist de 8 documentos de `AGENTS.md`.
+
+---
+
+### 25/10/2026 — Mini-cierre: sub-fases 3.11.b.4 y 3.11.b.5 — cierre de la Fase 3.11.b
+
+**Estado**: ✅ Cerrado. Suite 465/465 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (implementación) / high (cierre documental).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: cuarta y quinta sub-fases de la 3.11.b contra el diseño auditado (`docs/3.11.b_design_treemap_dataviewer.md`, correcciones O1–O6): el bloque Project Explorer del panel izquierdo (`gbProjectExplorer`) y el `pct_global` en la fila Total del `NodeItem`. Con b.4 y b.5, la Fase 3.11.b (Tree Map, Data Viewer, Project Explorer, pct_global) queda completa. Código commiteado en `b5cb5e6` (`git log` verificado).
+
+**Artefactos tocados**:
+
+- Bloque de código (commit `b5cb5e6`; 5 archivos):
+  1. `frontend_v3/main_window.py` (b.4) — `_lbl_explorer_model` (QLabel "—", word-wrap) añadido al layout de `gbProjectExplorer` en `_build_central`; se puebla en `_on_wizard_finished` (`{method} · {params_fingerprint[:8]}`) y se resetea a "—" en la rama de reseteo de `_on_new_wizard`.
+  2. `tests/test_gui_smoke.py` (b.4) — `test_project_explorer_updates`: ciclo "—" → "CRT · 12345678" → "—" con sesión/árbol MagicMock.
+  3. `frontend_v3/i18n.py` (b.5) — clave nueva `tree_node_total` ("Total"/"Total") con paridad estricta EN/ES.
+  4. `frontend_v3/tree_view.py` (b.5) — `NodeItem.__init__` acepta `pct_global: float` obligatorio; la fila Total pinta `Total (<pct_global>)` vía `tr("tree_node_total")` con el `n` en su columna derecha (formato final `Total (<pct_global>) <n>`; el `TODO(3.11.b)` de `tree_view.py` queda consumido); `TreeScene.build_from_model` calcula `total_n = float(model.nodes[model.root_id].n)` y la cuota por nodo `(node.n / total_n) if total_n > 0 else 0.0`.
+  5. `tests/test_tree_view.py` (b.5) — `test_node_total_pct_global`: raíz = 1.0 y hoja = 0.5 sobre el fixture `_crt_model` (raíz n=120, hojas n=60).
+- Cierre documental (este bloque): `docs/audit_log.md` (esta entrada), `docs/roadmap.md` (3.11.b ✅ + nota PyPI), `docs/estado_proyecto.md` (465/465 + bloques narrativos b.4/b.5 + tabla de tests), `docs/contexto_para_nueva_sesion.md` (próximo paso 3.11.c), `docs/prompt_para_asistente.md` (suite + estado), `README.md` / `README.es.md` (Mermaid + suite + filas de fase).
+
+**Hallazgos**:
+
+- **Zona gris en el test de b.4 (documentada con `# TODO(zona_gris)` en `tests/test_gui_smoke.py`)**: el test especificado en el prompt (cfg mínimo `{"governance_mode": "BANKING"}` + sesión/árbol MagicMock) no podía pasar por dos causas verificadas contra el código: (1) `_train_pipeline` lee las 15 claves del cfg (`cfg["target"]` → `KeyError` → `_run_guarded` devuelve `ok=False` → rollback y retorno anticipado → el label nunca se actualiza); (2) `_on_new_wizard` solo ejecuta la rama de reseteo si `_dataset_info` no es None. Decisión conservadora: cfg completo (misma forma que el cfg conocido-bueno de `test_tree_view.py`), stub de `_dataset_info`, paneles mockeados (un MagicMock-tree no atraviesa de forma determinista el layout real de `TreePanel`/`TreeMap`) y `patch` de `ModelWizard`. Las tres aserciones del enunciado se conservaron verbatim. Pendiente de resolución por el asistente estratégico: ¿sustituir por un e2e con CSV real?
+- **b.5 rompió 11 call sites de `NodeItem`**: al hacer `pct_global` obligatorio, las 11 instanciaciones directas preexistentes en `tests/test_tree_view.py` (tests de píxeles y de helpers) fallaban con `TypeError`. Resueltas añadiendo únicamente el tercer argumento (raíces → `1.0`; hojas → `0.5`/`1.0`, valor irrelevante para sus aserciones) — regla de refactor de `AGENTS.md`: corregir llamadores sin tocar su lógica.
+- **Checklist de 8 documentos — revisión consciente de los 2 restantes**: `docs/api.md` NO se actualiza (sin nueva superficie de API de backend: `get_data_preview` se registró en b.1 y `pct_global` es visual); `docs/design_decisions.md` NO se actualiza (sin nuevos defaults ni cambios de contrato).
+
+**Tests**: 465/465 PASSED (`python -m pytest tests -q`; 463 + 1 nuevo en `tests/test_gui_smoke.py` + 1 nuevo en `tests/test_tree_view.py`).
+
+**Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` (filas b.4/b.5 y decisión D5); `docs/3.11_classic_tree_ui_reference.md` §3 (fila Total); mini-cierres 3.11.b.1, 3.11.b.2 y 3.11.b.3 (entradas anteriores de este día); checklist de 8 documentos de `AGENTS.md`.

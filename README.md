@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 463/463 passing
+**Test suite**: 465/465 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.b.3 complete<br/>🔧 Focus: 3.11.b.4 Project Explorer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 463 / 463 tests PASSED<br/>📅 Oct 25, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.b complete<br/>🔧 Focus: Phase 3.11.c<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 465 / 465 tests PASSED<br/>📅 Oct 25, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -265,12 +265,14 @@ TreeGov/
 | **3.11.b.1** | Data Viewer backend: `Session.get_data_preview` (raw CSV preview, native-type JSON-serializable dict, empty-dict idle state — §18.7) | Completed |
 | **3.11.b.2** | Data Viewer frontend: `DataViewer` widget in the left panel, read-only table, truncation notice, Ctrl+C → TSV, live i18n | Completed |
 | **3.11.b.3** | Tree Map: passive minimap in the left panel (independent scene, flat node rectangles, click → `centerOn` on the main view without touching zoom/selection, full rebuild on model change, exclusive `fitInView`, passive highlight of the current node) | Completed |
+| **3.11.b.4** | Project Explorer: left-panel block with the current model's method + short fingerprint, reset to "—" on reconfigure | Completed |
+| **3.11.b.5** | `NodeItem` Total row with `pct_global` (node n / root n): mandatory constructor parameter, label via `tr("tree_node_total")`, format `Total (<pct_global>) <n>` | Completed |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 463/463 passing.**
+**Test suite: 465/465 passing.**
 
 ---
 
