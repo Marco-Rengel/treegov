@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a.1 complete<br/>🔧 Focus: 3.11.b Tree Map & Data Viewer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 452 / 452 tests PASSED<br/>📅 Oct 25, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.b.1 complete<br/>🔧 Focus: 3.11.b.2 Data Viewer (GUI)<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 456 / 456 tests PASSED<br/>📅 Oct 25, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -262,12 +262,13 @@ TreeGov/
 | **3.10.b** | CHAID continuous alignment: automatic decile binning, `bin_edges` in `SplitConfig`, `np.digitize` routing (H14) + visual hotfix (H9, H11-H13) | Completed |
 | **3.11.a** | Base Redesign: Colab theme, Excel-style full-page tabs, resized Wizard, classic tree-station HTML nodes | Completed |
 | **3.11.a.1** | Visual Hotfix: classic layout (8-menu bar, compact icon-only toolbar, 3-block left panel, bottom Excel-style tabs), QPainter audit-sheet nodes, forced dark/light theme via QPalette, numeric cut labels on edges, TSV clipboard copy in tables, GUI Design System | Completed |
+| **3.11.b.1** | Data Viewer backend: `Session.get_data_preview` (raw CSV preview, native-type JSON-serializable dict, empty-dict idle state — §18.7) | Completed |
 | **4** | Advanced reports + export (SQL, Python, MD/JSON) | Planned |
 | **5** | MCP layer for LLM agents | Planned |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 452/452 passing.**
+**Test suite: 456/456 passing.**
 
 ---
 

@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 452/452 PASSED
+**Suite de tests:** 456/456 PASSED
 
 ## Entorno de desarrollo
 
@@ -299,6 +299,18 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
+**Próximo paso inmediato (25/10/2026):** la **sub-fase 3.11.b.2 (Data
+Viewer GUI: bloque del panel izquierdo + tabla + TSV + claves i18n)**.
+La **3.11.b.1 (Backend Data Viewer: `Session.get_data_preview`)** cerró
+el 25/10/2026 con suite **456/456** (commit `6e4c4b5`): contrato D3 del
+diseño auditado `docs/3.11.b_design_treemap_dataviewer.md` (dict de
+tipos puros `columns`/`rows`/`n_total`/`truncated`, celdas nativas con
+ausentes como `None`, dict vacío sin dataset —divergencia consciente
+registrada en `docs/design_decisions.md` §18.7). Sin frontend, sin
+`TreeNode` (paridad K=2), sin `pct_global` (b.5). Después de b.2 siguen
+b.3 (Tree Map), b.4 (Project Explorer) y b.5 (`pct_global` en la fila
+Total del `NodeItem`, formato `Total (<pct_global>) <n>`).
+
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema
 Colab, Layout Excel, Wizard redimensionado, Nodos HTML, HUD acotado) y
@@ -313,10 +325,11 @@ terminal", y copiado TSV en el `PruneDialog` con 1 test nuevo)
 elevaron la suite a **452/452**. El sistema de
 diseño visual quedó estandarizado en `docs/3.11_gui_design_system.md`
 (normativo as-built; las sub-fases 3.11.b-d se implementan contra él).
-El código de la 3.11.a.1 está commiteado (`d8194dc`); los dos bloques
-posteriores del día (Ctrl+C TSV + Design System + este cierre
-documental) están en el working tree pendientes de commit —verificar
-con `git status` antes de editar. Los archivos de diseño de las fases
+El código de la 3.11.a.1 está commiteado (`d8194dc`); los bloques
+posteriores (cierre documental a.1 `bf02f66`, mini-cierres del 25/10
+`a426842` + `7d05aa2`, corrección del diseño 3.11.b `910edb5` y backend
+b.1 `6e4c4b5`) están commiteados —verificar con `git status` antes de
+editar. Los archivos de diseño de las fases
 recientes quedaron alineados el 24/10/2026:
 `docs/3.10.a_design_ux_ui_redesign.md` (antes `3.10_design_ux_redesign.md`),
 `docs/3.10.b_design_chaid_binning.md` (antes `3.10.b_design_chaid_continuous.md`)

@@ -285,7 +285,7 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 452/452 PASSED.
+**Suite:** 456/456 PASSED.
 
 ### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
 
@@ -321,9 +321,27 @@ en la tabla de ganancias. Sistema de diseño normativo as-built:
 §18. Suite 452/452 (mini-cierres del 25/10/2026: zonas grises C1 con
 tests de routing por `bin_edges`, blindaje Clean Room + terminología
 "Nodo terminal", y copiado TSV en el `PruneDialog` —REGLA 4.1.1 del
-Design System—). **Próximo paso: Fase 3.11.b (Tree Map y Data Viewer
-en el panel izquierdo)**, y después 3.11.c (Árboles Univariados y Matriz
-de Costos) y 3.11.d (Menú Contextual e Interactividad).
+Design System—).
+
+**3.11.b.1 — Backend Data Viewer** ✅ Completada (25/10/2026).
+`Session.get_data_preview(n_rows=50)` en `backend_v3/session_state.py`
+(decisión D3 del diseño auditado `docs/3.11.b_design_treemap_dataviewer.md`,
+correcciones O1–O6): *preview* crudo del CSV original (sin imputación,
+sin codificación, sin *split*) como dict de tipos puros
+`{"columns", "rows", "n_total", "truncated"}`, con toda celda
+serializada a tipo nativo Python y los ausentes (`pd.isna`) como `None`
+(JSON-serializable, listo para la futura capa MCP). Divergencia
+consciente registrada en `docs/design_decisions.md` §18.7: sin dataset
+devuelve el dict vacío en lugar de `RuntimeError` (la familia
+`describe_*` mantiene su semántica *fail-fast*). Alcance acotado: sin
+frontend (b.2), sin tocar el dataclass frozen `TreeNode` (paridad K=2
+intacta), sin `pct_global` (inyección en el `NodeItem`, b.5). 4 tests
+nuevos del contrato (vacío, truncado, tipos nativos, sin truncamiento).
+Suite 456/456. **Próximo paso: sub-fase 3.11.b.2 (Data Viewer GUI:
+bloque del panel izquierdo + tabla + TSV + i18n)**, y después b.3
+(Tree Map), b.4 (Project Explorer), b.5 (`pct_global` en la fila Total),
+3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d (Menú
+Contextual e Interactividad).
 
 ### Cierre intermedio 16/10/2026
 
@@ -379,7 +397,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (452 tests)
+├── tests/ # Suite de tests (456 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -505,7 +523,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 88 |
+| session_state.py | 92 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
@@ -519,9 +537,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | prune_dialog (frontend) | 1 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **452** |
+| **Total** | **456** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 452/452 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 456/456 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

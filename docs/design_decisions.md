@@ -2174,6 +2174,11 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 **Decisión:** El footer de un nodo terminal muestra solo el Gini del nodo (derivado de `pd_final`, presentación sin pandas); los nodos internos muestran p-valor ajustado + estadístico del split (precomputados por el backend). Añadir KS requeriría un campo nuevo en `TreeNode` (cambio de contrato de backend; no hay fase que lo exija).
 **Consecuencia:** Cero cálculo analítico en `frontend_v3/tree_view.py`; el footer es auditable campo a campo contra el backend.
 
+### 18.7 Empty dict vs RuntimeError en get_data_preview (Phase 3.11.b.1)
+**Contexto:** La familia de lecturas puras `describe_*` de `Session` (`describe_dataset`, `describe_target`, `describe_weight_column`, `describe_population_column`) lanza `RuntimeError` cuando no hay dataset cargado (`session_state.py`: guardas al inicio de cada método). Para el Data Viewer (decisión D3 del diseño auditado `docs/3.11.b_design_treemap_dataviewer.md`, corrección O3), el frontend necesita pintar un estado vacío simple (tabla sin datos) sin capturar excepciones en el flujo normal de arranque de la ventana.
+**Decisión:** `Session.get_data_preview(n_rows=50)` devuelve el dict vacío `{"columns": [], "rows": [], "n_total": 0, "truncated": False}` cuando `self._df is None`, en lugar de lanzar `RuntimeError`. Además, toda celda se serializa a tipo nativo de Python (`int`/`float`/`str`/`bool`) y los valores ausentes del CSV (`pd.isna`) como `None`: cero escalares numpy/pandas en el retorno, dict JSON-serializable (requisito O3 de la auditoría del diseño).
+**Consecuencia:** El frontend (3.11.b.2) distingue "sin dataset" con una sola comprobación (`n_total == 0`), sin `try/except`; el contrato es testeable sin Qt y queda listo para serialización JSON en la futura capa MCP (Fase 5). La divergencia queda acotada a este método: la familia `describe_*` mantiene su semántica fail-fast sin cambios.
+
 ---
 
 ## Maintenance
@@ -2205,6 +2210,7 @@ accumulated during Phases 0 through 2.4. (Updated on 20/10/2026 to add
 §10.4 — Phase 3.8; on 24/10/2026 to add §17 — Phase 3.11.a — and §18 —
 Phase 3.11.a.1; on 25/10/2026 to add §0.5 — Clean-Room Development and
 Academic Provenance — and §18.5–§18.6 — mini-cierre de zonas grises de
-presentación.)
+presentación; on 25/10/2026 to add §18.7 — Phase 3.11.b.1, empty dict
+vs RuntimeError in `get_data_preview`.)
 
 ---

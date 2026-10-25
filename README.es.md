@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.a.1 completas<br/>🔧 Foco: 3.11.b Tree Map y Data Viewer<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 452 / 452 tests PASSED<br/>📅 25 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.b.1 completas<br/>🔧 Foco: 3.11.b.2 Data Viewer (GUI)<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 456 / 456 tests PASSED<br/>📅 25 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -262,12 +262,13 @@ TreeGov/
 | **3.10.b** | Alineación CHAID con continuas: binning automático por deciles, `bin_edges` en `SplitConfig`, routing por `np.digitize` (H14) + hotfix visual (H9, H11-H13) | Completada |
 | **3.11.a** | Rediseño Base: Tema Colab, pestañas tipo Excel a página completa, Wizard redimensionado, nodos HTML estilo estación clásica | Completada |
 | **3.11.a.1** | Hotfix Visual: layout clásico (barra de 8 menús, toolbar compacta icon-only, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos QPainter "hoja de auditoría", tema claro/oscuro forzado vía QPalette, cortes numéricos en aristas, copia TSV al portapapeles en tablas, Sistema de Diseño GUI | Completada |
+| **3.11.b.1** | Backend del Data Viewer: `Session.get_data_preview` (preview crudo del CSV, dict JSON-serializable de tipos nativos, estado vacío sin excepción — §18.7) | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 452/452 passing.**
+**Suite de tests: 456/456 passing.**
 
 ---
 

@@ -5880,3 +5880,30 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 452/452 PASSED (`python -m pytest tests -q`, 22.97 s). `git status` muestra solo los 2 archivos listados.
 
 **Referencias**: auditoría técnica O1–O6 (misma fecha, veredicto y justificaciones en la conversación del bloque); `docs/3.11_gui_design_system.md` §3.3, §4.1.1, §5.1; `docs/3.11_design_interactive_tree.md` §3/§7; `docs/3.11_classic_tree_ui_reference.md` §2/§4; `docs/design_decisions.md` §18.6; mini-cierres del 25/10/2026 (entradas anteriores de este día).
+
+### 25/10/2026 — Mini-cierre: sub-fase 3.11.b.1 (Backend Data Viewer: `Session.get_data_preview`)
+
+**Estado**: ✅ Cerrado. Suite 456/456 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (implementación) / high (cierre documental).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la Fase 3.11.b (Tree Map y Data Viewer) se implementa contra el diseño corregido `docs/3.11.b_design_treemap_dataviewer.md` (auditoría O1–O6, entrada anterior de este día). La sub-fase b.1 es el backend puro del Data Viewer (decisión D3): NO se toca el frontend (eso es b.2), NO se toca el dataclass frozen `TreeNode` (rompería la paridad K=2) y la inyección de `pct_global` en el `NodeItem` queda diferida a b.5.
+
+**Artefactos tocados**:
+
+- Bloque de código (commit `6e4c4b5`, `git diff --stat` verificado: solo estos 2 archivos):
+  1. `backend_v3/session_state.py` — nuevo método público `Session.get_data_preview(n_rows=50) -> dict` + helper estático `_cell_native` (conversión a tipos nativos).
+  2. `tests/test_session_state.py` — 4 tests nuevos del contrato (módulo: 88 → 92 tests).
+- Cierre documental (este bloque): `docs/design_decisions.md` (§18.7 nuevo), `docs/api.md` (firma pública), `docs/roadmap.md` (b.1 ✅), `docs/estado_proyecto.md` (456/456 + bloque narrativo), `docs/contexto_para_nueva_sesion.md` (próximo paso b.2), `docs/prompt_para_asistente.md` (suite), `README.md` / `README.es.md` (Mermaid + suite + fila de fase), `docs/audit_log.md` (esta entrada).
+
+**Hallazgos**:
+
+- Contrato D3 implementado tal cual: `{"columns": list[str], "rows": list[tuple], "n_total": int, "truncated": bool}` con los datos CRUDOS del CSV original (sin imputación, sin codificación, sin split); `truncated = n_total > len(rows)`.
+- **Divergencia consciente 1 (estado vacío)**: sin dataset cargado devuelve el dict vacío `{"columns": [], "rows": [], "n_total": 0, "truncated": False}` en lugar de lanzar `RuntimeError` (convención fail-fast de la familia `describe_*`, intacta). Registrada en `docs/design_decisions.md` §18.7 tal como exigía la corrección O3 de la auditoría del diseño.
+- **Divergencia consciente 2 (serialización nativa, corrección O3)**: toda celda se convierte a tipo nativo Python (`int`/`float`/`str`/`bool`) y los valores ausentes del CSV (`pd.isna`) se devuelven como `None` — nunca `NaN` ni escalares numpy; el dict resultante es JSON-serializable (contrato listo para la futura capa MCP, Fase 5).
+
+**Tests**: 456/456 PASSED tras el cierre documental (`python -m pytest tests -q`; 452 + 4 nuevos: `test_get_data_preview_without_dataset`, `_truncated`, `_native_types`, `_no_truncation`). Verificación de tipos: `type(val) in (int, float, str, bool, NoneType)` en todas las celdas; cero `np.int64`/`np.nan`.
+
+**Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D3 + corrección O3; `docs/design_decisions.md` §18.7; entrada de auditoría O1–O6 (misma fecha, anterior); checklist de 8 documentos de `AGENTS.md`.

@@ -371,7 +371,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 - **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
 - **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ✅ Completada (24/10/2026). Implementados el layout clásico (barra de 8 menús, toolbar `IconOnly` 16×16 con tooltips, panel izquierdo de 3 bloques apilados, pestañas inferiores `TabPosition.South` estilo Excel), los nodos del árbol reescritos de HTML a **QPainter puro** ("hoja de auditoría" 220×126 sin espacio muerto), el tema oscuro forzado en ventanas nativas vía `QPalette` (`apply_palette` + wizard anclado a Fusion/ClassicStyle), las aristas ortogonales con cortes numéricos (NUNCA `bin_0`) y la copia TSV al portapapeles (Ctrl+C) en la tabla de ganancias. Sistema de diseño normativo: `docs/3.11_gui_design_system.md`. Decisiones: `docs/design_decisions.md` §18. Cierre: `docs/audit_log.md` 24/10/2026.
-- **3.11.b** Tree Map y Data Viewer. ⏳ Pendiente.
+- **3.11.b** Tree Map y Data Viewer. 🟡 En progreso. Diseño auditado (correcciones O1–O6): `docs/3.11.b_design_treemap_dataviewer.md`. **3.11.b.1** (Backend Data Viewer: `Session.get_data_preview`, contrato D3 de tipos nativos, dict vacío sin dataset —`design_decisions.md` §18.7) ✅ Completada (25/10/2026, suite 456/456). Siguen b.2 (Data Viewer GUI), b.3 (Tree Map), b.4 (Project Explorer) y b.5 (`pct_global` en la fila Total del NodeItem).
 - **3.11.c** Árboles Univariados y Matriz de Costos. ⏳ Pendiente.
 - **3.11.d** Menú Contextual e Interactividad. ⏳ Pendiente.
 
@@ -410,7 +410,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 452/452 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b.1 y 456/456 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**

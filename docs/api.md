@@ -73,6 +73,16 @@ underscore) are internal and may change without notice.
 - `FlowState` (Enum), `SessionState`, `Session`
 - `Session.describe_dataset() -> (columns, types)` — read-only profile of
   the loaded dataset (types as `PredictorType.name` strings; Phase 2.1).
+- `Session.get_data_preview(n_rows=50) -> dict` — read-only raw preview
+  of the loaded CSV (no imputation, no encoding, no split):
+  `{"columns": list[str], "rows": list[tuple], "n_total": int,
+  "truncated": bool}`. Every cell is a native Python type
+  (`int`/`float`/`str`/`bool`) and missing CSV values are returned as
+  `None` — no numpy/pandas scalars, JSON-serializable. Without a loaded
+  dataset it returns the empty dict (`n_total=0`, `truncated=False`)
+  instead of raising `RuntimeError` — conscious divergence from the
+  `describe_*` family, see `docs/design_decisions.md` §18.7. (Phase
+  3.11.b.1).
 - `Session.fix_spec(target, spec=None, *, predictors=None, target_class,
   class_labels, weight_col=None, population_col=None,
   population_ok_values=None)` — optional predictor subset filter applied
