@@ -65,6 +65,7 @@ from frontend_v3.data_viewer import DataViewer
 from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
+from frontend_v3.univariate_dialog import UnivariateDialog
 from frontend_v3.wizard import ModelWizard
 
 
@@ -134,6 +135,7 @@ class MainWindow(QMainWindow):
         self._act_edit_undo.setText(tr("menu_edit_undo"))
         self._act_format_node_display.setText(tr("menu_format_node_display"))
         self._act_analysis_var_types.setText(tr("menu_analysis_var_types"))
+        self._act_univariate.setText(tr("menu_analysis_univariate"))
         self._act_window_tile.setText(tr("menu_window_tile"))
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
@@ -328,6 +330,11 @@ class MainWindow(QMainWindow):
             "act_analysis_var_types", enabled=False
         )
         self._menu_analysis.addAction(self._act_analysis_var_types)
+        # Phase 3.11.c.2: batch univariate trees (design
+        # docs/3.11.c_design_univariate_cost_matrix.md §2.2).
+        self._act_univariate = self._new_action("act_univariate", enabled=False)
+        self._act_univariate.triggered.connect(self._on_univariate)
+        self._menu_analysis.addAction(self._act_univariate)
         bar.addMenu(self._menu_analysis)
 
         # --- Tree (former Model menu: train opens the wizard; OOS/OOT
@@ -941,6 +948,7 @@ class MainWindow(QMainWindow):
         self._act_evaluate_oos.setEnabled(trained)
         self._act_load_oot.setEnabled(trained)
         self._act_prune.setEnabled(trained)
+        self._act_univariate.setEnabled(trained)
         has_tree = self._session is not None and self._session.state.tree is not None
         if hasattr(self, "_act_zoom_in"):
             self._act_zoom_in.setEnabled(has_tree)
@@ -1074,6 +1082,23 @@ class MainWindow(QMainWindow):
             ),
             8000,
         )
+
+    def _on_univariate(self) -> None:
+        """Analysis > Generate Univariate Trees (Phase 3.11.c.2).
+
+        Reads the flat DTO from Session.get_univariate_trees() and shows
+        it in a modal dialog. Read-only: the session state is untouched.
+        """
+        if self._session is None or self._session.state.tree is None:
+            return
+        try:
+            data = self._session.get_univariate_trees(max_depth=3)
+        except Exception as exc:
+            QMessageBox.warning(self, tr("msg_error_title"), str(exc))
+            return
+        dlg = UnivariateDialog(self, logger=self._logger)
+        dlg.set_data(data)
+        dlg.exec()
 
     def _on_reports_partition_changed(self, _partition: str) -> None:
         """Partition combo changed: recompute gains table and matrix."""
