@@ -1892,6 +1892,33 @@ def test_get_data_preview_no_truncation():
         assert dto["truncated"] is False
 
 
+def test_get_univariate_trees():
+    """Fase 3.11.c.1: un arbol por predictor, con metricas y puntos de corte.
+
+    El fixture _csv tiene senal real en edad (default = 1_{edad >= 40}),
+    asi que el Gini univariado de edad debe ser alto y tener cortes; seg
+    es nominal sin senal (metricas bajas o cero, sin exigencia de cortes).
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", predictors=["edad", "seg"], target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+
+        trees = s.get_univariate_trees(max_depth=2)
+        assert len(trees) == 2
+        assert trees[0]["predictor"] == "edad"
+        assert trees[1]["predictor"] == "seg"
+        # El fixture tiene senal real en edad (>=40), asi que el Gini
+        # debe ser alto.
+        assert trees[0]["gini"] > 0.5
+        assert len(trees[0]["cut_points"]) > 0
+        assert isinstance(trees[0]["cut_points"][0], tuple)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

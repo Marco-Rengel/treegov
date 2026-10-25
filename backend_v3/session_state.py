@@ -1030,6 +1030,93 @@ class Session:
         secuencia = Pruner(logger=get_logger("pruning")).sequence(st.tree)
         return [asdict(paso) for paso in secuencia]
 
+    def get_univariate_trees(self, max_depth: int = 3) -> list[dict]:
+        """Genera un arbol univariado por predictor y extrae metricas y cortes.
+
+        Fase 3.11.c.1 (diseno: docs/3.11.c_design_univariate_cost_matrix.md):
+        para cada predictor del spec entrena un arbol de profundidad
+        ``max_depth`` con el MISMO motor del modelo principal y parametros
+        de gobernanza BANKING (Jeffreys + pd_floor), lo evalua sobre test
+        (mismo camino que ``evaluate_oos``) y devuelve un DTO plano: lista
+        de dicts con claves ``predictor`` (str), ``gini`` (float),
+        ``ks`` (float) y ``cut_points`` (list[tuple[str, float]], umbrales
+        de los nodos internos; vacio si el predictor no produjo cortes).
+        Solo lectura: no muta el estado ni commitea eventos. Un predictor
+        que falla (p. ej. categorias no vistas en test con
+        unseen_policy="error") queda registrado con metricas 0.0 y sin
+        cortes, con WARNING en el log.
+        """
+        if self._state.tree is None:
+            raise ValueError(
+                "[session] get_univariate_trees requiere un modelo entrenado"
+            )
+        st = self._state
+        assert st.spec is not None
+        assert self._X_train is not None and self._y_train is not None
+        assert self._X_test is not None and self._y_test is not None
+        # Mismo motor que el modelo principal (factoria unica del modulo,
+        # fuente de verdad de la Fase 2.1); fallback CRT defensivo.
+        factory = _ENGINE_FACTORIES.get(st.tree.method, CrtEngine)
+        results: list[dict] = []
+        for predictor, ptype in dict(st.spec).items():
+            builder = TreeBuilder(
+                factory(),
+                target_type=TargetType.BINARY,
+                target_class=st.target_class,
+                class_labels=st.tree.class_labels,
+                max_depth=max_depth,
+                min_child_size=5,
+                pd_floor=0.0005,
+                apply_jeffreys=True,
+                seed=st.seed,
+                logger=get_logger("builder"),
+                # TODO(zona_gris): el prompt omitia weights; se propagan los
+                # pesos de train para paridad con train() (gobernanza de
+                # sesiones ponderadas, Fase 3.2). Resolver en 3.11.c.2/3.
+                weights=self._w_train,
+            )
+            try:
+                uni_tree = builder.build(
+                    self._X_train, self._y_train, {predictor: ptype}
+                )
+                p_2d = predict_pd(uni_tree, self._X_test)
+                if len(uni_tree.class_labels) == 2:
+                    p = p_2d[:, 0]  # Phase 3.1.d: binario lee columna 0
+                    y_eval = self._y_test
+                else:
+                    p = p_2d
+                    y_eval = self._translate_y_to_internal(self._y_test)
+                # n_groups adaptativo: HL exige n_groups >= 3 y
+                # n_groups * 5 <= N (contrato de compute_oos_metrics).
+                n_test = len(self._X_test)
+                n_groups = min(10, max(3, n_test // 5))
+                metrics = compute_oos_metrics(
+                    p, y_eval, n_groups=n_groups, weights=self._w_test
+                )
+                cuts: list[tuple[str, float]] = []
+                for nd in uni_tree.nodes:
+                    if not nd.is_leaf and nd.split is not None:
+                        if nd.split.threshold is not None:
+                            cuts.append(
+                                (nd.split.predictor, float(nd.split.threshold))
+                            )
+                results.append({
+                    "predictor": predictor,
+                    "gini": metrics.gini if metrics.gini is not None else 0.0,
+                    "ks": metrics.ks if metrics.ks is not None else 0.0,
+                    "cut_points": cuts,
+                })
+            except Exception as e:
+                self._log.warning(
+                    "[session] Error entrenando univariado para %s: %s",
+                    predictor, e,
+                )
+                results.append({
+                    "predictor": predictor, "gini": 0.0, "ks": 0.0,
+                    "cut_points": [],
+                })
+        return results
+
     def load_oot(self, csv_path: str, *, time_col: str | None = None) -> SessionState:
         """TRAINED -> OOT_LOADED: ingesta de la cohorte temporal posterior.
 
