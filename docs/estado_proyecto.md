@@ -285,7 +285,7 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 456/456 PASSED.
+**Suite:** 460/460 PASSED.
 
 ### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
 
@@ -337,11 +337,27 @@ devuelve el dict vacío en lugar de `RuntimeError` (la familia
 frontend (b.2), sin tocar el dataclass frozen `TreeNode` (paridad K=2
 intacta), sin `pct_global` (inyección en el `NodeItem`, b.5). 4 tests
 nuevos del contrato (vacío, truncado, tipos nativos, sin truncamiento).
-Suite 456/456. **Próximo paso: sub-fase 3.11.b.2 (Data Viewer GUI:
-bloque del panel izquierdo + tabla + TSV + i18n)**, y después b.3
-(Tree Map), b.4 (Project Explorer), b.5 (`pct_global` en la fila Total),
-3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d (Menú
-Contextual e Interactividad).
+Suite 456/456.
+
+**3.11.b.2 — Frontend Data Viewer** ✅ Completada (25/10/2026). Nuevo
+widget `DataViewer` (`frontend_v3/data_viewer.py`) en el bloque
+`gbDataViewer` del panel izquierdo: etiqueta de aviso + tabla de solo
+lectura que pinta el DTO de `Session.get_data_preview()` (presentación
+pura, sala limpia). Estado vacío (sin dataset) con la clave nueva
+`data_viewer_empty`; aviso de truncamiento `data_viewer_truncated`
+("Mostrando N de M filas") solo cuando `truncated=True`; ausentes
+(`None` del contrato D3) como celdas vacías. Copia Ctrl+C → TSV
+(REGLA CRÍTICA 4.1.1 del Design System) reutilizando el helper
+estático de `ReportsPanel` (tercer consumidor, sin acoplamiento).
+Retraducción en caliente vía `language_bus`. Cableado en
+`main_window.py`: poblado tras cargar el CSV (`_load_dataset_path`) y
+limpieza en la rama de reseteo (`_on_new_wizard`). 4 tests nuevos
+headless (construcción/retraducción, poblado + aviso, TSV, estado
+vacío). Suite 460/460. **Próximo paso: sub-fase 3.11.b.3 (Tree Map:
+escena independiente, reconstrucción completa, `centerOn` sin tocar
+zoom/selección)**, y después b.4 (Project Explorer), b.5 (`pct_global`
+en la fila Total), 3.11.c (Árboles Univariados y Matriz de Costos) y
+3.11.d (Menú Contextual e Interactividad).
 
 ### Cierre intermedio 16/10/2026
 
@@ -397,7 +413,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (456 tests)
+├── tests/ # Suite de tests (460 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -535,11 +551,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 13 |
 | prune_dialog (frontend) | 1 |
+| data_viewer (frontend) | 4 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **456** |
+| **Total** | **460** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 456/456 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 460/460 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

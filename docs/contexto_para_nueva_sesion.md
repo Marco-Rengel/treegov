@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 456/456 PASSED
+**Suite de tests:** 460/460 PASSED
 
 ## Entorno de desarrollo
 
@@ -299,16 +299,19 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso inmediato (25/10/2026):** la **sub-fase 3.11.b.2 (Data
-Viewer GUI: bloque del panel izquierdo + tabla + TSV + claves i18n)**.
-La **3.11.b.1 (Backend Data Viewer: `Session.get_data_preview`)** cerró
-el 25/10/2026 con suite **456/456** (commit `6e4c4b5`): contrato D3 del
-diseño auditado `docs/3.11.b_design_treemap_dataviewer.md` (dict de
-tipos puros `columns`/`rows`/`n_total`/`truncated`, celdas nativas con
-ausentes como `None`, dict vacío sin dataset —divergencia consciente
-registrada en `docs/design_decisions.md` §18.7). Sin frontend, sin
-`TreeNode` (paridad K=2), sin `pct_global` (b.5). Después de b.2 siguen
-b.3 (Tree Map), b.4 (Project Explorer) y b.5 (`pct_global` en la fila
+**Próximo paso inmediato (25/10/2026):** la **sub-fase 3.11.b.3 (Tree
+Map: escena `QGraphicsScene`/`QGraphicsView` independiente en el bloque
+`gbTreeMap`, rectángulos planos por nodo, clic → `centerOn` en la vista
+principal sin tocar zoom/selección, reconstrucción completa ante
+cualquier cambio del modelo, `fitInView` exclusivo del minimapa,
+resaltado pasivo del nodo actual)**. La **3.11.b.1 (Backend Data
+Viewer: `Session.get_data_preview`)** y la **3.11.b.2 (Frontend Data
+Viewer: widget `DataViewer` en `gbDataViewer`, i18n
+`data_viewer_empty`/`data_viewer_truncated`, Ctrl+C → TSV —REGLA
+4.1.1—)** cerraron el 25/10/2026 con suite **460/460** (commits
+`6e4c4b5` y `a856c2c`). Diseño de referencia: `docs/3.11.b_design_treemap_dataviewer.md`
+(auditado, correcciones O1–O6 aplicadas; D2 para el Tree Map). Después
+de b.3 siguen b.4 (Project Explorer) y b.5 (`pct_global` en la fila
 Total del `NodeItem`, formato `Total (<pct_global>) <n>`).
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y

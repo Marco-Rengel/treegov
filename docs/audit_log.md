@@ -5907,3 +5907,32 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 456/456 PASSED tras el cierre documental (`python -m pytest tests -q`; 452 + 4 nuevos: `test_get_data_preview_without_dataset`, `_truncated`, `_native_types`, `_no_truncation`). Verificación de tipos: `type(val) in (int, float, str, bool, NoneType)` en todas las celdas; cero `np.int64`/`np.nan`.
 
 **Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D3 + corrección O3; `docs/design_decisions.md` §18.7; entrada de auditoría O1–O6 (misma fecha, anterior); checklist de 8 documentos de `AGENTS.md`.
+
+### 25/10/2026 — Mini-cierre: sub-fase 3.11.b.2 (Frontend Data Viewer: widget `DataViewer`)
+
+**Estado**: ✅ Cerrado. Suite 460/460 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (implementación) / high (cierre documental).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: segunda sub-fase de la 3.11.b contra el diseño auditado (`docs/3.11.b_design_treemap_dataviewer.md`, correcciones O1–O6): el bloque Data Viewer del panel izquierdo consume el contrato D3 implementado en la b.1 (`Session.get_data_preview`).
+
+**Artefactos tocados**:
+
+- Bloque de código (commit `a856c2c`; `git status` verificado: exactamente estos 4 archivos):
+  1. `frontend_v3/data_viewer.py` (nuevo) — clase `DataViewer(QWidget)`: `QLabel` de aviso + `QTableWidget` de solo lectura; `set_preview(dto)` cachea el DTO y repinta; estado vacío (None o dict vacío del backend) con `tr("data_viewer_empty")`; aviso de truncamiento `tr("data_viewer_truncated").format(shown, total)` solo si `truncated=True`; None → celda vacía (nunca el literal); Ctrl+C → TSV vía `ReportsPanel._copy_selection_to_clipboard` con contexto acotado a la tabla (REGLA CRÍTICA 4.1.1); `retranslate_ui()` conectado a `language_bus` (patrón MetricsPanel).
+  2. `frontend_v3/i18n.py` — claves nuevas `data_viewer_empty` y `data_viewer_truncated` con paridad EN/ES (sin claves de título nuevas, corrección O1: se reutilizan `panel_data_viewer` y compañía).
+  3. `frontend_v3/main_window.py` — import + instanciación en `gbDataViewer` (`_build_central`); `set_preview(self._session.get_data_preview())` tras cargar el CSV en `_load_dataset_path`; `set_preview(None)` en la rama de reseteo de `_on_new_wizard`.
+  4. `tests/test_data_viewer.py` (nuevo) — 4 tests headless (offscreen): construcción + estado vacío + retraducción EN→ES vía bus; poblado + aviso de truncamiento aparece/desaparece; Ctrl+C → TSV con cabeceras y None como celda vacía; limpieza vía None y dict vacío del backend.
+- Cierre documental (este bloque): `docs/audit_log.md` (esta entrada), `docs/roadmap.md` (b.2 ✅), `docs/estado_proyecto.md` (460/460 + bloque narrativo), `docs/contexto_para_nueva_sesion.md` (próximo paso b.3), `docs/prompt_para_asistente.md` (suite + estado), `README.md` / `README.es.md` (Mermaid + suite + fila de fase).
+
+**Hallazgos**:
+
+- El widget es presentación pura (sala limpia): pinta el DTO sin calcular nada; las cabeceras de la tabla son nombres de columna del CSV (dato, no texto UI) y NO pasan por `tr()` — la retraducción solo afecta a la etiqueta de aviso.
+- Reutilización del helper TSV como `@staticmethod` (decisión del 25/10/2026, `design_decisions.md` §18.3): tercer consumidor (tras tabla de ganancias y `PruneDialog`) sin acoplamiento de instancia.
+- **Checklist de 8 documentos — revisión consciente de los 2 restantes**: `docs/api.md` NO se actualiza (no hay nueva superficie de API de backend; el método `get_data_preview` ya se registró en el cierre de la b.1); `docs/design_decisions.md` NO se actualiza (no hay nuevos defaults ni cambios de contrato: la copia TSV ya está decidida en §18.3 y el comportamiento del visor deriva del contrato D3 ya registrado en §18.7).
+
+**Tests**: 460/460 PASSED (`python -m pytest tests -q`; 456 + 4 nuevos). `git status` tras el bloque de código mostró exactamente los 4 archivos listados (2 modificados, 2 nuevos).
+
+**Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D3/D4 + correcciones O1/O3; `docs/3.11_gui_design_system.md` §4.1.1; `docs/design_decisions.md` §18.3 y §18.7; mini-cierre 3.11.b.1 (entrada anterior); checklist de 8 documentos de `AGENTS.md`.
