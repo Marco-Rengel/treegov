@@ -231,10 +231,9 @@ class ChaidEngine:
         wd = w[mask] if weights is not None else None
         n_total = int(len(xd))
 
-        # TODO(zona_gris): un predictor CONTINUOUS binnado se trata como
-        # ORDINAL (bins con orden natural: fusiones solo adyacentes y
-        # Kass = C(c-1, r-1), convencion de Kass 1980 para categorias
-        # ordenadas). Resolver si se prefiere tratamiento NOMINAL.
+        # DECISIÓN (25/10/2026): los bins se tratan como ORDINAL (Kass
+        # 1980, §4.2). Fusión solo de adyacentes.
+        # Ver design_decisions.md §16.1.
         ordinal = predictor_type in (PredictorType.ORDINAL, PredictorType.CONTINUOUS)
         continuo = target_type == TargetType.CONTINUOUS
 

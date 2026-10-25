@@ -55,5 +55,7 @@
 | **3.10.b** | `docs/3.10.b_design_chaid_binning.md` | ✅ Completed (23/10/2026; as-built §4) |
 | **3.11 (fase)** | `docs/3.11_design_interactive_tree.md` + referencia visual `docs/3.11_classic_tree_ui_reference.md` | 🟡 En progreso |
 | **3.11.a** | `docs/3.11.a_design_colab_theme.md` (as-built) | ✅ Completed (24/10/2026) |
-| **3.11.a.1** | Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío); especificación en `docs/3.11_classic_tree_ui_reference.md` | 🟡 En progreso |
+| **3.11.a.1** | Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío); especificación en `docs/3.11_classic_tree_ui_reference.md` | ✅ Completed (24/10/2026) |
 | **3.11.b–d** | Pendiente de diseño propio; alcance previsto en `docs/3.11_design_interactive_tree.md` §6 | ⏳ Pendiente |
+
+**Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.

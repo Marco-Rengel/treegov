@@ -17,6 +17,10 @@ La gobernanza no es un añadido. Es el punto de partida:
 - Caja blanca matemática = fórmulas citables y verificables.
 - Bloqueo de librerías de caja negra = auditabilidad por diseño.
 
+## Independencia Tecnológica
+
+TreeGov es una reimplementación matemática moderna basada en papers académicos y en el estándar clásico de estaciones de árboles. Toda su lógica es de caja blanca, garantizando la independencia algorítmica y la máxima auditabilidad: sin implementaciones de terceros, sin cajas negras, cada fórmula explícita y trazable a su fuente bibliográfica (ver `docs/design_decisions.md` §0.5).
+
 ## ¿A quién sirve?
 
 - Analistas de riesgo de crédito que quieren dedicar tiempo al análisis, no a la programación.

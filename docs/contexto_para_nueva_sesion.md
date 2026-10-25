@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 449/449 PASSED
+**Suite de tests:** 451/451 PASSED
 
 ## Entorno de desarrollo
 
@@ -306,7 +306,10 @@ la **3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar
 compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores
 estilo Excel, nodos QPainter "hoja de auditoría", tema oscuro forzado
 vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas)
-quedaron cerradas el 24/10/2026 con suite 449/449**. El sistema de
+quedaron cerradas el 24/10/2026 con suite 449/449**; los mini-cierres
+del 25/10/2026 (resolución de zonas grises C1 con 2 tests nuevos de
+routing por `bin_edges`, y blindaje Clean Room + terminología "Nodo
+terminal") elevaron la suite a **451/451**. El sistema de
 diseño visual quedó estandarizado en `docs/3.11_gui_design_system.md`
 (normativo as-built; las sub-fases 3.11.b-d se implementan contra él).
 El código de la 3.11.a.1 está commiteado (`d8194dc`); los dos bloques
@@ -373,5 +376,6 @@ La carpeta `archive/` contiene documentos del proyecto anterior (DecisionTree_Mo
 - **Cada cambio de código:** actualizar `docs/audit_log.md`.
 - **Cada fase cerrada:** actualizar `docs/roadmap.md` y `docs/estado_proyecto.md`.
 - **Cero referencias a software privativo** (SPSS, Answer Tree, Stata, SAS) en docs activos.
+- **Desarrollo Clean Room (regla desde 25/10/2026):** el código se deriva exclusivamente de papers académicos y estándares públicos documentados. Prohibido incluir código de terceros o lógica no trazable a una fórmula matemática explícita y auditable. Ver `docs/design_decisions.md` §0.5 y `.treegovrules` (White-box rules, punto 4).
 - **i18n:** paridad estricta EN/ES, claves en snake_case.
 - **Verificación manual obligatoria** tras cada tarea de Aider: `python -m pytest tests -q`, `git status`, `git diff` del archivo tocado.

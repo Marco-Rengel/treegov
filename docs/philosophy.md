@@ -17,6 +17,10 @@ Governance is not an add-on. It is the starting point:
 - White-box mathematics = citable and verifiable formulas.
 - Black-box library blocking = auditability by design.
 
+## Technological Independence
+
+TreeGov is a modern mathematical reimplementation built exclusively from academic papers (Kass, Breiman, Loh & Shih) and the documented classic tree-station standard (circa 2001). All of its logic is white-box, guaranteeing algorithmic independence and maximum auditability: no third-party implementations, no black boxes, every formula explicit and traceable to its bibliographic source (see `docs/design_decisions.md` §0.5).
+
 ## Who it serves
 
 - Credit risk analysts who want to spend time on analysis, not programming.

@@ -15,6 +15,7 @@
 1. FORBIDDEN to use: sklearn, scikit-learn, statsmodels, xgboost, lightgbm, catboost.
 2. Only allowed: numpy, pandas, scipy.stats.
 3. Every statistical formula must be written explicitly in the code, with its bibliographic citation in the docstring.
+4. Clean-room development: the code derives exclusively from academic papers and documented public standards (Kass, Breiman, Loh & Shih; the classic tree-station standard, circa 2001). Including third-party code or any logic that cannot be traced to an explicit, auditable mathematical formula is forbidden. See `docs/design_decisions.md` §0.5.
 
 ## Clean-room architecture
 

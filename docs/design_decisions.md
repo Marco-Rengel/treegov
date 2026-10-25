@@ -167,6 +167,31 @@ the target-class combo, reports, and the fingerprint — become
 explicit user choices. This is the first concrete step toward the
 full neutral-vocabulary mode planned for Phase 3.6.e.
 
+### 0.5 Clean-Room Development and Academic Provenance
+
+**Declaration.** TreeGov is a *Clean Room* development: every line of
+its analytical logic derives exclusively from public academic
+literature (Kass 1980; Biggs, de Ville & Suen 1991; Breiman et al.
+1984; Loh & Shih 1997; Cochran 1954; and the other sources listed in
+the README's Academic references) and from the documented classic
+tree-station standard (circa 2001, transcribed in
+`docs/3.11_classic_tree_ui_reference.md`). No third-party
+implementation was read, copied, ported, or decompiled: all algorithms
+are explicit, auditable mathematics, each one traceable to its
+bibliographic source (see `docs/methodology.md` and the per-engine
+docstrings).
+
+**Consequences.**
+- There are no black-box dependencies and no third-party algorithmic
+  implementations: black-box libraries are blocked at the interpreter
+  level by `backend_v3/import_guard.py` (hard rule in
+  `.treegovrules`).
+- Every formula carries its citation in the docstring; a formula
+  without a citable source does not enter the codebase.
+- Any logic that cannot be traced to an explicit, auditable
+  mathematical formula is forbidden (governance rule replicated in
+  `.treegovrules` and `AGENTS.md`).
+
 ---
 
 ## §1. Type and contract decisions
@@ -2139,6 +2164,16 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 **Decisión:** Se adoptó el layout clásico: barra de 8 menús (File, Edit, View, Format, Analysis, Tree, Window, Help — los cuatro últimos con placeholders deshabilitados asignados a 3.11.c/d), toolbar compacta `IconOnly` 16×16 con tooltips obligatorios, panel izquierdo `QSplitter` vertical con 3 `QGroupBox` apilados (Project Explorer / Tree Map / Data Viewer) y `QTabWidget` principal con `TabPosition.South` (pestañas inferiores, metáfora de hojas de Excel conservada pero ancladas abajo).
 **Consecuencia:** La disposición coincide con la referencia visual del estándar clásico (`docs/3.11_classic_tree_ui_reference.md`) y con el diseño 3.11 reescrito (§2); las pestañas siguen ocupando toda el área central (la ganancia de espacio de §17.2 se conserva) y la barra inferior deja la franja superior para menús y toolbar, como en la estación clásica.
 
+### 18.5 Cabecera de nodo: "Node <id>" / "Nodo <id>" vía tr()
+**Contexto:** El brief visual pedía el literal fijo `"Nodo {id} — "` en la cabecera del nodo, lo que habría bloqueado la retraducción en caliente (el prefijo quedaría siempre en español).
+**Decisión:** La cabecera se compone vía `tr("tree_prop_node")` ("Node"/"Nodo"): en un nodo terminal es estrictamente `Node <id>` / `Nodo <id>`; en un nodo interno se añade ` — <predictor>`. Terminología obligatoria del Estándar Clásico de Estaciones de Árboles (circa 2001): "Nodo" / "Nodo terminal"; queda prohibido "Hoja/Leaf" en los textos visibles de la GUI.
+**Consecuencia:** La cabecera se retraduce en caliente con el resto de la escena (mismo `refresh()`); en ES produce exactamente el literal del brief.
+
+### 18.6 Footer de nodo terminal: solo Gini (sin KS)
+**Contexto:** El brief visual pedía "Gini + KS" en el footer de los nodos terminales, pero `TreeNode` no expone KS y calcularlo en el frontend violaría la sala limpia (capa analítica pura en `backend_v3/`).
+**Decisión:** El footer de un nodo terminal muestra solo el Gini del nodo (derivado de `pd_final`, presentación sin pandas); los nodos internos muestran p-valor ajustado + estadístico del split (precomputados por el backend). Añadir KS requeriría un campo nuevo en `TreeNode` (cambio de contrato de backend; no hay fase que lo exija).
+**Consecuencia:** Cero cálculo analítico en `frontend_v3/tree_view.py`; el footer es auditable campo a campo contra el backend.
+
 ---
 
 ## Maintenance
@@ -2168,6 +2203,8 @@ a note in `docs/audit_log.md`.
 3.0, closing the "grey zone" of undocumented design decisions
 accumulated during Phases 0 through 2.4. (Updated on 20/10/2026 to add
 §10.4 — Phase 3.8; on 24/10/2026 to add §17 — Phase 3.11.a — and §18 —
-Phase 3.11.a.1.)
+Phase 3.11.a.1; on 25/10/2026 to add §0.5 — Clean-Room Development and
+Academic Provenance — and §18.5–§18.6 — mini-cierre de zonas grises de
+presentación.)
 
 ---

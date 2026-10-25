@@ -653,7 +653,7 @@ def test_e2e_mainwindow():
         # seleccion de nodo -> tarjeta de detalle en el panel de propiedades
         w._tree_panel.select_node(1)
         assert model.nodes[1].split is None  # hoja identificable en detalle
-        assert w._hud_lbl_rule_var.text() == tr("tree_leaf_badge")
+        assert w._hud_lbl_rule_var.text() == tr("tree_node_terminal")
         w._tree_panel.select_node(0)
         assert w._hud_lbl_rule_var.text() == model.nodes[0].split.predictor
         # entrenamiento fallido -> rollback: el visor no conserva arbol

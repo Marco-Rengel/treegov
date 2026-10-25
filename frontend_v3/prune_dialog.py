@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 from frontend_v3.i18n import tr
 
-_HEADERS = ("prune_col_alpha", "prune_col_leaves", "prune_col_error")
+_HEADERS = ("prune_col_alpha", "prune_col_terminal_nodes", "prune_col_error")
 
 
 class PruneDialog(QDialog):

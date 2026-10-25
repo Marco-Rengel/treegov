@@ -139,7 +139,7 @@ class ReportsPanel(QWidget):
         top.addWidget(self._view_label)
         self._view_combo = QComboBox(self)
         self._view_combo.setObjectName("reportsView")
-        self._view_combo.addItem(tr("reports_view_leaf"), userData="leaf")
+        self._view_combo.addItem(tr("reports_view_terminal"), userData="leaf")
         self._view_combo.addItem(tr("reports_view_bucket"), userData="bucket")
         top.addWidget(self._view_combo)
         top.addSpacing(12)
@@ -214,7 +214,7 @@ class ReportsPanel(QWidget):
         self._threshold_spin.valueChanged.connect(self.threshold_changed.emit)
         self._refresh_button.clicked.connect(self.refresh_requested.emit)
 
-        # Initial control state: leaf view disables the buckets spinbox.
+        # Initial control state: terminal-node view disables the buckets spinbox.
         self._buckets_spin.setEnabled(self.current_view() == "bucket")
         self.set_session_available(train=False, oos=True, oot=False)
 
@@ -588,7 +588,7 @@ class ReportsPanel(QWidget):
         )
         self._retranslate_combo(
             self._view_combo,
-            {"leaf": tr("reports_view_leaf"), "bucket": tr("reports_view_bucket")},
+            {"leaf": tr("reports_view_terminal"), "bucket": tr("reports_view_bucket")},
         )
 
         # Repaint warning if needed

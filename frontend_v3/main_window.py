@@ -422,7 +422,8 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.setObjectName("centralSplitter")
 
-        # Phase 3.11.a.1 (classic AnswerTree layout): left panel is a
+        # Phase 3.11.a.1 (Estándar Clásico de Estaciones de Árboles,
+        # circa 2001): left panel is a
         # vertical splitter with three stacked group boxes — Project
         # Explorer, Tree Map (minimap, lands in 3.11.b) and Data Viewer
         # (lands in 3.11.b).
@@ -1032,7 +1033,7 @@ class MainWindow(QMainWindow):
         self._refresh_reports_panel()
 
     def _on_reports_view_changed(self, _view: str, _n_buckets: int) -> None:
-        """View (leaf/bucket) or bucket count changed: recompute gains table."""
+        """View (terminal-node/bucket) or bucket count changed: recompute gains table."""
         self._refresh_reports_panel()
 
     def _on_reports_threshold_changed(self, _threshold: float) -> None:
@@ -1127,8 +1128,8 @@ class MainWindow(QMainWindow):
 
         # Populate Rule
         if node.is_leaf:
-            self._hud_lbl_rule_var.setText(tr("tree_leaf_badge"))
-            self._hud_lbl_rule_cond.setText(tr(f"tree_leaf_reason_{node.leaf_reason}"))
+            self._hud_lbl_rule_var.setText(tr("tree_node_terminal"))
+            self._hud_lbl_rule_cond.setText(tr(f"tree_terminal_reason_{node.leaf_reason}"))
             self._hud_lbl_rule_stat.setText("—")
             self._hud_lbl_rule_p.setText("—")
         else:

@@ -131,7 +131,8 @@ def test_menus_exist():
     _get_app()
     w = MainWindow()
     menu_names = {m.objectName() for m in w.findChildren(QMenu)}
-    # Phase 3.11.a.1: classic menu structure (AnswerTree, circa 2001):
+    # Phase 3.11.a.1: classic menu structure (Estándar Clásico de
+    # Estaciones de Árboles, circa 2001):
     # File, Edit, View, Format, Analysis, Tree, Window, Help.
     assert {
         "menu_file",

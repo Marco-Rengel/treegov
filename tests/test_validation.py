@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend_v3.validation import (  # noqa: E402
     compute_oos_metrics,
+    predict_leaf_assignment,
     predict_pd,
 )
 from backend_v3.crt_engine import CrtEngine  # noqa: E402
@@ -730,6 +731,48 @@ def test_multiclass_k3_missing_class_returns_none():
     msg = " ".join(r.getMessage() for r in records
                    if r.levelno == logging.WARNING)
     assert "masa cero" in msg or "una sola clase" in msg
+
+
+# ---------------------------------------------------------------------------
+# Mini-cierre 25/10/2026 (C1): routing OOS por bin_edges (espejo de
+# test_tree_builder.test_routing_bin_edges_chaid_continuous)
+# ---------------------------------------------------------------------------
+
+
+def test_predict_leaf_assignment_binned_continuous():
+    """Fase 3.10.b (H14): coherencia OOS del routing por rangos numericos.
+
+    El modelo se entrena con CHAID sobre un predictor continuo binned
+    (max_depth=1: hijos terminales por profundidad) y se enruta una
+    muestra OOS que incluye valores FUERA del rango de train: los bins
+    extremos se extienden a +-inf, asi que toda fila finita tiene ruta.
+    """
+    from backend_v3.chaid_engine import ChaidEngine
+    x = pd.Series(np.linspace(0.0, 1.0, 600))
+    y = pd.Series((x > 0.5).astype(int))
+    X = pd.DataFrame({"ingreso": x})
+    m = TreeBuilder(
+        ChaidEngine(), target_type=TargetType.BINARY, target_class=1,
+        class_labels=("Event", "Non-event"),
+        max_depth=1, min_child_size=20,
+    ).build(X, y, {"ingreso": PredictorType.CONTINUOUS})
+    raiz = m.nodes[0]
+    assert raiz.split is not None and raiz.split.bin_edges
+    cfg = raiz.split
+    x_oos = pd.Series([-5.0, 0.1, 0.5, 0.9, 42.0])
+    asign = predict_leaf_assignment(m, pd.DataFrame({"ingreso": x_oos}))
+    assert (asign >= 0).all()          # ninguna fila se queda sin ruta
+    # expectativa independiente: bin -> rama via etiquetas "bin_i"
+    rama_map = {
+        int(str(lbl)[4:]): j
+        for j, grupo in enumerate(cfg.branches or ())
+        for lbl in grupo
+    }
+    bins = np.digitize(x_oos.to_numpy(dtype=float), cfg.bin_edges)
+    esperado = np.array(
+        [raiz.child_ids[rama_map[int(b)]] for b in bins], dtype=int
+    )
+    assert (asign == esperado).all()
 
 
 # ---------------------------------------------------------------------------

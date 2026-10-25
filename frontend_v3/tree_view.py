@@ -7,7 +7,7 @@ fields) is precomputed in the backend (tree_builder); the viewer merely
 formats it for display. Type annotations of backend classes live under
 TYPE_CHECKING: the module never imports backend_v3 at runtime.
 
-Layout convention (tidy tree, simplified): leaves occupy consecutive
+Layout convention (tidy tree, simplified): terminal nodes occupy consecutive
 integer slots respecting child_ids order (BFS ids are already
 deterministic); every internal node is centered over its outermost
 children; y = depth. Deterministic by construction. No subtree
@@ -38,7 +38,7 @@ every class row in canonical order.
 
 Node rendering: each NodeItem is painted ENTIRELY with QPainter (no
 HTML): a fixed-geometry "audit sheet" (NODE_W x NODE_H) with a 26 px
-header band (predictor name / leaf semaphore), per-class body rows
+header band (predictor name / terminal-node semaphore), per-class body rows
 (square + label + % + n), a bold Total (N) row, a stacked bar
 proportional to n_events (class colors) and a 20 px footer band (Gini /
 split stats). Fixed geometry kills the HTML auto-fit slack for good.
@@ -95,7 +95,7 @@ NODE_H = 126.0          # node box height (FIXED: the box is painted with
                         # QPainter at exactly NODE_W x NODE_H — header band
                         # 26 px + body rows + Total row + stacked bar 10 px
                         # + footer band 20 px; no auto-fit, no dead space)
-H_GAP = 24.0            # horizontal gap between leaf slots
+H_GAP = 24.0            # horizontal gap between terminal-node slots
 V_GAP = 64.0            # vertical gap between depth layers (elbow band +
                         # edge-label room)
 EDGE_LABEL_MAX = 24     # max characters on a categorical edge label
@@ -123,7 +123,7 @@ def _layout_tree(
 ) -> dict[int, tuple[float, float]]:
     """Deterministic tidy layout: node_id -> (x, y) of the box top-left.
 
-    Post-order DFS over child_ids. Leaves take consecutive integer slots;
+    Post-order DFS over child_ids. Terminal nodes take consecutive integer slots;
     an internal node sits at the midpoint of its outermost children
     (Reingold & Tilford 1981, principles 1-4, simplified). The same model
     always yields the same dict (identity verified in the test suite).
@@ -191,7 +191,7 @@ _STAT_DISPLAY = {
 
 def _caption_text(node: TreeNode) -> str:
     """Header band text (top 26 px of the box): predictor name (internal)
-    or empty string (leaf — the header shows only "Node <id>")."""
+    or empty string (terminal node — the header shows only "Node <id>")."""
     if node.is_leaf:
         return ""
     split = node.split
@@ -200,7 +200,7 @@ def _caption_text(node: TreeNode) -> str:
 
 def _footer_text(node: TreeNode) -> str:
     """Footer band text (bottom 20 px of the box): split stats (internal)
-    or node Gini (leaf).
+    or node Gini (terminal node).
 
     The Gini shown is the node impurity derived from pd_final (display
     only, pandas-free); split stats are precomputed by the backend.
@@ -285,8 +285,8 @@ def node_detail_lines(node: TreeNode) -> list[str]:
         lines.append(tr("tree_prop_floor_note"))
     if node.is_leaf:
         lines.append(
-            f"{tr('tree_prop_leaf')}: "
-            f"{tr(f'tree_leaf_reason_{node.leaf_reason}')}"
+            f"{tr('tree_prop_terminal_reason')}: "
+            f"{tr(f'tree_terminal_reason_{node.leaf_reason}')}"
         )
         return lines
     split = node.split
@@ -320,12 +320,12 @@ def node_detail_lines(node: TreeNode) -> list[str]:
 def model_summary_lines(model: TreeModel, mode_label: str) -> list[str]:
     """Properties-panel card when no node is selected (model overview)."""
     n_nodes = len(model.nodes)
-    n_leaves = sum(1 for nd in model.nodes if nd.is_leaf)
+    n_terminal = sum(1 for nd in model.nodes if nd.is_leaf)
     max_depth = max(nd.depth for nd in model.nodes)
     return [
         f"{tr('tree_prop_method')}: {model.method}",
         f"{tr('tree_hdr_nodes')}: {n_nodes}",
-        f"{tr('tree_hdr_leaves')}: {n_leaves}",
+        f"{tr('tree_hdr_nodes_terminal')}: {n_terminal}",
         f"{tr('tree_prop_depth')}: {max_depth}",
         f"{tr('tree_hdr_fp')}: {model.params_fingerprint}",
         f"{tr('status_mode')}: {mode_label}",
@@ -344,15 +344,16 @@ class NodeItem(QGraphicsItem):
 
     Bands (all INSIDE the bounding rect):
       - Header (26 px): "Node <id> — <predictor name>" (internal node,
-        ACCENT band) or "Node <id> — <leaf badge>" (semaphore band by
-        pd_final[0]: < 0.05 green, < 0.15 orange, otherwise red); white
-        bold text, elided to the box width.
+        ACCENT band) or strictly "Node <id>" / "Nodo <id>" (terminal
+        node, semaphore band by pd_final[0]: < 0.05 green, < 0.15
+        orange, otherwise red); white bold text, elided to the box
+        width.
       - Body: one row per class (semaphore square + label + % + n),
         a bold Total (N) row with a subtle separator above, and a
         stacked bar proportional to n_events (index 0 = class of
         interest/Bad -> red #D32F2F, index 1 = Good -> green #2E7D32;
         multiclass cycles _CLASS_BAR_COLORS).
-      - Footer (20 px): node Gini (leaves) or adjusted p-value + split
+      - Footer (20 px): node Gini (terminal nodes) or adjusted p-value + split
         statistic (internals), via the audited _footer_text helper; the
         band starts EXACTLY at NODE_H - 20 (no dead space below the bar).
     Selection: ACCENT border, width 3 (read from isSelected() in paint();
@@ -362,7 +363,7 @@ class NodeItem(QGraphicsItem):
 
     NODE_W = NODE_W      # class constants: mirror the module layout values
     NODE_H = NODE_H
-    HEADER_H = 26.0      # header band height (predictor / leaf badge)
+    HEADER_H = 26.0      # header band height (Node <id> / predictor)
     FOOTER_H = 20.0      # footer band height (Gini / split stats)
     ROW_H = 18.0         # body row height (shrinks if many classes)
     BAR_H = 10.0         # stacked-bar height (class distribution)
@@ -377,20 +378,19 @@ class NodeItem(QGraphicsItem):
         self.setZValue(1.0)
 
         # Display strings precomputed once (the node is frozen).
-        self._header = _caption_text(node)   # predictor (internal) / "" (leaf)
-        # TODO(zona_gris): el brief pedia el literal fijo "Nodo {id} — ";
-        # se usa tr("tree_prop_node") ("Node"/"Nodo") para preservar la
-        # retraducción en caliente — en ES produce exactamente el literal
-        # del brief. Resolver si se quiere el prefijo siempre en español.
+        self._header = _caption_text(node)   # predictor (internal) / "" (terminal)
+        # DECISIÓN (25/10/2026): el texto de cabecera es Node <id> /
+        # Nodo <id>, vía tr(), para retraducción en caliente.
+        # Ver design_decisions.md §18.5.
         if node.is_leaf:
             self._header_full = f"{tr('tree_prop_node')} {node.node_id}"
         else:
             self._header_full = (
                 f"{tr('tree_prop_node')} {node.node_id} — {self._header}"
             )
-        self._footer = _footer_text(node)    # Gini (leaf) / split stats
+        self._footer = _footer_text(node)    # Gini (terminal) / split stats
         self._total_n = f"{node.n:,}"        # Total (N) row, right column
-        # Header band color: palette ACCENT for internal nodes; leaf
+        # Header band color: palette ACCENT for internal nodes; terminal-node
         # semaphore from pd_final[0] (class of interest).
         if node.is_leaf:
             p0 = float(node.pd_final[0]) if node.pd_final else 0.0
@@ -432,7 +432,7 @@ class NodeItem(QGraphicsItem):
         painter.fillRect(QRectF(0.0, 0.0, w, h), QBrush(sheet_bg))
 
         # 2. header band (26 px) + white bold composite title
-        #    "Node <id>" (leaf) / "Node <id> — <predictor>" (internal),
+        #    "Node <id>" (terminal) / "Node <id> — <predictor>" (internal),
         #    elided to the box width with QFontMetrics ("…" on overflow).
         hh = float(self.HEADER_H)
         painter.fillRect(QRectF(0.0, 0.0, w, hh), QBrush(self._header_color))
@@ -492,6 +492,9 @@ class NodeItem(QGraphicsItem):
 
         # 3b. Total (N) row: bold, subtle separator above, n right-aligned
         #     in the n column (same x as the per-class counts).
+        # TODO(3.11.b): implementar pct_global en la fila Total
+        #     (formato objetivo: "Total (<pct_global>) <n>"; en la raíz
+        #     será "Total (100.00) n").
         painter.fillRect(
             QRectF(8.0, total_y - 2.0, w - 16.0, 1.0),
             QBrush(QColor(_NODE_SHEET_BORDER)),
@@ -539,13 +542,12 @@ class NodeItem(QGraphicsItem):
                 QRectF(bar_x + 0.5, bar_y + 0.5, bar_w - 1.0, bar_h - 1.0)
             )
 
-        # 4. footer band (20 px): separator + Gini (leaf) / split stats.
+        # 4. footer band (20 px): separator + Gini (terminal) / split stats.
         #    The band starts EXACTLY at NODE_H - 20 (sep_y computed in
         #    section 3), so no dead space remains below the stacked bar.
-        # TODO(zona_gris): el brief pedia "Gini + KS" en el footer de las
-        # hojas, pero TreeNode no expone KS y calcularlo aquí violaría la
-        # sala limpia; se reutiliza el helper auditado _footer_text()
-        # (Gini en hojas, p_adj + estadístico en internos).
+        # DECISIÓN (25/10/2026): el footer de nodos terminales muestra
+        # solo Gini. El KS no se expone en TreeNode; añadirlo requeriría
+        # un campo nuevo en backend. Ver design_decisions.md §18.6.
         painter.fillRect(
             QRectF(0.0, sep_y, w, 1.0), QBrush(QColor(_NODE_SHEET_BORDER))
         )
@@ -903,10 +905,10 @@ class TreePanel(QWidget):
     def _header_text(self) -> str:
         m = self._model
         assert m is not None
-        n_leaves = sum(1 for nd in m.nodes if nd.is_leaf)
+        n_terminal = sum(1 for nd in m.nodes if nd.is_leaf)
         return (
             f"{m.method} · {len(m.nodes)} {tr('tree_hdr_nodes')} · "
-            f"{n_leaves} {tr('tree_hdr_leaves')} · "
+            f"{n_terminal} {tr('tree_hdr_nodes_terminal')} · "
             f"{tr('tree_hdr_fp')}={m.params_fingerprint} · {self._mode_label}"
         )
 

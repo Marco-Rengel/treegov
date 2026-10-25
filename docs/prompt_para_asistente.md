@@ -44,6 +44,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 4. **Cero referencias a software privativo** en docs activos (SPSS, Answer Tree, Stata, SAS, IBM). El legacy archivado sí las tiene, pero está aislado.
 5. **No dejar cabos sueltos.** Ni siquiera cambios triviales. Cada cambio se documenta y se commitea.
 6. **Rigor metodológico:** Diseñar → Auditar diseño → Implementar → Testear → Documentar. Nunca implementar sin auditar el diseño primero.
+7. **Clean Room / Caja Blanca:** el código se deriva exclusivamente de papers académicos (Kass, Breiman, Loh & Shih) y del estándar clásico de estaciones de árboles documentado (circa 2001). Prohibido incluir código de terceros o lógica no trazable a una fórmula matemática explícita y auditable (`docs/design_decisions.md` §0.5).
 
 ---
 
@@ -109,7 +110,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 449/449 PASSED.
+- **Suite de tests:** 451/451 PASSED.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -170,7 +171,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 24/10/2026:** Fases 0 a 3.11.a.1 cerradas. Suite 449/449. Próximo paso: **Fase 3.11.b (Tree Map y Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página completa, Wizard redimensionado con banner de título, Nodos HTML estación clásica, HUD acotado y colapsable) y la 3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel, nodos QPainter "hoja de auditoría" sin espacio vacío, tema oscuro forzado vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas) cerraron el 24/10/2026; después siguen 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e Interactividad). El código de la 3.11.a.1 está commiteado (`d8194dc`); el cierre documental de la 3.11.a.1 (Ctrl+C TSV, Design System, checklist de 8) está en el working tree pendiente de commit — verificar con `git status` antes de editar. Archivos de diseño canónicos de las fases recientes: `docs/3.10.a_design_ux_ui_redesign.md`, `docs/3.10.b_design_chaid_binning.md`, `docs/3.11.a_design_colab_theme.md` (as-built), `docs/3.11_gui_design_system.md` (sistema de diseño normativo), `docs/3.11_design_interactive_tree.md` y `docs/3.11_classic_tree_ui_reference.md`. En paralelo, recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. Ver `docs/roadmap.md` sección 3.11 y `docs/audit_log.md` entradas del 24/10/2026.
+- **Estado al 25/10/2026:** Fases 0 a 3.11.a.1 cerradas. Suite 451/451. Próximo paso: **Fase 3.11.b (Tree Map y Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página completa, Wizard redimensionado con banner de título, Nodos HTML estación clásica, HUD acotado y colapsable) y la 3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel, nodos QPainter "hoja de auditoría" sin espacio vacío, tema oscuro forzado vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas) cerraron el 24/10/2026; después siguen 3.11.b (Tree Map y Data Viewer), 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e Interactividad). El 25/10/2026 se cerraron dos mini-cierres: resolución de zonas grises (tests de routing por `bin_edges`, terminología "Nodo/Nodo terminal" en GUI) y blindaje de gobernanza Clean Room (`design_decisions.md` §0.5). El código de la 3.11.a.1 está commiteado (`d8194dc`); el cierre documental de la 3.11.a.1 y los mini-cierres del 25/10 están en el working tree pendientes de commit — verificar con `git status` antes de editar. Archivos de diseño canónicos de las fases recientes: `docs/3.10.a_design_ux_ui_redesign.md`, `docs/3.10.b_design_chaid_binning.md`, `docs/3.11.a_design_colab_theme.md` (as-built), `docs/3.11_gui_design_system.md` (sistema de diseño normativo), `docs/3.11_design_interactive_tree.md` y `docs/3.11_classic_tree_ui_reference.md`. En paralelo, recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. Ver `docs/roadmap.md` sección 3.11 y `docs/audit_log.md` entradas del 24-25/10/2026.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 ---

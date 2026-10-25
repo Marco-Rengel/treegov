@@ -31,6 +31,8 @@ TreeGov parte de una premisa: la gobernanza de modelos no es una capa que se añ
 
 Más allá de usar MRM dentro de la herramienta, **el software en sí mismo se construye bajo disciplina MRM**: auditoría de diseño antes del código, supervisión humana en el circuito, verificación adversarial y trazabilidad inmutable para cada release.
 
+TreeGov es un **desarrollo Clean Room**: una reimplementación matemática moderna derivada exclusivamente de papers académicos (Kass, Breiman, Loh & Shih) y del estándar clásico de estaciones de árboles documentado (circa 2001). Toda su lógica es de caja blanca, garantizando la independencia algorítmica y la máxima auditabilidad (`docs/design_decisions.md` §0.5).
+
 *Lee la filosofía completa → [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md) · [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md)*
 
 ```mermaid
@@ -52,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.a.1 completas<br/>🔧 Foco: 3.11.b Tree Map y Data Viewer<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 449 / 449 tests PASSED<br/>📅 24 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.a.1 completas<br/>🔧 Foco: 3.11.b Tree Map y Data Viewer<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 451 / 451 tests PASSED<br/>📅 25 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -265,7 +267,7 @@ TreeGov/
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 449/449 passing.**
+**Suite de tests: 451/451 passing.**
 
 ---
 

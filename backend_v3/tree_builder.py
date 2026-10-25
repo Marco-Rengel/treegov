@@ -611,9 +611,10 @@ class TreeBuilder:
             # su rama via las etiquetas "bin_i" de cfg.branches (las ramas
             # llegan ya fusionadas del motor: una parte por RAMA, no por
             # bin; la guarda de integridad de abajo detecta huerfanos).
-            # TODO(zona_gris): el prompt pedia una parte por BIN
-            # (range(len(bin_edges)+1)); eso desincronizaria el arbol de
-            # cfg.branches/cfg.child_ns. Resolver si se prefiere otra cosa.
+            # DECISIÓN (25/10/2026): la partición es por RAMA
+            # (consolidada por el motor), no por bin individual. Una
+            # partición por bin desincronizaría el árbol de
+            # cfg.branches/child_ns. Ver design_decisions.md §16.3.
             vals = col.iloc[idx].to_numpy(dtype=float)
             bin_idx = np.digitize(vals, cfg.bin_edges)
             n_bins = len(cfg.bin_edges) + 1

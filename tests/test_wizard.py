@@ -543,10 +543,6 @@ def test_wizard_weight_warning_when_validator_returns_false():
     wiz.deleteLater()
 
 
-# ---------------------------------------------------------------------------
-# ejecucion directa sin pytest
-# ---------------------------------------------------------------------------
-
 def test_wizard_population_combo_default_is_none():
     """Fase 3.3.d: el combo arranca en "sin filtro de población"."""
     wiz = _make_wizard()
@@ -808,6 +804,10 @@ def test_wizard_size_and_title_banner():
     wiz.close()
     wiz.deleteLater()
 
+
+# ---------------------------------------------------------------------------
+# ejecucion directa sin pytest
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     tests = [

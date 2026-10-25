@@ -31,6 +31,8 @@ TreeGov starts from one premise: model governance is not a layer you add at the 
 
 Beyond using MRM inside the tool, **the software itself is built under MRM discipline**: design audits before code, human-in-the-loop supervision, adversarial verification, and immutable traceability for every release.
 
+TreeGov is a **clean-room development**: a modern mathematical reimplementation derived exclusively from academic papers (Kass, Breiman, Loh & Shih) and the documented classic tree-station standard (circa 2001). All of its logic is white-box, guaranteeing algorithmic independence and maximum auditability (`docs/design_decisions.md` §0.5).
+
 *Read the full project philosophy → [English](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.md) · [Español](https://github.com/Marco-Rengel/treegov/blob/main/docs/philosophy.es.md)*
 
 ```mermaid
@@ -52,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a.1 complete<br/>🔧 Focus: 3.11.b Tree Map & Data Viewer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 449 / 449 tests PASSED<br/>📅 Oct 24, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11.a.1 complete<br/>🔧 Focus: 3.11.b Tree Map & Data Viewer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 451 / 451 tests PASSED<br/>📅 Oct 25, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -265,7 +267,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 449/449 passing.**
+**Test suite: 451/451 passing.**
 
 ---
 

@@ -817,6 +817,53 @@ def test_fingerprint_banking_default_vs_legacy_floor():
     assert fp_default != fp_legacy
 
 
+# ---------------------------------------------------------------------------
+# Mini-cierre 25/10/2026 (C1): routing por bin_edges (CHAID + continuo binned)
+# ---------------------------------------------------------------------------
+
+
+def test_routing_bin_edges_chaid_continuous():
+    """Fase 3.10.b (H14): TreeBuilder + ChaidEngine, predictor CONTINUOUS
+    binned. Verifica que cfg.bin_edges no esta vacio, que _partition
+    reparte por RAMA (suma child_ns == parent_n) y que
+    predict_leaf_assignment coincide con _partition."""
+    from backend_v3.validation import predict_leaf_assignment
+    x = pd.Series(np.linspace(0.0, 1.0, 600))
+    y = pd.Series((x > 0.5).astype(int))
+    X = pd.DataFrame({"ingreso": x})
+    tb = TreeBuilder(_quiet_engine(ChaidEngine), target_type=_BIN,
+                     target_class=1, class_labels=("Event", "Non-event"),
+                     max_depth=2, min_child_size=20)
+    m = tb.build(X, y, {"ingreso": _CONT})
+    raiz = m.nodes[0]
+    assert not raiz.is_leaf
+    cfg = raiz.split
+    assert cfg is not None and cfg.bin_edges          # tupla no vacia
+    # la particion es por RAMA consolidada, no por bin individual
+    assert len(cfg.branches) == len(raiz.child_ids)
+    assert sum(cfg.child_ns) == cfg.parent_n == len(X)
+    partes = tb._partition(X, np.arange(len(X)), cfg)
+    assert len(partes) == len(cfg.branches)
+    for j, cid in enumerate(raiz.child_ids):
+        assert len(partes[j]) == m.nodes[cid].n
+    # predict_leaf_assignment reproduce _partition nodo a nodo
+    asign = predict_leaf_assignment(m, X)
+    esperado = np.full(len(X), -1, dtype=int)
+
+    def _route(nid, idx):
+        nd = m.nodes[nid]
+        if nd.is_leaf:
+            esperado[idx] = nid
+            return
+        sub = tb._partition(X, idx, nd.split)
+        for j, cid in enumerate(nd.child_ids):
+            _route(cid, sub[j])
+
+    _route(m.root_id, np.arange(len(X)))
+    assert (esperado >= 0).all()
+    assert (asign == esperado).all()
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

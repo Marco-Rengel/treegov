@@ -5053,6 +5053,8 @@ Se añade al final de §13.7 (sin modificar el cuerpo original del 10/10/2026) u
 
 **Referencias**: `docs/3.10.b_design_chaid_continuous.md`, `docs/design_decisions.md` §16.
 
+**Corrección (25/10/2026):** La afirmación de que se añadió 'Nuevo test de routing por `bin_edges`' en `test_tree_builder.py` no se materializó. El único test existente con `bin_edges` es `test_chaid_engine.py:551`. El test de routing se añade en el mini-cierre del 25/10/2026.
+
 ---
 
 ### 24/10/2026 — Diseño de la Fase 3.11 (Rediseño Interactivo y Topología Visual)
@@ -5733,3 +5735,89 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 4. **Semántica de datos.** El frontend no debe asumir etiquetas humanas ("Bueno/Malo") si el backend no las exige: las etiquetas de clase que llegan en el DTO son las del dataset (p. ej. `0`/`1`), y mostrarlas tal cual es más seguro y auditable que traducirlas en la capa de presentación. La traducción de etiquetas es una decisión de dominio, no de UI.
 
 **Propagación de este post-mortem (mismo bloque)**: regla del Design System añadida a `AGENTS.md` (sección Gobernanza) y `.treegovrules` (nueva sección "GUI design system"); tres deudas registradas en `docs/roadmap.md` (Deferred): iconos SVG personalizados, copiado TSV en `PruneDialog`, y validación cruzada del Wizard Paso 3 (vinculada a la Fase 2.1.b). **Tests**: 449/449 PASSED (bloque de documentación pura; sin cambios de código).
+
+---
+
+### 25/10/2026 — Mini-cierre: resolución de zonas grises pequeñas (Bloques A, B y C1) + terminología "Nodo terminal"
+
+**Estado**: ✅ Cerrada. Suite 451/451 PASSED (449 + 2 tests nuevos).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: mini-cierre (regla AGENTS.md: corrección post-cierre / documentación pura con tests nuevos) que resuelve las zonas grises pequeñas arrastradas de la Fase 3.10.b/3.11.a.1 y fija la terminología del Estándar Clásico de Estaciones de Árboles (circa 2001) — referencia visual y terminológica: `docs/3.11_classic_tree_ui_reference.md`. Terminología obligatoria: "Nodo" / "Nodo terminal"; queda prohibido "Hoja/Leaf" en los textos visibles de la GUI. No se tocó código de producción analítico (solo documentación, comentarios, textos i18n y tests).
+
+**Artefactos tocados (13 archivos; el brief listaba 8 — las 5 rutas adicionales son consecuencias verificadas, ver "Desviaciones" abajo)**:
+
+1. `docs/playbook.md` — Skill 4: fila **3.11.a.1** → ✅ Completed (24/10/2026); nueva nota bajo la tabla: "El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal." (no existía nota previa ni referencias a herramientas comerciales que reemplazar — verificado con rg).
+2. `docs/audit_log.md` — corrección en la entrada del 23/10/2026 (Fase 3.10.b): la afirmación "Nuevo test de routing por `bin_edges`" no se materializó (el único test con `bin_edges` era `test_chaid_engine.py:551`); el test se añade en este mini-cierre. Cuerpo original intacto (registro inmutable).
+3. `docs/3.11.a_design_colab_theme.md` — §7 ítem 4: TODO "Caché de QTextDocument" → **RESUELTO (3.11.a.1)**: los nodos migraron de HTML a QPainter puro; el riesgo desaparece por sustitución de tecnología (`design_decisions.md` §18.1).
+4. `backend_v3/chaid_engine.py` (~línea 234, solo comentario) — TODO(zona_gris) → `# DECISIÓN (25/10/2026): los bins se tratan como ORDINAL (Kass 1980, §4.2). Fusión solo de adyacentes.` con cita a `design_decisions.md` §16.1.
+5. `backend_v3/tree_builder.py` (~línea 614, solo comentario) — TODO(zona_gris) → `# DECISIÓN (25/10/2026): la partición es por RAMA (consolidada por el motor), no por bin individual...` con cita a §16.3.
+6. `frontend_v3/tree_view.py` (solo comentarios/docstrings) — (a) TODO de cabecera → DECISIÓN: `Node <id>` / `Nodo <id>` vía `tr()` para retraducción en caliente (cita §18.5); (b) TODO de footer → DECISIÓN: el footer de nodos terminales muestra solo Gini; el KS no se expone en `TreeNode` y añadirlo requeriría un campo nuevo en backend (cita §18.6); (c) fila Total: se deja `# TODO(3.11.b): implementar pct_global en la fila Total` (la lógica `Total (<pct_global>) <n>` se implementa en la Fase 3.11.b; en este bloque NO cambia el render); (d) docstring de `NodeItem` y comentario de `HEADER_H` actualizados: el nodo terminal ya no muestra "leaf badge" — la cabecera es estrictamente `Node <id>` / `Nodo <id>` y el predictor solo aparece en nodos internos (comportamiento ya existente en `_caption_text`/`_header_full`; se fija documentalmente).
+7. `frontend_v3/i18n.py` — clave `tree_leaf_badge` ("LEAF"/"HOJA") eliminada en ambos bloques (EN/ES); añadida `tree_node_terminal` ("Terminal"/"Terminal") con paridad estricta.
+8. `frontend_v3/main_window.py` — `_update_hud_node`: `tr("tree_leaf_badge")` → `tr("tree_node_terminal")` (el HUD muestra "Terminal" en la regla de un nodo terminal; sin la sustitución, retirar la clave habría roto el fail-fast de `tr()`). Comentario "classic AnswerTree layout" → "Estándar Clásico de Estaciones de Árboles, circa 2001" (cero marcas comerciales).
+9. `tests/test_tree_view.py` — aserción `_hud_lbl_rule_var` actualizada a `tr("tree_node_terminal")`.
+10. `tests/test_gui_smoke.py` — comentario "(AnswerTree, circa 2001)" → "(Estándar Clásico de Estaciones de Árboles, circa 2001)" (cero marcas comerciales; solo comentario).
+11. `tests/test_tree_builder.py` — nuevo `test_routing_bin_edges_chaid_continuous` (C1): `TreeBuilder` + `ChaidEngine` con predictor continuo binned (600 filas, señal en x>0.5). Verifica: `cfg.bin_edges` no vacío, partición por RAMA (`sum(child_ns) == parent_n`, `len(partes) == len(branches)`, tamaños == `n` de los hijos) y que `predict_leaf_assignment` reproduce `TreeBuilder._partition` nodo a nodo (router recursivo espejo).
+12. `tests/test_validation.py` — nuevo `test_predict_leaf_assignment_binned_continuous` (espejo OOS): muestra con valores FUERA del rango de train (-5.0 y 42.0); los bins extremos se extienden a ±inf, toda fila finita tiene ruta (cero -1) y la asignación coincide con la convención documentada bin→rama vía etiquetas `bin_i` (expectativa independiente con `np.digitize`).
+13. `tests/test_wizard.py` — el comentario `# ejecucion directa sin pytest` se mueve a su sitio: justo antes del `if __name__ == "__main__":` (estaba antes de `test_wizard_population_combo_default_is_none`).
+14. `docs/design_decisions.md` — nuevas **§18.5** (cabecera de nodo: `Node <id>` / `Nodo <id>` vía `tr()`) y **§18.6** (footer de nodo terminal: solo Gini, sin KS), en el formato Contexto/Decisión/Consecuencia; trailer "Version" actualizado.
+
+**Hallazgos**:
+
+- **Test fantasma corregido**: la entrada del 23/10/2026 declaraba un test de routing por `bin_edges` que nunca se escribió. Queda corregido con corrección in situ (registro inmutable: no se reescribe el cuerpo) y con los dos tests reales de este bloque.
+- **Referencias § ajustadas a la numeración real** (regla "los hallazgos se emiten solo con cita textual"): el brief pedía citar §16.3 desde `chaid_engine.py`, pero §16.3 es "Routing: bins to consolidated branches" — la decisión de bins ORDINAL vive en **§16.1**, que es lo que se cita. El brief pedía §18.4/§18.5 para cabecera/footer, pero §18.4 es el layout clásico y §18.5 no existía: se crean **§18.5** (cabecera) y **§18.6** (footer) y los comentarios citan las secciones reales.
+- **Desviaciones del listado de 8 archivos (todas forzadas por el ground truth)**: (a) `backend_v3/chaid_engine.py` y `backend_v3/tree_builder.py` los pedía el PASO 4 aunque no estaban en la lista; (b) retirar `tree_leaf_badge` sin tocar `frontend_v3/main_window.py:1130` ni `tests/test_tree_view.py:656` habría roto la GUI (fail-fast de `tr()`) y la suite; (c) `docs/design_decisions.md` entra por el ítem 8 del checklist (los comentarios DECISIÓN citan secciones que deben existir); (d) `tests/test_gui_smoke.py` y el segundo comentario de `main_window.py` entran por el criterio de verificación "cero referencias a marcas comerciales" (las únicas dos ocurrencias activas de "AnswerTree"; las históricas del audit_log y las del texto de la propia regla de gobernanza se conservan por registro inmutable / Grupo A).
+- **Residual terminológico (registrado, fuera de alcance)**: las claves `tree_hdr_leaves` ("leaves"/"hojas", cabecera del panel) y `tree_prop_leaf`/`tree_leaf_reason_*` (panel de propiedades) siguen usando "hoja/leaf"; su migración a "nodo terminal" se evalúa en la Fase 3.11.b junto con `pct_global` (TODO dejado en `tree_view.py`).
+
+**Tests**: **451/451 PASSED** (449 + 2 nuevos: `test_routing_bin_edges_chaid_continuous`, `test_predict_leaf_assignment_binned_continuous`). Verificación de marcas: rg repo-wide `AnswerTree|SPSS|Clementine|KnowledgeSEEKER|SAS Enterprise` → cero ocurrencias en documentos/código activos (solo entradas históricas commiteadas del audit_log y el texto de la regla de gobernanza, ambos exentos). `git diff --stat`: 14 archivos, todos listados arriba.
+
+**Referencias**: `docs/3.11_classic_tree_ui_reference.md` (Estándar Clásico de Estaciones de Árboles, circa 2001); `docs/design_decisions.md` §16.1, §16.3, §18.1, §18.5, §18.6; `docs/3.11_gui_design_system.md`; entrada del 23/10/2026 (corregida in situ) y cierre de la 3.11.a.1 del 24/10/2026.
+
+---
+
+### 25/10/2026 — Mini-cierre: Blindaje de Gobernanza (Clean Room & Caja Blanca) + cierre de terminología residual + sincronización de contexto
+
+**Estado**: ✅ Cerrada. Suite 451/451 PASSED (sin tests nuevos; renombres i18n y documentación).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: ráfaga documental de blindaje: declaración formal de la procedencia matemática del proyecto (desarrollo Clean Room derivado exclusivamente de literatura académica pública — Kass, Breiman, Loh & Shih — y del Estándar Clásico de Estaciones de Árboles, circa 2001) y cierre de la terminología residual "Hoja/Leaf" en la GUI (norma: "Nodo" / "Nodo terminal"). No se tocó `LICENSE` ni código analítico del backend.
+
+**Artefactos tocados (17 archivos)**:
+
+1. `docs/design_decisions.md` — nueva **§0.5 Clean-Room Development and Academic Provenance** (tras §0.4): declaración explícita de desarrollo Clean Room; toda la lógica algorítmica es matemática explícita, auditable y trazable a su fuente bibliográfica; cero dependencias de caja negra o implementaciones de terceros (bloqueadas por `import_guard.py`). Trailer "Version" actualizado.
+2. `.treegovrules` — sección "White-box rules (HARD RESTRICTION)": nuevo punto 4 (Clean-room development). **Zona gris resuelta (conservador)**: el brief pedía "sección Reglas Inquebrantables, punto #7"; esa sección no existe con ese nombre — la regla vive en la sección de restricciones duras de caja blanca, que es donde se prohiben librerías y se exige la cita bibliográfica (mismo hogar semántico).
+3. `AGENTS.md` — sección Gobernanza: misma regla replicada (formato en negrita de las reglas fechadas, como la del Design System).
+4. `docs/philosophy.md` / `docs/philosophy.es.md` — nueva sección "Technological Independence" / "Independencia Tecnológica" tras "The differentiator"/"El diferenciador" (paridad EN/ES).
+5. `README.md` / `README.es.md` — nota breve Clean Room en la sección Philosophy/Filosofía (paridad EN/ES); conteos de suite 449→**451/451** y fecha → 25 oct 2026 (Mermaid + línea de cierre de tabla) en ambos.
+6. `docs/roadmap.md` — nota Deferred de desincronización PyPI actualizada (fecha 25/10/2026, conteo 451/451; se añade la nota Clean Room a la lista de cambios cosméticos diferidos). Fuera del listado del brief; necesaria para no dejar la nota contradiciendo el README.
+7. `frontend_v3/i18n.py` — renombres con paridad EN/ES estricta (cero claves huérfanas; `test_i18n_dict_keys_match` verde):
+   - `tree_hdr_leaves` → `tree_hdr_nodes_terminal` ("terminal nodes" / "nodos terminales").
+   - `tree_leaf_reason_*` (5 claves) → `tree_terminal_reason_*` (valores de texto intactos).
+   - `tree_prop_leaf` → `tree_prop_terminal_reason` ("Terminal node reason" / "Motivo de nodo terminal").
+   - `tree_prop_pd_final`: valores "...on leaves" / "...en hojas" → "...on terminal nodes" / "...en nodos terminales" (clave conservada).
+   - `prune_col_leaves` → `prune_col_terminal_nodes` ("Terminal nodes" / "Nodos terminales").
+   - `reports_view_leaf` → `reports_view_terminal` ("By terminal node" / "Por nodo terminal").
+8. `frontend_v3/tree_view.py` — consumidores actualizados (`tree_prop_terminal_reason`, `tree_terminal_reason_*`, `tree_hdr_nodes_terminal` en `node_detail_lines`, `model_summary_lines` y `_header_text`); variable local `n_leaves` → `n_terminal` (2 funciones); prosa en inglés de docstrings/comentarios alineada ("terminal node(s)" en lugar de "leaf/leaves").
+9. `frontend_v3/main_window.py` — `tr(f"tree_leaf_reason_...")` → `tr(f"tree_terminal_reason_...")` en `_update_hud_node`; docstring "View (leaf/bucket)" → "(terminal-node/bucket)".
+10. `frontend_v3/reports_panel.py` — `tr("reports_view_leaf")` → `tr("reports_view_terminal")` (2 puntos: combo y mapa de etiquetas); comentario "leaf view" → "terminal-node view". El valor máquina `userData="leaf"` se conserva: es el contrato del parámetro `by=` del backend (`reporting.build_gains_table`).
+11. `frontend_v3/prune_dialog.py` — `_HEADERS`: `prune_col_leaves` → `prune_col_terminal_nodes`. La clave `n_leaves` del payload de `Session.get_prune_sequence()` se conserva (DTO del backend).
+12. `docs/contexto_para_nueva_sesion.md` — suite 449→**451/451**; nueva viñeta "Desarrollo Clean Room" en "Convenciones del proyecto" (zona gris: el brief decía "sección de Reglas de Oro", que no existe con ese nombre; el hogar semántico correcto es Convenciones del proyecto); nota de los mini-cierres del 25/10 en el párrafo de próximo paso.
+13. `docs/prompt_para_asistente.md` — suite 449→**451/451** (sección 5); nuevo punto 7 "Clean Room / Caja Blanca" en la sección 3 (Filosofía); bala de estado actualizada a 25/10/2026.
+14. `docs/audit_log.md` — esta entrada.
+
+**Hallazgos**:
+
+- **Declaración formal de Desarrollo Clean Room y procedencia académica**: queda fijada en cuatro superficies coherentes (`design_decisions.md` §0.5, `.treegovrules` white-box #4, `AGENTS.md` Gobernanza, filosofía EN/ES + nota en READMEs).
+- **Limpieza total de "hoja/leaf" en la GUI**: todas las claves i18n y todos los textos visibles usan ahora "Nodo" / "Nodo terminal" (EN: "terminal node"). Verificación rg sobre `frontend_v3/`: las únicas ocurrencias restantes de `leaf`/`leaves`/`hoja` son identificadores del contrato backend — `TreeNode.is_leaf`, `TreeNode.leaf_reason`, la clave `n_leaves` del DTO de poda (`Session.get_prune_sequence`) y el valor máquina `by="leaf"` de la gains table — más los falsos positivos verbales ("leave an audit trail", "may only leave"). Renombrarlos sería un cambio de contrato de API pública (`docs/api.md`), fuera del alcance de este bloque; queda registrado como frontera explícita de la norma terminológica: **la norma "Nodo / Nodo terminal" aplica a textos visibles de la GUI, no a identificadores máquina del backend**.
+- **Cero referencias a marcas comerciales** mantenido: los renombres no introducen ninguna; el barrido del mini-cierre anterior sigue vigente.
+- **Tests sin cambios de aserciones**: ningún test referenciaba las claves renombradas (verificado con rg antes de editar); la suite queda en 451/451 sin tocarse un solo test (los renombres son internos a i18n + consumidores frontend).
+
+**Tests**: 451/451 PASSED. `git diff --stat` muestra solo los 17 archivos listados.
+
+**Referencias**: `docs/design_decisions.md` §0.5, §18.5–§18.6; `docs/3.11_classic_tree_ui_reference.md`; `docs/philosophy.md` §"Technological Independence"; mini-cierre del 25/10/2026 (zonas grises C1, entrada inmediatamente anterior).

@@ -410,7 +410,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (24/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 449/449 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 451/451 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
