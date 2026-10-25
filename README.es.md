@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 449/449 passing
+**Suite de tests**: 463/463 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.b.2 completas<br/>🔧 Foco: 3.11.b.3 Tree Map<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 460 / 460 tests PASSED<br/>📅 25 oct 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 3.11.b.3 completas<br/>🔧 Foco: 3.11.b.4 Project Explorer<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 463 / 463 tests PASSED<br/>📅 25 oct 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -264,12 +264,13 @@ TreeGov/
 | **3.11.a.1** | Hotfix Visual: layout clásico (barra de 8 menús, toolbar compacta icon-only, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos QPainter "hoja de auditoría", tema claro/oscuro forzado vía QPalette, cortes numéricos en aristas, copia TSV al portapapeles en tablas, Sistema de Diseño GUI | Completada |
 | **3.11.b.1** | Backend del Data Viewer: `Session.get_data_preview` (preview crudo del CSV, dict JSON-serializable de tipos nativos, estado vacío sin excepción — §18.7) | Completada |
 | **3.11.b.2** | Frontend del Data Viewer: widget `DataViewer` en el panel izquierdo, tabla de solo lectura, aviso de truncamiento, Ctrl+C → TSV, i18n en caliente | Completada |
+| **3.11.b.3** | Tree Map: minimapa pasivo en el panel izquierdo (escena independiente, rectángulos planos por nodo, clic → `centerOn` en la vista principal sin tocar zoom/selección, reconstrucción completa ante cambios del modelo, `fitInView` exclusivo del minimapa, resaltado pasivo del nodo actual) | Completada |
 | **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 460/460 passing.**
+**Suite de tests: 463/463 passing.**
 
 ---
 

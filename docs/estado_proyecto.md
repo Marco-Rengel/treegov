@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 24/10/2026 (Fase 3.11.a cerrada: Tema Colab, Layout Excel, Wizard y Nodos HTML; release 1.0.0rc4)
+**Fecha de última actualización:** 25/10/2026 (Fase 3.11.b.3 cerrada: Tree Map, minimapa pasivo del panel izquierdo; release 1.0.0rc4)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -353,11 +353,27 @@ Retraducción en caliente vía `language_bus`. Cableado en
 `main_window.py`: poblado tras cargar el CSV (`_load_dataset_path`) y
 limpieza en la rama de reseteo (`_on_new_wizard`). 4 tests nuevos
 headless (construcción/retraducción, poblado + aviso, TSV, estado
-vacío). Suite 460/460. **Próximo paso: sub-fase 3.11.b.3 (Tree Map:
-escena independiente, reconstrucción completa, `centerOn` sin tocar
-zoom/selección)**, y después b.4 (Project Explorer), b.5 (`pct_global`
-en la fila Total), 3.11.c (Árboles Univariados y Matriz de Costos) y
-3.11.d (Menú Contextual e Interactividad).
+vacío). Suite 460/460.
+
+**3.11.b.3 — Tree Map** ✅ Completada (25/10/2026). Nuevo widget
+`TreeMap` (`frontend_v3/tree_map.py`) en el bloque `gbTreeMap` del
+panel izquierdo (decisión D2 del diseño auditado
+`docs/3.11.b_design_treemap_dataviewer.md`): minimapa pasivo del
+árbol completo con escena `QGraphicsScene`/`QGraphicsView`
+independientes del canvas principal, rectángulos planos por nodo,
+clic sobre un rectángulo → `centerOn` en la vista principal **sin
+tocar zoom ni selección**, reconstrucción completa del mapa ante
+cualquier cambio del modelo, `fitInView` exclusivo del minimapa
+(prohibido tocar el `QTransform` de la vista principal, corrección
+O6) y resaltado pasivo del nodo actual (refleja la selección del
+canvas, sin selección propia ni propagación). Cableado en
+`main_window.py`: reconstrucción tras entrenar y limpieza en la rama
+de reseteo. 3 tests nuevos headless en `tests/test_tree_map.py`.
+Suite 463/463. **Próximo paso: sub-fase 3.11.b.4 (Project
+Explorer)**, y después b.5 (`pct_global` en la fila Total del
+`NodeItem`, formato `Total (<pct_global>) <n>`), 3.11.c (Árboles
+Univariados y Matriz de Costos) y 3.11.d (Menú Contextual e
+Interactividad).
 
 ### Cierre intermedio 16/10/2026
 
@@ -413,7 +429,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (460 tests)
+├── tests/ # Suite de tests (463 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -552,11 +568,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | reports_panel (frontend) | 13 |
 | prune_dialog (frontend) | 1 |
 | data_viewer (frontend) | 4 |
+| tree_map (frontend) | 3 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **460** |
+| **Total** | **463** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 460/460 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 463/463 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

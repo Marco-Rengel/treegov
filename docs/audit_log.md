@@ -5936,3 +5936,33 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 460/460 PASSED (`python -m pytest tests -q`; 456 + 4 nuevos). `git status` tras el bloque de código mostró exactamente los 4 archivos listados (2 modificados, 2 nuevos).
 
 **Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D3/D4 + correcciones O1/O3; `docs/3.11_gui_design_system.md` §4.1.1; `docs/design_decisions.md` §18.3 y §18.7; mini-cierre 3.11.b.1 (entrada anterior); checklist de 8 documentos de `AGENTS.md`.
+
+---
+
+### 25/10/2026 — Mini-cierre: sub-fase 3.11.b.3 (Tree Map: minimapa pasivo)
+
+**Estado**: ✅ Cerrado. Suite 463/463 PASSED.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (implementación) / high (cierre documental).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: tercera sub-fase de la 3.11.b contra el diseño auditado (`docs/3.11.b_design_treemap_dataviewer.md`, correcciones O1–O6, decisión D2): el bloque Tree Map del panel izquierdo (`gbTreeMap`), un minimapa pasivo del árbol completo. La b.3 cierra el segundo de los tres bloques del panel izquierdo previstos en la 3.11.b; siguen b.4 (Project Explorer) y b.5 (`pct_global` en la fila Total del `NodeItem`).
+
+**Artefactos tocados**:
+
+- Bloque de código (3 archivos):
+  1. `frontend_v3/tree_map.py` (nuevo) — widget del minimapa: escena `QGraphicsScene`/`QGraphicsView` independientes del canvas principal, rectángulos planos por nodo del modelo, clic sobre un rectángulo → `centerOn` en la vista principal **sin tocar zoom ni selección**, reconstrucción completa del mapa ante cualquier cambio del modelo, `fitInView` exclusivo del minimapa (prohibido tocar el `QTransform` de la vista principal, corrección O6) y resaltado pasivo del nodo actual (el mapa refleja la selección del canvas, sin selección propia ni propagación — invariante 4 del diseño: el mapa es pasivo).
+  2. `frontend_v3/main_window.py` — cableado del `TreeMap` en `gbTreeMap`: reconstrucción tras entrenar/cargar modelo, limpieza en la rama de reseteo, y conexión del resaltado pasivo a la selección del canvas principal.
+  3. `tests/test_tree_map.py` (nuevo) — 3 tests headless (offscreen) del contrato D2.
+- Cierre documental (este bloque): `docs/audit_log.md` (esta entrada), `docs/roadmap.md` (b.3 ✅ + nota PyPI), `docs/estado_proyecto.md` (463/463 + bloque narrativo + tabla de tests), `docs/contexto_para_nueva_sesion.md` (próximo paso b.4), `docs/prompt_para_asistente.md` (suite + estado), `README.md` / `README.es.md` (Mermaid + suite + fila de fase).
+
+**Hallazgos**:
+
+- **Minimapa estrictamente pasivo**: el Tree Map no tiene selección propia ni propaga estado al canvas; la única interacción es clic → `centerOn` en la vista principal, que no altera el zoom ni la selección del usuario (invariante 4 del diseño 3.11.b y corrección O6).
+- **`fitInView` acotado**: el ajuste de vista es exclusivo de la escena/vista propias del minimapa; el `QTransform` de la vista principal queda intacto.
+- **Checklist de 8 documentos — revisión consciente de los 2 restantes**: `docs/api.md` NO se actualiza (no hay nueva superficie de API pública de backend; el Tree Map es frontend puro y consume el `TreeModel` ya expuesto por `Session`); `docs/design_decisions.md` NO se actualiza (no hay nuevos defaults ni cambios de contrato: la decisión D2 del minimapa ya quedó fijada en el diseño auditado `docs/3.11.b_design_treemap_dataviewer.md`).
+
+**Tests**: 463/463 PASSED (`python -m pytest tests -q`; 460 + 3 nuevos en `tests/test_tree_map.py`).
+
+**Referencias**: `docs/3.11.b_design_treemap_dataviewer.md` D2 + corrección O6; `docs/3.11_design_interactive_tree.md` §3/§7; `docs/3.11_classic_tree_ui_reference.md` §2; mini-cierres 3.11.b.1 y 3.11.b.2 (entradas anteriores de este día); checklist de 8 documentos de `AGENTS.md`.
