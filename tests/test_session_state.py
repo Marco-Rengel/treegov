@@ -1831,6 +1831,67 @@ def test_get_classification_matrix_multiclass_threshold_ignored():
     assert resto1 == resto2
 
 
+# ---------------------------------------------------------------------------
+# Fase 3.11.b.1: get_data_preview (backend del Data Viewer, diseno D3)
+# ---------------------------------------------------------------------------
+
+
+def test_get_data_preview_without_dataset():
+    """Sin load_dataset: dict vacio (divergencia consciente con describe_*,
+    que lanzan RuntimeError; el visor necesita un estado vacio simple)."""
+    s = Session(logger=_quiet_logger())
+    dto = s.get_data_preview()
+    assert dto == {"columns": [], "rows": [], "n_total": 0,
+                   "truncated": False}
+
+
+def test_get_data_preview_truncated():
+    """120 filas con n_rows=50: n_total=120, len(rows)=50, truncated=True."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        dto = s.get_data_preview(n_rows=50)
+        assert dto["n_total"] == 120
+        assert len(dto["rows"]) == 50
+        assert dto["truncated"] is True
+
+
+def test_get_data_preview_native_types():
+    """Toda celda es tipo nativo Python: cero np.int64 / np.nan en rows.
+
+    El fixture _csv tiene edad (int), seg (str) y default (int): se
+    verifican los tipos concretos de la primera fila y el invariante
+    global type(val) in (int, float, str, bool, NoneType).
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        dto = s.get_data_preview(n_rows=50)
+        assert dto["columns"] == ["edad", "seg", "default"]
+        for row in dto["rows"]:
+            assert isinstance(row, tuple)
+            for val in row:
+                assert type(val) in (int, float, str, bool, type(None))
+        primera = dto["rows"][0]
+        assert type(primera[0]) is int      # edad
+        assert type(primera[1]) is str      # seg
+        assert type(primera[2]) is int      # default
+
+
+def test_get_data_preview_no_truncation():
+    """n_rows=200 > 120 filas del fixture: truncated=False, rows completo."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        dto = s.get_data_preview(n_rows=200)
+        assert dto["n_total"] == 120
+        assert len(dto["rows"]) == 120
+        assert dto["truncated"] is False
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

@@ -308,6 +308,66 @@ class Session:
         items.sort(key=lambda kv: (-kv[1], kv[0]))
         return {"exists": True, "n": n, "values": tuple(items)}
 
+    def get_data_preview(self, n_rows: int = 50) -> dict:
+        """Preview crudo del dataset cargado (lectura pura, sin transicion).
+
+        Fase 3.11.b.1 (Data Viewer, diseno 3.11.b D3): pensado para
+        GUI/MCP; responde a "que cargue?" con los datos CRUDOS del CSV
+        original (sin imputacion, sin codificacion, sin split).
+
+        Contrato de retorno (tipos puros, JSON-serializable):
+            {"columns": list[str], "rows": list[tuple],
+             "n_total": int, "truncated": bool}
+        Toda celda se convierte a tipo nativo de Python (int/float/str/
+        bool); los valores ausentes del CSV (pd.isna) se devuelven como
+        None (nunca NaN ni escalares numpy/pandas en el retorno).
+        `truncated` es True si n_total > len(rows).
+
+        Divergencia consciente con la familia describe_*: SIN dataset
+        cargado NO lanza RuntimeError; devuelve el dict vacio
+        ({"columns": [], "rows": [], "n_total": 0, "truncated": False})
+        para simplificar el estado vacio del visor (diseno D3; la
+        divergencia se registra en docs/design_decisions.md al cierre
+        de la sub-fase).
+        """
+        if self._df is None:
+            return {"columns": [], "rows": [], "n_total": 0,
+                    "truncated": False}
+        n_total = int(self._df.shape[0])
+        columns = [str(c) for c in self._df.columns]
+        rows = [
+            tuple(self._cell_native(v) for v in fila)
+            for fila in self._df.iloc[:n_rows].itertuples(
+                index=False, name=None
+            )
+        ]
+        self._log.info(
+            "[session] get_data_preview: %d/%d filas", len(rows), n_total
+        )
+        return {
+            "columns": columns,
+            "rows": rows,
+            "n_total": n_total,
+            "truncated": n_total > len(rows),
+        }
+
+    @staticmethod
+    def _cell_native(v: Any) -> Any:
+        """Convierte una celda pandas/numpy a tipo nativo de Python.
+
+        NaN/NaT -> None; np.bool_ -> bool; np.integer -> int;
+        np.floating -> float; el resto (str, bool nativos) pasa intacto.
+        """
+        if pd.isna(v):
+            return None
+        if isinstance(v, np.bool_):
+            return bool(v)
+        if isinstance(v, np.integer):
+            return int(v)
+        if isinstance(v, np.floating):
+            return float(v)
+        return v
+
     def _routed_partition(self, partition: str) -> tuple[Any, Any, str]:
         """Resolve a partition name to its cached (X, y) and unseen policy.
 
