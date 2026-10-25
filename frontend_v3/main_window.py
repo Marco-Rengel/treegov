@@ -62,6 +62,7 @@ from frontend_v3.tree_view import (
 )
 from frontend_v3.metrics_panel import MetricsPanel
 from frontend_v3.data_viewer import DataViewer
+from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
 from frontend_v3.wizard import ModelWizard
@@ -437,10 +438,15 @@ class MainWindow(QMainWindow):
         self._left_panel.addWidget(self._left_gb_treemap)
         self._left_panel.addWidget(self._left_gb_dataviewer)
         # Phase 3.11.b.2: contenido del bloque Data Viewer (preview crudo
-        # del CSV via Session.get_data_preview; Explorer y Tree Map
-        # llegan en 3.11.b.3/b.4).
+        # del CSV via Session.get_data_preview; Explorer llega en b.4).
         self._data_viewer = DataViewer(self._left_gb_dataviewer)
         self._left_gb_dataviewer.layout().addWidget(self._data_viewer)
+        # Phase 3.11.b.3: contenido del bloque Tree Map (minimapa pasivo,
+        # decisión D2: escena propia e independiente; clic -> panning del
+        # canvas principal sin tocar su zoom ni su selección).
+        self._tree_map = TreeMap(self._left_gb_treemap)
+        self._left_gb_treemap.layout().addWidget(self._tree_map)
+        self._tree_map.node_clicked.connect(self._on_tree_map_node_clicked)
 
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
         # Phase 3.10.a: structured properties panel (Dataset / Node / Rule)
@@ -457,6 +463,12 @@ class MainWindow(QMainWindow):
         self._tree_panel.setObjectName("treePanel")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)
         self._tree_panel.selection_cleared.connect(self._hud_reset)
+        # Phase 3.11.b.3 (D2): resaltado pasivo del minimapa — refleja la
+        # selección del canvas principal y nunca la propaga.
+        self._tree_panel.node_selected.connect(self._tree_map.set_selected_node)
+        self._tree_panel.selection_cleared.connect(
+            lambda: self._tree_map.set_selected_node(None)
+        )
 
         # Phase 2.3: OOS/OOT metrics panel (main "Risks" tab)
         self._metrics_panel = MetricsPanel()
@@ -631,6 +643,7 @@ class MainWindow(QMainWindow):
         )
         # QGraphicsItems ignore the app QSS: recolor the scene explicitly
         self._tree_panel.set_theme(name)
+        self._tree_map.set_theme(name)
         if self._logger is not None:
             self._logger.info("Theme switched to %s", name)
 
@@ -693,6 +706,7 @@ class MainWindow(QMainWindow):
             # transactional consistency: the session no longer holds a
             # tree, so the viewer must not keep displaying the old one
             self._tree_panel.clear_model()
+            self._tree_map.set_model(None)
             self._metrics_panel.set_report(None)
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
@@ -743,6 +757,7 @@ class MainWindow(QMainWindow):
             # rollback already applied (reset_on_error); the viewer must
             # not keep a tree the session state no longer holds
             self._tree_panel.clear_model()
+            self._tree_map.set_model(None)
             self._hud_reset()
             return
         st = self._session.state
@@ -755,6 +770,9 @@ class MainWindow(QMainWindow):
         tree = st.tree
         if tree is not None:
             self._tree_panel.set_model(tree, cfg["governance_mode"])
+            # Phase 3.11.b.3 (D2): el minimapa se reconstruye completo
+            # ante cualquier cambio del modelo (fit/poda/nuevo CSV).
+            self._tree_map.set_model(tree)
             # Phase 3.11.a: governance panel shows the model identity
             self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
             self._hud_lbl_gov_mode.setText(cfg["governance_mode"])
@@ -828,6 +846,7 @@ class MainWindow(QMainWindow):
             # transactional consistency: the viewer must not keep showing
             # the pre-inversion tree (same rule as _on_wizard_finished)
             self._tree_panel.set_model(tree, cfg_inv["governance_mode"])
+            self._tree_map.set_model(tree)
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
         self._refresh_session_indicator()
@@ -938,6 +957,14 @@ class MainWindow(QMainWindow):
     # Slots (Phase 2.2: tree viewer -> properties panel)
     # ------------------------------------------------------------------
 
+    def _on_tree_map_node_clicked(self, node_id: int) -> None:
+        """Clic en el minimapa -> panning del canvas principal al nodo
+        (centerOn sobre su centro), SIN tocar su zoom ni su selección
+        (D2; invariante 4 del diseño 3.11.b: el mapa es pasivo)."""
+        center = self._tree_map.node_pos(node_id)
+        if center is not None:
+            self._tree_panel._view.centerOn(*center)
+
     def _on_tree_node_selected(self, node_id: int) -> None:
         """Show the selected node card (read-only, from the frozen tree)."""
         model = self._session.state.tree if self._session is not None else None
@@ -1023,6 +1050,7 @@ class MainWindow(QMainWindow):
             else "BANKING"
         )
         self._tree_panel.set_model(tree, mode)
+        self._tree_map.set_model(tree)
         self._metrics_panel.refresh()
         self._refresh_reports_panel()
         self._refresh_session_indicator()
