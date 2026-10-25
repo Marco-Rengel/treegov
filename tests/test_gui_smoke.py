@@ -338,6 +338,26 @@ def test_project_explorer_updates():
 # Direct execution without pytest
 # ---------------------------------------------------------------------------
 
+
+def test_tr_term_dynamic():
+    from frontend_v3.i18n import tr_term
+    # El singleton de idioma es global y otros tests lo conmutan: fijar
+    # 'en' y restaurar (mismo patrón que test_i18n_tr_and_language) para
+    # hacer el test determinista dentro de la suite completa.
+    prev = get_language()
+    try:
+        set_language("en")
+        # En modo BANKING, PD se mantiene
+        assert tr_term("pd", "BANKING") == "PD"
+        # En modo RESEARCH, PD se traduce a Probability (Probabilidad en ES)
+        assert tr_term("pd", "RESEARCH") == "Probability"
+        # Verificar otra clave
+        assert tr_term("event", "BANKING") == "Bad"
+        assert tr_term("event", "RESEARCH") == "Event"
+    finally:
+        set_language(prev)
+
+
 if __name__ == "__main__":
     tests = [
         obj

@@ -392,6 +392,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "override_col_action": "Action",
         "override_col_fp_before": "Fingerprint Before",
         "override_col_fp_after": "Fingerprint After",
+        # --- Fase 3.6.e.1: terminología dinámica por modo de gobernanza ---
+        "term_banking_pd": "PD",
+        "term_research_pd": "Probability",
+        "term_banking_bad_rate": "Bad rate",
+        "term_research_bad_rate": "Event rate",
+        "term_banking_event": "Bad",
+        "term_research_event": "Event",
+        "term_banking_no_event": "Good",
+        "term_research_no_event": "Non-event",
+        "term_banking_class_interest": "Class of interest",
+        "term_research_class_interest": "Class of interest",
+        "term_banking_default": "Default",
+        "term_research_default": "Outcome",
         "reports_no_model": "Train a model to view reports.",
     },
     "es": {
@@ -773,6 +786,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "override_col_action": "Acción",
         "override_col_fp_before": "Huella Antes",
         "override_col_fp_after": "Huella Después",
+        # --- Fase 3.6.e.1: terminología dinámica por modo de gobernanza ---
+        "term_banking_pd": "PD",
+        "term_research_pd": "Probabilidad",
+        "term_banking_bad_rate": "Tasa de malos",
+        "term_research_bad_rate": "Tasa de evento",
+        "term_banking_event": "Malo",
+        "term_research_event": "Evento",
+        "term_banking_no_event": "Bueno",
+        "term_research_no_event": "No evento",
+        "term_banking_class_interest": "Clase de interés",
+        "term_research_class_interest": "Clase de interés",
+        "term_banking_default": "Default",
+        "term_research_default": "Resultado",
         "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }
@@ -819,6 +845,11 @@ def detect_system_language() -> str:
     """
     code = QLocale.system().name().split("_")[0].lower()
     return code if code in _STRINGS else _DEFAULT
+
+
+def tr_term(concept: str, mode: str) -> str:
+    """Resuelve terminología bancaria vs neutral según el modo de gobernanza."""
+    return tr(f"term_{mode.lower()}_{concept}")
 
 
 class LanguageBus(QObject):
