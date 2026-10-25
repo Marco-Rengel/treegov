@@ -5850,3 +5850,33 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 452/452 PASSED. Smoke del helper: portapapeles con TSV de cabecera + 3 filas verificado vía test.
 
 **Referencias**: `docs/3.11_gui_design_system.md` §4.1.1 y §6; `docs/design_decisions.md` §18.3; `docs/roadmap.md` Deferred (ítem resuelto); mini-cierres del 25/10/2026 (entradas anteriores de este día).
+
+---
+
+### 25/10/2026 — Mini-cierre: corrección del diseño 3.11.b tras auditoría técnica (O1–O6)
+
+**Estado**: ✅ Cerrado. Suite 452/452 PASSED (bloque documental puro; suite re-ejecutada por regla de verificación doble).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max (auditoría) / high (corrección).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: el documento `docs/3.11.b_design_treemap_dataviewer.md` se redactó y la auditoría técnica posterior (contra el diseño general §3/§7, el Design System, la referencia clásica y el as-built verificado con lectura directa y rg) emitió veredicto **RECHAZADO CON OBSERVACIONES** (6 observaciones). Este bloque aplica las correcciones antes de cualquier prompt de implementación de la Fase 3.11.b (regla: Diseñar → Auditar diseño → Implementar).
+
+**Artefactos tocados (2 archivos)**:
+
+1. `docs/3.11.b_design_treemap_dataviewer.md` — correcciones O1–O6 (detalle en Hallazgos); cabecera de estado anota la corrección post-auditoría.
+2. `docs/audit_log.md` — esta entrada.
+
+**Hallazgos (O1–O6 aplicadas)**:
+
+- **O1 (i18n)**: D4 proponía las claves `tree_map_title`, `data_viewer_title` y `project_explorer_title`, que **duplican** las claves existentes `panel_tree_map`, `panel_data_viewer` y `panel_left_title` (`frontend_v3/i18n.py`:60-62 EN, 405-407 ES; ya aplicadas a los tres `QGroupBox` en `main_window.py:176-177`). Corregido: D4 declara la reutilización y prohíbe claves de título nuevas; las claves nuevas quedan reducidas a `data_viewer_empty`, `data_viewer_truncated` y `tree_node_total`.
+- **O2 (`pct_global`)**: D5 no fijaba el mecanismo de exposición; un campo nuevo en el dataclass frozen `TreeNode` (`tree_builder.py:69-106`) habría alterado la igualdad de `TreeNode`/`TreeModel`, base de los tests de paridad K=2. Corregido: prohibición explícita de campos nuevos; el backend calcula `pct_global = node.n / model.nodes[root].n` y el valor se **inyecta** en la construcción del `NodeItem` desde `TreeScene.build_from_model` (`tree_view.py:598-613`, que posee el `TreeModel` completo); `params_fingerprint` intacto (deriva solo del spec, `tree_builder.py:667`). La justificación de la opción rechazada se reescribió citando el precedente §18.6 (derivación presentacional aprobada: Gini desde `pd_final`, `tree_view.py:205-210) en lugar de invocar una sala limpia más estricta que el as-built.
+- **O3 (Data Preview)**: D3 no especificaba la serialización de faltantes ni la conversión de tipos. Corregido: toda celda se convierte a tipo nativo Python (`int`/`float`/`str`/`bool`), los valores ausentes se devuelven como `None` (nunca `NaN` ni escalares numpy) y el dict es JSON-serializable. Divergencia consciente registrada en el propio D3: estado vacío como dict vacío en lugar de `RuntimeError` (convención de la familia `describe_*`, `session_state.py:196-197`); se registrará en `docs/design_decisions.md` al implementar.
+- **O4 (Fila Total)**: D5 y b.5 decían "añadir" la fila Total, que **ya existe** (`tree_view.py:493-513`, con la etiqueta literal `"Total (N):"`). Corregido: "modificar"; formato exacto fijado `Total (<pct_global>) <n>` (raíz: `Total (100.00) 1000`, según el TODO de referencia `tree_view.py:495-497`); la etiqueta pasa por `tr()` con la clave nueva `tree_node_total`, eliminando el literal al tocar la línea (invariante i18n).
+- **O5 (Terminología)**: "dock" → "bloque del panel izquierdo (`QGroupBox` en `leftPanel`)" (Design System §3.3; `main_window.py:429-436`), incluidas las filas b.2/b.4 de la tabla del plan y la tabla de riesgos.
+- **O6 (Tree Map)**: aclarado que el `fitInView` es exclusivo de la vista/escena propias del minimapa y que está prohibido que toque el `QTransform` de la vista principal (diseño general §3/§7); añadido el **resaltado pasivo** del nodo actual (el mapa refleja la selección del canvas, referencia clásica §2, sin selección propia ni propagación).
+
+**Tests**: 452/452 PASSED (`python -m pytest tests -q`, 22.97 s). `git status` muestra solo los 2 archivos listados.
+
+**Referencias**: auditoría técnica O1–O6 (misma fecha, veredicto y justificaciones en la conversación del bloque); `docs/3.11_gui_design_system.md` §3.3, §4.1.1, §5.1; `docs/3.11_design_interactive_tree.md` §3/§7; `docs/3.11_classic_tree_ui_reference.md` §2/§4; `docs/design_decisions.md` §18.6; mini-cierres del 25/10/2026 (entradas anteriores de este día).
