@@ -61,6 +61,7 @@ from frontend_v3.tree_view import (
     node_detail_lines,
 )
 from frontend_v3.metrics_panel import MetricsPanel
+from frontend_v3.manual_override_dialog import ManualOverrideDialog
 from frontend_v3.data_viewer import DataViewer
 from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
@@ -581,8 +582,10 @@ class MainWindow(QMainWindow):
         self._hud_lbl_gov_mode_cap = QLabel()
         self._hud_lbl_gov_mode = QLabel("—")
         self._hud_btn_view_audit = QPushButton()
-        # placeholder: the audit viewer lands in Phase 3.11.d
+        # Phase 3.11.d.3: habilitado tras entrenar (ver
+        # _on_wizard_finished); abre el Manual Override Log.
         self._hud_btn_view_audit.setEnabled(False)
+        self._hud_btn_view_audit.clicked.connect(self._on_view_audit)
         form_gov.addRow(self._hud_lbl_gov_fp_cap, self._hud_lbl_gov_fp)
         form_gov.addRow(self._hud_lbl_gov_mode_cap, self._hud_lbl_gov_mode)
         form_gov.addRow(self._hud_btn_view_audit)
@@ -731,6 +734,8 @@ class MainWindow(QMainWindow):
             self._lbl_explorer_model.setText("—")
             self._hud_lbl_gov_fp.setText("—")
             self._hud_lbl_gov_mode.setText("—")
+            # Phase 3.11.d.3: sin modelo no hay Manual Override Log
+            self._hud_btn_view_audit.setEnabled(False)
             self._hud_reset()
         columns, types = self._dataset_info
         wiz = ModelWizard(
@@ -797,6 +802,9 @@ class MainWindow(QMainWindow):
             # Phase 3.11.a: governance panel shows the model identity
             self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
             self._hud_lbl_gov_mode.setText(cfg["governance_mode"])
+            # Phase 3.11.d.3: con modelo entrenado, el Manual Override
+            # Log (aunque esté vacío) ya es consultable
+            self._hud_btn_view_audit.setEnabled(True)
             self._hud_reset()
             if self._logger is not None:
                 self._logger.info(
@@ -1018,12 +1026,10 @@ class MainWindow(QMainWindow):
             if self._last_train_cfg is not None
             else "BANKING"
         )
-        # TODO(zona_gris): textos del menú literales, sin claves i18n;
-        # resolver con claves tree_ctx_* al cerrar la fase 3.11.d.
         menu = QMenu(self)
-        act_grow = menu.addAction("Grow Tree")
+        act_grow = menu.addAction(tr("menu_tree_grow"))
         act_grow.setEnabled(node.is_leaf)
-        act_prune = menu.addAction("Prune Branch")
+        act_prune = menu.addAction(tr("menu_tree_prune_branch"))
         act_prune.setEnabled(not node.is_leaf)
         chosen = menu.exec(QCursor.pos())
         if chosen is act_prune:
@@ -1057,10 +1063,22 @@ class MainWindow(QMainWindow):
                 8000,
             )
         elif chosen is act_grow:
-            # TODO(3.11.d.3): Grow Tree (y Select Predictor / Define
+            # TODO(zona_gris): Grow Tree (y Select Predictor / Define
             # Split) llegan cuando el backend implemente esas acciones
-            # en Session.intervene_node.
+            # en Session.intervene_node (fase posterior a 3.11.d).
             pass
+
+    def _on_view_audit(self) -> None:
+        """HUD > Ver Auditoría: abre el Manual Override Log (3.11.d.3).
+
+        Muestra SessionState.manual_overrides (registro inmutable del
+        backend) en un diálogo modal de solo lectura.
+        """
+        if self._session is None:
+            return
+        dlg = ManualOverrideDialog(self, logger=self._logger)
+        dlg.set_data(self._session.state.manual_overrides)
+        dlg.exec()
 
     def _hud_reset(self) -> None:
         """Properties panel default: node detail if selected, else clear."""
