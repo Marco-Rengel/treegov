@@ -369,11 +369,15 @@ class NodeItem(QGraphicsItem):
     BAR_H = 10.0         # stacked-bar height (class distribution)
     SQ = 8.0             # semaphore square side in the body rows
 
-    def __init__(self, node: TreeNode, palette: dict[str, str]) -> None:
+    def __init__(
+        self, node: TreeNode, palette: dict[str, str], pct_global: float
+    ) -> None:
         super().__init__()
         self.node_id = node.node_id
         self._node = node
         self._palette = palette
+        # Phase 3.11.b.5: cuota del nodo sobre la población raíz [0, 1]
+        self._pct_global = pct_global
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setZValue(1.0)
 
@@ -490,21 +494,21 @@ class NodeItem(QGraphicsItem):
                 str(k_c),
             )
 
-        # 3b. Total (N) row: bold, subtle separator above, n right-aligned
+        # 3b. Total row: bold, subtle separator above, n right-aligned
         #     in the n column (same x as the per-class counts).
-        # TODO(3.11.b): implementar pct_global en la fila Total
-        #     (formato objetivo: "Total (<pct_global>) <n>"; en la raíz
-        #     será "Total (100.00) n").
+        #     Phase 3.11.b.5: la etiqueta lleva pct_global (n / n raíz) a 2
+        #     decimales vía tr(); formato final "Total (<pct_global>) <n>".
         painter.fillRect(
             QRectF(8.0, total_y - 2.0, w - 16.0, 1.0),
             QBrush(QColor(_NODE_SHEET_BORDER)),
         )
         painter.setFont(self._font_total)
         painter.setPen(QPen(sheet_fg))
+        texto_total = f"{tr('tree_node_total')} ({self._pct_global * 100:.2f})"
         painter.drawText(
             QRectF(20.0, total_y, 140.0, total_h),
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-            "Total (N):",
+            texto_total,
         )
         painter.drawText(
             QRectF(172.0, total_y, 40.0, total_h),
@@ -639,8 +643,11 @@ class TreeScene(QGraphicsScene):
                 lr = label.boundingRect()
                 label.setPos((x0c + x1c - lr.width()) / 2.0, mid_y - lr.height())
 
+        # Phase 3.11.b.5: cuota de cada nodo sobre la población raíz
+        total_n = float(model.nodes[model.root_id].n)
         for node in model.nodes:
-            item = NodeItem(node, palette)
+            pct = (node.n / total_n) if total_n > 0 else 0.0
+            item = NodeItem(node, palette, pct)
             x, y = pos[node.node_id]
             item.setPos(x, y)
             self.addItem(item)

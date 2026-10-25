@@ -454,7 +454,7 @@ def test_node_paint_classic_station_design():
     assert not root.is_leaf and leaf.is_leaf and leaf.pd_final[0] < 0.05
     for theme in ("light", "dark"):
         pal = PALETTES[theme]
-        item = NodeItem(root, pal)
+        item = NodeItem(root, pal, 1.0)
         img = _render_node(item)
         # 1. huecos del cuerpo y banda de footer siempre blancos
         assert _px(img, item, 110, 28) == QColor("#FFFFFF")   # sobre filas
@@ -476,7 +476,7 @@ def test_node_paint_classic_station_design():
         (0.10, "STATUS_WARN"),
         (0.30, "STATUS_CRIT"),
     ):
-        leaf_item = NodeItem(_leaf_node(1, pd0), pal)
+        leaf_item = NodeItem(_leaf_node(1, pd0), pal, 1.0)
         img_leaf = _render_node(leaf_item)
         assert _px(img_leaf, leaf_item, 6, 12) == QColor(pal[token])
         assert leaf_item._header == ""                 # hoja: sin badge
@@ -486,20 +486,20 @@ def test_node_paint_classic_station_design():
     assert _caption_text(leaf) == ""                   # hoja: cadena vacía
     assert "Adj. P-value:" in _footer_text(root)       # stats del split
     assert "Gini:" in _footer_text(leaf)               # impureza de la hoja
-    assert NodeItem(root, pal)._header == "edad"
-    assert NodeItem(leaf, pal)._header == ""
+    assert NodeItem(root, pal, 1.0)._header == "edad"
+    assert NodeItem(leaf, pal, 0.5)._header == ""
     # 6. título de cabecera: "Node <id> — <predictor>" (interno) /
     #    "Node <id>" (hoja, sin badge).
     assert (
-        NodeItem(root, pal)._header_full
+        NodeItem(root, pal, 1.0)._header_full
         == f"{tr('tree_prop_node')} {root.node_id} — edad"
     )
     assert (
-        NodeItem(leaf, pal)._header_full
+        NodeItem(leaf, pal, 0.5)._header_full
         == f"{tr('tree_prop_node')} {leaf.node_id}"
     )
-    assert "Adj. P-value:" in NodeItem(root, pal)._footer
-    assert "Gini:" in NodeItem(leaf, pal)._footer
+    assert "Adj. P-value:" in NodeItem(root, pal, 1.0)._footer
+    assert "Gini:" in NodeItem(leaf, pal, 0.5)._footer
 
 
 def test_node_box_fixed_geometry():
@@ -532,7 +532,7 @@ def test_node_total_row_and_stacked_bar():
     model = _crt_model()                       # raíz: n=120, k=(60,60)
     root = model.nodes[0]
     assert root.n == 120 and root.n_events == (60, 60)
-    item = NodeItem(root, pal)
+    item = NodeItem(root, pal, 1.0)
     assert item._total_n == f"{root.n:,}"
     assert item._font_total.bold()
     img = _render_node(item)
@@ -547,7 +547,7 @@ def test_node_total_row_and_stacked_bar():
     chaid = _chaid_model()
     leaf_a, leaf_b = chaid.nodes[1], chaid.nodes[2]
     assert leaf_a.n_events == (0, 30) and leaf_b.n_events == (30, 0)
-    ia, ib = NodeItem(leaf_a, pal), NodeItem(leaf_b, pal)
+    ia, ib = NodeItem(leaf_a, pal, 1.0), NodeItem(leaf_b, pal, 1.0)
     assert _px(_render_node(ia), ia, 110, bar_cy) == QColor("#2E7D32")
     assert _px(_render_node(ib), ib, 110, bar_cy) == QColor("#D32F2F")
     # multiclase (K=3): segmentos 50/30/20 con _CLASS_BAR_COLORS
@@ -557,11 +557,24 @@ def test_node_total_row_and_stacked_bar():
         class_labels=("Bad", "Good", "Other"),
         is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
     )
-    im = NodeItem(multi, pal)
+    im = NodeItem(multi, pal, 1.0)
     imgm = _render_node(im)
     assert _px(imgm, im, 20, bar_cy) == QColor("#D32F2F")    # 50% rojo
     assert _px(imgm, im, 140, bar_cy) == QColor("#2E7D32")   # 30% verde
     assert _px(imgm, im, 200, bar_cy) == QColor("#1A73E8")   # 20% azul
+
+
+def test_node_total_pct_global():
+    panel = _make_panel()
+    panel.set_model(_crt_model(), "BANKING")
+    # La raíz debe mostrar 100.00
+    raiz_item = panel._scene._items[0]
+    assert raiz_item._pct_global == 1.0
+    # Una hoja (n=60 en el fixture _crt_model) debe mostrar 50.00
+    hoja_item = panel._scene._items[1]
+    assert hoja_item._pct_global == 0.5
+    panel.close()
+    panel.deleteLater()
 
 
 # ---------------------------------------------------------------------------

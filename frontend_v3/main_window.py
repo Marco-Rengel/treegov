@@ -432,6 +432,10 @@ class MainWindow(QMainWindow):
         self._left_panel = QSplitter(Qt.Orientation.Vertical)
         self._left_panel.setObjectName("leftPanel")
         self._left_gb_explorer = self._make_left_groupbox("gbProjectExplorer")
+        # Phase 3.11.b.4: Project Explorer — identidad del modelo activo
+        self._lbl_explorer_model = QLabel("—")
+        self._lbl_explorer_model.setWordWrap(True)
+        self._left_gb_explorer.layout().addWidget(self._lbl_explorer_model)
         self._left_gb_treemap = self._make_left_groupbox("gbTreeMap")
         self._left_gb_dataviewer = self._make_left_groupbox("gbDataViewer")
         self._left_panel.addWidget(self._left_gb_explorer)
@@ -711,6 +715,8 @@ class MainWindow(QMainWindow):
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
             self._data_viewer.set_preview(None)
+            # Phase 3.11.b.4: Project Explorer vuelve al estado vacío
+            self._lbl_explorer_model.setText("—")
             self._hud_lbl_gov_fp.setText("—")
             self._hud_lbl_gov_mode.setText("—")
             self._hud_reset()
@@ -770,6 +776,9 @@ class MainWindow(QMainWindow):
         tree = st.tree
         if tree is not None:
             self._tree_panel.set_model(tree, cfg["governance_mode"])
+            # Phase 3.11.b.4: Project Explorer refleja el modelo entrenado
+            if tree is not None:
+                self._lbl_explorer_model.setText(f"{tree.method} · {tree.params_fingerprint[:8]}")
             # Phase 3.11.b.3 (D2): el minimapa se reconstruye completo
             # ante cualquier cambio del modelo (fit/poda/nuevo CSV).
             self._tree_map.set_model(tree)

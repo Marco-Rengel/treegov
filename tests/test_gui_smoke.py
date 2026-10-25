@@ -279,6 +279,61 @@ def test_detect_system_language_returns_valid():
     assert detect_system_language() in SUPPORTED
 
 
+def test_project_explorer_updates():
+    # TODO(zona_gris): el prompt original pasaba cfg={"governance_mode": ...}
+    # y sesión/arbol MagicMock sin más scaffolding, pero (1) _train_pipeline
+    # exige las 15 claves del cfg (KeyError -> rollback -> label nunca se
+    # actualiza) y (2) _on_new_wizard solo ejecuta la rama de reseteo si
+    # _dataset_info no es None. Se completan el cfg y el stub de dataset, y
+    # se mockean los paneles para aislar el cableado del QLabel (el render
+    # real de un MagicMock-tree en set_model no es determinista). El asistente
+    # estratégico decidirá si se prefiere un e2e con CSV real.
+    from unittest.mock import MagicMock, patch
+
+    from backend_v3.session_state import FlowState
+    _get_app()
+    w = MainWindow()
+    assert w._lbl_explorer_model.text() == "—"
+
+    mock_tree = MagicMock()
+    mock_tree.method = "CRT"
+    mock_tree.params_fingerprint = "1234567890abcdef"
+
+    mock_state = MagicMock()
+    mock_state.state = FlowState.TRAINED
+    mock_state.tree = mock_tree
+
+    w._session = MagicMock()
+    w._session.state = mock_state
+    w._dataset_info = (["x"], {"x": "numeric"})
+    w._tree_panel = MagicMock()
+    w._tree_panel.selected_node_id.return_value = None
+    w._tree_map = MagicMock()
+    w._metrics_panel = MagicMock()
+    w._reports_panel = MagicMock()
+
+    cfg = {
+        "governance_mode": "BANKING",
+        "target": "y", "predictors": ["x"], "target_class": 1,
+        "class_labels": {0: "No", 1: "Yes"},
+        "weight_col": None, "population_col": None,
+        "population_ok_values": (),
+        "train_frac": 0.7, "seed": 42, "engine": "CRT",
+        "max_depth": 3, "min_child_size": 5,
+        "min_child_weight": None, "pd_floor": 0.0005,
+        "apply_jeffreys": True,
+    }
+    w._on_wizard_finished(cfg)
+    assert w._lbl_explorer_model.text() == "CRT · 12345678"
+
+    with patch("frontend_v3.main_window.ModelWizard"):
+        w._on_new_wizard()
+    assert w._lbl_explorer_model.text() == "—"
+
+    w.close()
+    w.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------
