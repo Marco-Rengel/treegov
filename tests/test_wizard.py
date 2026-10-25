@@ -837,6 +837,50 @@ def test_wizard_cost_matrix_in_config():
     wiz.deleteLater()
 
 
+def test_wizard_cost_matrix_multiclass():
+    """ZG-2: la pestaña Costs del AdvancedOptionsDialog es N x N dinamica.
+
+    Con un target de 3 clases (target_provider), GovernancePage pasa
+    n_classes=3 al dialogo (via PredictorsPage.n_classes) y la matriz
+    que fluye a _cost_matrix —y de ahi a current_config()— es 3x3 con
+    la diagonal fija a 0.
+    """
+    from PySide6.QtWidgets import QDialog
+    import frontend_v3.wizard as wz
+
+    wiz = _make_wizard_with_provider({0: 40, 1: 50, 2: 10})
+    page_p = wiz.page_predictors
+    page_p._refresh_class_table()
+    assert page_p.n_classes() == 3
+    page_g = wiz.page_governance
+
+    capturado: dict = {}
+    original = wz.AdvancedOptionsDialog
+
+    class _SpyDialog(original):
+        def __init__(self, **kwargs):
+            capturado.update(kwargs)
+            super().__init__(**kwargs)
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    wz.AdvancedOptionsDialog = _SpyDialog
+    try:
+        page_g._open_advanced_options()
+    finally:
+        wz.AdvancedOptionsDialog = original
+
+    assert capturado.get("n_classes") == 3
+    mat = page_g._cost_matrix
+    assert len(mat) == 3
+    assert all(len(fila) == 3 for fila in mat)
+    assert all(mat[i][i] == 0.0 for i in range(3))
+    assert wiz.current_config()["cost_matrix"] == mat
+    wiz.close()
+    wiz.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------

@@ -616,7 +616,7 @@ class TreeBuilder:
             # partición por bin desincronizaría el árbol de
             # cfg.branches/child_ns. Ver design_decisions.md §16.3.
             vals = col.iloc[idx].to_numpy(dtype=float)
-            bin_idx = np.digitize(vals, cfg.bin_edges)
+            bin_idx = np.digitize(vals, cfg.bin_edges, right=True)
             n_bins = len(cfg.bin_edges) + 1
             mapa = np.full(n_bins, -1, dtype=int)
             ramas = cfg.branches or ()

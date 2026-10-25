@@ -82,6 +82,15 @@ class DataViewer(QWidget):
         """Retraduccion en caliente: repinta desde el DTO cacheado."""
         self._refresh()
 
+    def closeEvent(self, event):
+        # Desconexion defensiva del bus: sin ella, el bound method
+        # retranslate_ui mantiene el widget vivo tras el cierre.
+        try:
+            language_bus.language_changed.disconnect(self.retranslate_ui)
+        except (RuntimeError, TypeError):
+            pass
+        super().closeEvent(event)
+
     # ------------------------------------------------------------ Internals
 
     def _refresh(self) -> None:

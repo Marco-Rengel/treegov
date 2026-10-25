@@ -152,7 +152,7 @@ def predict_leaf_assignment(
                 for lbl in grupo:
                     rama_map[int(str(lbl)[4:])] = j
             idx_val = idx[valido]
-            rama_fila = rama_map[np.digitize(vals[valido], cfg.bin_edges)]
+            rama_fila = rama_map[np.digitize(vals[valido], cfg.bin_edges, right=True)]
             for j, cid in enumerate(nd.child_ids):
                 cola.append((cid, idx_val[rama_fila == j]))
             # NaN y bins sin rama quedan sin ruta (se resuelven abajo)

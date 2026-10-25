@@ -1966,7 +1966,7 @@ def test_intervene_prune():
     """Fase 3.11.d.1: intervene_node("prune_branch") sobre la raiz.
 
     Podar la raiz deja un arbol de un solo nodo (hoja), con fingerprint
-    sufijado "-p1" y un registro en el Manual Override Log.
+    sufijado "-i1" y un registro en el Manual Override Log.
     """
     with tempfile.TemporaryDirectory() as td:
         csv_path = _csv(Path(td))
@@ -1989,7 +1989,7 @@ def test_intervene_prune():
 
         assert len(tree_nuevo.nodes) == 1  # Solo queda la raiz
         assert tree_nuevo.nodes[0].is_leaf
-        assert tree_nuevo.params_fingerprint == f"{fp_original}-p1"
+        assert tree_nuevo.params_fingerprint == f"{fp_original}-i1"
         assert len(st.manual_overrides) == 1
         assert st.manual_overrides[0][1] == root_id
         assert st.manual_overrides[0][2] == "prune_branch"

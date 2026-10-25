@@ -6,6 +6,8 @@ arrive as plain dicts prepared by MainWindow from the backend DTOs.
 
 from __future__ import annotations
 
+import html
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
@@ -436,12 +438,7 @@ class ReportsPanel(QWidget):
         threshold = self.current_threshold()
 
         def esc(value) -> str:
-            text = _fmt(value)
-            return (
-                text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-            )
+            return html.escape(_fmt(value), quote=True)
 
         parts: list[str] = []
         parts.append("<!DOCTYPE html><html><head><meta charset='utf-8'>")

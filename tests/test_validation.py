@@ -768,7 +768,7 @@ def test_predict_leaf_assignment_binned_continuous():
         for j, grupo in enumerate(cfg.branches or ())
         for lbl in grupo
     }
-    bins = np.digitize(x_oos.to_numpy(dtype=float), cfg.bin_edges)
+    bins = np.digitize(x_oos.to_numpy(dtype=float), cfg.bin_edges, right=True)
     esperado = np.array(
         [raiz.child_ids[rama_map[int(b)]] for b in bins], dtype=int
     )

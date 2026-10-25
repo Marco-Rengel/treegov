@@ -630,6 +630,14 @@ class PredictorsPage(QWizardPage):
         # Guardar la info de mayoría para _on_interest_toggled.
         self._class_majority = max_count if hay_mayoria_clara else None
 
+    def n_classes(self) -> int:
+        """Numero de clases del target poblado en la tabla (minimo 2).
+
+        ZG-2: fuente de verdad para el tamaño N x N de la matriz de
+        costos del AdvancedOptionsDialog (Step 4).
+        """
+        return max(2, len(getattr(self, "_class_rows", [])))
+
     def _on_interest_toggled(self, _checked: bool) -> None:
         """Muestra u oculta el warning de clase mayoritaria."""
         majority = getattr(self, "_class_majority", None)
@@ -913,9 +921,11 @@ class AdvancedOptionsDialog(QDialog):
         min_child_size: int,
         min_child_weight: float,
         cost_matrix: tuple[tuple[float, ...], ...] = (),
+        n_classes: int = 2,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
+        self._n_classes = n_classes
         self.setObjectName("advancedOptionsDialog")
         self.setModal(True)
         self.setWindowTitle(tr("adv_dialog_title"))
@@ -978,13 +988,11 @@ class AdvancedOptionsDialog(QDialog):
         self._tabs.addTab(tab_chaid, tr("adv_tab_chaid"))
 
         # --- Tab 3: Costs (N x N misclassification cost matrix, 3.11.c.3) ---
-        # TODO(zona_gris): N fijo a 2 (binario) en esta fase; deducir el
-        # numero de clases del target cuando el wizard exponga esa info
-        # de forma fiable en Step 4 (Fase 3.11.d o 4.0).
+        # ZG-2: N dinamico = nº de clases del target (PredictorsPage.n_classes).
         tab_costs = QWidget()
         tab_costs.setObjectName("tabCosts")
         lay_costs = QVBoxLayout(tab_costs)
-        n_costs = 2
+        n_costs = self._n_classes
         self._tbl_costs = QTableWidget(n_costs, n_costs)
         self._tbl_costs.setObjectName("tblCosts")
         diag_bg = self.palette().color(QPalette.ColorRole.AlternateBase)
@@ -1172,6 +1180,7 @@ class GovernancePage(QWizardPage):
             min_child_size=self._min_child_size,
             min_child_weight=self._min_child_weight,
             cost_matrix=self._cost_matrix,
+            n_classes=self.wizard().page_predictors.n_classes(),
             parent=self,
         )
         if dlg.exec() != QDialog.DialogCode.Accepted:

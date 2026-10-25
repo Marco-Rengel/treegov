@@ -160,6 +160,8 @@ class Session:
         # Caches de categorias de poblacion (Fase 3.3)
         self._pop_col: str | None = None
         self._pop_ok_values: tuple[str, ...] | None = None
+        # ZG-3: parametros del ultimo train() para los arboles univariados
+        self._last_train_params: dict | None = None
 
     @property
     def state(self) -> SessionState:
@@ -554,6 +556,7 @@ class Session:
         self._w_col = None
         self._pop_col = None
         self._pop_ok_values = None
+        self._last_train_params = None
         self._state = SessionState(
             state=FlowState.DATA_LOADED,
             csv_path=self._state.csv_path,
@@ -987,6 +990,15 @@ class Session:
             for c in sorted(c for c in labels_map if c != target_class)
         )
         class_labels_canonical = (target_label,) + resto
+        # ZG-3: persistir los parametros de gobernanza de este train() para
+        # que get_univariate_trees replique la configuracion del modelo.
+        self._last_train_params = {
+            "target_type": target_type,
+            "min_child_size": min_child_size,
+            "min_child_weight": min_child_weight,
+            "pd_floor": pd_floor,
+            "apply_jeffreys": apply_jeffreys
+        }
         builder = TreeBuilder(
             engine, target_type=target_type, target_class=target_class,
             class_labels=class_labels_canonical,
@@ -1108,20 +1120,22 @@ class Session:
         factory = _ENGINE_FACTORIES.get(st.tree.method, CrtEngine)
         results: list[dict] = []
         for predictor, ptype in dict(st.spec).items():
+            params = self._last_train_params or {
+                "target_type": TargetType.BINARY, "min_child_size": 5,
+                "min_child_weight": None, "pd_floor": 0.0005,
+                "apply_jeffreys": True
+            }
             builder = TreeBuilder(
                 factory(),
-                target_type=TargetType.BINARY,
+                target_type=params["target_type"],
                 target_class=st.target_class,
-                class_labels=st.tree.class_labels,
+                class_labels=self.state.tree.class_labels,
                 max_depth=max_depth,
-                min_child_size=5,
-                pd_floor=0.0005,
-                apply_jeffreys=True,
+                min_child_size=params["min_child_size"],
+                min_child_weight=params["min_child_weight"],
+                pd_floor=params["pd_floor"],
+                apply_jeffreys=params["apply_jeffreys"],
                 seed=st.seed,
-                logger=get_logger("builder"),
-                # TODO(zona_gris): el prompt omitia weights; se propagan los
-                # pesos de train para paridad con train() (gobernanza de
-                # sesiones ponderadas, Fase 3.2). Resolver en 3.11.c.2/3.
                 weights=self._w_train,
             )
             try:
@@ -1526,7 +1540,7 @@ class Session:
             # descarta los descendientes inalcanzables.
             new_fp = (
                 f"{tree.params_fingerprint}"
-                f"-p{len(self._state.manual_overrides) + 1}"
+                f"-i{len(self._state.manual_overrides) + 1}"
             )
             final_tree = self._reindex_tree(tree, nuevos, new_fp)
 

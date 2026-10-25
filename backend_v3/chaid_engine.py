@@ -595,7 +595,7 @@ class ChaidEngine:
         if xv.size == 0:
             return None
         edges = np.unique(np.quantile(xv, np.linspace(0.0, 1.0, 12)[1:-1]))
-        codes = np.digitize(xv, edges)                       # 0..len(edges)
+        codes = np.digitize(xv, edges, right=True)           # 0..len(edges)
         c = int(edges.size) + 1
         labels = tuple(f"bin_{i}" for i in range(c))
         counts = np.bincount(codes, minlength=c).astype(float)

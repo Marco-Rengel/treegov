@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 474/474 passing
+**Test suite**: 475/475 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 474 / 474 tests PASSED<br/>📅 Oct 25, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 475 / 475 tests PASSED<br/>📅 Oct 25, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -276,7 +276,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 474/474 passing.**
+**Test suite: 475/475 passing.**
 
 ---
 

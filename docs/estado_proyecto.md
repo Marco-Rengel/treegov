@@ -463,8 +463,22 @@ vacío con `override_empty`, Ctrl+C → TSV (REGLA 4.1.1 vía
 del HUD (`_hud_btn_view_audit`) habilitado tras entrenar y conectado a
 `_on_view_audit`. 2 tests nuevos en `tests/test_manual_override.py`.
 Suite 474/474.
-**Fase 3.11 completa. Próximo paso: recogida de feedback para la
-v1.0.0 estable o inicio de la Fase 4.0**.
+
+**Bloque de Saneamiento Post-Auditoría Externa** ✅ Cerrado (25/10/2026).
+Correcciones sobre el cierre de la Fase 3.11: ZG-1 (fingerprint de
+`intervene_node` renombrado `-pN` → `-iN` para evitar la colisión con
+el sufijo de poda de `pruning.py`), ZG-2 (matriz de costos del wizard
+N×N dinámica vía `PredictorsPage.n_classes()` y kwarg `n_classes` en
+`AdvancedOptionsDialog`), ZG-3 (propagación de los parámetros de
+`train()` a `get_univariate_trees` vía `Session._last_train_params`),
+ZG-5 (`np.digitize` con `right=True` en `chaid_engine.py`,
+`tree_builder.py` y `validation.py`, alineado con la convención
+documentada `(a, b]`). Fugas frontend: `html.escape(quote=True)` en el
+reporte HTML (`reports_panel.py`) y `closeEvent` con disconnect del bus
+i18n en `DataViewer`. 1 test nuevo (`test_wizard_cost_matrix_multiclass`).
+Suite 475/475.
+**Fase 3.11 completa y código saneado. Próximo paso: diseño e
+implementación de la Fase 3.6.e (modo no-bancario extensivo)**.
 
 ### Cierre intermedio 16/10/2026
 
@@ -520,7 +534,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (465 tests)
+├── tests/ # Suite de tests (475 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -652,7 +666,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | stability.py | 18 |
 | reporting.py | 28 |
 | gui_smoke (frontend) | 12 |
-| wizard (frontend) | 27 |
+| wizard (frontend) | 28 |
 | tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
@@ -664,9 +678,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| **Total** | **474** |
+| **Total** | **475** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 474/474 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 475/475 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

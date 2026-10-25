@@ -127,7 +127,9 @@ underscore) are internal and may change without notice.
   its descendants are dropped and the tree is BFS-reindexed via
   `_reindex_tree`, preserving the `node_id == index` invariant). The
   original frozen `TreeModel` is never mutated: a new one is built with
-  the fingerprint suffixed `-pN` (N = override counter) and the action
+  the fingerprint suffixed `-iN` (N = override counter; renamed from
+  `-pN` on 25/10/2026 to avoid collision with the pruning suffix
+  `-p{alpha}` of `pruning.py`) and the action
   is appended to the immutable `SessionState.manual_overrides` log
   `(timestamp, node_id, action, params_str, fp_before, fp_after)`
   (see `docs/design_decisions.md` §18.9). Requires a trained model
@@ -289,6 +291,8 @@ and therefore not listed here.*
 Nota (Fase 3.10.a): La clase `TreePanel` expone ahora los métodos públicos `zoom_in()`, `zoom_out()` y `zoom_fit()` para que la `QToolBar` de `MainWindow` pueda controlar la vista sin acceder a atributos privados.
 
 Nota (Fase 3.11.a.1, 24/10/2026): fase puramente visual (frontend: layout clásico, nodos QPainter, tema forzado vía QPalette, copia TSV en tablas). No alteró la superficie de la API pública: `backend_v3/` intacto y ningún módulo de `frontend_v3` ganó símbolos públicos nuevos (el método de copia TSV es privado: `ReportsPanel._copy_selection_to_clipboard`).
+
+Nota (saneamiento post-auditoría externa, 25/10/2026): sin cambios de firma pública. Tres correcciones de coherencia interna con reflejo en este documento: (a) el sufijo del fingerprint de `Session.intervene_node` pasa de `-pN` a `-iN` (ver arriba); (b) el routing por `bin_edges` (`TreeBuilder._partition`, `predict_leaf_assignment`) y el binning de `ChaidEngine` usan `np.digitize(..., right=True)` — convención `(a, b]` ya documentada en `methodology.md`; (c) la pestaña Costs del wizard (interna, fuera de la API pública) es ahora N×N dinámica (`AdvancedOptionsDialog(n_classes=...)`), alineada con la validación N = nº de clases de `Session.fix_spec(cost_matrix=...)`.
 
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.
