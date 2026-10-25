@@ -390,7 +390,7 @@ def test_mainwindow_wizard_config_trains():
 def test_wizard_default_class_selected():
     """Fase 3.1.e.4: tras poblar la tabla, SIEMPRE hay una clase
     de interés seleccionada por default (última fila del orden
-    ascendente)."""
+    ascendente). Etiquetas por default: str(valor)."""
     wiz = _make_wizard_with_provider({0: 60, 1: 60})
     page = wiz.page_predictors
     # Forzar el poblado de la tabla llamando al refresh.
@@ -402,6 +402,27 @@ def test_wizard_default_class_selected():
     assert tc == 1
     labels = page.class_labels()
     assert labels == {0: "0", 1: "1"}
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_class_labels_preserved():
+    """Default de etiqueta: str(valor). Preservación del texto del
+    analista: un re-poblado NO pisa lo que el usuario ya había
+    escrito."""
+    wiz = _make_wizard_with_provider({0: 40, 1: 50, 2: 10})
+    page = wiz.page_predictors
+    page._refresh_class_table()
+    assert page.class_labels() == {0: "0", 1: "1", 2: "2"}
+    # El analista edita la etiqueta de la clase 0...
+    page._class_rows[0]["label_edit"].setText("Al corriente")
+    # ...y un refresh posterior la respeta (los demás defaults intactos)
+    page._refresh_class_table()
+    assert page.class_labels() == {
+        0: "Al corriente",
+        1: "1",
+        2: "2",
+    }
     wiz.close()
     wiz.deleteLater()
 
@@ -620,6 +641,109 @@ def test_wizard_population_in_current_config():
     cfg1 = wiz.current_config()
     assert cfg1["population_col"] == "ingreso"
     assert cfg1["population_ok_values"] == ("OK", "INDET")
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_validation_scheme_radios():
+    """Phase 3.11.a.1 (Paso 3 clásico): tres radios verticales (No validar /
+    Partición / Validación cruzada), Partición por defecto; slider y barra
+    solo habilitados con Partición; aviso al seleccionar CV o No validar.
+    El config sigue emitiendo holdout (TODO zona gris: NONE/CV pendientes
+    de backend)."""
+    wiz = _make_wizard()
+    page = wiz.page_validation
+    assert page._rb_holdout.isChecked() is True      # default: Partición
+    assert page._slider.isEnabled() is True
+    assert page._split_bar.isEnabled() is True
+    assert page._lbl_cv_notice.isHidden() is True
+    assert page._lbl_none_notice.isHidden() is True
+
+    page._rb_cv.setChecked(True)                     # CV: aviso Fase 2.1.b
+    assert page._slider.isEnabled() is False
+    assert page._split_bar.isEnabled() is False
+    assert page._lbl_cv_notice.isHidden() is False
+    assert page._lbl_none_notice.isHidden() is True
+    assert page.validation_scheme() == "CV"
+
+    page._rb_none.setChecked(True)                   # No validar: aviso
+    assert page._slider.isEnabled() is False
+    assert page._lbl_none_notice.isHidden() is False
+    assert page._lbl_cv_notice.isHidden() is True
+    assert page.validation_scheme() == "NONE"
+
+    page._rb_holdout.setChecked(True)                # de vuelta a Partición
+    assert page._slider.isEnabled() is True
+    assert page._split_bar.isEnabled() is True
+    assert page.validation_scheme() == "HOLDOUT"
+    # el contrato con MainWindow no cambia (holdout estratificado)
+    assert wiz.current_config()["train_frac"] == 0.7
+    assert wiz.current_config()["seed"] == 42
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_advanced_options_update_config():
+    """Phase 3.11.a.1 (Paso 4 clásico): los hiperparámetros ya no están en
+    la página; el diálogo modal 'Opciones avanzadas...' edita Stopping
+    Rules y sus valores fluyen a current_config() al aceptar."""
+    from PySide6.QtWidgets import QDialog
+    import frontend_v3.wizard as wz
+
+    wiz = _make_wizard()
+    page = wiz.page_governance
+    # defaults preservados (contrato pre-3.11.a.1)
+    cfg = wiz.current_config()
+    assert cfg["max_depth"] == 4 and cfg["min_child_size"] == 50
+    assert cfg["min_child_weight"] is None
+    # los spinboxes de hiperparámetros ya NO viven en la página
+    assert not hasattr(page, "_spin_depth")
+    assert not hasattr(page, "_spin_child")
+
+    # el diálogo se construye con los valores vigentes y los expone
+    dlg = wz.AdvancedOptionsDialog(
+        max_depth=page._max_depth,
+        min_child_size=page._min_child_size,
+        min_child_weight=page._min_child_weight,
+        parent=page,
+    )
+    assert dlg.isModal() is True
+    assert dlg._tabs.count() == 2                    # Stopping Rules + CHAID
+    assert dlg._spin_depth.value() == 4
+    assert dlg._spin_child.value() == 50
+    # pestaña CHAID presente pero deshabilitada (backend pendiente)
+    assert dlg._spin_alpha_merge.isEnabled() is False
+    assert dlg._spin_alpha_split.isEnabled() is False
+    assert abs(dlg._spin_alpha_merge.value() - 0.05) < 1e-12
+    dlg._spin_depth.setValue(7)
+    dlg._spin_child.setValue(123)
+    dlg._spin_min_child_weight.setValue(2.5)
+    assert dlg.values() == (7, 123, 2.5)
+    dlg.close()
+    dlg.deleteLater()
+
+    # wiring de la página: Accept -> current_config() actualizado
+    class _FakeDialog:
+        def __init__(self, **kwargs):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+        def values(self):
+            return (8, 200, 3.0)
+
+    original = wz.AdvancedOptionsDialog
+    wz.AdvancedOptionsDialog = _FakeDialog
+    try:
+        page._open_advanced_options()
+    finally:
+        wz.AdvancedOptionsDialog = original
+    cfg2 = wiz.current_config()
+    assert cfg2["max_depth"] == 8
+    assert cfg2["min_child_size"] == 200
+    assert cfg2["min_child_weight"] == 3.0
+    assert f": 8" in page._lbl_summary.text()        # resumen refrescado
     wiz.close()
     wiz.deleteLater()
 

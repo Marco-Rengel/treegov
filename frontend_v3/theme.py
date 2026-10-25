@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 from string import Template
 
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
 _TEMPLATE_PATH = Path(__file__).resolve().parent / "resources" / "styles.qss"
@@ -83,3 +84,50 @@ def apply_theme(name: str, app: QApplication | None = None) -> None:
     if target is None:
         raise RuntimeError("apply_theme requires a QApplication instance")
     target.setStyleSheet(render_stylesheet(name))
+
+
+# Role mapping for apply_palette: the QSS cannot restyle native-rendered
+# chrome (wizard title bar, native button frames, disabled text); the
+# QPalette covers those parts. Roles not listed keep Qt defaults.
+_PALETTE_ROLES: tuple[tuple[QPalette.ColorRole, str], ...] = (
+    (QPalette.ColorRole.Window, "BG"),
+    (QPalette.ColorRole.WindowText, "FG"),
+    (QPalette.ColorRole.Base, "SURFACE_ELEVATED"),
+    (QPalette.ColorRole.AlternateBase, "SURFACE"),
+    (QPalette.ColorRole.Text, "FG"),
+    (QPalette.ColorRole.Button, "SURFACE"),
+    (QPalette.ColorRole.ButtonText, "FG"),
+    (QPalette.ColorRole.Highlight, "ACCENT"),
+    (QPalette.ColorRole.HighlightedText, "ACCENT_FG"),
+)
+
+_DISABLED_ROLES: tuple[QPalette.ColorRole, ...] = (
+    QPalette.ColorRole.Text,
+    QPalette.ColorRole.ButtonText,
+    QPalette.ColorRole.WindowText,
+)
+
+
+def apply_palette(name: str, app: QApplication | None = None) -> None:
+    """Force the TreeGov QPalette for theme `name` (Phase 3.11.a.1).
+
+    Without an explicit palette, native-rendered surfaces (QWizard chrome,
+    dialogs) inherit the WINDOWS light/dark mode instead of the app theme.
+    Same fail-fast policy as apply_theme: unknown theme -> ValueError.
+    """
+    try:
+        palette = PALETTES[name]
+    except KeyError:
+        raise ValueError(
+            f"Unknown theme: {name!r} (available: {available_themes()})"
+        ) from None
+    target = app if app is not None else QApplication.instance()
+    if target is None:
+        raise RuntimeError("apply_palette requires a QApplication instance")
+    qp = QPalette()
+    for role, token in _PALETTE_ROLES:
+        qp.setColor(role, QColor(palette[token]))
+    disabled = QColor(palette["DISABLED"])
+    for role in _DISABLED_ROLES:
+        qp.setColor(QPalette.ColorGroup.Disabled, role, disabled)
+    target.setPalette(qp)

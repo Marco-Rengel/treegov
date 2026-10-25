@@ -54,7 +54,7 @@ from frontend_v3.i18n import (
     set_language,
     tr,
 )
-from frontend_v3.theme import apply_theme
+from frontend_v3.theme import apply_palette, apply_theme
 from frontend_v3.tree_view import (
     TreePanel,
     model_summary_lines,
@@ -118,13 +118,21 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(tr("window_title"))
 
         self._menu_file.setTitle(tr("menu_file"))
-        self._menu_model.setTitle(tr("menu_model"))
+        self._menu_edit.setTitle(tr("menu_edit"))
         self._menu_view.setTitle(tr("menu_view"))
+        self._menu_format.setTitle(tr("menu_format"))
+        self._menu_analysis.setTitle(tr("menu_analysis"))
+        self._menu_tree.setTitle(tr("menu_tree"))
+        self._menu_window.setTitle(tr("menu_window"))
         self._menu_help.setTitle(tr("menu_help"))
 
         self._act_new_wizard.setText(tr("menu_file_new_wizard"))
         self._act_open.setText(tr("menu_file_open"))
         self._act_exit.setText(tr("menu_file_exit"))
+        self._act_edit_undo.setText(tr("menu_edit_undo"))
+        self._act_format_node_display.setText(tr("menu_format_node_display"))
+        self._act_analysis_var_types.setText(tr("menu_analysis_var_types"))
+        self._act_window_tile.setText(tr("menu_window_tile"))
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
         self._act_load_oot.setText(tr("menu_model_load_oot"))
@@ -132,6 +140,26 @@ class MainWindow(QMainWindow):
         self._act_zoom_in.setText(tr("tree_zoom_in"))
         self._act_zoom_out.setText(tr("tree_zoom_out"))
         self._act_zoom_fit.setText(tr("tree_zoom_fit"))
+
+        # Toolbar IconOnly: el texto de la acción no es visible, así que
+        # el tooltip (y el status tip) son la única etiqueta. Se fijan
+        # aquí con el mismo tr() para re-traducirse al cambiar de
+        # idioma.
+        # TODO(zona_gris): el brief asumía que las acciones ya tenían
+        # tooltip; no lo tenían (ni menús ni zoom). Se añaden aquí.
+        for act, key in (
+            (self._act_open, "menu_file_open"),
+            (self._act_new_wizard, "menu_file_new_wizard"),
+            (self._act_train, "menu_model_train"),
+            (self._act_evaluate_oos, "menu_model_evaluate_oos"),
+            (self._act_load_oot, "menu_model_load_oot"),
+            (self._act_prune, "menu_model_prune"),
+            (self._act_zoom_in, "tree_zoom_in"),
+            (self._act_zoom_out, "tree_zoom_out"),
+            (self._act_zoom_fit, "tree_zoom_fit"),
+        ):
+            act.setToolTip(tr(key))
+            act.setStatusTip(tr(key))
 
         self._menu_theme.setTitle(tr("menu_view_theme"))
         self._act_theme_light.setText(tr("menu_view_theme_light"))
@@ -144,7 +172,9 @@ class MainWindow(QMainWindow):
 
         self._act_about.setText(tr("menu_help_about"))
 
-        self._left_title.setText(tr("panel_left_title"))
+        self._left_gb_explorer.setTitle(tr("panel_left_title"))
+        self._left_gb_treemap.setTitle(tr("panel_tree_map"))
+        self._left_gb_dataviewer.setTitle(tr("panel_data_viewer"))
         self._hud_title.setText(tr("panel_right_title"))
         # Main tabs (Excel-style sheets): Tree / Gains / Risks / Rules /
         # Summary — each tab fills the whole central area.
@@ -216,26 +246,13 @@ class MainWindow(QMainWindow):
         self._menu_file.addAction(self._act_exit)
         bar.addMenu(self._menu_file)
 
-        # --- Model (train opens the wizard; OOS/OOT land in Phase 2.3) ---
-        self._menu_model = QMenu(self)
-        self._menu_model.setObjectName("menu_model")
-        self._act_train = self._new_action("act_train", enabled=False)
-        self._act_train.triggered.connect(self._on_new_wizard)
-        self._act_evaluate_oos = self._new_action(
-            "act_evaluate_oos", enabled=False
-        )
-        self._act_evaluate_oos.triggered.connect(self._on_evaluate_oos)
-        self._act_load_oot = self._new_action(
-            "act_load_oot", enabled=False
-        )
-        self._act_load_oot.triggered.connect(self._on_load_oot)
-        self._act_prune = self._new_action("act_prune", enabled=False)
-        self._act_prune.triggered.connect(self._on_prune)
-        self._menu_model.addAction(self._act_train)
-        self._menu_model.addAction(self._act_evaluate_oos)
-        self._menu_model.addAction(self._act_load_oot)
-        self._menu_model.addAction(self._act_prune)
-        bar.addMenu(self._menu_model)
+        # --- Edit (Phase 3.11.a.1: classic menu structure; undo/redo of
+        # interactive interventions lands in Phase 3.11.d) ---
+        self._menu_edit = QMenu(self)
+        self._menu_edit.setObjectName("menu_edit")
+        self._act_edit_undo = self._new_action("act_edit_undo", enabled=False)
+        self._menu_edit.addAction(self._act_edit_undo)
+        bar.addMenu(self._menu_edit)
 
         # --- View ---
         self._menu_view = QMenu(self)
@@ -292,6 +309,56 @@ class MainWindow(QMainWindow):
         self._menu_view.addAction(self._act_toggle_hud)
         bar.addMenu(self._menu_view)
 
+        # --- Format (placeholder: node/line presentation options) ---
+        self._menu_format = QMenu(self)
+        self._menu_format.setObjectName("menu_format")
+        self._act_format_node_display = self._new_action(
+            "act_format_node_display", enabled=False
+        )
+        self._menu_format.addAction(self._act_format_node_display)
+        bar.addMenu(self._menu_format)
+
+        # --- Analysis (placeholder: manual variable types and cost matrix
+        # land in Phase 3.11.c) ---
+        self._menu_analysis = QMenu(self)
+        self._menu_analysis.setObjectName("menu_analysis")
+        self._act_analysis_var_types = self._new_action(
+            "act_analysis_var_types", enabled=False
+        )
+        self._menu_analysis.addAction(self._act_analysis_var_types)
+        bar.addMenu(self._menu_analysis)
+
+        # --- Tree (former Model menu: train opens the wizard; OOS/OOT
+        # from Phase 2.3; interactive grow/select land in Phase 3.11.d) ---
+        self._menu_tree = QMenu(self)
+        self._menu_tree.setObjectName("menu_tree")
+        self._act_train = self._new_action("act_train", enabled=False)
+        self._act_train.triggered.connect(self._on_new_wizard)
+        self._act_evaluate_oos = self._new_action(
+            "act_evaluate_oos", enabled=False
+        )
+        self._act_evaluate_oos.triggered.connect(self._on_evaluate_oos)
+        self._act_load_oot = self._new_action(
+            "act_load_oot", enabled=False
+        )
+        self._act_load_oot.triggered.connect(self._on_load_oot)
+        self._act_prune = self._new_action("act_prune", enabled=False)
+        self._act_prune.triggered.connect(self._on_prune)
+        self._menu_tree.addAction(self._act_train)
+        self._menu_tree.addAction(self._act_evaluate_oos)
+        self._menu_tree.addAction(self._act_load_oot)
+        self._menu_tree.addAction(self._act_prune)
+        bar.addMenu(self._menu_tree)
+
+        # --- Window (placeholder: management of open model views) ---
+        self._menu_window = QMenu(self)
+        self._menu_window.setObjectName("menu_window")
+        self._act_window_tile = self._new_action(
+            "act_window_tile", enabled=False
+        )
+        self._menu_window.addAction(self._act_window_tile)
+        bar.addMenu(self._menu_window)
+
         # --- Help ---
         self._menu_help = QMenu(self)
         self._menu_help.setObjectName("menu_help")
@@ -342,17 +409,32 @@ class MainWindow(QMainWindow):
         self._toolbar.addAction(self._act_zoom_out)
         self._toolbar.addAction(self._act_zoom_fit)
 
-        # Phase 3.11.a: compact icon-only toolbar. Applied AFTER all
-        # actions are added so every button honors the style; the QAction
-        # texts set in retranslate_ui() double as tooltips.
-        self._toolbar.setIconSize(QSize(24, 24))
-        self._toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        # Phase 3.11.a.1: classic compact toolbar (icon only). Applied
+        # AFTER all actions are added so every button honors the style.
+        # With IconOnly the QAction text is not visible: the tooltips
+        # set in retranslate_ui() carry the labels.
+        self._toolbar.setIconSize(QSize(16, 16))
+        self._toolbar.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
 
     def _build_central(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.setObjectName("centralSplitter")
 
-        self._left_panel, self._left_title = self._make_panel("leftPanel")
+        # Phase 3.11.a.1 (classic AnswerTree layout): left panel is a
+        # vertical splitter with three stacked group boxes — Project
+        # Explorer, Tree Map (minimap, lands in 3.11.b) and Data Viewer
+        # (lands in 3.11.b).
+        self._left_panel = QSplitter(Qt.Orientation.Vertical)
+        self._left_panel.setObjectName("leftPanel")
+        self._left_gb_explorer = self._make_left_groupbox("gbProjectExplorer")
+        self._left_gb_treemap = self._make_left_groupbox("gbTreeMap")
+        self._left_gb_dataviewer = self._make_left_groupbox("gbDataViewer")
+        self._left_panel.addWidget(self._left_gb_explorer)
+        self._left_panel.addWidget(self._left_gb_treemap)
+        self._left_panel.addWidget(self._left_gb_dataviewer)
+
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
         # Phase 3.10.a: structured properties panel (Dataset / Node / Rule)
         self._build_hud_panel_content(self._hud_panel.layout())
@@ -361,8 +443,9 @@ class MainWindow(QMainWindow):
         self._hud_panel.setMinimumWidth(200)
         self._hud_panel.setMaximumWidth(400)
 
-        # Phase 2.2: interactive tree canvas (empty until TRAINED); it
-        # lives as tab 0 of the main tab widget (Excel-style sheet).
+        # Phase 2.2: interactive tree canvas (empty until TRAINED).
+        # Phase 3.11.a.1 (classic layout): the canvas is the FIXED upper
+        # pane of the central vertical splitter, above the main tabs.
         self._tree_panel = TreePanel()
         self._tree_panel.setObjectName("treePanel")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)
@@ -390,11 +473,14 @@ class MainWindow(QMainWindow):
             self._refresh_reports_panel
         )
 
-        # Main tab bar (Excel-style sheets filling the central area):
-        # Tree / Gains / Risks / Rules / Summary. Rules and Summary are
-        # placeholders until sub-phases 3.11.b-d fill them.
+        # Main tab widget fills the WHOLE central area (Phase 3.11.a.1
+        # correction): the tab bar is anchored at the BOTTOM of the
+        # window (TabPosition.South), Excel-sheet style. Sheets: Tree
+        # (the canvas) / Gains / Risks / Rules / Summary. Rules and
+        # Summary are placeholders until sub-phases 3.11.b-d fill them.
         self._main_tabs = QTabWidget()
         self._main_tabs.setObjectName("centralTabs")
+        self._main_tabs.setTabPosition(QTabWidget.TabPosition.South)
         self._main_tabs.addTab(self._tree_panel, "")
         self._main_tabs.addTab(self._reports_panel, "")
         self._main_tabs.addTab(self._metrics_panel, "")
@@ -416,6 +502,14 @@ class MainWindow(QMainWindow):
         self._act_toggle_left.toggled.connect(self._left_panel.setVisible)
         self._act_toggle_hud.toggled.connect(self._hud_panel.setVisible)
         return splitter
+
+    def _make_left_groupbox(self, name: str) -> QGroupBox:
+        """Empty stacked block of the left panel (Phase 3.11.a.1). Content
+        (Explorer list, minimap, data grid) lands in sub-phase 3.11.b."""
+        gb = QGroupBox()
+        gb.setObjectName(name)
+        QVBoxLayout(gb)
+        return gb
 
     def _make_panel(self, name: str) -> tuple[QFrame, QLabel]:
         frame = QFrame()
@@ -521,6 +615,9 @@ class MainWindow(QMainWindow):
 
     def _switch_theme(self, name: str) -> None:
         apply_theme(name)  # operates on the running QApplication
+        # Phase 3.11.a.1: re-pin the QPalette too, so native-rendered
+        # chrome (wizard/dialogs) follows the new theme, not Windows'.
+        apply_palette(name, QApplication.instance())
         self._theme_name = name
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{name}')}"

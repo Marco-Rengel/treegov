@@ -22,11 +22,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np  # noqa: E402  (tests/ SI puede importar: fuera del frontend)
 import pandas as pd  # noqa: E402
-from PySide6.QtGui import QColor  # noqa: E402
+from PySide6.QtCore import QRectF  # noqa: E402
+from PySide6.QtGui import QColor, QImage, QPainter  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
     QGraphicsPathItem,
     QGraphicsSimpleTextItem,
+    QGraphicsTextItem,
+    QStyleOptionGraphicsItem,
 )
 
 from backend_v3.chaid_engine import ChaidEngine  # noqa: E402
@@ -53,7 +56,6 @@ from frontend_v3.tree_view import (  # noqa: E402
     NodeItem,
     TreePanel,
     _layout_tree,
-    _node_label,
 )
 
 _SLOT = NODE_W + H_GAP   # distancia entre slots de hojas (unidad del layout)
@@ -72,6 +74,40 @@ def _make_panel() -> TreePanel:
     panel = TreePanel()
     panel.resize(900, 600)  # viewport con tamano real para fitInView
     return panel
+
+
+def _render_node(item: NodeItem, scale: int = 2) -> QImage:
+    """Renderiza un NodeItem off-screen a traves de su propio paint()
+    (disenio QPainter, sin HTML). scale=2 -> 1 px del item = 2 px imagen."""
+    img = QImage(
+        int(item.NODE_W * scale),
+        int(item.NODE_H * scale),
+        QImage.Format.Format_ARGB32,
+    )
+    img.fill(QColor(0, 0, 0, 0))
+    painter = QPainter(img)
+    painter.scale(float(scale), float(scale))
+    item.paint(painter, QStyleOptionGraphicsItem(), None)
+    painter.end()
+    return img
+
+
+def _px(img: QImage, item: NodeItem, x: float, y: float) -> QColor:
+    """Pixel en coordenadas de ITEM (x, y) sobre la imagen renderizada."""
+    s = img.width() / item.NODE_W
+    return img.pixelColor(int(x * s), int(y * s))
+
+
+def _leaf_node(node_id: int, pd0: float) -> TreeNode:
+    """Hoja manual con pd_final[0] controlado (semaforo de cabecera)."""
+    k0 = int(round(pd0 * 100))
+    return TreeNode(
+        node_id=node_id, depth=1, parent_id=0,
+        n=100, n_events=(k0, 100 - k0),
+        pd_jeffreys=(pd0, 1.0 - pd0), pd_final=(pd0, 1.0 - pd0),
+        class_labels=("Event", "Non-event"),
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
 
 
 def _crt_model() -> TreeModel:
@@ -132,6 +168,42 @@ def _big_model(n_leaves: int = LARGE_TREE_THRESHOLD + 50) -> TreeModel:
         nodes.append(TreeNode(
             node_id=i, depth=1, parent_id=0,
             n=100, n_events=(50, 50),
+            pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+            class_labels=("Event", "Non-event"),
+            is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+        ))
+    return TreeModel(
+        root_id=0, nodes=tuple(nodes), method="CHAID",
+        params_fingerprint="ab12cd34ef56gh78",
+        class_labels=("Event", "Non-event"),
+        target_class=1,
+        target_class_index=0,
+    )
+
+
+def _binned_chaid_model() -> TreeModel:
+    """Raiz CHAID con split continuo binned (Fase 3.10.b): cortes
+    (25.5, 40.0, 55.0) -> bins 0..3; ramas = {0}, {1,2}, {3}."""
+    split = SplitConfig(
+        predictor="ingreso", method="CHAID",
+        statistic=42.0, statistic_name="chi2", df=(1,),
+        parent_n=120, child_ns=(40, 40, 40),
+        p_value=1e-6, p_value_adjusted=1e-5,
+        bonferroni_multiplier=6, n_merges=7,
+        branches=(("bin_0",), ("bin_1", "bin_2"), ("bin_3",)),
+        bin_edges=(25.5, 40.0, 55.0),
+    )
+    nodes = [TreeNode(
+        node_id=0, depth=0, parent_id=None,
+        n=120, n_events=(60, 60),
+        pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
+        class_labels=("Event", "Non-event"),
+        is_leaf=False, split=split, child_ids=(1, 2, 3), leaf_reason=None,
+    )]
+    for i in (1, 2, 3):
+        nodes.append(TreeNode(
+            node_id=i, depth=1, parent_id=0,
+            n=40, n_events=(20, 20),
             pd_jeffreys=(0.5, 0.5), pd_final=(0.5, 0.5),
             class_labels=("Event", "Non-event"),
             is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
@@ -214,6 +286,50 @@ def test_layout_and_labels_multiway_chaid():
     panel.deleteLater()
 
 
+def test_edge_label_binned_continuous():
+    """Split continuo binned (CHAID con bin_edges): las etiquetas de
+    rama muestran los cortes numericos reales, no "bin_<i>":
+    -inf -> "≤ <high>", +inf -> "> <low>", rango -> "(<low>, <high>]".
+    Los splits categoricos y por umbral NO cambian."""
+    from frontend_v3.tree_view import _edge_label
+
+    split = _binned_chaid_model().nodes[0].split
+    assert _edge_label(split, 0) == "≤ 25.5"        # bin 0 baja a -inf
+    assert _edge_label(split, 1) == "(25.5, 55]"    # rango cerrado
+    assert _edge_label(split, 2) == "> 55"          # bin 3 sube a +inf
+
+    # Fallback defensivo: grupo sin etiquetas bin_* con bin_edges.
+    split_txt = SplitConfig(
+        predictor="seg", method="CHAID",
+        statistic=10.0, statistic_name="chi2", df=(1,),
+        parent_n=80, child_ns=(40, 40),
+        p_value=1e-3, p_value_adjusted=1e-2,
+        bonferroni_multiplier=2, n_merges=1,
+        branches=(("a",), ("b",)),
+        bin_edges=(1.5,),
+    )
+    assert _edge_label(split_txt, 0) == "{a}"
+
+    # Categorico clasico (bin_edges=()) y umbral (CRT): intactos.
+    cat_split = _chaid_model().nodes[0].split
+    assert _edge_label(cat_split, 0) == "{a}"
+    thr_split = _crt_model().nodes[0].split
+    assert _edge_label(thr_split, 0) == "≤ 39.5"
+    assert _edge_label(thr_split, 1) == "> 39.5"
+
+    # En el canvas: las aristas del modelo binned muestran numeros.
+    panel = _make_panel()
+    panel.set_model(_binned_chaid_model(), "BANKING")
+    labels = {
+        i.text() for i in panel._scene.items()
+        if isinstance(i, QGraphicsSimpleTextItem)
+    }
+    assert {"≤ 25.5", "(25.5, 55]", "> 55"} <= labels
+    assert not any(lbl.startswith("{bin_") for lbl in labels)
+    panel.close()
+    panel.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # 5-6: seleccion y zoom
 # ---------------------------------------------------------------------------
@@ -276,12 +392,14 @@ def test_retranslate_preserves_selection():
         language_bus.language_changed.emit("es")
         item1 = panel._scene._items[1]
         assert panel.selected_node_id() == 1   # seleccion preservada (rebuild)
-        assert "HOJA" in item1._text.toPlainText()       # badge retraducido
+        assert item1._header == ""                     # hoja: sin badge
+        assert item1._header_full == "Nodo 1"          # prefijo retraducido
         assert "nodos" in panel._lbl_header.text()       # cabecera ES
     finally:
         set_language("en")
         language_bus.language_changed.emit("en")
-    assert "HOJA" not in panel._scene._items[1]._text.toPlainText()
+    assert panel._scene._items[1]._header == ""
+    assert panel._scene._items[1]._header_full == "Node 1"
     panel.close()
     panel.deleteLater()
 
@@ -290,42 +408,160 @@ def test_theme_recolor_on_switch():
     _get_app()
     w = MainWindow()
     w._tree_panel.set_model(_crt_model(), "BANKING")
-    root_light = w._tree_panel._scene._items[0].brush().color()
-    # Estación clásica: cuerpo del nodo sólido NODE_BG (blanco/negro puro)
-    assert root_light == QColor(PALETTES["light"]["NODE_BG"])
+    # Hoja de auditoría: el cuerpo del nodo pintado con QPainter es
+    # SIEMPRE blanco puro (#FFFFFF), independiente del tema claro/oscuro;
+    # la cabecera del nodo interno SI sigue el token ACCENT del tema.
+    item0 = w._tree_panel._scene._items[0]
+    assert _px(_render_node(item0), item0, 110, 33) == QColor("#FFFFFF")
+    assert (
+        _px(_render_node(item0), item0, 6, 12)
+        == QColor(PALETTES["light"]["ACCENT"])
+    )
     w._switch_theme("dark")
-    root_dark = w._tree_panel._scene._items[0].brush().color()
-    assert root_dark == QColor(PALETTES["dark"]["NODE_BG"])
+    item0d = w._tree_panel._scene._items[0]
+    assert _px(_render_node(item0d), item0d, 110, 33) == QColor("#FFFFFF")
+    assert (
+        _px(_render_node(item0d), item0d, 6, 12)
+        == QColor(PALETTES["dark"]["ACCENT"])
+    )
+    # lo que SI sigue al tema es el fondo de la escena
+    bg_dark = w._tree_panel._scene.backgroundBrush().color()
+    assert bg_dark == QColor(PALETTES["dark"]["BG"])
     w._switch_theme("light")                   # restaura (orden de la suite)
-    assert w._tree_panel._scene._items[0].brush().color() == root_light
+    item0l = w._tree_panel._scene._items[0]
+    assert _px(_render_node(item0l), item0l, 110, 33) == QColor("#FFFFFF")
+    assert (
+        w._tree_panel._scene.backgroundBrush().color()
+        == QColor(PALETTES["light"]["BG"])
+    )
     w.close()
     w.deleteLater()
 
 
-def test_node_label_classic_station_design():
-    """Tarjeta de nodo estilo estación clásica: rejilla de tabla visible con el
-    BORDER de la paleta activa, y cabecera como bloque de color sólido
-    (verde/ámbar/rojo en hojas, azul en internos) con texto blanco."""
+def test_node_paint_classic_station_design():
+    """Diseño QPainter (hoja de auditoría): caja fija NODE_W x NODE_H con
+    el cuerpo SIEMPRE blanco (#FFFFFF) en ambos temas; cabecera de 26 px
+    (banda ACCENT en internos; semáforo verde/naranja/rojo en hojas según
+    pd_final[0]: <0.05 / <0.15 / resto) con texto blanco en negrita; filas
+    por clase con cuadrado semáforo + % + n; fila Total (N) en negrita;
+    gráfica apilada; footer de 20 px con Gini (hojas) o stats del split
+    (internos) arrancando exactamente en NODE_H - 20; borde $BORDER
+    ($ACCENT si está seleccionado). Todo el ink queda DENTRO del
+    boundingRect."""
+    _get_app()
     model = _crt_model()
-    leaf = model.nodes[1]
-    assert leaf.is_leaf and leaf.pd_final[0] < 0.05  # fixture -> semáforo verde
+    root, leaf = model.nodes[0], model.nodes[1]
+    assert not root.is_leaf and leaf.is_leaf and leaf.pd_final[0] < 0.05
     for theme in ("light", "dark"):
         pal = PALETTES[theme]
-        html = _node_label(leaf, pal)
-        # 1. tabla con bordes visibles (regla CSS del bloque <style>)
-        assert "border-collapse: collapse" in html
-        assert "width: 100%" in html
-        assert f"border: 1px solid {pal['BORDER']}" in html
-        assert "padding: 2px" in html
-        # 2. texto del cuerpo con contraste: FG de la paleta activa
-        assert f"color: {pal['FG']}" in html
-        # 3. cabecera: bloque de color sólido con texto blanco
-        assert "color:#FFFFFF" in html
-        assert "background-color:#2E7D32" in html  # hoja PD<5% -> verde
-    # nodo interno: cabecera azul (Colab accent)
-    html_root = _node_label(model.nodes[0], PALETTES["light"])
-    assert "background-color:#1A73E8" in html_root
-    assert "color:#FFFFFF" in html_root
+        item = NodeItem(root, pal)
+        img = _render_node(item)
+        # 1. huecos del cuerpo y banda de footer siempre blancos
+        assert _px(img, item, 110, 28) == QColor("#FFFFFF")   # sobre filas
+        assert _px(img, item, 6, 116) == QColor("#FFFFFF")    # banda footer
+        # 2. cabecera ACCENT (interno), texto blanco en negrita
+        assert _px(img, item, 6, 12) == QColor(pal["ACCENT"])
+        assert item._font_header.bold()
+        assert item._header_fg == QColor("#FFFFFF")
+        # 3. borde no seleccionado = $BORDER; seleccionado = $ACCENT
+        assert _px(img, item, 0, 60) == QColor(pal["BORDER"])
+        item.setSelected(True)
+        img_sel = _render_node(item)
+        assert _px(img_sel, item, 1, 60) == QColor(pal["ACCENT"])
+        item.setSelected(False)
+    # 4. semáforo de cabecera en hojas (umbrales 0.05 / 0.15)
+    pal = PALETTES["light"]
+    for pd0, token in (
+        (0.01, "STATUS_OK"),
+        (0.10, "STATUS_WARN"),
+        (0.30, "STATUS_CRIT"),
+    ):
+        leaf_item = NodeItem(_leaf_node(1, pd0), pal)
+        img_leaf = _render_node(leaf_item)
+        assert _px(img_leaf, leaf_item, 6, 12) == QColor(pal[token])
+        assert leaf_item._header == ""                 # hoja: sin badge
+    # 5. textos pintados: helpers puros auditados + strings precalculados
+    from frontend_v3.tree_view import _caption_text, _footer_text
+    assert _caption_text(root) == "edad"               # predictor (interno)
+    assert _caption_text(leaf) == ""                   # hoja: cadena vacía
+    assert "Adj. P-value:" in _footer_text(root)       # stats del split
+    assert "Gini:" in _footer_text(leaf)               # impureza de la hoja
+    assert NodeItem(root, pal)._header == "edad"
+    assert NodeItem(leaf, pal)._header == ""
+    # 6. título de cabecera: "Node <id> — <predictor>" (interno) /
+    #    "Node <id>" (hoja, sin badge).
+    assert (
+        NodeItem(root, pal)._header_full
+        == f"{tr('tree_prop_node')} {root.node_id} — edad"
+    )
+    assert (
+        NodeItem(leaf, pal)._header_full
+        == f"{tr('tree_prop_node')} {leaf.node_id}"
+    )
+    assert "Adj. P-value:" in NodeItem(root, pal)._footer
+    assert "Gini:" in NodeItem(leaf, pal)._footer
+
+
+def test_node_box_fixed_geometry():
+    """Diseño QPainter: TODAS las cajas son exactamente NODE_W x NODE_H
+    (geometría fija, sin auto-ajuste HTML ni espacio vacío); boundingRect
+    coincide con las constantes de clase; la escena apila los niveles a
+    NODE_H + V_GAP."""
+    panel = _make_panel()
+    panel.set_model(_crt_model(), "BANKING")
+    items = panel._scene._items
+    for item in items.values():
+        assert item.boundingRect() == QRectF(0.0, 0.0, NODE_W, NODE_H)
+        assert item.NODE_W == NODE_W and item.NODE_H == NODE_H
+        assert item.HEADER_H + item.FOOTER_H < item.NODE_H  # bandas internas
+    # layout: la distancia entre niveles es NODE_H + V_GAP (fija)
+    dy = items[1].pos().y() - items[0].pos().y()
+    assert dy == NODE_H + V_GAP
+    panel.close()
+    panel.deleteLater()
+
+
+def test_node_total_row_and_stacked_bar():
+    """Fila Total (N) en negrita (separador sutil encima) + gráfica de
+    barras apilada proporcional a n_events, justo encima del footer
+    (NODE_H - 20): índice 0 = clase de interés/Bad en rojo #D32F2F,
+    índice 1 = Good en verde #2E7D32; multiclase cicla _CLASS_BAR_COLORS.
+    El último segmento absorbe el redondeo (borde derecho exacto)."""
+    _get_app()
+    pal = PALETTES["light"]
+    model = _crt_model()                       # raíz: n=120, k=(60,60)
+    root = model.nodes[0]
+    assert root.n == 120 and root.n_events == (60, 60)
+    item = NodeItem(root, pal)
+    assert item._total_n == f"{root.n:,}"
+    assert item._font_total.bold()
+    img = _render_node(item)
+    bar_cy = item.NODE_H - item.FOOTER_H - 4.0 - item.BAR_H / 2.0  # centro barra
+    # mitad roja (izquierda, clase de interés) + mitad verde; frontera
+    # exacta en x = 8 + (60/120)*204 = 110
+    assert _px(img, item, 20, bar_cy) == QColor("#D32F2F")
+    assert _px(img, item, 200, bar_cy) == QColor("#2E7D32")
+    assert _px(img, item, 109, bar_cy) == QColor("#D32F2F")
+    assert _px(img, item, 111, bar_cy) == QColor("#2E7D32")
+    # hojas CHAID: barra toda verde (0 eventos) o toda roja (30 eventos)
+    chaid = _chaid_model()
+    leaf_a, leaf_b = chaid.nodes[1], chaid.nodes[2]
+    assert leaf_a.n_events == (0, 30) and leaf_b.n_events == (30, 0)
+    ia, ib = NodeItem(leaf_a, pal), NodeItem(leaf_b, pal)
+    assert _px(_render_node(ia), ia, 110, bar_cy) == QColor("#2E7D32")
+    assert _px(_render_node(ib), ib, 110, bar_cy) == QColor("#D32F2F")
+    # multiclase (K=3): segmentos 50/30/20 con _CLASS_BAR_COLORS
+    multi = TreeNode(
+        node_id=1, depth=1, parent_id=0, n=100, n_events=(50, 30, 20),
+        pd_jeffreys=(0.5, 0.3, 0.2), pd_final=(0.5, 0.3, 0.2),
+        class_labels=("Bad", "Good", "Other"),
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
+    im = NodeItem(multi, pal)
+    imgm = _render_node(im)
+    assert _px(imgm, im, 20, bar_cy) == QColor("#D32F2F")    # 50% rojo
+    assert _px(imgm, im, 140, bar_cy) == QColor("#2E7D32")   # 30% verde
+    assert _px(imgm, im, 200, bar_cy) == QColor("#1A73E8")   # 20% azul
 
 
 # ---------------------------------------------------------------------------
@@ -340,19 +576,20 @@ def test_empty_state():
     assert not panel._btn_in.isEnabled()
     assert not panel._btn_fit.isEnabled()
     texts = [
-        i.text() for i in panel._scene.items()
-        if isinstance(i, QGraphicsSimpleTextItem)
+        i.toPlainText() for i in panel._scene.items()
+        if isinstance(i, QGraphicsTextItem)
     ]
-    assert any(tr("tree_empty") == t for t in texts)
+    assert any(tr("tree_empty") in t for t in texts)
+    assert any("TreeGov" in t for t in texts)        # marca en la tarjeta
     # idioma/tema sin modelo: el placeholder se reconstruye, nada rompe
     try:
         set_language("es")
         language_bus.language_changed.emit("es")
         texts = [
-            i.text() for i in panel._scene.items()
-            if isinstance(i, QGraphicsSimpleTextItem)
+            i.toPlainText() for i in panel._scene.items()
+            if isinstance(i, QGraphicsTextItem)
         ]
-        assert any(tr("tree_empty", "es") == t for t in texts)
+        assert any(tr("tree_empty", "es") in t for t in texts)
         panel.set_theme("dark")
         panel.set_theme("light")
     finally:
@@ -400,8 +637,9 @@ def test_e2e_mainwindow():
         w._on_wizard_finished(cfg)
         model = w._session.state.tree
         assert model is not None
-        # The tree canvas is tab 0 of the main tab widget (Excel-style
-        # sheets filling the whole central area; no vertical splitter)
+        # The tree canvas is tab 0 of the main tab widget (sheets filling
+        # the whole central area; tab bar anchored South, Phase 3.11.a.1
+        # correction)
         assert w._main_tabs.count() == 5
         assert w._main_tabs.widget(0) is w._tree_panel
         items = [i for i in w._tree_panel._scene.items()

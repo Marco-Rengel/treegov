@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from backend_v3.log_config import get_logger, setup_logging
 from frontend_v3.main_window import MainWindow
-from frontend_v3.theme import apply_theme
+from frontend_v3.theme import apply_palette, apply_theme
 
 APP_NAME: str = "TreeGov — Risk Segmentation Workbench"
 _ORG_NAME: str = "TreeGov"
@@ -70,6 +70,10 @@ def run(argv: Sequence[str] | None = None) -> int:
     _install_excepthook(logger)
     app = create_app(argv)
     apply_theme("light", app)  # fixed default in 2.0; persistence deferred
+    # Phase 3.11.a.1: force the TreeGov QPalette as well — without it,
+    # native-rendered chrome (QWizard/QDialog) inherits the WINDOWS
+    # light/dark mode instead of the app theme.
+    apply_palette("light", app)
 
     window = MainWindow(logger=logger)
     window.show()

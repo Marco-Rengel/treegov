@@ -33,19 +33,26 @@ Approved design decisions (Phase 2.2 audit):
     clamped to [ZOOM_MIN, ZOOM_MAX]; never an accumulated product.
 
 Phase 3.1 (multiclass): n_events, pd_jeffreys and pd_final are
-per-class tuples (index 0 = class of interest). The tree viewer
-displays index 0 for now; full multiclass rendering arrives in
-Phase 3.1.f.
+per-class tuples (index 0 = class of interest). The node box draws
+every class row in canonical order.
+
+Node rendering: each NodeItem is painted ENTIRELY with QPainter (no
+HTML): a fixed-geometry "audit sheet" (NODE_W x NODE_H) with a 26 px
+header band (predictor name / leaf semaphore), per-class body rows
+(square + label + % + n), a bold Total (N) row, a stacked bar
+proportional to n_events (class colors) and a 20 px footer band (Gini /
+split stats). Fixed geometry kills the HTML auto-fit slack for good.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QPointF, Qt, Signal
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
+    QFont,
     QKeySequence,
     QPainter,
     QPainterPath,
@@ -57,7 +64,6 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
-    QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsTextItem,
     QGraphicsView,
@@ -85,9 +91,13 @@ __all__ = [
 
 # --- layout geometry (module constants, documented) -------------------------
 NODE_W = 220.0          # node box width (scene units == px at zoom 1.0)
-NODE_H = 140.0          # node box height (Phase 3.11.a: table + bar chart)
+NODE_H = 126.0          # node box height (FIXED: the box is painted with
+                        # QPainter at exactly NODE_W x NODE_H — header band
+                        # 26 px + body rows + Total row + stacked bar 10 px
+                        # + footer band 20 px; no auto-fit, no dead space)
 H_GAP = 24.0            # horizontal gap between leaf slots
-V_GAP = 48.0            # vertical gap between depth layers
+V_GAP = 64.0            # vertical gap between depth layers (elbow band +
+                        # edge-label room)
 EDGE_LABEL_MAX = 24     # max characters on a categorical edge label
 SCENE_MARGIN = 20.0     # padding around itemsBoundingRect for sceneRect
 ZOOM_MIN = 0.10         # idempotent zoom clamp (out)
@@ -108,13 +118,19 @@ LARGE_TREE_THRESHOLD = 200
 # ---------------------------------------------------------------------------
 
 
-def _layout_tree(model: TreeModel) -> dict[int, tuple[float, float]]:
+def _layout_tree(
+    model: TreeModel, node_h: float = NODE_H
+) -> dict[int, tuple[float, float]]:
     """Deterministic tidy layout: node_id -> (x, y) of the box top-left.
 
     Post-order DFS over child_ids. Leaves take consecutive integer slots;
     an internal node sits at the midpoint of its outermost children
     (Reingold & Tilford 1981, principles 1-4, simplified). The same model
     always yields the same dict (identity verified in the test suite).
+
+    `node_h` is the per-layer box height; the scene passes the fixed
+    NODE_H (QPainter node design). The default keeps the pure function
+    standalone-testable.
     """
     pos: dict[int, tuple[float, float]] = {}
     next_slot = 0.0
@@ -130,7 +146,7 @@ def _layout_tree(model: TreeModel) -> dict[int, tuple[float, float]]:
             slot = (xs[0] + xs[-1]) / 2.0
         pos[node_id] = (
             slot * (NODE_W + H_GAP),
-            float(node.depth) * (NODE_H + V_GAP),
+            float(node.depth) * (node_h + V_GAP),
         )
         return slot
 
@@ -148,134 +164,107 @@ def _fmt_pct(x: float) -> str:
     return f"{float(x) * 100:.2f}%"
 
 
-# Phase 3.11.a: per-class bar colors in the node body (classic station
-# bar chart). Class 0 (class of interest) is red; the rest cycle through
-# green, blue (Colab accent) and amber.
+# Audit-sheet node design (classic tree station, circa 2001), painted
+# with QPainter: the node body is ALWAYS a white sheet — independent of
+# the app theme — so it reads as an auditable document on the canvas.
+# The sheet fill/text/grid colors are fixed neutrals (Google light
+# palette), decoupled from PALETTES; the header band and the outer border
+# DO read palette tokens (ACCENT / STATUS_* / BORDER).
+_NODE_SHEET_BG = "#FFFFFF"     # sheet background (both themes)
+_NODE_SHEET_FG = "#202124"     # sheet text (both themes)
+_NODE_SHEET_BORDER = "#DADCE0" # sheet inner grid (footer separator)
+_NODE_HEADER_FG = "#FFFFFF"    # header band text (white bold, both themes)
+
+# Semaphore squares in the category column (classic tree station): class 0
+# (class of interest) is red, the rest cycle green / blue / amber.
 _CLASS_BAR_COLORS = ("#D32F2F", "#2E7D32", "#1A73E8", "#F29900")
 
+# Display names for the footer statistic (backend statistic_name is a
+# machine key: chi2 / f / gini_gain / variance_gain).
+_STAT_DISPLAY = {
+    "chi2": "Chi-square",
+    "f": "F",
+    "gini_gain": "Gini gain",
+    "variance_gain": "Variance gain",
+}
 
-def _node_label(node: TreeNode, palette: dict[str, str]) -> str:
-    """HTML for the node box (Phase 3.11.a: classic station layout).
 
-    Structure: colored header (predictor for internal nodes, leaf badge
-    for leaves), distribution table `Categoría | % | n` with a `Total`
-    row, a proportional per-class bar chart scaled to the node width,
-    and a small footer with the split stats (internal) or the node Gini
-    (leaves). Presentation-only: every number is precomputed by the
-    backend; the Gini shown is the node impurity derived from pd_final.
+def _caption_text(node: TreeNode) -> str:
+    """Header band text (top 26 px of the box): predictor name (internal)
+    or empty string (leaf — the header shows only "Node <id>")."""
+    if node.is_leaf:
+        return ""
+    split = node.split
+    return str(split.predictor) if split is not None else "Internal"
 
-    Theme-aware: body/footer text colors come from the ACTIVE palette
-    (FG / DISABLED) and the table grid from palette BORDER; the outer div
-    stays transparent so the NodeItem rect (solid NODE_BG) paints through.
+
+def _footer_text(node: TreeNode) -> str:
+    """Footer band text (bottom 20 px of the box): split stats (internal)
+    or node Gini (leaf).
+
+    The Gini shown is the node impurity derived from pd_final (display
+    only, pandas-free); split stats are precomputed by the backend.
     """
-    # 1. Header (blue for internal, semaphore green/amber/red for leaves)
     if node.is_leaf:
-        pd = node.pd_final[0]
-        color = "#2E7D32" if pd < 0.05 else ("#ED6C02" if pd < 0.15 else "#D32F2F")
-        header_text = f"{tr('tree_leaf_badge')}"
-    else:
-        color = "#1A73E8"  # Colab accent
-        split = node.split
-        header_text = str(split.predictor) if split else "Internal"
-
-    header_html = f"<div style='background-color:{color}; color:#FFFFFF; font-weight:bold; text-align:center; padding:2px; border-top-left-radius:4px; border-top-right-radius:4px;'>{header_text}</div>"
-
-    # 2. Distribution table: Categoría | % | n (canonical class order).
-    # Visible grid (classic tree-station style): Qt's rich-text engine DOES support
-    # <style> blocks and td/th borders + padding (verified empirically by
-    # pixel count, audit log 24/10/2026). The border color follows the
-    # active palette (BORDER token), so the grid is visible on both the
-    # white (light) and black (dark) node bodies.
-    style_html = (
-        "<style>"
-        "table { border-collapse: collapse; width: 100%; } "
-        "th, td { border: 1px solid " + palette["BORDER"] + "; padding: 2px; }"
-        "</style>"
-    )
-    rows: list[str] = []
-    for c, label in enumerate(node.class_labels):
-        k_c = node.n_events[c] if c < len(node.n_events) else 0
-        p_c = node.pd_final[c] if c < len(node.pd_final) else 0.0
-        rows.append(
-            f"<tr><td>{label}</td>"
-            f"<td style='text-align:right;'>{float(p_c) * 100:.1f}%</td>"
-            f"<td style='text-align:right;'>{k_c}</td></tr>"
-        )
-    rows.append(
-        "<tr><td><b>Total</b></td>"
-        "<td style='text-align:right;'><b>100%</b></td>"
-        f"<td style='text-align:right;'><b>{node.n}</b></td></tr>"
-    )
-    table_html = (
-        '<table style="font-size:11px;">'
-        "<tr><th>Categoría</th><th>%</th><th>n</th></tr>"
-        + "".join(rows)
-        + "</table>"
-    )
-
-    # 3. Proportional per-class bar chart, scaled to the node width
-    n = node.n if node.n > 0 else 1
-    bar_w_total = int(NODE_W) - 16  # outer padding (2x4px) + border slack
-    spans: list[str] = []
-    for c in range(len(node.class_labels)):
-        k_c = node.n_events[c] if c < len(node.n_events) else 0
-        w_c = int(round(bar_w_total * k_c / n))
-        color_c = _CLASS_BAR_COLORS[c % len(_CLASS_BAR_COLORS)]
-        spans.append(
-            f"<span style='background-color:{color_c}; "
-            f"display:inline-block; width:{w_c}px; height:6px;'></span>"
-        )
-    bar_html = (
-        "<div style='margin-top:4px; margin-bottom:4px;'>"
-        + "".join(spans)
-        + "</div>"
-    )
-
-    # 4. Footer (small grey text): split stats for internal nodes,
-    #    node Gini for leaves
-    if node.is_leaf:
-        # Gini calculated purely for display (pandas-free)
         gini = 1.0 - sum(p**2 for p in node.pd_final) if node.pd_final else 0.0
-        footer_text = f"Gini: {gini:.3f}"
-    else:
-        split = node.split
-        p_adj = (
-            split.p_value_adjusted
-            if split is not None and split.p_value_adjusted is not None
-            else (split.p_value if split is not None else None)
-        )
-        p_str = f"{p_adj:.3g}" if p_adj is not None else "—"
-        stat_name = split.statistic_name if split is not None else "—"
-        stat_str = (
-            f"{split.statistic:.4g}"
-            if split is not None and split.statistic is not None
-            else "—"
-        )
-        footer_text = f"Adj. P: {p_str} | {stat_name}: {stat_str}"
-
-    footer_html = f"<div style='font-size:9px; color:{palette['DISABLED']}; text-align:center;'>{footer_text}</div>"
-
-    # Combine (transparent background so the solid NodeItem rect paints
-    # through); the style block travels with the HTML document.
-    return f"""
-    {style_html}
-    <div style='width:{int(NODE_W) - 8}px; background-color: transparent; color: {palette["FG"]}; font-family: sans-serif; padding: 4px;'>
-        {header_html}
-        {table_html}
-        {bar_html}
-        {footer_html}
-    </div>
-    """
+        return f"Gini: {gini:.3f}"
+    split = node.split
+    p_adj = (
+        split.p_value_adjusted
+        if split is not None and split.p_value_adjusted is not None
+        else (split.p_value if split is not None else None)
+    )
+    p_str = f"{p_adj:.3g}" if p_adj is not None else "—"
+    stat_name = (
+        _STAT_DISPLAY.get(split.statistic_name, split.statistic_name)
+        if split is not None
+        else "—"
+    )
+    stat_str = (
+        f"{split.statistic:.4g}"
+        if split is not None and split.statistic is not None
+        else "—"
+    )
+    text = f"Adj. P-value: {p_str} | {stat_name}: {stat_str}"
+    if split is not None and split.df:
+        text += f" | df: {split.df}"
+    return text
 
 
 def _edge_label(split, branch_index: int) -> str:
-    """Short branch rule for the elbow connector; long groups are elided."""
+    """Short branch rule for the elbow connector; long groups are elided.
+
+    Binned continuous splits (CHAID, split.bin_edges non-empty) resolve
+    the "bin_<i>" labels of the branch to the real numeric cuts: bin i
+    covers (bin_edges[i-1], bin_edges[i]], with bin 0 extending to -inf
+    and bin len(bin_edges) extending to +inf.
+    """
     if split is None:
         return ""
     if split.threshold is not None:
         t = _fmt_num(split.threshold)
         return f"≤ {t}" if branch_index == 0 else f"> {t}"
     group = (split.branches or ())[branch_index]
+    if split.bin_edges:
+        bins = [
+            int(str(lbl)[4:]) for lbl in group if str(lbl).startswith("bin_")
+        ]
+        if bins:
+            low = (
+                float("-inf")
+                if min(bins) == 0
+                else split.bin_edges[min(bins) - 1]
+            )
+            high = (
+                float("inf")
+                if max(bins) == len(split.bin_edges)
+                else split.bin_edges[max(bins)]
+            )
+            if low == float("-inf"):
+                return f"≤ {_fmt_num(high)}"
+            if high == float("inf"):
+                return f"> {_fmt_num(low)}"
+            return f"({_fmt_num(low)}, {_fmt_num(high)}]"
     text = "{" + ",".join(str(v) for v in group) + "}"
     if len(text) > EDGE_LABEL_MAX:
         text = text[: EDGE_LABEL_MAX - 1] + "…"
@@ -348,52 +337,238 @@ def model_summary_lines(model: TreeModel, mode_label: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-class NodeItem(QGraphicsRectItem):
-    """One node box (fixed NODE_W x NODE_H) with centered text.
+class NodeItem(QGraphicsItem):
+    """One node box painted ENTIRELY with QPainter (no HTML), with FIXED
+    geometry NODE_W x NODE_H: the "audit sheet" is always white (#FFFFFF)
+    on both themes.
 
-    Colors come from the active theme PALETTE (graphics items do not read
-    the application QSS). Body: solid NODE_BG fill (pure white on light,
-    pure black on dark — classic tree-station flat card) / BORDER pen / FG
-    text (contrast guaranteed by the palette pairing). The header's
-    semaphore color encodes the leaf status. Selection: ACCENT pen,
-    width 3.
+    Bands (all INSIDE the bounding rect):
+      - Header (26 px): "Node <id> — <predictor name>" (internal node,
+        ACCENT band) or "Node <id> — <leaf badge>" (semaphore band by
+        pd_final[0]: < 0.05 green, < 0.15 orange, otherwise red); white
+        bold text, elided to the box width.
+      - Body: one row per class (semaphore square + label + % + n),
+        a bold Total (N) row with a subtle separator above, and a
+        stacked bar proportional to n_events (index 0 = class of
+        interest/Bad -> red #D32F2F, index 1 = Good -> green #2E7D32;
+        multiclass cycles _CLASS_BAR_COLORS).
+      - Footer (20 px): node Gini (leaves) or adjusted p-value + split
+        statistic (internals), via the audited _footer_text helper; the
+        band starts EXACTLY at NODE_H - 20 (no dead space below the bar).
+    Selection: ACCENT border, width 3 (read from isSelected() in paint();
+    the border is always drawn INSIDE the bounding rect, inset by half
+    the pen width, so nothing is clipped).
     """
 
+    NODE_W = NODE_W      # class constants: mirror the module layout values
+    NODE_H = NODE_H
+    HEADER_H = 26.0      # header band height (predictor / leaf badge)
+    FOOTER_H = 20.0      # footer band height (Gini / split stats)
+    ROW_H = 18.0         # body row height (shrinks if many classes)
+    BAR_H = 10.0         # stacked-bar height (class distribution)
+    SQ = 8.0             # semaphore square side in the body rows
+
     def __init__(self, node: TreeNode, palette: dict[str, str]) -> None:
-        super().__init__(0.0, 0.0, NODE_W, NODE_H)
+        super().__init__()
         self.node_id = node.node_id
+        self._node = node
         self._palette = palette
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
         self.setZValue(1.0)
 
-        fg = QColor(palette["FG"])
-        fill = QColor(palette["NODE_BG"])
-        self.setBrush(QBrush(fill))
-        self.setPen(QPen(QColor(palette["BORDER"]), 1))
+        # Display strings precomputed once (the node is frozen).
+        self._header = _caption_text(node)   # predictor (internal) / "" (leaf)
+        # TODO(zona_gris): el brief pedia el literal fijo "Nodo {id} — ";
+        # se usa tr("tree_prop_node") ("Node"/"Nodo") para preservar la
+        # retraducción en caliente — en ES produce exactamente el literal
+        # del brief. Resolver si se quiere el prefijo siempre en español.
+        if node.is_leaf:
+            self._header_full = f"{tr('tree_prop_node')} {node.node_id}"
+        else:
+            self._header_full = (
+                f"{tr('tree_prop_node')} {node.node_id} — {self._header}"
+            )
+        self._footer = _footer_text(node)    # Gini (leaf) / split stats
+        self._total_n = f"{node.n:,}"        # Total (N) row, right column
+        # Header band color: palette ACCENT for internal nodes; leaf
+        # semaphore from pd_final[0] (class of interest).
+        if node.is_leaf:
+            p0 = float(node.pd_final[0]) if node.pd_final else 0.0
+            if p0 < 0.05:
+                token = "STATUS_OK"
+            elif p0 < 0.15:
+                token = "STATUS_WARN"
+            else:
+                token = "STATUS_CRIT"
+        else:
+            token = "ACCENT"
+        self._header_color = QColor(palette[token])
+        self._header_fg = QColor(_NODE_HEADER_FG)
 
-        self._text = QGraphicsTextItem(self)
-        self._text.setTextWidth(NODE_W)
-        doc = self._text.document()
-        opt = doc.defaultTextOption()
-        opt.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        doc.setDefaultTextOption(opt)
-        self._text.setDefaultTextColor(fg)
-        self._text.setHtml(_node_label(node, palette))
-        text_h = doc.size().height()
-        self._text.setPos(0.0, max(0.0, (NODE_H - text_h) / 2.0))
+        self._font_header = QFont()
+        self._font_header.setPointSize(9)
+        self._font_header.setBold(True)
+        self._font_body = QFont()
+        self._font_body.setPointSize(9)
+        self._font_total = QFont()
+        self._font_total.setPointSize(9)
+        self._font_total.setBold(True)
+        self._font_footer = QFont()
+        self._font_footer.setPointSize(8)
         self.setToolTip("\n".join(node_detail_lines(node)))
 
-    def itemChange(self, change: QGraphicsItem.GraphicsItemChange, value):
-        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:
-            pen = self.pen()
-            if value:
-                pen.setColor(QColor(self._palette["ACCENT"]))
-                pen.setWidth(3)
-            else:
-                pen.setColor(QColor(self._palette["BORDER"]))
-                pen.setWidth(1)
-            self.setPen(pen)
-        return super().itemChange(change, value)
+    # -- QGraphicsItem API ----------------------------------------------------
+
+    def boundingRect(self) -> QRectF:
+        return QRectF(0.0, 0.0, self.NODE_W, self.NODE_H)
+
+    def paint(self, painter: QPainter, option, widget: QWidget | None = None) -> None:
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w, h = float(self.NODE_W), float(self.NODE_H)
+        sheet_bg = QColor(_NODE_SHEET_BG)
+        sheet_fg = QColor(_NODE_SHEET_FG)
+
+        # 1. audit sheet background (always white, both themes)
+        painter.fillRect(QRectF(0.0, 0.0, w, h), QBrush(sheet_bg))
+
+        # 2. header band (26 px) + white bold composite title
+        #    "Node <id>" (leaf) / "Node <id> — <predictor>" (internal),
+        #    elided to the box width with QFontMetrics ("…" on overflow).
+        hh = float(self.HEADER_H)
+        painter.fillRect(QRectF(0.0, 0.0, w, hh), QBrush(self._header_color))
+        painter.setFont(self._font_header)
+        painter.setPen(QPen(self._header_fg))
+        header = painter.fontMetrics().elidedText(
+            self._header_full, Qt.TextElideMode.ElideRight, int(w - 16.0)
+        )
+        painter.drawText(
+            QRectF(8.0, 0.0, w - 16.0, hh),
+            Qt.AlignmentFlag.AlignCenter,
+            header,
+        )
+
+        # 3. body, BOTTOM-ANCHORED so the block sits snugly above the
+        #    footer band: per-class rows, then the bold Total (N) row
+        #    (subtle separator above), then the stacked bar.
+        node = self._node
+        k = len(node.class_labels)
+        fh = float(self.FOOTER_H)
+        sep_y = h - fh                             # footer top (NODE_H-20)
+        bar_h = float(self.BAR_H)
+        bar_y = sep_y - 4.0 - bar_h                # bar just above footer
+        total_h = float(self.ROW_H)
+        total_y = bar_y - 4.0 - total_h            # Total row above the bar
+        rows_top = hh + 4.0
+        avail = total_y - 2.0 - rows_top           # room for class rows
+        row_h = min(self.ROW_H, avail / k) if k else avail
+        painter.setFont(self._font_body)
+        painter.setPen(QPen(sheet_fg))
+        for c in range(k):
+            ry = rows_top + c * row_h
+            painter.fillRect(
+                QRectF(8.0, ry + (row_h - self.SQ) / 2.0, self.SQ, self.SQ),
+                QBrush(QColor(_CLASS_BAR_COLORS[c % len(_CLASS_BAR_COLORS)])),
+            )
+            label = painter.fontMetrics().elidedText(
+                str(node.class_labels[c]), Qt.TextElideMode.ElideRight, 88
+            )
+            painter.drawText(
+                QRectF(20.0, ry, 88.0, row_h),
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                label,
+            )
+            p_c = node.pd_final[c] if c < len(node.pd_final) else 0.0
+            painter.drawText(
+                QRectF(112.0, ry, 56.0, row_h),
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
+                f"{float(p_c) * 100:.1f}%",
+            )
+            k_c = node.n_events[c] if c < len(node.n_events) else 0
+            painter.drawText(
+                QRectF(172.0, ry, 40.0, row_h),
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
+                str(k_c),
+            )
+
+        # 3b. Total (N) row: bold, subtle separator above, n right-aligned
+        #     in the n column (same x as the per-class counts).
+        painter.fillRect(
+            QRectF(8.0, total_y - 2.0, w - 16.0, 1.0),
+            QBrush(QColor(_NODE_SHEET_BORDER)),
+        )
+        painter.setFont(self._font_total)
+        painter.setPen(QPen(sheet_fg))
+        painter.drawText(
+            QRectF(20.0, total_y, 140.0, total_h),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            "Total (N):",
+        )
+        painter.drawText(
+            QRectF(172.0, total_y, 40.0, total_h),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
+            self._total_n,
+        )
+
+        # 3c. stacked bar: segment widths proportional to n_events (raw
+        #     counts, canonical order: index 0 = class of interest/Bad in
+        #     red #D32F2F, index 1 = Good in green #2E7D32; multiclass
+        #     cycles _CLASS_BAR_COLORS). The last segment absorbs the
+        #     rounding slack so the bar always ends exactly at the right
+        #     edge. Skipped on degenerate n == 0 nodes.
+        if k and node.n > 0:
+            bar_x = 8.0
+            bar_w = w - 16.0
+            x = bar_x
+            for c in range(k):
+                k_c = node.n_events[c] if c < len(node.n_events) else 0
+                if c == k - 1:
+                    seg_w = bar_x + bar_w - x    # absorb rounding slack
+                else:
+                    seg_w = bar_w * (k_c / node.n)
+                painter.fillRect(
+                    QRectF(x, bar_y, seg_w, bar_h),
+                    QBrush(
+                        QColor(_CLASS_BAR_COLORS[c % len(_CLASS_BAR_COLORS)])
+                    ),
+                )
+                x += seg_w
+            # subtle frame around the bar (audit-sheet grid style)
+            painter.setPen(QPen(QColor(_NODE_SHEET_BORDER), 1))
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.drawRect(
+                QRectF(bar_x + 0.5, bar_y + 0.5, bar_w - 1.0, bar_h - 1.0)
+            )
+
+        # 4. footer band (20 px): separator + Gini (leaf) / split stats.
+        #    The band starts EXACTLY at NODE_H - 20 (sep_y computed in
+        #    section 3), so no dead space remains below the stacked bar.
+        # TODO(zona_gris): el brief pedia "Gini + KS" en el footer de las
+        # hojas, pero TreeNode no expone KS y calcularlo aquí violaría la
+        # sala limpia; se reutiliza el helper auditado _footer_text()
+        # (Gini en hojas, p_adj + estadístico en internos).
+        painter.fillRect(
+            QRectF(0.0, sep_y, w, 1.0), QBrush(QColor(_NODE_SHEET_BORDER))
+        )
+        painter.setFont(self._font_footer)
+        painter.setPen(QPen(sheet_fg))
+        footer = painter.fontMetrics().elidedText(
+            self._footer, Qt.TextElideMode.ElideRight, int(w - 16.0)
+        )
+        painter.drawText(
+            QRectF(8.0, sep_y, w - 16.0, float(self.FOOTER_H)),
+            Qt.AlignmentFlag.AlignCenter,
+            footer,
+        )
+
+        # 5. border, ALWAYS inside the bounding rect (inset half pen width)
+        if self.isSelected():
+            pen_w, token = 3.0, "ACCENT"
+        else:
+            pen_w, token = 1.0, "BORDER"
+        painter.setPen(QPen(QColor(self._palette[token]), pen_w))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        inset = pen_w / 2.0
+        painter.drawRect(QRectF(inset, inset, w - pen_w, h - pen_w))
 
 
 class TreeScene(QGraphicsScene):
@@ -423,28 +598,40 @@ class TreeScene(QGraphicsScene):
         self.clear()
         self._items.clear()
         self.setBackgroundBrush(QBrush(QColor(palette["BG"])))
-        pos = _layout_tree(model)
+        # Fixed geometry (QPainter node design): every box is EXACTLY
+        # NODE_W x NODE_H, so the layout uses the module constants
+        # directly — no content-measurement probe.
+        pos = _layout_tree(model, node_h=NODE_H)
 
-        # edges first (z=0, below the node boxes at z=1)
+        # edges first (z=0, below the node boxes at z=1). Line color is the
+        # palette BORDER token: legible on both themes (light grey on dark
+        # scene BG, dark grey on light scene BG).
         edge_pen = QPen(QColor(palette["BORDER"]), 1)
         label_brush = QBrush(QColor(palette["DISABLED"]))
         for node in model.nodes:
             if node.is_leaf:
                 continue
             x0, y0 = pos[node.node_id]
-            x0c, y0b = x0 + NODE_W / 2.0, y0 + NODE_H
+            # Fixed box width: the connector centres exactly on the box.
+            x0c = x0 + NODE_W / 2.0
+            # The elbow exits the BOTTOM edge of the parent box and arrives
+            # at the TOP edge of the child box: header and footer bands now
+            # live INSIDE the box, so there are no outside bands to avoid.
+            y0b = y0 + NODE_H
             for bi, cid in enumerate(node.child_ids):
                 x1, y1 = pos[cid]
                 x1c = x1 + NODE_W / 2.0
-                mid_y = (y0b + y1) / 2.0
+                y1t = y1
+                mid_y = (y0b + y1t) / 2.0
                 path = QPainterPath(QPointF(x0c, y0b))
                 path.lineTo(x0c, mid_y)
                 path.lineTo(x1c, mid_y)
-                path.lineTo(x1c, y1)
+                path.lineTo(x1c, y1t)
                 edge = QGraphicsPathItem(path)
                 edge.setPen(edge_pen)
                 edge.setZValue(0.0)
                 self.addItem(edge)
+                # Cut label (e.g. "≤ 1", "> 1") centered on the elbow.
                 label = self.addSimpleText(_edge_label(node.split, bi))
                 label.setBrush(label_brush)
                 lr = label.boundingRect()
@@ -724,12 +911,25 @@ class TreePanel(QWidget):
         )
 
     def _build_placeholder(self) -> None:
+        """Pantalla vacía: tarjeta HTML centrada (marca TreeGov en ACCENT,
+        instrucción en DISABLED). QGraphicsTextItem + QTextDocument; la
+        escena ignora la QSS de la app, así que el color va inline con
+        los tokens de la paleta activa."""
         self._scene.clear()
         self._scene.setBackgroundBrush(QBrush(QColor(self._palette["BG"])))
-        text = self._scene.addSimpleText(tr("tree_empty"))
-        text.setBrush(QBrush(QColor(self._palette["FG"])))
-        r = text.boundingRect()
-        text.setPos(-r.width() / 2.0, -r.height() / 2.0)
+        html = (
+            f"<div style='text-align: center;"
+            f" color: {self._palette['DISABLED']};'>"
+            f"<h2 style='color: {self._palette['ACCENT']};"
+            f" font-weight: bold;'>TreeGov</h2>"
+            f"<p>{tr('tree_empty')}</p></div>"
+        )
+        item = QGraphicsTextItem()
+        item.document().setDocumentMargin(0)
+        item.setHtml(html)
+        self._scene.addItem(item)
+        r = item.boundingRect()
+        item.setPos(-r.width() / 2.0, -r.height() / 2.0)
         self._scene.setSceneRect(r.adjusted(-40.0, -40.0, 40.0, 40.0))
 
     def _on_zoom_changed(self, factor: float) -> None:

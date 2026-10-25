@@ -30,12 +30,14 @@ QSplitter::handle {
 QMenuBar {
     background: $SURFACE;
     border-bottom: 1px solid $BORDER;
+    font-size: 14px;
+    font-weight: 500;
 }
 
 QMenuBar::item {
     background: transparent;
     color: $FG;
-    padding: 4px 8px;
+    padding: 6px 12px;
 }
 
 QMenuBar::item:selected {
@@ -64,6 +66,8 @@ QTabWidget::pane {
 
 QTabBar::tab {
     background: $BG;
+    font-size: 13px;
+    font-weight: 500;
     padding: 6px 14px;
     border: 1px solid $BORDER;
 }
@@ -88,7 +92,9 @@ QToolTip {
 QGroupBox {
     border: 1px solid $BORDER;
     border-radius: 4px;
-    margin-top: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    margin-top: 12px;
     padding-top: 8px;
 }
 
@@ -100,8 +106,10 @@ QGroupBox::title {
 }
 
 QLabel#panelTitle {
+    font-size: 15px;
     font-weight: bold;
     color: $ACCENT;
+    margin-bottom: 4px;
 }
 
 QLabel#treeLargeWarning {
@@ -160,7 +168,7 @@ QToolBar {
 }
 
 QToolBar QToolButton {
-    padding: 2px;
+    padding: 1px;
     margin: 0px;
     border-radius: 4px;
 }
@@ -194,6 +202,7 @@ QScrollBar:vertical, QScrollBar:horizontal {
 QWizardPage QLabel, QWizard QLabel {
     color: $FG;
     background: transparent;
+    font-size: 13px;
 }
 
 QWizardPage QGroupBox {
@@ -210,9 +219,116 @@ QWizardPage QCheckBox, QWizardPage QRadioButton {
 }
 
 /* Wizard title banner (EnginePage): theme-aware accent, legible over
-   dark backgrounds. The ID selector outranks "QWizardPage QLabel". */
+   dark backgrounds. The ID selector outranks "QWizardPage QLabel".
+   Border + spacing turn it into a proper page header. */
 QLabel#wizardTitle {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: bold;
     color: $ACCENT;
+    border-bottom: 2px solid $BORDER;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+/* Hotfix 3.11.a.1: wizard header and button box inherit the active theme
+   (fixes dark header background in light theme and illegible text in dark
+   theme). The ID selector QLabel#wizardTitle still outranks ::title.
+   Ampliado: el área de contenido del wizard también se fuerza al tema
+   (QWizard ya quedó cubierto por la regla base "QDialog, QWizard"). */
+QWizard > QWidget {
+    background-color: $BG;
+}
+
+QWizardPage {
+    background-color: $BG;
+}
+
+QWizard::header {
+    background-color: $SURFACE_ELEVATED;
+    border-bottom: 1px solid $BORDER;
+}
+
+QWizard::title {
+    color: $ACCENT;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+QWizard::subtitle {
+    color: $FG;
+}
+
+QDialogButtonBox {
+    background-color: $SURFACE;
+    border-top: 1px solid $BORDER;
+}
+
+QDialogButtonBox QPushButton {
+    background-color: $BG;
+    color: $FG;
+    border: 1px solid $BORDER;
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+QDialogButtonBox QPushButton:hover {
+    background-color: $ACCENT;
+    color: $ACCENT_FG;
+}
+
+/* Explicit wizard button rules: the wizard's button bar is a plain
+   QWidget (not a QDialogButtonBox), so the QDialogButtonBox rules above
+   do NOT reach the Next/Back/Finish/Cancel buttons. Without these rules
+   the native Windows style paints them unthemed. */
+QWizard QPushButton {
+    background-color: $BG;
+    color: $FG;
+    border: 1px solid $BORDER;
+    padding: 6px 16px;
+    border-radius: 4px;
+}
+
+QWizard QPushButton:hover {
+    background-color: $ACCENT;
+    color: $ACCENT_FG;
+}
+
+/* Gains/reports table: modern flat look — subtle grid, elevated headers,
+   accent selection. Alternate row colors require the widget flag
+   (setAlternatingRowColors) to be enabled in reports_panel.py. */
+QTableWidget {
+    gridline-color: $BORDER;
+    background-color: $SURFACE;
+    alternate-background-color: $SURFACE_ELEVATED;
+    selection-background-color: $ACCENT;
+    selection-color: $ACCENT_FG;
+}
+
+QHeaderView::section {
+    background-color: $SURFACE_ELEVATED;
+    color: $FG;
+    border: none;
+    border-bottom: 1px solid $BORDER;
+    border-right: 1px solid $BORDER;
+    padding: 6px;
+    font-weight: bold;
+}
+
+QTableWidget::item {
+    padding: 4px;
+}
+
+/* Reports summary card: theme-token card (moved out of the inline
+   stylesheet in reports_panel.py). QLabel inherits QFrame, so the
+   children are reset to transparent explicitly. Inner spacing comes
+   from the frame layout margins (15 px), not from QSS padding. */
+QFrame#summaryCard {
+    background-color: $SURFACE_ELEVATED;
+    border: 1px solid $BORDER;
+    border-radius: 6px;
+}
+
+QFrame#summaryCard QLabel {
+    color: $FG;
+    background: transparent;
 }

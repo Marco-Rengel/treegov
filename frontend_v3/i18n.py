@@ -22,12 +22,20 @@ _STRINGS: dict[str, dict[str, str]] = {
     "en": {
         "window_title": "TreeGov — Risk Segmentation Workbench",
         "menu_file": "File",
-        "menu_model": "Model",
+        "menu_edit": "Edit",
         "menu_view": "View",
+        "menu_format": "Format",
+        "menu_analysis": "Analysis",
+        "menu_tree": "Tree",
+        "menu_window": "Window",
         "menu_help": "Help",
         "menu_file_new_wizard": "New Model Wizard...",
         "menu_file_open": "Open Dataset...",
         "menu_file_exit": "Exit",
+        "menu_edit_undo": "Undo",
+        "menu_format_node_display": "Node Display...",
+        "menu_analysis_var_types": "Define Variable Types...",
+        "menu_window_tile": "Tile",
         "menu_model_train": "Train",
         "menu_model_evaluate_oos": "Evaluate OOS",
         "menu_model_load_oot": "Load OOT Cohort...",
@@ -50,6 +58,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_view_toggle_right": "Properties Panel",
         "menu_help_about": "About TreeGov",
         "panel_left_title": "Project Explorer",
+        "panel_tree_map": "Tree Map",
+        "panel_data_viewer": "Data Viewer",
         "panel_center_title": "Workspace",
         "panel_right_title": "Properties",
         "tab_welcome_title": "Welcome",
@@ -105,6 +115,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_class_warning_majority": (
             "Warning: the selected class of interest is the majority class."
         ),
+        # Humanized default labels for a binary 0/1 target (step 2 class
+        # table): value 0 = Good, value 1 = Bad (class of interest).
+        "class_label_good": "Good",
+        "class_label_bad": "Bad",
         # --- Phase 3.2.h: sample weighting in wizard ---
         "wizard_weight_label": "Weight column:",
         "wizard_weight_none": "(no weights)",
@@ -136,13 +150,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "wizard_population_ok_col_ok": "OK",
         "step3_title": "Step 3 — Validation scheme",
         "step3_subtitle": "Stratified holdout partition (Hamilton-Hare).",
-        "step3_scheme_label": "Scheme",
-        "step3_scheme_holdout": "Holdout (stratified, Hamilton-Hare)",
-        "step3_scheme_cv_todo": "Cross-validation (Phase 2.1.b)",
+        "step3_scheme_none": "Do not validate",
+        "step3_scheme_partition": "Partition (Holdout)",
+        "step3_scheme_cv": "Cross-validation",
+        "step3_cv_notice": "Cross-validation will be available in Phase 2.1.b.",
+        "step3_none_notice": (
+            "Training without a holdout partition is not available yet; "
+            "the stratified holdout is still applied."
+        ),
         "step3_seed_label": "Random seed",
         "step3_train_label": "Train",
         "step3_test_label": "Test",
-        "step3_cv_tooltip": "Cross-validation is planned for Phase 2.1.b. Currently only stratified holdout is available.",
+        "step3_split_title": "Train / Test Split",
         "reports_warning_recall_zero": "Warning: the current threshold classifies all records as good. Adjust the threshold to obtain recall > 0.",
         "step4_title": "Step 4 — MRM governance",
         "step4_subtitle": "Regularisation and regulatory controls.",
@@ -159,6 +178,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step4_pd_floor": "PD floor",
         "step4_summary_label": "Summary",
         "step4_summary_engine": "Engine",
+        "step4_advanced_options": "Advanced Options...",
+        "adv_dialog_title": "Advanced Options",
+        "adv_tab_stopping": "Stopping Rules",
+        "adv_tab_chaid": "CHAID",
+        "adv_chaid_alpha_merge": "Alpha merge",
+        "adv_chaid_alpha_split": "Alpha split",
+        "adv_chaid_pending": (
+            "CHAID alphas will be wired to the backend in Phase 3.11.c/d; "
+            "the engine defaults (0.05) currently apply."
+        ),
         "step4_govmode_banking_short": "Banking",
         "step4_govmode_research_short": "Research",
         "security_warning_title": "Security Notice",
@@ -329,17 +358,29 @@ _STRINGS: dict[str, dict[str, str]] = {
         "governance_fingerprint": "Fingerprint",
         "governance_mode": "Mode",
         "governance_view_audit": "View Audit Log",
+        "step2_btn_move_one": "Move selected",
+        "step2_btn_move_back_one": "Move back selected",
+        "step2_btn_move_all": "Move all",
+        "step2_btn_move_back_all": "Move back all",
         "reports_no_model": "Train a model to view reports.",
     },
     "es": {
         "window_title": "TreeGov — Risk Segmentation Workbench",
         "menu_file": "Archivo",
-        "menu_model": "Modelo",
+        "menu_edit": "Editar",
         "menu_view": "Ver",
+        "menu_format": "Formato",
+        "menu_analysis": "Análisis",
+        "menu_tree": "Árbol",
+        "menu_window": "Ventana",
         "menu_help": "Ayuda",
         "menu_file_new_wizard": "Asistente de nuevo modelo...",
         "menu_file_open": "Abrir dataset...",
         "menu_file_exit": "Salir",
+        "menu_edit_undo": "Deshacer",
+        "menu_format_node_display": "Presentación de nodos...",
+        "menu_analysis_var_types": "Definir tipos de variable...",
+        "menu_window_tile": "Mosaico",
         "menu_model_train": "Entrenar",
         "menu_model_evaluate_oos": "Evaluar OOS",
         "menu_model_load_oot": "Cargar cohorte OOT...",
@@ -362,6 +403,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_view_toggle_right": "Panel de propiedades",
         "menu_help_about": "Acerca de TreeGov",
         "panel_left_title": "Explorador de proyecto",
+        "panel_tree_map": "Mapa del árbol",
+        "panel_data_viewer": "Visor de datos",
         "panel_center_title": "Espacio de trabajo",
         "panel_right_title": "Propiedades",
         "tab_welcome_title": "Bienvenido",
@@ -417,6 +460,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step2_class_warning_majority": (
             "Aviso: la clase de interés seleccionada es la clase mayoritaria."
         ),
+        # Etiquetas por defecto humanizadas para target binario 0/1
+        # (tabla de clases del paso 2): valor 0 = Bueno, valor 1 = Malo
+        # (clase de interés).
+        "class_label_good": "Bueno",
+        "class_label_bad": "Malo",
         # --- Phase 3.2.h: sample weighting in wizard ---
         "wizard_weight_label": "Columna de pesos:",
         "wizard_weight_none": "(sin pesos)",
@@ -451,13 +499,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "wizard_population_ok_col_ok": "OK",
         "step3_title": "Paso 3 — Esquema de validación",
         "step3_subtitle": "Partición holdout estratificada (Hamilton-Hare).",
-        "step3_scheme_label": "Esquema",
-        "step3_scheme_holdout": "Holdout (estratificado, Hamilton-Hare)",
-        "step3_scheme_cv_todo": "Validación cruzada (Fase 2.1.b)",
+        "step3_scheme_none": "No validar",
+        "step3_scheme_partition": "Partición (Holdout)",
+        "step3_scheme_cv": "Validación cruzada",
+        "step3_cv_notice": "La validación cruzada estará disponible en la Fase 2.1.b.",
+        "step3_none_notice": (
+            "Entrenar sin partición holdout aún no está disponible; "
+            "la partición estratificada sigue aplicándose."
+        ),
         "step3_seed_label": "Semilla aleatoria",
         "step3_train_label": "Entrenamiento",
         "step3_test_label": "Prueba",
-        "step3_cv_tooltip": "La validación cruzada está planificada para la Fase 2.1.b. Actualmente solo está disponible el holdout estratificado.",
+        "step3_split_title": "Partición Entrenamiento / Prueba",
         "reports_warning_recall_zero": "Aviso: el umbral actual clasifica todos los registros como buenos. Ajuste el umbral para obtener recall > 0.",
         "step4_title": "Paso 4 — Gobernanza MRM",
         "step4_subtitle": "Regularización y controles regulatorios.",
@@ -476,6 +529,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step4_pd_floor": "PD floor",
         "step4_summary_label": "Resumen",
         "step4_summary_engine": "Motor",
+        "step4_advanced_options": "Opciones avanzadas...",
+        "adv_dialog_title": "Opciones avanzadas",
+        "adv_tab_stopping": "Reglas de parada",
+        "adv_tab_chaid": "CHAID",
+        "adv_chaid_alpha_merge": "Alfa de fusión",
+        "adv_chaid_alpha_split": "Alfa de partición",
+        "adv_chaid_pending": (
+            "Los alfa de CHAID se conectarán al backend en la Fase "
+            "3.11.c/d; por ahora aplican los defaults del motor (0.05)."
+        ),
         "step4_govmode_banking_short": "Bancario",
         "step4_govmode_research_short": "Investigación",
         "security_warning_title": "Aviso de seguridad",
@@ -646,6 +709,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "governance_fingerprint": "Huella",
         "governance_mode": "Modo",
         "governance_view_audit": "Ver Auditoría",
+        "step2_btn_move_one": "Mover seleccionado",
+        "step2_btn_move_back_one": "Devolver seleccionado",
+        "step2_btn_move_all": "Mover todos",
+        "step2_btn_move_back_all": "Devolver todos",
         "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }

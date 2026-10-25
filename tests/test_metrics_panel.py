@@ -101,7 +101,8 @@ def test_mainwindow_main_tabs():
     assert tabs is not None
     assert tabs.count() == 5, f"expected 5 tabs, got {tabs.count()}"
     # Tab indices: 0=Tree, 1=Gains, 2=Risks, 3=Rules, 4=Summary
-    # (Excel-style sheets filling the central area)
+    # (sheets filling the whole central area, tab bar anchored at the
+    # bottom — TabPosition.South, Phase 3.11.a.1 correction)
     assert tabs.tabText(0) == tr("tab_tree")
     assert tabs.tabText(1) == tr("tab_gains")
     assert tabs.tabText(2) == tr("tab_risks")

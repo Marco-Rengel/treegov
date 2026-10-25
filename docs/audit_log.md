@@ -5593,3 +5593,27 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 441/441 PASSED (sin cambios de código; renombres y ediciones solo en `docs/` y READMEs).
 
 **Referencias**: `docs/playbook.md` Skill 1 y Skill 4; AGENTS.md (mini-cierre de documentación pura; manejo de zonas grises en ráfaga); `docs/audit_log.md` entradas del 22-24/10/2026 (cierres 3.10.a, 3.10.b, 3.11.a).
+
+---
+
+### 24/10/2026 — Mini-cierre: reescritura del diseño 3.11 al estándar clásico (circa 2001) con estética Colab
+
+**Estado**: ✅ Cerrada. Documentación pura (un archivo de diseño; sin cambios de código; suite intacta).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high (documentación pura; política AGENTS.md).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos (por ruta exacta)**:
+
+1. `docs/3.11_design_interactive_tree.md` — reescritura de §2, §3 y §6 para alinear el diseño con la estructura operativa del estándar clásico de estaciones de árboles (circa 2001), manteniendo la estética moderna (Colab).
+
+**Hallazgos (qué se corrigió y por qué)**:
+
+- **§2 (Layout)**: se restaura la barra de menús clásica (Archivo, Editar, Ver, Formato, Análisis, Árbol, Ventana, Ayuda) en lugar de `File, Model, View, Help` (nueva §2.0); el panel izquierdo queda dividido verticalmente en tres bloques apilados (Project Explorer, Tree Map, Data Viewer); el `QTabWidget` principal (Tree, Gains, Risks, Rules, Summary) se mueve de la parte superior a la **parte inferior de la ventana** como franja anclada bajo el canvas (nueva §2.3; el panel derecho pasa a §2.4). Motivo: replicar la ergonomía operativa del estándar clásico sin sacrificar el tema Colab.
+- **§3 (Nodos)**: el nodo se redefine como "hoja de auditoría": cuerpo de la caja **siempre blanco puro (#FFFFFF), incluso en tema oscuro**; el nombre del predictor (o `HOJA`) va **fuera de la caja, encima, centrado**; los metadatos del split (`Adj. P-value`, `Chi-square`, `df`) van **fuera de la caja, debajo**; dentro de la caja solo la tabla (`Categoría | % | n`) y la fila Total; las líneas de conexión muestran el corte (`<=1`, `>1`). Se registra la divergencia respecto a 3.11.a (el token `NODE_BG` deja de alimentar el cuerpo del nodo).
+- **§6 (Sub-fases)**: nueva fila **3.11.a.1** (menús clásicos, tabs inferiores, wizard acorde al flujo clásico, rediseño de nodos); **3.11.b** integra Tree Map y Data Viewer como bloques del panel izquierdo apilado; **3.11.d** especifica que el menú contextual (`Grow Tree`, `Select Predictor`) requiere **rediseño del backend (`TreeBuilder`)** para crecimiento interactivo nodo a nodo: modo `RESEARCH` (crecimiento libre con registro) y modo `BANKING` (auditoría estricta: la acción no se aplica si no se puede auditar, fingerprint antes/después obligatorio).
+
+**Tests**: 441/441 PASSED (`python -m pytest tests -q`; sin cambios de código). Verificación Markdown: 0 code fences residuales, tabla §6 con columnas consistentes.
+
+**Referencias**: AGENTS.md (mini-cierre de documentación pura); `docs/3.11_classic_tree_ui_reference.md` (referencia visual transcrita); `docs/audit_log.md` entrada del 24/10/2026 (mini-cierre previo de alineación retroactiva).

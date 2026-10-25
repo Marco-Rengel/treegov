@@ -12,12 +12,13 @@ from PySide6.QtWidgets import (
     QDialog,
     QDoubleSpinBox,
     QFileDialog,
-    QGridLayout,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSpinBox,
     QSplitter,
     QTableWidget,
@@ -183,6 +184,7 @@ class ReportsPanel(QWidget):
         self._table.setColumnCount(len(self._HEADER_KEYS))
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._table.setAlternatingRowColors(True)
         self._table.verticalHeader().setVisible(False)
         self._table.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.ResizeToContents
@@ -209,16 +211,28 @@ class ReportsPanel(QWidget):
         bottom = QWidget(self)
         layout = QHBoxLayout(bottom)
 
-        # (a) Summary block: title + one label per metric row.
-        summary = QWidget(bottom)
+        # (a) Summary block: card-styled frame with a single rich-HTML
+        # label (no rigid per-metric grid). The stylesheet uses palette
+        # roles (base/mid) so the card follows the active theme in both
+        # light and dark mode.
+        summary = QFrame(bottom)
+        summary.setFrameShape(QFrame.Shape.StyledPanel)
+        # QLabel hereda de QFrame: el selector QSS va por objectName
+        # (regla QFrame#summaryCard en styles.qss, con tokens de tema) o
+        # cada etiqueta hija heredaria borde/fondo propios. La tarjeta
+        # NO se estira verticalmente: Preferred/Maximum la ajusta al
+        # contenido; los margenes internos los da el layout.
+        summary.setObjectName("summaryCard")
+        summary.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum
+        )
         summary_layout = QVBoxLayout(summary)
+        summary_layout.setContentsMargins(15, 15, 15, 15)
         self._summary_title = QLabel(summary)
         summary_layout.addWidget(self._summary_title)
-        self._summary_rows: dict[str, QLabel] = {}
-        for key in self._SUMMARY_FIELDS:
-            row_label = QLabel(summary)
-            summary_layout.addWidget(row_label)
-            self._summary_rows[key] = row_label
+        self._lbl_summary_text = QLabel(summary)
+        self._lbl_summary_text.setWordWrap(True)
+        summary_layout.addWidget(self._lbl_summary_text)
         self._per_class_label = QLabel(summary)
         self._per_class_label.setWordWrap(True)
         self._per_class_label.setVisible(False)
@@ -226,42 +240,48 @@ class ReportsPanel(QWidget):
         summary_layout.addStretch(1)
         layout.addWidget(summary, 1)
 
-        # (b) Classification matrix: 3x3 grid + quality metric rows.
+        # (b) Classification matrix: real 2x2 QTableWidget + quality
+        # metric rows. Las reglas globales QTableWidget / QHeaderView::
+        # section de styles.qss aportan grid, cabeceras elevadas en
+        # negrita y colores de tema en claro/oscuro (sin estilos inline).
+        # Cabeceras de fila/columna = Real good/bad x Predicted good/bad
+        # (textos en retranslate_ui). Celdas centradas, min 100 px/col.
         matrix = QWidget(bottom)
         matrix_layout = QVBoxLayout(matrix)
         self._matrix_title = QLabel(matrix)
         matrix_layout.addWidget(self._matrix_title)
-        grid = QGridLayout()
-        self._matrix_corner = QLabel(matrix)
-        self._matrix_pred_good = QLabel(matrix)
-        self._matrix_pred_bad = QLabel(matrix)
-        self._matrix_actual_good = QLabel(matrix)
-        self._matrix_actual_bad = QLabel(matrix)
-        for header in (
-            self._matrix_corner,
-            self._matrix_pred_good,
-            self._matrix_pred_bad,
-            self._matrix_actual_good,
-            self._matrix_actual_bad,
-        ):
-            header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        grid.addWidget(self._matrix_corner, 0, 0)
-        grid.addWidget(self._matrix_pred_good, 0, 1)
-        grid.addWidget(self._matrix_pred_bad, 0, 2)
-        grid.addWidget(self._matrix_actual_good, 1, 0)
-        grid.addWidget(self._matrix_actual_bad, 2, 0)
-        self._matrix_cells: dict[str, QLabel] = {}
+        self._matrix_table = QTableWidget(2, 2, matrix)
+        self._matrix_table.setEditTriggers(
+            QTableWidget.EditTrigger.NoEditTriggers
+        )
+        self._matrix_table.setSelectionMode(
+            QTableWidget.SelectionMode.NoSelection
+        )
+        self._matrix_table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._matrix_table.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._matrix_table.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        h_header = self._matrix_table.horizontalHeader()
+        h_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        h_header.setMinimumSectionSize(100)
+        self._matrix_table.verticalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.ResizeToContents
+        )
+        self._matrix_cells: dict[str, QTableWidgetItem] = {}
         for key, row, col in (
-            ("tn", 1, 1),
-            ("fp", 1, 2),
-            ("fn", 2, 1),
-            ("tp", 2, 2),
+            ("tn", 0, 0),
+            ("fp", 0, 1),
+            ("fn", 1, 0),
+            ("tp", 1, 1),
         ):
-            cell = QLabel(matrix)
-            cell.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            grid.addWidget(cell, row, col)
+            cell = QTableWidgetItem("")
+            cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._matrix_table.setItem(row, col, cell)
             self._matrix_cells[key] = cell
-        matrix_layout.addLayout(grid)
+        matrix_layout.addWidget(self._matrix_table)
         self._matrix_warning = QLabel(matrix)
         self._matrix_warning.setObjectName("lblMatrixWarning")
         self._matrix_warning.setWordWrap(True)
@@ -510,11 +530,14 @@ class ReportsPanel(QWidget):
         self._refresh_button.setText(tr("reports_refresh"))
         self._export_button.setText(tr("reports_export_html"))
         self._summary_title.setText(tr("reports_summary_title"))
-        self._matrix_corner.setText(tr("reports_matrix_corner"))
-        self._matrix_pred_good.setText(tr("reports_matrix_pred_good"))
-        self._matrix_pred_bad.setText(tr("reports_matrix_pred_bad"))
-        self._matrix_actual_good.setText(tr("reports_matrix_actual_good"))
-        self._matrix_actual_bad.setText(tr("reports_matrix_actual_bad"))
+        self._matrix_table.setHorizontalHeaderLabels([
+            tr("reports_matrix_pred_good"),
+            tr("reports_matrix_pred_bad"),
+        ])
+        self._matrix_table.setVerticalHeaderLabels([
+            tr("reports_matrix_actual_good"),
+            tr("reports_matrix_actual_bad"),
+        ])
 
         self._retranslate_combo(
             self._partition_combo,
@@ -549,9 +572,25 @@ class ReportsPanel(QWidget):
         self._table.setSortingEnabled(True)
 
     def _repaint_summary(self) -> None:
+        """Rich-HTML summary: bold labels + values on two wrapped lines
+        (totals row, then rates/quality metrics). _fmt(None) -> em dash,
+        so an empty payload renders as dashes, never crashes."""
         gains = self._gains or {}
-        for key, label in self._summary_rows.items():
-            label.setText(f"{tr('reports_sum_' + key)}: {_fmt(gains.get(key))}")
+
+        def _chip(key: str) -> str:
+            return f"<b>{tr('reports_sum_' + key)}:</b> {_fmt(gains.get(key))}"
+
+        fields = self._SUMMARY_FIELDS
+        line1 = " &nbsp;&nbsp; ".join(_chip(k) for k in fields[:3])
+        line2 = " &nbsp;&nbsp; ".join(_chip(k) for k in fields[3:])
+        html = f"{line1}<br>{line2}"
+        self._lbl_summary_text.setText(html)
+        # QLabel con wordWrap + rich text negocia mal su altura en el
+        # layout (la tarjeta, con policy Maximum, recorta la 2a linea):
+        # alto minimo = nº de lineas de diseno (separadas por <br>).
+        fm = self._lbl_summary_text.fontMetrics()
+        n_lines = html.count("<br>") + 1
+        self._lbl_summary_text.setMinimumHeight(n_lines * fm.lineSpacing())
         n_per_class = gains.get("n_per_class_global") or ()
         if n_per_class:
             values = ", ".join(str(int(v)) for v in n_per_class)
@@ -573,6 +612,19 @@ class ReportsPanel(QWidget):
             self._matrix_title.setText(tr("reports_matrix_title"))
         for key, cell in self._matrix_cells.items():
             cell.setText(_fmt(matrix.get(key)))
+        # La tabla abraza su contenido en ambas dimensiones: sin hueco
+        # vacio bajo la 2a fila ni a la derecha de la 2a columna (el
+        # sizeHint de un QAbstractScrollArea seria ~256x192 siempre).
+        self._matrix_table.setMaximumHeight(
+            self._matrix_table.horizontalHeader().sizeHint().height()
+            + sum(self._matrix_table.rowHeight(r) for r in range(2))
+            + 2 * self._matrix_table.frameWidth()
+        )
+        self._matrix_table.setMaximumWidth(
+            self._matrix_table.verticalHeader().sizeHint().width()
+            + sum(self._matrix_table.columnWidth(c) for c in range(2))
+            + 2 * self._matrix_table.frameWidth()
+        )
         for key, label in self._matrix_rows.items():
             label.setText(f"{tr('reports_matrix_' + key)}: {_fmt(matrix.get(key))}")
         recall = matrix.get("recall")

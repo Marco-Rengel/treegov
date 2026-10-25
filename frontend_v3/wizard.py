@@ -19,13 +19,17 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QCloseEvent, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
@@ -33,11 +37,15 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QProgressBar,
     QPushButton,
     QRadioButton,
     QScrollArea,
     QSlider,
     QSpinBox,
+    QStyle,
+    QStyleFactory,
+    QTabWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -48,7 +56,14 @@ from PySide6.QtWidgets import (
 
 from frontend_v3.i18n import language_bus, tr
 
-_PREFIX = {"NOMINAL": "NOM", "ORDINAL": "ORD", "CONTINUOUS": "CONT"}
+# Data-type icons for the predictor lists (Phase 3.11.a.1 UX polish):
+# the visible item text is the bare column name; the type is carried by
+# the icon and the tooltip.
+_TYPE_ICONS = {
+    "NOMINAL": QStyle.StandardPixmap.SP_DialogYesButton,
+    "ORDINAL": QStyle.StandardPixmap.SP_ArrowUp,
+    "CONTINUOUS": QStyle.StandardPixmap.SP_FileDialogInfoView,
+}
 
 _ENGINES: tuple[tuple[str, str], ...] = (
     ("CRT", "step1_desc_crt"),
@@ -61,6 +76,16 @@ _ENGINE_LABELS = {
     "CHAID": "CHAID",
     "CHAID_EXHAUSTIVE": "CHAID (Exhaustive)",
     "QUEST": "QUEST",
+}
+# TODO(zona_gris): el brief pedia iconos SP_* en los radios de motor sin
+# fijar cuáles; mapeo semántico conservador (C&RT = split binario,
+# CHAID = rejilla multivía, Exhaustive = recorrido iterativo, QUEST =
+# interrogante). El estratega puede cambiar los pixmaps.
+_ENGINE_ICONS = {
+    "CRT": QStyle.StandardPixmap.SP_ArrowForward,
+    "CHAID": QStyle.StandardPixmap.SP_FileDialogDetailedView,
+    "CHAID_EXHAUSTIVE": QStyle.StandardPixmap.SP_BrowserReload,
+    "QUEST": QStyle.StandardPixmap.SP_MessageBoxQuestion,
 }
 
 
@@ -88,6 +113,7 @@ class EnginePage(QWizardPage):
         layout.addWidget(self._lbl_wizard_title)
         for engine, desc_key in _ENGINES:
             radio = QRadioButton(_ENGINE_LABELS[engine])  # proper noun, fixed
+            radio.setIcon(self.style().standardIcon(_ENGINE_ICONS[engine]))
             desc = QLabel()
             desc.setIndent(24)
             desc.setEnabled(False)  # descriptive text, visually muted
@@ -156,9 +182,14 @@ class PredictorsPage(QWizardPage):
         self._weight_validator = weight_validator
         self._population_provider = population_provider
 
-        layout = QVBoxLayout(self)
+        # Phase 3.11.a.1: grid layout, three bands (combos / core lists /
+        # class table). The old vertical stack crowded the lists; the
+        # weight/population help texts moved to combo tooltips.
+        layout = QGridLayout(self)
 
-        target_row = QHBoxLayout()
+        # --- Row 0 (top): compact combo strip — target + weight +
+        # population in a single horizontal band ---
+        row_combos = QHBoxLayout()
         self._lbl_target = QLabel()
         self._combo_target = QComboBox()
         self._combo_target.setObjectName("comboTarget")
@@ -170,54 +201,45 @@ class PredictorsPage(QWizardPage):
         self._combo_target.addItem("", userData=None)
         for col in columns:
             self._combo_target.addItem(col, userData=col)
-        target_row.addWidget(self._lbl_target)
-        target_row.addWidget(self._combo_target, 1)
-        layout.addLayout(target_row)
+        row_combos.addWidget(self._lbl_target)
+        row_combos.addWidget(self._combo_target, 1)
 
-        # --- Phase 3.2.h: weight column row (debajo del target) ---
-        weight_row = QHBoxLayout()
+        # --- Phase 3.2.h: weight column combo ---
         self._lbl_weight = QLabel()
         self._combo_weight = QComboBox()
         self._combo_weight.setObjectName("comboWeight")
         self._combo_weight.addItem("", userData=None)  # retraducido
         for col in columns:
             self._combo_weight.addItem(col, userData=col)
-        weight_row.addWidget(self._lbl_weight)
-        weight_row.addWidget(self._combo_weight, 1)
-        layout.addLayout(weight_row)
+        row_combos.addWidget(self._lbl_weight)
+        row_combos.addWidget(self._combo_weight, 1)
 
-        self._lbl_weight_warning = QLabel()
-        self._lbl_weight_warning.setObjectName("lblWeightWarning")
-        self._lbl_weight_warning.setWordWrap(True)
-        self._lbl_weight_warning.setVisible(False)
-        layout.addWidget(self._lbl_weight_warning)
-
-        self._lbl_weight_hint = QLabel()
-        self._lbl_weight_hint.setWordWrap(True)
-        layout.addWidget(self._lbl_weight_hint)
-
-        # --- Phase 3.3.d: population column row + OK values table ---
-        population_row = QHBoxLayout()
+        # --- Phase 3.3.d: population column combo ---
         self._lbl_population = QLabel()
         self._combo_population = QComboBox()
         self._combo_population.setObjectName("comboPopulation")
         self._combo_population.addItem("", userData=None)  # retraducido
         for col in columns:
             self._combo_population.addItem(col, userData=col)
-        population_row.addWidget(self._lbl_population)
-        population_row.addWidget(self._combo_population, 1)
-        layout.addLayout(population_row)
+        row_combos.addWidget(self._lbl_population)
+        row_combos.addWidget(self._combo_population, 1)
+        layout.addLayout(row_combos, 0, 0)
+
+        # --- Rows 1-2: non-blocking amber warnings (hidden by default) ---
+        self._lbl_weight_warning = QLabel()
+        self._lbl_weight_warning.setObjectName("lblWeightWarning")
+        self._lbl_weight_warning.setWordWrap(True)
+        self._lbl_weight_warning.setVisible(False)
+        layout.addWidget(self._lbl_weight_warning, 1, 0)
 
         self._lbl_population_warning = QLabel()
         self._lbl_population_warning.setObjectName("lblPopulationWarning")
         self._lbl_population_warning.setWordWrap(True)
         self._lbl_population_warning.setVisible(False)
-        layout.addWidget(self._lbl_population_warning)
+        layout.addWidget(self._lbl_population_warning, 2, 0)
 
-        self._lbl_population_hint = QLabel()
-        self._lbl_population_hint.setWordWrap(True)
-        layout.addWidget(self._lbl_population_hint)
-
+        # --- Row 3: population OK-values group (visible only when a
+        # population column is declared) ---
         self._group_population = QGroupBox()
         self._group_population.setObjectName("groupPopulationOK")
         self._group_population.setVisible(False)
@@ -232,9 +254,46 @@ class PredictorsPage(QWizardPage):
         header_p.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self._tbl_population.verticalHeader().setVisible(False)
         self._tbl_population.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self._tbl_population.setMaximumHeight(150)  # no aplastar las listas
         gpop_layout.addWidget(self._tbl_population)
-        layout.addWidget(self._group_population)
+        layout.addWidget(self._group_population, 3, 0)
 
+        # --- Row 4 (centre, the core): available / selected predictor
+        # lists with the arrow buttons in between ---
+        lists_row = QHBoxLayout()
+        left_box = QVBoxLayout()
+        self._lbl_available = QLabel()
+        self._lst_available = QListWidget()
+        self._lst_available.setObjectName("lstAvailable")
+        left_box.addWidget(self._lbl_available)
+        left_box.addWidget(self._lst_available)
+        lists_row.addLayout(left_box, 1)
+
+        btns = QVBoxLayout()
+        # Hotfix 3.11.a.1: tooltips via tr() (live retranslation in
+        # retranslate_ui); initial text set there like every other string.
+        self._btn_add = QPushButton("→")
+        self._btn_remove = QPushButton("←")
+        self._btn_add_all = QPushButton("⇒")
+        self._btn_remove_all = QPushButton("⇐")
+        for b in (self._btn_add, self._btn_remove,
+                  self._btn_add_all, self._btn_remove_all):
+            btns.addWidget(b)
+        btns.addStretch(1)
+        lists_row.addLayout(btns)
+
+        right_box = QVBoxLayout()
+        self._lbl_selected = QLabel()
+        self._lst_selected = QListWidget()
+        self._lst_selected.setObjectName("lstSelected")
+        right_box.addWidget(self._lbl_selected)
+        right_box.addWidget(self._lst_selected)
+        lists_row.addLayout(right_box, 1)
+        layout.addLayout(lists_row, 4, 0)
+        layout.setRowStretch(4, 1)  # las listas absorben el alto sobrante
+
+        # --- Row 5 (bottom): class-of-interest + labels table, full width
+        # but capped in height so it never crushes the lists ---
         self._group_class = QGroupBox()
         self._group_class.setObjectName("groupClassOfInterest")
         gclass_layout = QVBoxLayout(self._group_class)
@@ -260,6 +319,7 @@ class PredictorsPage(QWizardPage):
         self._tbl_classes.setSelectionMode(
             QTableWidget.SelectionMode.SingleSelection
         )
+        self._tbl_classes.setMaximumHeight(150)
         gclass_layout.addWidget(self._tbl_classes)
 
         self._lbl_warning = QLabel()
@@ -268,43 +328,10 @@ class PredictorsPage(QWizardPage):
         self._lbl_warning.setVisible(False)  # se muestra si aplica
         gclass_layout.addWidget(self._lbl_warning)
 
-        layout.addWidget(self._group_class)
-
-        lists_row = QHBoxLayout()
-        left_box = QVBoxLayout()
-        self._lbl_available = QLabel()
-        self._lst_available = QListWidget()
-        self._lst_available.setObjectName("lstAvailable")
-        left_box.addWidget(self._lbl_available)
-        left_box.addWidget(self._lst_available)
-        lists_row.addLayout(left_box, 1)
-
-        btns = QVBoxLayout()
-        self._btn_add = QPushButton("→")
-        self._btn_add.setToolTip("Move selected")
-        self._btn_remove = QPushButton("←")
-        self._btn_remove.setToolTip("Move back selected")
-        self._btn_add_all = QPushButton("⇒")
-        self._btn_add_all.setToolTip("Move all")
-        self._btn_remove_all = QPushButton("⇐")
-        self._btn_remove_all.setToolTip("Move back all")
-        for b in (self._btn_add, self._btn_remove,
-                  self._btn_add_all, self._btn_remove_all):
-            btns.addWidget(b)
-        btns.addStretch(1)
-        lists_row.addLayout(btns)
-
-        right_box = QVBoxLayout()
-        self._lbl_selected = QLabel()
-        self._lst_selected = QListWidget()
-        self._lst_selected.setObjectName("lstSelected")
-        right_box.addWidget(self._lbl_selected)
-        right_box.addWidget(self._lst_selected)
-        lists_row.addLayout(right_box, 1)
-        layout.addLayout(lists_row, 1)
+        layout.addWidget(self._group_class, 5, 0)
 
         self._lbl_hint = QLabel()
-        layout.addWidget(self._lbl_hint)
+        layout.addWidget(self._lbl_hint, 6, 0)
 
         self._btn_add.clicked.connect(lambda: self._move(False, False))
         self._btn_remove.clicked.connect(lambda: self._move(True, False))
@@ -373,7 +400,14 @@ class PredictorsPage(QWizardPage):
     # --- internals ---------------------------------------------------------
 
     def _make_item(self, col: str, enabled: bool = True) -> QListWidgetItem:
-        item = QListWidgetItem(f"[{_PREFIX[self._types[col]]}] {col}")
+        ptype = self._types[col]
+        item = QListWidgetItem(col)  # bare name; the type rides on the icon
+        item.setIcon(self.style().standardIcon(_TYPE_ICONS[ptype]))
+        # TODO(zona_gris): tooltip = backend PredictorType name (fixed
+        # domain proper noun, like the engine names in _ENGINE_LABELS).
+        # i18n keys ("Variable Continua" / "Continuous variable") were out
+        # of scope for this task; add step2_type_* keys if wanted.
+        item.setToolTip(ptype)
         item.setData(Qt.ItemDataRole.UserRole, col)
         if not enabled:
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled
@@ -505,12 +539,21 @@ class PredictorsPage(QWizardPage):
 
         Sin callback (None): tabla vacía, sin warning.
         Con callback: una fila por clase, con QLineEdit editable para
-        la etiqueta humana, el valor original y el count. La última
-        fila queda seleccionada por default (default neutral; el
-        analista debe elegir explícitamente en cualquier caso).
+        la etiqueta humana, el valor original y el count. Default de
+        etiqueta: str(valor). Se RESPETA el texto que el analista ya
+        hubiera escrito para un valor (un repoblado no pisa
+        ediciones). La última fila queda
+        seleccionada por default (default neutral; el analista debe
+        elegir explícitamente en cualquier caso).
         Warning amber si la clase seleccionada es la mayoritaria y
         NO hay empate entre clases.
         """
+        # Capturar las etiquetas previas ANTES de vaciar la tabla: los
+        # QLineEdit mueren con setRowCount(0).
+        prev_labels = {
+            r["value"]: r["label_edit"].text()
+            for r in getattr(self, "_class_rows", [])
+        }
         self._tbl_classes.setRowCount(0)
         self._lbl_warning.setVisible(False)
         if self._target_provider is None:
@@ -542,8 +585,13 @@ class PredictorsPage(QWizardPage):
         self._class_rows: list[dict] = []
 
         for row_idx, (valor, count) in enumerate(items):
-            # Columna 0: etiqueta humana (editable).
-            edit = QLineEdit(str(valor))
+            # Columna 0: etiqueta humana (editable). Prioridad: texto
+            # previo del analista > str(valor).
+            if valor in prev_labels:
+                default_label = prev_labels[valor]
+            else:
+                default_label = str(valor)
+            edit = QLineEdit(default_label)
             self._tbl_classes.setCellWidget(row_idx, 0, edit)
 
             # Columna 1: valor original (read-only).
@@ -662,10 +710,12 @@ class PredictorsPage(QWizardPage):
         self._lbl_weight.setText(tr("wizard_weight_label"))
         self._combo_weight.setItemText(0, tr("wizard_weight_none"))
         self._lbl_weight_warning.setText(tr("wizard_weight_warning"))
-        self._lbl_weight_hint.setText(tr("wizard_weight_hint"))
+        # Phase 3.11.a.1: the help texts live as combo tooltips (saves
+        # vertical space in the grid layout).
+        self._combo_weight.setToolTip(tr("wizard_weight_hint"))
         self._lbl_population.setText(tr("wizard_population_label"))
         self._combo_population.setItemText(0, tr("wizard_population_none"))
-        self._lbl_population_hint.setText(tr("wizard_population_hint"))
+        self._combo_population.setToolTip(tr("wizard_population_hint"))
         self._lbl_population_warning.setText(tr("wizard_population_warning"))
         self._group_population.setTitle(tr("wizard_population_ok_title"))
         self._lbl_population_ok_hint.setText(tr("wizard_population_ok_hint"))
@@ -674,6 +724,10 @@ class PredictorsPage(QWizardPage):
             tr("wizard_population_ok_col_count"),
             tr("wizard_population_ok_col_ok"),
         ])
+        self._btn_add.setToolTip(tr("step2_btn_move_one"))
+        self._btn_remove.setToolTip(tr("step2_btn_move_back_one"))
+        self._btn_add_all.setToolTip(tr("step2_btn_move_all"))
+        self._btn_remove_all.setToolTip(tr("step2_btn_move_back_all"))
 
 
 # ---------------------------------------------------------------------------
@@ -682,40 +736,107 @@ class PredictorsPage(QWizardPage):
 
 
 class ValidationPage(QWizardPage):
-    """Holdout fraction (slider) + seed; CV slot prepared for Phase 2.1.b."""
+    """Scheme radios (classic structure) + holdout slider + seed.
+
+    Phase 3.11.a.1: three vertical radio buttons — Do not validate /
+    Partition (Holdout, default) / Cross-validation. The progress bar and
+    the slider are enabled ONLY under Holdout. CV shows a Phase 2.1.b
+    notice.
+
+    TODO(zona_gris): the scheme radios are presentational for now — the
+    backend pipeline (Session.partition -> train) ALWAYS applies the
+    stratified holdout; there is no no-validation or CV flow yet. To
+    avoid a silent UI/backend mismatch, NONE and CV show an explicit
+    notice and current_config() keeps emitting the holdout fraction.
+    """
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        layout = QFormLayout(self)
+        layout = QVBoxLayout(self)
 
-        self._combo_scheme = QComboBox()
-        model = QStandardItemModel(self._combo_scheme)
-        self._item_holdout = QStandardItem()
-        self._item_cv = QStandardItem()
-        self._item_cv.setEnabled(False)  # deferred to Phase 2.1.b
-        model.appendRow(self._item_holdout)
-        model.appendRow(self._item_cv)
-        self._combo_scheme.setModel(model)
-        self._combo_scheme.setToolTip(tr("step3_cv_tooltip"))
+        # Scheme radios (classic vertical stack; Holdout default)
+        self._scheme_group = QButtonGroup(self)
+        self._scheme_group.setExclusive(True)
+        self._rb_none = QRadioButton()
+        self._rb_none.setObjectName("rbSchemeNone")
+        self._rb_holdout = QRadioButton()
+        self._rb_holdout.setObjectName("rbSchemeHoldout")
+        self._rb_cv = QRadioButton()
+        self._rb_cv.setObjectName("rbSchemeCV")
+        for rb in (self._rb_none, self._rb_holdout, self._rb_cv):
+            self._scheme_group.addButton(rb)
+            layout.addWidget(rb)
+        self._rb_holdout.setChecked(True)
+
+        # Availability notices (shown only when the radio is selected)
+        self._lbl_none_notice = QLabel()
+        self._lbl_none_notice.setObjectName("lblNoneNotice")
+        self._lbl_none_notice.setWordWrap(True)
+        self._lbl_none_notice.setVisible(False)
+        self._lbl_cv_notice = QLabel()
+        self._lbl_cv_notice.setObjectName("lblCVNotice")
+        self._lbl_cv_notice.setWordWrap(True)
+        self._lbl_cv_notice.setVisible(False)
+        layout.addWidget(self._lbl_none_notice)
+        layout.addWidget(self._lbl_cv_notice)
+
+        # Hotfix 3.11.a.1: modern split visualisation — section title,
+        # proportional progress bar and large train/test percentage labels.
+        self._lbl_split_title = QLabel()
+        self._lbl_split_title.setObjectName("panelTitle")
+        layout.addWidget(self._lbl_split_title)
+
+        self._split_bar = QProgressBar()
+        self._split_bar.setObjectName("splitBar")
+        self._split_bar.setTextVisible(False)
+        self._split_bar.setFixedHeight(24)
+        self._split_bar.setRange(0, 100)
+        layout.addWidget(self._split_bar)
+
+        row_split_labels = QHBoxLayout()
+        self._lbl_train = QLabel()
+        self._lbl_train.setObjectName("splitTrainLabel")
+        self._lbl_train.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self._lbl_test = QLabel()
+        self._lbl_test.setObjectName("splitTestLabel")
+        self._lbl_test.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        for lbl in (self._lbl_train, self._lbl_test):
+            font = lbl.font()
+            font.setPointSize(12)
+            font.setBold(True)
+            lbl.setFont(font)
+        row_split_labels.addWidget(self._lbl_train)
+        row_split_labels.addStretch(1)
+        row_split_labels.addWidget(self._lbl_test)
+        layout.addLayout(row_split_labels)
 
         self._slider = QSlider(Qt.Orientation.Horizontal)
         self._slider.setObjectName("sliderTrainFrac")
         self._slider.setRange(50, 90)
         self._slider.setSingleStep(1)
         self._slider.setValue(70)
-        self._lbl_split = QLabel()
-        self._slider.valueChanged.connect(self._refresh_split_label)
+        self._slider.valueChanged.connect(self._update_split_ui)
+        layout.addWidget(self._slider)
 
+        # Seed row (spinbox kept, below the split controls)
         self._spin_seed = QSpinBox()
         self._spin_seed.setObjectName("spinSeed")
         self._spin_seed.setRange(0, 999999)
         self._spin_seed.setValue(42)
-
-        self._lbl_scheme = QLabel()
         self._lbl_seed = QLabel()
-        layout.addRow(self._lbl_scheme, self._combo_scheme)
-        layout.addRow(self._slider, self._lbl_split)
-        layout.addRow(self._lbl_seed, self._spin_seed)
+        row_seed = QHBoxLayout()
+        row_seed.addWidget(self._lbl_seed)
+        row_seed.addWidget(self._spin_seed)
+        row_seed.addStretch(1)
+        layout.addLayout(row_seed)
+        layout.addStretch(1)
+
+        self._scheme_group.buttonToggled.connect(self._sync_scheme_controls)
+        self._sync_scheme_controls()
 
     def train_frac(self) -> float:
         return self._slider.value() / 100.0
@@ -723,11 +844,27 @@ class ValidationPage(QWizardPage):
     def seed(self) -> int:
         return int(self._spin_seed.value())
 
-    def _refresh_split_label(self, value: int) -> None:
-        self._lbl_split.setText(
-            f"{tr('step3_train_label')}: {value}% | "
-            f"{tr('step3_test_label')}: {100 - value}%"
-        )
+    def validation_scheme(self) -> str:
+        """Selected scheme: NONE / HOLDOUT / CV (presentational, see TODO)."""
+        if self._rb_none.isChecked():
+            return "NONE"
+        if self._rb_cv.isChecked():
+            return "CV"
+        return "HOLDOUT"
+
+    def _sync_scheme_controls(self, *_args) -> None:
+        holdout = self._rb_holdout.isChecked()
+        # Only the holdout split controls track the radio; the split
+        # labels keep showing the last values (read-only display).
+        self._slider.setEnabled(holdout)
+        self._split_bar.setEnabled(holdout)
+        self._lbl_none_notice.setVisible(self._rb_none.isChecked())
+        self._lbl_cv_notice.setVisible(self._rb_cv.isChecked())
+
+    def _update_split_ui(self, value: int) -> None:
+        self._split_bar.setValue(value)
+        self._lbl_train.setText(f"{tr('step3_train_label')}: {value}%")
+        self._lbl_test.setText(f"{tr('step3_test_label')}: {100 - value}%")
 
     def isComplete(self) -> bool:
         return True  # slider/spinbox ranges are valid by construction
@@ -735,11 +872,14 @@ class ValidationPage(QWizardPage):
     def retranslate_ui(self) -> None:
         self.setTitle(tr("step3_title"))
         self.setSubTitle(tr("step3_subtitle"))
-        self._lbl_scheme.setText(tr("step3_scheme_label"))
-        self._item_holdout.setText(tr("step3_scheme_holdout"))
-        self._item_cv.setText(tr("step3_scheme_cv_todo"))
+        self._rb_none.setText(tr("step3_scheme_none"))
+        self._rb_holdout.setText(tr("step3_scheme_partition"))
+        self._rb_cv.setText(tr("step3_scheme_cv"))
+        self._lbl_none_notice.setText(tr("step3_none_notice"))
+        self._lbl_cv_notice.setText(tr("step3_cv_notice"))
         self._lbl_seed.setText(tr("step3_seed_label"))
-        self._refresh_split_label(self._slider.value())
+        self._lbl_split_title.setText(tr("step3_split_title"))
+        self._update_split_ui(self._slider.value())
 
 
 # ---------------------------------------------------------------------------
@@ -747,8 +887,121 @@ class ValidationPage(QWizardPage):
 # ---------------------------------------------------------------------------
 
 
+class AdvancedOptionsDialog(QDialog):
+    """Modal advanced-options editor (Phase 3.11.a.1, classic structure).
+
+    Tabs:
+      - "Stopping Rules": max_depth, min_child_size, min_child_weight
+        (editable; they flow into ModelWizard.current_config() on Accept).
+      - "CHAID": alpha_merge / alpha_split.
+
+    TODO(zona_gris): the CHAID alpha controls are DISABLED on purpose.
+    ChaidEngine accepts alpha_merge/alpha_split (default 0.05) but
+    Session.train does not expose them and they are not part of
+    SplitConfig/params_fingerprint: editable-but-inert controls would be
+    a silent no-op (governance violation). They enable when the backend
+    contract lands (Phase 3.11.c/d, TreeBuilder redesign).
+
+    The dialog is modal and short-lived: texts are resolved via tr() at
+    construction (no live retranslation while open).
+    """
+
+    def __init__(
+        self,
+        *,
+        max_depth: int,
+        min_child_size: int,
+        min_child_weight: float,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setObjectName("advancedOptionsDialog")
+        self.setModal(True)
+        self.setWindowTitle(tr("adv_dialog_title"))
+        layout = QVBoxLayout(self)
+
+        self._tabs = QTabWidget()
+        self._tabs.setObjectName("advancedTabs")
+
+        # --- Tab 1: Stopping Rules (editable) ---
+        tab_stop = QWidget()
+        tab_stop.setObjectName("tabStoppingRules")
+        form_stop = QFormLayout(tab_stop)
+        self._spin_depth = QSpinBox()
+        self._spin_depth.setObjectName("spinMaxDepth")
+        self._spin_depth.setRange(2, 10)
+        self._spin_depth.setValue(int(max_depth))
+        self._spin_child = QSpinBox()
+        self._spin_child.setObjectName("spinMinChild")
+        self._spin_child.setRange(10, 50000)
+        self._spin_child.setValue(int(min_child_size))
+        self._spin_min_child_weight = QDoubleSpinBox()
+        self._spin_min_child_weight.setObjectName("spinMinChildWeight")
+        self._spin_min_child_weight.setDecimals(2)
+        self._spin_min_child_weight.setRange(0.0, 100000.0)
+        self._spin_min_child_weight.setSingleStep(1.0)
+        self._spin_min_child_weight.setValue(float(min_child_weight))
+        form_stop.addRow(tr("step4_max_depth"), self._spin_depth)
+        form_stop.addRow(tr("step4_min_child"), self._spin_child)
+        form_stop.addRow(
+            tr("step4_min_child_weight"), self._spin_min_child_weight
+        )
+        lbl_hint = QLabel(tr("step4_min_child_weight_hint"))
+        lbl_hint.setWordWrap(True)
+        form_stop.addRow("", lbl_hint)
+        self._tabs.addTab(tab_stop, tr("adv_tab_stopping"))
+
+        # --- Tab 2: CHAID (disabled until the backend contract lands) ---
+        tab_chaid = QWidget()
+        tab_chaid.setObjectName("tabChaid")
+        form_chaid = QFormLayout(tab_chaid)
+        self._spin_alpha_merge = QDoubleSpinBox()
+        self._spin_alpha_merge.setObjectName("spinAlphaMerge")
+        self._spin_alpha_merge.setDecimals(3)
+        self._spin_alpha_merge.setRange(0.001, 0.5)
+        self._spin_alpha_merge.setSingleStep(0.005)
+        self._spin_alpha_merge.setValue(0.05)  # ChaidEngine default
+        self._spin_alpha_split = QDoubleSpinBox()
+        self._spin_alpha_split.setObjectName("spinAlphaSplit")
+        self._spin_alpha_split.setDecimals(3)
+        self._spin_alpha_split.setRange(0.001, 0.5)
+        self._spin_alpha_split.setSingleStep(0.005)
+        self._spin_alpha_split.setValue(0.05)  # ChaidEngine default
+        self._spin_alpha_merge.setEnabled(False)  # TODO(zona_gris), arriba
+        self._spin_alpha_split.setEnabled(False)
+        form_chaid.addRow(tr("adv_chaid_alpha_merge"), self._spin_alpha_merge)
+        form_chaid.addRow(tr("adv_chaid_alpha_split"), self._spin_alpha_split)
+        lbl_pending = QLabel(tr("adv_chaid_pending"))
+        lbl_pending.setWordWrap(True)
+        form_chaid.addRow("", lbl_pending)
+        self._tabs.addTab(tab_chaid, tr("adv_tab_chaid"))
+
+        layout.addWidget(self._tabs)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def values(self) -> tuple[int, int, float]:
+        """(max_depth, min_child_size, min_child_weight) as edited."""
+        return (
+            int(self._spin_depth.value()),
+            int(self._spin_child.value()),
+            float(self._spin_min_child_weight.value()),
+        )
+
+
 class GovernancePage(QWizardPage):
-    """Governance mode (BANKING default / RESEARCH) + hyper-parameters.
+    """Governance mode (BANKING default / RESEARCH) + summary + advanced.
+
+    Phase 3.11.a.1 (classic structure): the hyper-parameter fields no
+    longer live on the page; they moved into the modal "Advanced
+    Options..." dialog (Stopping Rules / CHAID tabs). The page keeps the
+    governance controls (Jeffreys / PD floor — bound to the mode), a
+    model summary label and the big Advanced Options button.
 
     Banking -> Research: Jeffreys/PD-floor controls disabled and the config
     emits apply_jeffreys=False, pd_floor=None. Research -> Banking: the
@@ -758,6 +1011,12 @@ class GovernancePage(QWizardPage):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         layout = QVBoxLayout(self)
+
+        # Hyper-parameters edited via the Advanced Options dialog
+        # (defaults identical to the pre-3.11.a.1 spinboxes).
+        self._max_depth: int = 4
+        self._min_child_size: int = 50
+        self._min_child_weight: float = 0.0
 
         self._group_mode = QGroupBox()
         mode_box = QVBoxLayout(self._group_mode)
@@ -773,6 +1032,15 @@ class GovernancePage(QWizardPage):
         btn_group.setExclusive(True)
         btn_group.addButton(self._rb_banking)
         btn_group.addButton(self._rb_research)
+        # Mode icons (standard pixmaps): Banking = computer (regulated
+        # production), Research = contents view (exploratory work).
+        style = self.style()
+        self._rb_banking.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
+        )
+        self._rb_research.setIcon(
+            style.standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)
+        )
         mode_box.addWidget(self._rb_banking)
         mode_box.addWidget(self._lbl_banking_desc)
         mode_box.addWidget(self._rb_research)
@@ -790,34 +1058,21 @@ class GovernancePage(QWizardPage):
         self._spin_floor.setRange(0.0, 0.05)
         self._spin_floor.setSingleStep(0.0001)
         self._spin_floor.setValue(0.0005)  # Basel PD floor (BCBS CRE 32.4, non-sovereign)
-        self._spin_depth = QSpinBox()
-        self._spin_depth.setObjectName("spinMaxDepth")
-        self._spin_depth.setRange(2, 10)
-        self._spin_depth.setValue(4)
-        self._spin_child = QSpinBox()
-        self._spin_child.setObjectName("spinMinChild")
-        self._spin_child.setRange(10, 50000)
-        self._spin_child.setValue(50)
-        self._spin_min_child_weight = QDoubleSpinBox()
-        self._spin_min_child_weight.setObjectName("spinMinChildWeight")
-        self._spin_min_child_weight.setDecimals(2)
-        self._spin_min_child_weight.setRange(0.0, 100000.0)
-        self._spin_min_child_weight.setSingleStep(1.0)
-        self._spin_min_child_weight.setValue(0.0)
         self._lbl_jeffreys = QLabel()
         self._lbl_floor = QLabel()
-        self._lbl_depth = QLabel()
-        self._lbl_child = QLabel()
-        self._lbl_min_child_weight = QLabel()
-        self._lbl_min_child_weight_hint = QLabel()
-        self._lbl_min_child_weight_hint.setWordWrap(True)
         form.addRow(self._lbl_jeffreys, self._chk_jeffreys)
         form.addRow(self._lbl_floor, self._spin_floor)
-        form.addRow(self._lbl_depth, self._spin_depth)
-        form.addRow(self._lbl_child, self._spin_child)
-        form.addRow(self._lbl_min_child_weight, self._spin_min_child_weight)
-        form.addRow("", self._lbl_min_child_weight_hint)
         layout.addLayout(form)
+
+        # Big classic entry point to the modal advanced-options editor.
+        self._btn_advanced = QPushButton()
+        self._btn_advanced.setObjectName("btnAdvancedOptions")
+        self._btn_advanced.setMinimumHeight(40)
+        font = self._btn_advanced.font()
+        font.setBold(True)
+        self._btn_advanced.setFont(font)
+        self._btn_advanced.clicked.connect(self._open_advanced_options)
+        layout.addWidget(self._btn_advanced)
 
         self._lbl_summary_title = QLabel()
         self._lbl_summary_title.setObjectName("panelTitle")
@@ -842,15 +1097,30 @@ class GovernancePage(QWizardPage):
         return float(self._spin_floor.value()) if self.is_banking() else None
 
     def max_depth(self) -> int:
-        return int(self._spin_depth.value())
+        return int(self._max_depth)
 
     def min_child_size(self) -> int:
-        return int(self._spin_child.value())
+        return int(self._min_child_size)
 
     def min_child_weight(self) -> float | None:
         """Piso de MASA PONDERADA por rama (Fase 3.7.c). 0.0 = desactivado."""
-        v = float(self._spin_min_child_weight.value())
-        return None if v <= 0.0 else v
+        return None if self._min_child_weight <= 0.0 else self._min_child_weight
+
+    def _open_advanced_options(self) -> None:
+        """Open the modal editor; on Accept the values flow into
+        current_config() (via the page getters) and the summary refreshes."""
+        dlg = AdvancedOptionsDialog(
+            max_depth=self._max_depth,
+            min_child_size=self._min_child_size,
+            min_child_weight=self._min_child_weight,
+            parent=self,
+        )
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._max_depth, self._min_child_size, self._min_child_weight = (
+            dlg.values()
+        )
+        self._refresh_summary()
 
     def _sync_governance_controls(self) -> None:
         banking = self.is_banking()
@@ -875,17 +1145,33 @@ class GovernancePage(QWizardPage):
             if cfg["governance_mode"] == "BANKING"
             else "step4_govmode_research_short"
         )
-        lines = [
-            f"{tr('step4_summary_engine')}: {cfg['engine']}",
-            f"{tr('step2_target_label')} {cfg['target']}",
-            f"{tr('step2_selected')}: {len(cfg['predictors'])}",
-            (f"{tr('step3_train_label')}: {int(cfg['train_frac'] * 100)}% · "
-             f"{tr('step3_seed_label')}: {cfg['seed']}"),
-            (f"{tr('step4_max_depth')}: {cfg['max_depth']} · "
-             f"{tr('step4_min_child')}: {cfg['min_child_size']}"),
-            f"{tr('step4_govmode_title')}: {tr(gov_key)}",
-        ]
-        self._lbl_summary.setText("\n".join(lines))
+        # Dashboard-style rich text (QLabel auto-detects HTML). Accent
+        # spans highlight the decision values; the list keeps the audit
+        # order engine -> target -> predictors -> split -> stopping rules
+        # -> governance.
+        # NOTE (test contract): the stopping-rules line keeps the colon
+        # OUTSIDE the <b> tags so the raw HTML still contains ": <value>"
+        # (test_wizard.py asserts ": 8" after editing max_depth); the other
+        # lines keep the colon inside the <b> ("Motor:" / "Engine:" are
+        # asserted with the colon attached to the label word).
+        accent = "#1A73E8"
+        html = (
+            "<ul style='margin:0px; padding-left:16px;'>"
+            f"<li><b>{tr('step4_summary_engine')}:</b> "
+            f"<span style='color: {accent};'>{cfg['engine']}</span></li>"
+            f"<li><b>{tr('step2_target_label')}</b> "
+            f"<span style='color: {accent};'>{cfg['target']}</span></li>"
+            f"<li><b>{tr('step2_selected')}:</b> {len(cfg['predictors'])}</li>"
+            f"<li><b>{tr('step3_train_label')}:</b> "
+            f"{int(cfg['train_frac'] * 100)}% · "
+            f"<b>{tr('step3_seed_label')}:</b> {cfg['seed']}</li>"
+            f"<li><b>{tr('step4_max_depth')}</b>: {cfg['max_depth']} · "
+            f"<b>{tr('step4_min_child')}</b>: {cfg['min_child_size']}</li>"
+            f"<li><b>{tr('step4_govmode_title')}:</b> "
+            f"<span style='color: {accent};'>{tr(gov_key)}</span></li>"
+            "</ul>"
+        )
+        self._lbl_summary.setText(html)
 
     def isComplete(self) -> bool:
         return True  # spinbox ranges are valid by construction
@@ -900,12 +1186,7 @@ class GovernancePage(QWizardPage):
         self._lbl_research_desc.setText(tr("step4_govmode_research_desc"))
         self._lbl_jeffreys.setText(tr("step4_apply_jeffreys"))
         self._lbl_floor.setText(tr("step4_pd_floor"))
-        self._lbl_depth.setText(tr("step4_max_depth"))
-        self._lbl_child.setText(tr("step4_min_child"))
-        self._lbl_min_child_weight.setText(tr("step4_min_child_weight"))
-        self._lbl_min_child_weight_hint.setText(
-            tr("step4_min_child_weight_hint")
-        )
+        self._btn_advanced.setText(tr("step4_advanced_options"))
         self._lbl_summary_title.setText(tr("step4_summary_label"))
         self._refresh_summary()
 
@@ -939,6 +1220,27 @@ class ModelWizard(QWizard):
         # Qt 6 (la opcion es HaveHelpButton; no existe "NoHelpButton" - ver
         # docs Qt6). Sin contenido de ayuda, basta no activarla.
         self.setModal(False)
+
+        # Phase 3.11.a.1: pin the wizard itself to Fusion so it never falls
+        # back to the native Windows style (which ignores the app
+        # palette/QSS). QWidget.setStyle() does NOT transfer ownership:
+        # keep the reference alive for the wizard's lifetime.
+        self._fusion_style = QStyleFactory.create("Fusion")
+        if self._fusion_style is not None:
+            self.setStyle(self._fusion_style)
+
+        # Force ClassicStyle: AeroStyle (the Windows default) renders the
+        # header and button bar through the OS theme, ignoring the app
+        # palette and the QSS. ClassicStyle lets the QSS paint both.
+        self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
+
+        # Inherit the global app palette (set by theme.apply_palette) so
+        # native-rendered chrome (title bar, button frames) follows the
+        # active theme instead of the Windows light/dark mode.
+        app = QApplication.instance()
+        if app is not None:
+            self.setPalette(app.palette())
+        self.setAutoFillBackground(True)
 
         # Reasonable opening size: wide enough for the dual predictor
         # lists and tall enough for the governance summary without

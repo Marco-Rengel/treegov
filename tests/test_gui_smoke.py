@@ -37,7 +37,11 @@ from frontend_v3.i18n import (  # noqa: E402
     tr,
 )
 from frontend_v3.main_window import MainWindow  # noqa: E402
-from frontend_v3.theme import apply_theme, available_themes  # noqa: E402
+from frontend_v3.theme import (  # noqa: E402
+    apply_palette,
+    apply_theme,
+    available_themes,
+)
 
 _BANNED = {"numpy", "pandas", "scipy"}
 _TOKEN_RE = re.compile(r"\$[A-Z_]+")
@@ -84,12 +88,19 @@ def test_layout_structure():
     splitter = w.findChild(QSplitter, "centralSplitter")
     assert splitter is not None
     assert splitter.count() == 3
-    assert splitter.widget(0) is w.findChild(QFrame, "leftPanel")
+    # Phase 3.11.a.1 (classic layout): the left panel is a vertical
+    # splitter with three stacked group boxes (Explorer / Tree Map /
+    # Data Viewer).
+    left = splitter.widget(0)
+    assert left is w.findChild(QSplitter, "leftPanel")
+    assert left.count() == 3
     assert splitter.widget(2) is w.findChild(QFrame, "hudPanel")
     tabs = w.findChild(QTabWidget, "centralTabs")
-    # 5 main tabs (Excel-style sheets filling the central area):
+    # 5 main tabs filling the WHOLE central area, with the tab bar
+    # anchored at the bottom (Excel-sheet style, TabPosition.South):
     # Tree (0) + Gains (1) + Risks (2) + Rules (3) + Summary (4)
     assert tabs is not None and tabs.count() == 5
+    assert tabs.tabPosition() == QTabWidget.TabPosition.South
     # the tab widget IS the central splitter pane (no vertical splitter)
     assert splitter.widget(1) is tabs
     assert tabs.widget(0) is w._tree_panel
@@ -120,10 +131,16 @@ def test_menus_exist():
     _get_app()
     w = MainWindow()
     menu_names = {m.objectName() for m in w.findChildren(QMenu)}
+    # Phase 3.11.a.1: classic menu structure (AnswerTree, circa 2001):
+    # File, Edit, View, Format, Analysis, Tree, Window, Help.
     assert {
         "menu_file",
-        "menu_model",
+        "menu_edit",
         "menu_view",
+        "menu_format",
+        "menu_analysis",
+        "menu_tree",
+        "menu_window",
         "menu_help",
         "menu_theme",
         "menu_language",
@@ -175,6 +192,32 @@ def test_theme_switch_both():
         assert not _TOKEN_RE.findall(qss), f"unresolved $TOKEN in {name} theme"
     _assert_raises(ValueError, apply_theme, "neon", app)
     apply_theme("light", app)  # restore default
+
+
+def test_apply_palette_roles():
+    """Phase 3.11.a.1: apply_palette pins the TreeGov QPalette so native-
+    rendered chrome (QWizard/QDialog) follows the app theme, not the
+    Windows light/dark mode. Fail-fast on unknown theme (like apply_theme).
+    """
+    from PySide6.QtGui import QColor, QPalette
+
+    from frontend_v3.theme import PALETTES
+
+    app = _get_app()
+    R = QPalette.ColorRole
+    for name in available_themes():
+        apply_palette(name, app)
+        pal = app.palette()
+        expected = PALETTES[name]
+        assert pal.color(R.Window) == QColor(expected["BG"])
+        assert pal.color(R.WindowText) == QColor(expected["FG"])
+        assert pal.color(R.Base) == QColor(expected["SURFACE_ELEVATED"])
+        assert pal.color(R.AlternateBase) == QColor(expected["SURFACE"])
+        assert pal.color(R.Text) == QColor(expected["FG"])
+        assert pal.color(R.Button) == QColor(expected["SURFACE"])
+        assert pal.color(R.ButtonText) == QColor(expected["FG"])
+    _assert_raises(ValueError, apply_palette, "neon", app)
+    apply_palette("light", app)  # restore default
 
 
 def test_frontend_clean_room():
