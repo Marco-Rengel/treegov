@@ -396,9 +396,41 @@ call sites preexistentes del propio test; se corrigieron
 añadiendo solo el tercer argumento (regla de refactor: sin
 tocar su lógica). 1 test nuevo (`test_node_total_pct_global`:
 raíz = 1.0, hoja = 0.5 sobre `_crt_model`). Suite 465/465.
-**Fase 3.11.b completa. Próximo paso: Fase 3.11.c (Árboles
-Univariados y Matriz de Costos)**, y después 3.11.d (Menú
-Contextual e Interactividad).
+
+**3.11.c.1 — Backend univariado** ✅ Completada (25/10/2026).
+Nuevo método de solo lectura `Session.get_univariate_trees(max_depth=3)`
+en `backend_v3/session_state.py`: entrena un árbol por predictor del
+spec con el mismo motor del modelo principal (vía `_ENGINE_FACTORIES`)
+y gobernanza BANKING, lo evalúa sobre test (mismo camino que
+`evaluate_oos`) y devuelve el DTO plano `{"predictor", "gini", "ks",
+"cut_points"}`; un predictor que falla degrada a 0.0 con WARNING.
+Zona gris documentada (`# TODO(zona_gris)`): propagación de
+`weights=self._w_train` para paridad con `train()`. 1 test nuevo.
+Suite 466/466.
+
+**3.11.c.2 — Frontend univariado** ✅ Completada (25/10/2026).
+`frontend_v3/univariate_dialog.py` (nuevo): `UnivariateDialog` con
+tabla Predictor | Gini | KS | Cortes, Ctrl+C → TSV y botón "Copiar
+TSV" (REGLA 4.1.1 vía `ReportsPanel._copy_selection_to_clipboard`) y
+"Exportar CSV". Menú Análisis > "Generar Árboles Univariados"
+(`act_univariate`, habilitada solo en TRAINED, patrón `act_prune`).
+9 claves i18n nuevas con paridad EN/ES. 2 tests nuevos headless en
+`tests/test_univariate_dialog.py`. Suite 468/468.
+
+**3.11.c.3 — Matriz de costos N×N** ✅ Completada (25/10/2026).
+`SessionState.cost_matrix` (tupla de tuplas, inmutable; `()` = sin
+costos) y `fix_spec(cost_matrix=...)` con endurecimiento previo a la
+transición (cuadrada N = nº de clases, diagonal fija a 0, valores
+finitos ≥ 0). Pestaña "Costs" del `AdvancedOptionsDialog` (tabla
+`tblCosts` N×N, N=2 fijo con TODO(zona_gris), diagonal read-only),
+wiring `GovernancePage._cost_matrix` → `current_config()["cost_matrix"]`
+→ `_train_pipeline` → `fix_spec`. NO entra en `params_fingerprint`
+(el motor de crecimiento no la usa; `design_decisions.md` §18.8).
+Hallazgo: la validación inicial rechazaba `()` (guard `is not None`)
+y rompió 5 tests e2e; fix a `if cost_matrix:` (`() ≡ sin costos`).
+2 tests nuevos (backend + wizard). Suite 470/470.
+**Fase 3.11.c completa. Próximo paso: Fase 3.11.d (Menú
+Contextual e Interactividad)**.
 
 ### Cierre intermedio 16/10/2026
 
@@ -580,13 +612,13 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 11 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 92 |
+| session_state.py | 94 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
 | gui_smoke (frontend) | 12 |
-| wizard (frontend) | 26 |
+| wizard (frontend) | 27 |
 | tree_view (frontend) | 15 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
@@ -596,9 +628,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_map (frontend) | 3 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **465** |
+| univariate_dialog (frontend) | 2 |
+| **Total** | **470** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 465/465 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 470/470 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

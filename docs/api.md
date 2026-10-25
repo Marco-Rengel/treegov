@@ -112,6 +112,24 @@ underscore) are internal and may change without notice.
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
 - `Session.get_prune_sequence() -> list[dict[str, Any]]` — Read-only method that returns the cost-complexity pruning sequence for the trained model. Each dictionary contains `alpha` (float), `n_leaves` (int), and `r_subtree` (float). Returns an empty list if the model has no internal nodes. (Phase 3.9).
+- `Session.get_univariate_trees(max_depth=3) -> list[dict]` — read-only
+  batch univariate trees (Phase 3.11.c.1): trains one depth-`max_depth`
+  tree per predictor in the spec using the SAME engine as the trained
+  model and BANKING governance, evaluates it on the test partition (same
+  path as `evaluate_oos`) and returns one flat dict per predictor with
+  keys `predictor` (str), `gini` (float), `ks` (float) and `cut_points`
+  (list[tuple[str, float]] of internal-node thresholds). A failing
+  predictor degrades to `0.0` metrics with a WARNING in the log.
+  Requires a trained model (`ValueError` otherwise).
+- `Session.fix_spec(..., cost_matrix=None)` — Phase 3.11.c.3 adds the
+  keyword-only `cost_matrix` parameter: an immutable N×N
+  misclassification-cost matrix (rows: actual class; columns: predicted
+  class), stored in `SessionState.cost_matrix` as a tuple of tuples.
+  Validated BEFORE the state transition (square with N = number of
+  target classes, diagonal fixed at 0, finite values ≥ 0). The empty
+  tuple `()` means "no costs" (default). It is NOT part of
+  `params_fingerprint` in this phase — the growth engine does not use
+  it (see `docs/design_decisions.md` §18.8).
 - `Session.evaluate_oos(*, n_groups=10)` — supports K > 2 since
   Phase 3.5.c. Internally translates `y` to the internal canonical
   order via `_translate_y_to_internal` and calls

@@ -2179,6 +2179,11 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 **Decisión:** `Session.get_data_preview(n_rows=50)` devuelve el dict vacío `{"columns": [], "rows": [], "n_total": 0, "truncated": False}` cuando `self._df is None`, en lugar de lanzar `RuntimeError`. Además, toda celda se serializa a tipo nativo de Python (`int`/`float`/`str`/`bool`) y los valores ausentes del CSV (`pd.isna`) como `None`: cero escalares numpy/pandas en el retorno, dict JSON-serializable (requisito O3 de la auditoría del diseño).
 **Consecuencia:** El frontend (3.11.b.2) distingue "sin dataset" con una sola comprobación (`n_total == 0`), sin `try/except`; el contrato es testeable sin Qt y queda listo para serialización JSON en la futura capa MCP (Fase 5). La divergencia queda acotada a este método: la familia `describe_*` mantiene su semántica fail-fast sin cambios.
 
+### 18.8 Matriz de costos en SessionState sin fingerprint (Phase 3.11.c.3)
+**Contexto:** La Fase 3.11.c introduce una matriz de costos de clasificación errónea N×N (asimétrica; filas = clase real, columnas = clase predicha) editada en el wizard (pestaña "Costs" del `AdvancedOptionsDialog`) y almacenada en `SessionState.cost_matrix` como tupla de tuplas inmutable. La regla general de gobernanza dice "un modelo con parámetros distintos es un modelo distinto" (params_fingerprint único), lo que sugeriría incluir la matriz en el fingerprint.
+**Decisión:** La matriz se almacena en `SessionState` para trazabilidad y se expone en los reportes, pero NO entra en el `params_fingerprint` del TreeBuilder en esta fase, porque el motor de crecimiento actual no la utiliza: no altera la topología del árbol ni las PD por hoja, así que dos modelos con costos distintos son numéricamente idénticos bit a bit. Incluirla en el fingerprint sería una diferencia ficticia (mismo modelo, huella distinta). La matriz se incluirá en el fingerprint cuando el TreeBuilder implemente poda o crecimiento basado en costos (Fase 3.11.d o 4.0). Además, la tupla vacía `()` equivale a "sin costos" y no se valida (el endurecimiento de `fix_spec` —cuadrada N = nº de clases, diagonal fija a 0, valores finitos ≥ 0— solo aplica a matrices no vacías).
+**Consecuencia:** El contrato de `fix_spec` gana el parámetro keyword-only `cost_matrix=None` (ver `docs/api.md`); la topología y las métricas del modelo son independientes de la matriz en esta fase; los umbrales de clasificación óptimos basados en costos quedan como uso futuro documentado (diseño `docs/3.11.c_design_univariate_cost_matrix.md` §3.2).
+
 ---
 
 ## Maintenance
@@ -2211,6 +2216,7 @@ accumulated during Phases 0 through 2.4. (Updated on 20/10/2026 to add
 Phase 3.11.a.1; on 25/10/2026 to add §0.5 — Clean-Room Development and
 Academic Provenance — and §18.5–§18.6 — mini-cierre de zonas grises de
 presentación; on 25/10/2026 to add §18.7 — Phase 3.11.b.1, empty dict
-vs RuntimeError in `get_data_preview`.)
+vs RuntimeError in `get_data_preview`; on 25/10/2026 to add §18.8 —
+Phase 3.11.c.3, cost matrix in `SessionState` without fingerprint.)
 
 ---
