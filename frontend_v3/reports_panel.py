@@ -490,7 +490,7 @@ class ReportsPanel(QWidget):
         parts.append("<table><tbody>")
         for key in self._SUMMARY_FIELDS:
             parts.append(
-                f"<tr><td class='label'>{esc(tr('reports_sum_' + key))}</td>"
+                f"<tr><td class='label'>{esc(self._term_report_label('reports_sum_' + key))}</td>"
                 f"<td>{esc(gains.get(key))}</td></tr>"
             )
         parts.append("</tbody></table>")
@@ -500,16 +500,16 @@ class ReportsPanel(QWidget):
         parts.append("<table><tbody>")
         parts.append(
             f"<tr><td class='label'></td>"
-            f"<td>{esc(tr('reports_matrix_pred_good'))}</td>"
-            f"<td>{esc(tr('reports_matrix_pred_bad'))}</td></tr>"
+            f"<td>{esc(self._term_report_label('reports_matrix_pred_good'))}</td>"
+            f"<td>{esc(self._term_report_label('reports_matrix_pred_bad'))}</td></tr>"
         )
         parts.append(
-            f"<tr><td class='label'>{esc(tr('reports_matrix_actual_good'))}</td>"
+            f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_good'))}</td>"
             f"<td>{esc(matrix.get('tn'))}</td>"
             f"<td>{esc(matrix.get('fp'))}</td></tr>"
         )
         parts.append(
-            f"<tr><td class='label'>{esc(tr('reports_matrix_actual_bad'))}</td>"
+            f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_bad'))}</td>"
             f"<td>{esc(matrix.get('fn'))}</td>"
             f"<td>{esc(matrix.get('tp'))}</td></tr>"
         )
@@ -734,6 +734,33 @@ class ReportsPanel(QWidget):
             "reports_col_bad_rate_decum": (
                 f"{tr_term('bad_rate', self._mode)} Decum"
             ),
+        }
+        return mapping.get(key, tr(key))
+
+    def _term_report_label(self, key: str) -> str:
+        """Etiqueta del reporte HTML según el modo de gobernanza.
+
+        Fase 3.6.e.3: extiende la cobertura de `_term_header` a las
+        etiquetas del resumen y de la matriz del export HTML, para que
+        el documento exportado en modo RESEARCH no contenga términos
+        bancarios ("Bad rate" quedaba filtrado vía
+        `reports_sum_bad_rate_global`). BANKING conserva tr(key)
+        intacto (paridad; los tests existentes aserten sobre el HTML
+        en modo por defecto).
+        TODO(zona_gris): `reports_matrix_bad_capture_rate` sigue siendo
+        bancario en RESEARCH ("Bad capture rate"); requiere clave neutra
+        propia (diferido al cierre de la Fase 3.6.e).
+        """
+        if self._mode != "RESEARCH":
+            return tr(key)
+        mapping = {
+            "reports_sum_n_good": tr_term("no_event", self._mode),
+            "reports_sum_n_bad": tr_term("event", self._mode),
+            "reports_sum_bad_rate_global": tr_term("bad_rate", self._mode),
+            "reports_matrix_pred_good": tr_term("no_event", self._mode),
+            "reports_matrix_pred_bad": tr_term("event", self._mode),
+            "reports_matrix_actual_good": tr_term("no_event", self._mode),
+            "reports_matrix_actual_bad": tr_term("event", self._mode),
         }
         return mapping.get(key, tr(key))
 
