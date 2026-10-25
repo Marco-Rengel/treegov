@@ -65,6 +65,9 @@ class MetricsPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._report: dict | None = None
+        # Fase 3.6.e.2: modo de gobernanza del modelo entrenado (fija la
+        # terminología visible; BANKING por defecto = paridad intacta).
+        self._mode: str = "BANKING"
         self._invert_button: QPushButton | None = None
         self._layout = QVBoxLayout(self)
         language_bus.language_changed.connect(self.retranslate_ui)
@@ -73,6 +76,11 @@ class MetricsPanel(QWidget):
     def set_report(self, dto: dict | None) -> None:
         """Recibe el DTO de Session.get_oos_oot_report() y repinta."""
         self._report = dto
+        self.refresh()
+
+    def set_governance_mode(self, mode: str):
+        """Fase 3.6.e.2: fija el modo de gobernanza (terminología) y repinta."""
+        self._mode = mode
         self.refresh()
 
     def refresh(self) -> None:
@@ -129,6 +137,20 @@ class MetricsPanel(QWidget):
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.addWidget(QLabel(tr(label_key)))
+        row_layout.addStretch(1)
+        row_layout.addWidget(QLabel(value))
+        self._layout.addWidget(row)
+
+    def _add_row_raw(self, label_text: str, value: str) -> None:
+        """Fila con etiqueta ya resuelta (sin clave i18n).
+
+        Fase 3.6.e.2: vía de entrada de etiquetas dinámicas por modo de
+        gobernanza (tr_term) cuando la etiqueta no es una clave fija.
+        """
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(QLabel(label_text))
         row_layout.addStretch(1)
         row_layout.addWidget(QLabel(value))
         self._layout.addWidget(row)

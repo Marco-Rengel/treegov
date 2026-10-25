@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from frontend_v3.i18n import language_bus, tr
+from frontend_v3.i18n import language_bus, tr, tr_term
 
 
 def _fmt(value, digits: int = 4) -> str:
@@ -115,6 +115,9 @@ class ReportsPanel(QWidget):
         super().__init__(parent)
         self._gains: dict | None = None
         self._matrix: dict | None = None
+        # Fase 3.6.e.2: modo de gobernanza del modelo entrenado (fija la
+        # terminología visible; BANKING por defecto = paridad intacta).
+        self._mode: str = "BANKING"
         self._partitions: tuple[str, ...] = ("oos",)
         self._build_ui()
         language_bus.language_changed.connect(self.retranslate_ui)
@@ -393,6 +396,11 @@ class ReportsPanel(QWidget):
         self._matrix = dto
         self.refresh()
 
+    def set_governance_mode(self, mode: str):
+        """Fase 3.6.e.2: fija el modo de gobernanza (terminología) y repinta."""
+        self._mode = mode
+        self.retranslate_ui()
+
     def current_partition(self) -> str:
         data = self._partition_combo.currentData()
         return str(data) if data is not None else "oos"
@@ -467,7 +475,7 @@ class ReportsPanel(QWidget):
         parts.append(f"<h2>{esc(tr('reports_summary_title'))}</h2>")
         parts.append("<table><thead><tr>")
         for key in self._HEADER_KEYS:
-            parts.append(f"<th>{esc(tr(key))}</th>")
+            parts.append(f"<th>{esc(self._term_header(key))}</th>")
         parts.append("</tr></thead><tbody>")
         for row in rows:
             parts.append("<tr>")
@@ -580,14 +588,25 @@ class ReportsPanel(QWidget):
         self._refresh_button.setText(tr("reports_refresh"))
         self._export_button.setText(tr("reports_export_html"))
         self._summary_title.setText(tr("reports_summary_title"))
-        self._matrix_table.setHorizontalHeaderLabels([
-            tr("reports_matrix_pred_good"),
-            tr("reports_matrix_pred_bad"),
-        ])
-        self._matrix_table.setVerticalHeaderLabels([
-            tr("reports_matrix_actual_good"),
-            tr("reports_matrix_actual_bad"),
-        ])
+        # Fase 3.6.e.2: en RESEARCH las cabeceras de la matriz usan la
+        # terminología neutra (Evento / No evento); en BANKING se
+        # conservan las claves clásicas (paridad visual, diseño §5).
+        if self._mode == "RESEARCH":
+            lbl_no_ev = tr_term("no_event", self._mode)
+            lbl_ev = tr_term("event", self._mode)
+            pred_labels = [lbl_no_ev, lbl_ev]
+            real_labels = [lbl_no_ev, lbl_ev]
+        else:
+            pred_labels = [
+                tr("reports_matrix_pred_good"),
+                tr("reports_matrix_pred_bad"),
+            ]
+            real_labels = [
+                tr("reports_matrix_actual_good"),
+                tr("reports_matrix_actual_bad"),
+            ]
+        self._matrix_table.setHorizontalHeaderLabels(pred_labels)
+        self._matrix_table.setVerticalHeaderLabels(real_labels)
 
         self._retranslate_combo(
             self._partition_combo,
@@ -601,7 +620,9 @@ class ReportsPanel(QWidget):
         # Repaint warning if needed
         if hasattr(self, "_matrix_warning"):
             self._repaint_matrix()
-        self._table.setHorizontalHeaderLabels([tr(key) for key in self._HEADER_KEYS])
+        self._table.setHorizontalHeaderLabels(
+            [self._term_header(key) for key in self._HEADER_KEYS]
+        )
         self.refresh()
 
     # ------------------------------------------------------------ Painting
@@ -685,6 +706,37 @@ class ReportsPanel(QWidget):
             self._matrix_warning.setVisible(False)
 
     # ------------------------------------------------------------- Helpers
+    def _term_header(self, key: str) -> str:
+        """Cabecera de la gains table según el modo de gobernanza.
+
+        TODO(zona_gris): el prompt 3.6.e.2 mapeaba también el modo
+        BANKING a tr_term(...), lo que cambiaba textos visibles en
+        BANKING (p. ej. ES "Tasa malos" -> "Tasa de malos") y rompía la
+        paridad visual exigida por el diseño (3.6.e §5: BANKING bit a
+        bit idéntico). Decisión conservadora: BANKING conserva tr(key)
+        intacto; el mapeo neutro solo aplica en RESEARCH. La misma
+        resolución se usa en retranslate_ui y en _build_report_html.
+        """
+        if self._mode != "RESEARCH":
+            return tr(key)
+        mapping = {
+            "reports_col_pd": tr_term("pd", self._mode),
+            "reports_col_bad_rate": tr_term("bad_rate", self._mode),
+            "reports_col_n_bad": f"{tr_term('event', self._mode)} N",
+            "reports_col_n_good": f"{tr_term('no_event', self._mode)} N",
+            "reports_col_n_bad_cum": f"{tr_term('event', self._mode)} N Cum",
+            "reports_col_bad_rate_cum": (
+                f"{tr_term('bad_rate', self._mode)} Cum"
+            ),
+            "reports_col_n_bad_decum": (
+                f"{tr_term('event', self._mode)} N Decum"
+            ),
+            "reports_col_bad_rate_decum": (
+                f"{tr_term('bad_rate', self._mode)} Decum"
+            ),
+        }
+        return mapping.get(key, tr(key))
+
     @staticmethod
     def _retranslate_combo(combo: QComboBox, texts: dict[str, str]) -> None:
         """Rewrite combo item texts in place, keeping data and selection."""

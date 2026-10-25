@@ -793,6 +793,10 @@ class MainWindow(QMainWindow):
         tree = st.tree
         if tree is not None:
             self._tree_panel.set_model(tree, cfg["governance_mode"])
+            # Fase 3.6.e.2: la terminología visible de los paneles sigue
+            # al modo de gobernanza congelado en el fingerprint.
+            self._reports_panel.set_governance_mode(cfg["governance_mode"])
+            self._metrics_panel.set_governance_mode(cfg["governance_mode"])
             # Phase 3.11.b.4: Project Explorer refleja el modelo entrenado
             if tree is not None:
                 self._lbl_explorer_model.setText(f"{tree.method} · {tree.params_fingerprint[:8]}")

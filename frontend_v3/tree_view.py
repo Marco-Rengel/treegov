@@ -74,7 +74,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from frontend_v3.i18n import language_bus, tr
+from frontend_v3.i18n import language_bus, tr, tr_term
 from frontend_v3.theme import PALETTES
 
 if TYPE_CHECKING:
@@ -271,15 +271,27 @@ def _edge_label(split, branch_index: int) -> str:
     return text
 
 
-def node_detail_lines(node: TreeNode) -> list[str]:
+def node_detail_lines(node: TreeNode, mode: str = "BANKING") -> list[str]:
     """Properties-panel card for one node (read-only formatting)."""
+    # TODO(zona_gris): el prompt 3.6.e.2 sustituía ambos labels por
+    # tr_term("pd", mode), lo que en BANKING colapsaba "PD (Jeffreys)" y
+    # "PD (final, ...)" en el mismo texto "PD" (pérdida de la distinción
+    # Jeffreys/final y ruptura de la paridad visual BANKING del diseño
+    # 3.6.e §5). Decisión conservadora: BANKING conserva las claves
+    # clásicas; RESEARCH usa el término neutro con sufijo de distinción.
+    if mode == "RESEARCH":
+        lbl_pd_j = f"{tr_term('pd', mode)} (Jeffreys)"
+        lbl_pd_f = f"{tr_term('pd', mode)} (final)"
+    else:
+        lbl_pd_j = tr("tree_prop_pd_jeffreys")
+        lbl_pd_f = tr("tree_prop_pd_final")
     lines = [
         f"{tr('tree_prop_node')}: {node.node_id}",
         f"{tr('tree_prop_depth')}: {node.depth}",
         f"n: {node.n}",
         f"{tr('tree_node_events')}: {node.n_events[0]}",
-        f"{tr('tree_prop_pd_jeffreys')}: {_fmt_num(node.pd_jeffreys[0])}",
-        f"{tr('tree_prop_pd_final')}: {_fmt_num(node.pd_final[0])}",
+        f"{lbl_pd_j}: {_fmt_num(node.pd_jeffreys[0])}",
+        f"{lbl_pd_f}: {_fmt_num(node.pd_final[0])}",
     ]
     if node.pd_final[0] != node.pd_jeffreys[0]:
         lines.append(tr("tree_prop_floor_note"))
@@ -370,12 +382,15 @@ class NodeItem(QGraphicsItem):
     SQ = 8.0             # semaphore square side in the body rows
 
     def __init__(
-        self, node: TreeNode, palette: dict[str, str], pct_global: float
+        self, node: TreeNode, palette: dict[str, str], pct_global: float,
+        mode: str = "BANKING",
     ) -> None:
         super().__init__()
         self.node_id = node.node_id
         self._node = node
         self._palette = palette
+        # Phase 3.6.e.2: modo de gobernanza (terminología del tooltip).
+        self._mode = mode
         # Phase 3.11.b.5: cuota del nodo sobre la población raíz [0, 1]
         self._pct_global = pct_global
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
@@ -419,7 +434,7 @@ class NodeItem(QGraphicsItem):
         self._font_total.setBold(True)
         self._font_footer = QFont()
         self._font_footer.setPointSize(8)
-        self.setToolTip("\n".join(node_detail_lines(node)))
+        self.setToolTip("\n".join(node_detail_lines(node, self._mode)))
 
     # -- QGraphicsItem API ----------------------------------------------------
 
@@ -603,7 +618,10 @@ class TreeScene(QGraphicsScene):
 
     # -- build ---------------------------------------------------------------
 
-    def build_from_model(self, model: TreeModel, palette: dict[str, str]) -> None:
+    def build_from_model(
+        self, model: TreeModel, palette: dict[str, str],
+        mode: str = "BANKING",
+    ) -> None:
         """Rebuild every item from the frozen model (single render path)."""
         self.clear()
         self._items.clear()
@@ -651,7 +669,7 @@ class TreeScene(QGraphicsScene):
         total_n = float(model.nodes[model.root_id].n)
         for node in model.nodes:
             pct = (node.n / total_n) if total_n > 0 else 0.0
-            item = NodeItem(node, palette, pct)
+            item = NodeItem(node, palette, pct, mode)
             x, y = pos[node.node_id]
             item.setPos(x, y)
             self.addItem(item)
@@ -799,6 +817,9 @@ class TreePanel(QWidget):
         super().__init__(parent)
         self._model: TreeModel | None = None
         self._mode_label: str = ""
+        # Phase 3.6.e.2: modo de gobernanza del modelo entrenado (fija la
+        # terminología de los tooltips; BANKING por defecto = paridad).
+        self._mode: str = "BANKING"
         self._palette: dict[str, str] = PALETTES["light"]
 
         layout = QVBoxLayout(self)
@@ -846,6 +867,7 @@ class TreePanel(QWidget):
         The user can still fit via Ctrl+0 / the Fit button.
         """
         self._model = model
+        self._mode = governance_mode
         self._mode_label = tr(
             "step4_govmode_banking_short"
             if governance_mode == "BANKING"
@@ -892,7 +914,7 @@ class TreePanel(QWidget):
             self._lbl_warning.setVisible(False)
             self._build_placeholder()
             return
-        self._scene.build_from_model(self._model, self._palette)
+        self._scene.build_from_model(self._model, self._palette, self._mode)
         n = len(self._model.nodes)
         self._lbl_header.setText(self._header_text())
         self._lbl_warning.setVisible(n > LARGE_TREE_THRESHOLD)
