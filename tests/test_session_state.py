@@ -1962,6 +1962,39 @@ def test_fix_spec_with_cost_matrix():
         )
 
 
+def test_intervene_prune():
+    """Fase 3.11.d.1: intervene_node("prune_branch") sobre la raiz.
+
+    Podar la raiz deja un arbol de un solo nodo (hoja), con fingerprint
+    sufijado "-p1" y un registro en el Manual Override Log.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+
+        tree_original = s.state.tree
+        assert len(tree_original.nodes) > 1
+        fp_original = tree_original.params_fingerprint
+
+        # Encontrar un nodo interno (raiz)
+        root_id = tree_original.root_id
+
+        # Intervenir
+        st = s.intervene_node(root_id, "prune_branch")
+        tree_nuevo = st.tree
+
+        assert len(tree_nuevo.nodes) == 1  # Solo queda la raiz
+        assert tree_nuevo.nodes[0].is_leaf
+        assert tree_nuevo.params_fingerprint == f"{fp_original}-p1"
+        assert len(st.manual_overrides) == 1
+        assert st.manual_overrides[0][1] == root_id
+        assert st.manual_overrides[0][2] == "prune_branch"
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

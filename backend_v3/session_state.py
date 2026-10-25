@@ -23,8 +23,10 @@ Dependencias permitidas: numpy, pandas y los modulos propios de backend_v3.
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
+from collections import deque
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from enum import Enum, auto
@@ -125,6 +127,9 @@ class SessionState:
     n_excluded_population_oot: int = 0
     # Fase 3.3: desglose por motivo de exclusion (OOT)
     population_breakdown_oot: tuple[tuple[str, int], ...] = ()
+    # Fase 3.11.d.1: Manual Override Log. Cada elemento es
+    # (timestamp_str, node_id, action, params_str, fp_before, fp_after).
+    manual_overrides: tuple[tuple[str, int, str, str, str, str], ...] = ()
     event_log: tuple[str, ...] = ("init/state=EMPTY",)
 
 
@@ -1433,6 +1438,117 @@ class Session:
             evento=evento,
             oot_report=reporte,
         )
+
+    # ------------------------------------------------------------------
+    # intervencion manual (Fase 3.11.d.1)
+    # ------------------------------------------------------------------
+
+    def _reindex_tree(
+        self, model: TreeModel, nodes: Sequence, new_fp: str
+    ) -> TreeModel:
+        """Re-indexado BFS completo: invariante node_id == index.
+
+        Logica simplificada de pruning.py::_rebuild (sin dependencia del
+        Pruner): recorre `nodes` desde la raiz en BFS, descarta nodos
+        inalcanzables (huerfanos tras una intervencion) y asigna ids
+        consecutivos 0..N-1 en orden BFS. `model` aporta solo los
+        metadatos (method, class_labels, target_class...).
+
+        TODO(zona_gris): el diseno 3.11.d construia un TreeModel temporal
+        intermedio antes del re-indexado, pero TreeModel.__post_init__
+        rechaza nodos inalcanzables desde la raiz, asi que el BFS se hace
+        sobre la lista de nodos directamente. Decision conservadora:
+        preservar la invariante de alcanzabilidad. Resolver en 3.11.d.2.
+        """
+        mapa = {}
+        orden = []
+        cola = deque([model.root_id])
+        while cola:
+            nid = cola.popleft()
+            if nid in mapa:
+                continue
+            mapa[nid] = len(orden)
+            orden.append(nid)
+            for cid in nodes[nid].child_ids:
+                cola.append(cid)
+        nuevos = []
+        for pos, nid in enumerate(orden):
+            nd = nodes[nid]
+            nuevos.append(replace(
+                nd, node_id=mapa[nid],
+                child_ids=tuple(mapa[c] for c in nd.child_ids)
+            ))
+        return TreeModel(
+            root_id=0, nodes=tuple(nuevos), method=model.method,
+            params_fingerprint=new_fp,
+            class_labels=model.class_labels,
+            target_class=model.target_class,
+            target_class_index=model.target_class_index,
+        )
+
+    def intervene_node(
+        self, node_id: int, action: str, payload: dict | None = None
+    ) -> SessionState:
+        """Intervencion manual sobre un nodo del arbol entrenado.
+
+        Fase 3.11.d.1 (diseno: docs/3.11.d_design_context_menu_interactivity.md):
+        punto de entrada unico del backend para toda intervencion manual.
+        El TreeModel original NO se muta (frozen); se construye uno nuevo
+        con sufijo de intervencion en el fingerprint y se registra la
+        accion en SessionState.manual_overrides (Manual Override Log).
+
+        Acciones implementadas en 3.11.d.1: "prune_branch" (elimina los
+        descendientes del nodo, lo convierte en hoja con
+        leaf_reason="podado" y re-indexa BFS). Las acciones grow_tree,
+        select_predictor y define_split llegan en sub-fases posteriores.
+        """
+        if self._state.tree is None:
+            raise ValueError(
+                "[session] intervene_node requiere un modelo entrenado"
+            )
+        tree = self._state.tree
+        if not (0 <= node_id < len(tree.nodes)):
+            raise ValueError(f"[session] nodo {node_id} no existe")
+
+        if action == "prune_branch":
+            if tree.nodes[node_id].is_leaf:
+                raise ValueError("[session] el nodo ya es hoja")
+
+            # Cortar la rama: el nodo pasa a hoja sin hijos.
+            nuevos = list(tree.nodes)
+            nodo = nuevos[node_id]
+            nuevos[node_id] = replace(
+                nodo, is_leaf=True, split=None, child_ids=(),
+                leaf_reason="podado"
+            )
+
+            # Re-indexado BFS sobre la lista de nodos modificada:
+            # descarta los descendientes inalcanzables.
+            new_fp = (
+                f"{tree.params_fingerprint}"
+                f"-p{len(self._state.manual_overrides) + 1}"
+            )
+            final_tree = self._reindex_tree(tree, nuevos, new_fp)
+
+            # Registrar en el Manual Override Log.
+            timestamp = datetime.datetime.now().isoformat()
+            params_str = str(payload) if payload else ""
+            override = (
+                timestamp, node_id, action, params_str,
+                tree.params_fingerprint, new_fp
+            )
+            new_overrides = self._state.manual_overrides + (override,)
+
+            return self._commit(
+                self._state.state,
+                evento=f"intervene:{action}|node={node_id}|fp={new_fp}",
+                tree=final_tree,
+                manual_overrides=new_overrides,
+            )
+        else:
+            raise NotImplementedError(
+                f"Accion {action} no implementada aun"
+            )
 
     # ------------------------------------------------------------------
 
