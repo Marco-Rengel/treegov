@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -32,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from frontend_v3.i18n import tr
+from frontend_v3.reports_panel import ReportsPanel
 
 _HEADERS = ("prune_col_alpha", "prune_col_terminal_nodes", "prune_col_error")
 
@@ -83,6 +85,20 @@ class PruneDialog(QDialog):
         for row, paso in enumerate(self._sequence):
             self._fill_row(row, paso)
         self._table.itemSelectionChanged.connect(self._sync_apply_button)
+        # Ctrl+C copia la seleccion (o toda la tabla si no hay seleccion)
+        # como TSV al portapapeles — REGLA CRITICA 4.1.1 del Design
+        # System. El helper generico vive en ReportsPanel como
+        # staticmethod (25/10/2026): se reutiliza sin acoplar instancias.
+        # Contexto WidgetWithChildren para no secuestrar Ctrl+C de otros
+        # widgets de la misma ventana.
+        self._copy_shortcut = QShortcut(
+            QKeySequence.StandardKey.Copy,
+            self._table,
+            context=Qt.ShortcutContext.WidgetWithChildrenShortcut,
+        )
+        self._copy_shortcut.activated.connect(
+            lambda: ReportsPanel._copy_selection_to_clipboard(self._table)
+        )
         layout.addWidget(self._table)
 
         botones = QHBoxLayout()

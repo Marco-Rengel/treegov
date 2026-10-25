@@ -119,7 +119,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
 
-**Suite de tests:** 451/451 PASSED
+**Suite de tests:** 452/452 PASSED
 
 ## Entorno de desarrollo
 
@@ -308,8 +308,9 @@ estilo Excel, nodos QPainter "hoja de auditoría", tema oscuro forzado
 vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas)
 quedaron cerradas el 24/10/2026 con suite 449/449**; los mini-cierres
 del 25/10/2026 (resolución de zonas grises C1 con 2 tests nuevos de
-routing por `bin_edges`, y blindaje Clean Room + terminología "Nodo
-terminal") elevaron la suite a **451/451**. El sistema de
+routing por `bin_edges`, blindaje Clean Room + terminología "Nodo
+terminal", y copiado TSV en el `PruneDialog` con 1 test nuevo)
+elevaron la suite a **452/452**. El sistema de
 diseño visual quedó estandarizado en `docs/3.11_gui_design_system.md`
 (normativo as-built; las sub-fases 3.11.b-d se implementan contra él).
 El código de la 3.11.a.1 está commiteado (`d8194dc`); los dos bloques

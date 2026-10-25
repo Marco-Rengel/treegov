@@ -5821,3 +5821,32 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Tests**: 451/451 PASSED. `git diff --stat` muestra solo los 17 archivos listados.
 
 **Referencias**: `docs/design_decisions.md` §0.5, §18.5–§18.6; `docs/3.11_classic_tree_ui_reference.md`; `docs/philosophy.md` §"Technological Independence"; mini-cierre del 25/10/2026 (zonas grises C1, entrada inmediatamente anterior).
+
+---
+
+### 25/10/2026 — Mini-cierre: copiado TSV (Ctrl+C) en la tabla del PruneDialog (REGLA 4.1.1)
+
+**Estado**: ✅ Cerrada. Suite 452/452 PASSED (451 + 1 test nuevo).
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: la REGLA CRÍTICA 4.1.1 del Design System exige Ctrl+C → TSV en toda tabla de datos; la tabla del diálogo de poda era la única pendiente (deuda registrada en `docs/roadmap.md` Deferred y en la tabla de cumplimiento §6 del Design System). Se resuelve refactorizando el helper genérico a `@staticmethod` para no acoplar `PruneDialog` a una instancia de `ReportsPanel`.
+
+**Artefactos tocados (10 archivos)**:
+
+1. `frontend_v3/reports_panel.py` — `_copy_selection_to_clipboard` refactorizado a `@staticmethod` con firma `(table: QTableWidget) -> None` (eliminados `self` y el fallback `self._table`); el `QShortcut` interno pasa ahora `lambda: self._copy_selection_to_clipboard(self._table)`. **Hallazgo de implementación**: el fallback "sin selección → toda la tabla" usaba `selectAll()`, que en Qt es **no-op en `SelectionMode.SingleSelection`** (el modo del diálogo de poda): el portapapeles quedaba vacío (detectado por el test nuevo en la primera corrida). El fallback ahora itera las celdas directamente (`rowCount × columnCount`); comportamiento idéntico en la tabla de ganancias (su test sigue verde) y funcional en tablas SingleSelection.
+2. `frontend_v3/prune_dialog.py` — imports `QKeySequence`/`QShortcut` (QtGui) y `ReportsPanel`; en `_build_ui`, `QShortcut(QKeySequence.StandardKey.Copy, self._table, context=WidgetWithChildrenShortcut)` conectado al helper estático. `QApplication` ya estaba importado.
+3. `tests/test_prune_dialog.py` (NUEVO) — `test_prune_dialog_copy_tsv_to_clipboard`: `PruneDialog` con `_FakeSession` (stub del contrato `get_prune_sequence`/`prune`, sin backend), tabla de 3 filas × 3 columnas, shortcut presente y acotado a la tabla, y TSV en el portapapeles con cabeceras `tr()` de (`prune_col_alpha`, `prune_col_terminal_nodes`, `prune_col_error`) — la cabecera central ya es "Terminal nodes" (nunca "leaf/hoja", norma del 25/10/2026) — y las 3 filas de datos exactas.
+4. `tests/test_reports_panel.py` — las 3 llamadas `panel._copy_selection_to_clipboard()` sin argumentos actualizadas a `(panel._table)` (consumidor del cambio de firma; regla #5 de `.treegovrules`: auditar consumidores en el mismo bloque). **Desviación del brief**: la verificación pedía "git diff --stat → 3 archivos"; el cambio de firma rompía este test y la conexión interna del `QShortcut`, así que el diff real es de 4 archivos de código/tests (3 pedidos + este).
+5. `docs/roadmap.md` — ítem Deferred "Copiado TSV en PruneDialog" → ✅ RESUELTO (25/10/2026) con el hallazgo del `selectAll()`; nota PyPI Deferred: conteo 452/452.
+6. `docs/3.11_gui_design_system.md` — §4.1.1: estado de cumplimiento → `PruneDialog._table` ✅ (con test), fallback documentado (iteración directa, no `selectAll()`), helper referenciado como `@staticmethod`; tabla §6: fila 4.1.1 → ✅; fila 5.1: el `TODO(zona_gris)` del footer se cita ahora como DECISIÓN cerrada (§18.6), coherente con el mini-cierre anterior.
+7. `docs/design_decisions.md` — §18.3 Consecuencia: helper `@staticmethod`, nota del `selectAll()`, cobertura `PruneDialog` ✅.
+8. `docs/estado_proyecto.md` — conteo real 452/452 (línea de suite, narrativa 3.11.a.1 con los tres mini-cierres del 25/10, árbol de directorios, tabla por módulos: tree_builder 38→39, validation 30→31, nueva fila prune_dialog 1, Total 449→452; conteos verificados con `pytest --collect-only`) y línea de ejecución. Nota: la tabla estaba en 449 (24/10); este bloque la sincroniza también con los dos mini-cierres anteriores del día.
+9. `README.md` / `README.es.md` — 451→**452/452** (Mermaid + línea de cierre de tabla) en ambos.
+10. `docs/contexto_para_nueva_sesion.md` y `docs/prompt_para_asistente.md` — suite 451→**452/452** (línea de suite, nota de próximo paso y bala de estado).
+
+**Tests**: 452/452 PASSED. Smoke del helper: portapapeles con TSV de cabecera + 3 filas verificado vía test.
+
+**Referencias**: `docs/3.11_gui_design_system.md` §4.1.1 y §6; `docs/design_decisions.md` §18.3; `docs/roadmap.md` Deferred (ítem resuelto); mini-cierres del 25/10/2026 (entradas anteriores de este día).

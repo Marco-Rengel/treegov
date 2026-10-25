@@ -410,7 +410,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 451/451 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 y 452/452 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -582,10 +582,10 @@ Barra superior con iconos detallados (estilo clásico 2001) diferido a la Fase 4
 
 La toolbar y el wizard usan iconos estándar de Qt (`QStyle.StandardPixmap`, `main_window.py:382-406`, `wizard.py:116`). El autor definirá un set de iconos SVG propios (coloreables vía tokens de tema) para la toolbar y el wizard en una fase futura. Referencia visual: `docs/3.11_classic_tree_ui_reference.md` §1. Divergencia as-built ya registrada en `docs/3.11.a_design_colab_theme.md` §7 (ítem 1).
 
-### ⏳ Copiado TSV en PruneDialog
-**Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1).**
+### ✅ Copiado TSV en PruneDialog — RESUELTO (25/10/2026)
+**Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1; resolved 25/10/2026).**
 
-La tabla de ganancias soporta Ctrl+C → TSV (REGLA CRÍTICA 4.1.1 de `docs/3.11_gui_design_system.md`, implementada en `ReportsPanel._copy_selection_to_clipboard`, 24/10/2026), pero la tabla del diálogo de poda (`frontend_v3/prune_dialog.py`, `PruneDialog._table`) aún no. La implementación de referencia es genérica (acepta cualquier `QTableWidget`), por lo que el cumplimiento es un cableado trivial del `QShortcut`. Cobertura registrada en la tabla de cumplimiento §6 del Design System.
+La tabla del diálogo de poda (`frontend_v3/prune_dialog.py`, `PruneDialog._table`) soporta Ctrl+C → TSV desde el 25/10/2026: `ReportsPanel._copy_selection_to_clipboard` se refactorizó a `@staticmethod` (firma `(table: QTableWidget) -> None`) y el diálogo cablea un `QShortcut(QKeySequence.StandardKey.Copy, ...)` con contexto `WidgetWithChildrenShortcut`. Hallazgo de implementación: el fallback "sin selección → toda la tabla" dejó de usar `selectAll()` (no-op en `SelectionMode.SingleSelection`, el modo del diálogo) y ahora itera las celdas directamente — comportamiento idéntico en la tabla de ganancias. Cobertura: `tests/test_prune_dialog.py::test_prune_dialog_copy_tsv_to_clipboard`.
 
 ### ⏳ Validación cruzada (Wizard, Paso 3)
 **Priority: MEDIUM (registered 24/10/2026, post-mortem 3.11.a.1; backend diferido a la Fase 2.1.b).**

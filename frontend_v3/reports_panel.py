@@ -200,7 +200,9 @@ class ReportsPanel(QWidget):
             self._table,
             context=Qt.ShortcutContext.WidgetWithChildrenShortcut,
         )
-        self._copy_shortcut.activated.connect(self._copy_selection_to_clipboard)
+        self._copy_shortcut.activated.connect(
+            lambda: self._copy_selection_to_clipboard(self._table)
+        )
         splitter.addWidget(self._table)
         splitter.addWidget(self._build_bottom_section())
         splitter.setStretchFactor(0, 3)
@@ -320,28 +322,36 @@ class ReportsPanel(QWidget):
     def _on_buckets_changed(self, value: int) -> None:
         self.view_changed.emit(self.current_view(), value)
 
-    def _copy_selection_to_clipboard(self, table: QTableWidget | None = None) -> None:
+    @staticmethod
+    def _copy_selection_to_clipboard(table: QTableWidget) -> None:
         """Copia la seleccion al portapapeles como TSV (pega directa en Excel/Word).
 
-        Sin seleccion previa, selecciona toda la tabla. La primera linea
+        Sin seleccion previa, copia toda la tabla. La primera linea
         lleva las cabeceras de las columnas implicadas; cada fila es una
         linea con valores separados por tabuladores. Generico: sirve para
-        cualquier QTableWidget pasado como argumento.
+        cualquier QTableWidget pasado como argumento. Static (25/10/2026):
+        lo comparten ReportsPanel y PruneDialog (REGLA CRITICA 4.1.1 del
+        Design System) sin acoplamiento de instancia. Nota: el fallback
+        "toda la tabla" NO usa selectAll(): en tablas con
+        SelectionMode.SingleSelection (PruneDialog) selectAll() no
+        selecciona nada; se iteran las celdas directamente.
         """
-        table = self._table if table is None else table
         indexes = table.selectedIndexes()
-        if not indexes:
-            table.selectAll()
-            indexes = table.selectedIndexes()
-        if not indexes:
+        if indexes:
+            pairs = [(i.row(), i.column()) for i in indexes]
+        else:
+            pairs = [
+                (r, c)
+                for r in range(table.rowCount())
+                for c in range(table.columnCount())
+            ]
+        if not pairs:
             return
-        cols = sorted({index.column() for index in indexes})
+        cols = sorted({c for _r, c in pairs})
         rows: dict[int, dict[int, str]] = {}
-        for index in indexes:
-            item = table.item(index.row(), index.column())
-            rows.setdefault(index.row(), {})[index.column()] = (
-                item.text() if item is not None else ""
-            )
+        for r, c in pairs:
+            item = table.item(r, c)
+            rows.setdefault(r, {})[c] = item.text() if item is not None else ""
         header = table.horizontalHeaderItem
         lines = [
             "\t".join(

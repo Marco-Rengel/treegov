@@ -285,7 +285,7 @@ modelada por defecto; analistas con exposición soberana deben pasar
 `pd_floor=0.0003` explícitamente. El disclaimer está documentado en
 el código y en `docs/methodology.md` §6.3.
 
-**Suite:** 449/449 PASSED.
+**Suite:** 452/452 PASSED.
 
 ### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
 
@@ -318,7 +318,10 @@ anclado a Fusion/ClassicStyle), las aristas ortogonales con etiquetas de
 corte numéricas (NUNCA `bin_0`) y la copia TSV al portapapeles (Ctrl+C)
 en la tabla de ganancias. Sistema de diseño normativo as-built:
 `docs/3.11_gui_design_system.md`. Decisiones: `docs/design_decisions.md`
-§18. Suite 449/449. **Próximo paso: Fase 3.11.b (Tree Map y Data Viewer
+§18. Suite 452/452 (mini-cierres del 25/10/2026: zonas grises C1 con
+tests de routing por `bin_edges`, blindaje Clean Room + terminología
+"Nodo terminal", y copiado TSV en el `PruneDialog` —REGLA 4.1.1 del
+Design System—). **Próximo paso: Fase 3.11.b (Tree Map y Data Viewer
 en el panel izquierdo)**, y después 3.11.c (Árboles Univariados y Matriz
 de Costos) y 3.11.d (Menú Contextual e Interactividad).
 
@@ -376,7 +379,7 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (449 tests)
+├── tests/ # Suite de tests (452 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -501,9 +504,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | imputation.py | 5 |
 | splitting.py | 11 |
 | profiling.py | 3 |
-| tree_builder.py | 38 |
+| tree_builder.py | 39 |
 | session_state.py | 88 |
-| validation.py | 30 |
+| validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
@@ -513,11 +516,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 10 |
 | reports_panel (frontend) | 13 |
+| prune_dialog (frontend) | 1 |
 | e2e_reports (frontend) | 4 |
 | uci_integration | 14 |
-| **Total** | **449** |
+| **Total** | **452** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 449/449 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 452/452 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

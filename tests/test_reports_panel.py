@@ -243,7 +243,7 @@ def test_copy_selection_to_clipboard():
     clipboard = QApplication.clipboard()
     # Sin seleccion previa: copia toda la tabla con cabeceras.
     panel._table.clearSelection()
-    panel._copy_selection_to_clipboard()
+    panel._copy_selection_to_clipboard(panel._table)
     lines = clipboard.text().split("\n")
     assert len(lines) == 2  # cabecera + 1 fila de datos
     assert len(lines[0].split("\t")) == 13
@@ -251,14 +251,14 @@ def test_copy_selection_to_clipboard():
     assert "L0" in lines[1]
     # Con seleccion explicita: mismas columnas, mismas filas.
     panel._table.selectRow(0)
-    panel._copy_selection_to_clipboard()
+    panel._copy_selection_to_clipboard(panel._table)
     lines_sel = clipboard.text().split("\n")
     assert lines_sel == lines
     # Tabla vacia: no toca el portapapeles.
     panel._table.setRowCount(0)
     panel._table.clearSelection()
     clipboard.setText("SENTINEL")
-    panel._copy_selection_to_clipboard()
+    panel._copy_selection_to_clipboard(panel._table)
     assert clipboard.text() == "SENTINEL"
     panel.close()
     panel.deleteLater()
