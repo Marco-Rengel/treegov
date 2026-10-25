@@ -22,8 +22,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import numpy as np  # noqa: E402  (tests/ SI puede importar: fuera del frontend)
 import pandas as pd  # noqa: E402
-from PySide6.QtCore import QRectF  # noqa: E402
-from PySide6.QtGui import QColor, QImage, QPainter  # noqa: E402
+from PySide6.QtCore import QPointF, QRectF  # noqa: E402
+from PySide6.QtGui import (  # noqa: E402
+    QColor,
+    QContextMenuEvent,
+    QImage,
+    QPainter,
+)
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
     QGraphicsPathItem,
@@ -679,6 +684,41 @@ def test_e2e_mainwindow():
         assert tr("tree_prop_empty") in w._hud_placeholder.text()
         w.close()
         w.deleteLater()
+
+
+def test_tree_context_menu_signal():
+    """Fase 3.11.d.2: clic derecho sobre un NodeItem -> la TreeScene emite
+    node_context_menu(node_id); fuera de un nodo, no se emite nada."""
+    _get_app()
+    model = _crt_model()
+    panel = _make_panel()
+    panel.set_model(model, "BANKING")
+    recibidos = []
+    panel._scene.node_context_menu.connect(recibidos.append)
+
+    # Clic derecho simulado sobre el centro de la raiz (nodo 0).
+    item = next(
+        i for i in panel._scene.items()
+        if isinstance(i, NodeItem) and i.node_id == 0
+    )
+    view_pos = panel._view.mapFromScene(item.sceneBoundingRect().center())
+    ev = QContextMenuEvent(
+        QContextMenuEvent.Reason.Mouse,
+        view_pos,
+        panel._view.viewport().mapToGlobal(view_pos),
+    )
+    panel._view.contextMenuEvent(ev)
+    assert recibidos == [0]
+
+    # Clic derecho en zona vacia del canvas: no se emite la senal.
+    view_pos_vacio = panel._view.mapFromScene(QPointF(-10000.0, -10000.0))
+    ev2 = QContextMenuEvent(
+        QContextMenuEvent.Reason.Mouse,
+        view_pos_vacio,
+        panel._view.viewport().mapToGlobal(view_pos_vacio),
+    )
+    panel._view.contextMenuEvent(ev2)
+    assert recibidos == [0]
 
 
 # ---------------------------------------------------------------------------

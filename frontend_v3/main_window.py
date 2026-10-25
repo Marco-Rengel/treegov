@@ -22,7 +22,7 @@ import os
 from typing import Callable
 
 from PySide6.QtCore import QSettings, QSize, Qt
-from PySide6.QtGui import QAction, QActionGroup, QCloseEvent
+from PySide6.QtGui import QAction, QActionGroup, QCloseEvent, QCursor
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -474,6 +474,11 @@ class MainWindow(QMainWindow):
         self._tree_panel.setObjectName("treePanel")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)
         self._tree_panel.selection_cleared.connect(self._hud_reset)
+        # Phase 3.11.d.2: menú contextual del analista (clic derecho
+        # sobre un NodeItem del canvas principal).
+        self._tree_panel._scene.node_context_menu.connect(
+            self._on_tree_context_menu
+        )
         # Phase 3.11.b.3 (D2): resaltado pasivo del minimapa — refleja la
         # selección del canvas principal y nunca la propaga.
         self._tree_panel.node_selected.connect(self._tree_map.set_selected_node)
@@ -991,6 +996,71 @@ class MainWindow(QMainWindow):
         node = model.nodes[node_id]
         self._update_hud_node(node)
         self.statusBar().showMessage(f"{tr('tree_prop_node')} #{node_id}", 5000)
+
+    def _on_tree_context_menu(self, node_id: int) -> None:
+        """Clic derecho sobre un nodo del canvas (Fase 3.11.d.2).
+
+        Menú contextual del analista (Grow Tree / Prune Branch), solo
+        con modelo entrenado. Grow se habilita en hojas; Prune en nodos
+        internos. En modo BANKING la poda manual exige confirmación
+        explícita (QMessageBox); en RESEARCH se aplica directamente.
+        Toda intervención queda registrada en el Manual Override Log del
+        backend (SessionState.manual_overrides) y sufija el fingerprint.
+        """
+        if self._session is None or self._session.state.tree is None:
+            return
+        tree = self._session.state.tree
+        if not (0 <= node_id < len(tree.nodes)):
+            return
+        node = tree.nodes[node_id]
+        mode = (
+            self._last_train_cfg.get("governance_mode", "BANKING")
+            if self._last_train_cfg is not None
+            else "BANKING"
+        )
+        # TODO(zona_gris): textos del menú literales, sin claves i18n;
+        # resolver con claves tree_ctx_* al cerrar la fase 3.11.d.
+        menu = QMenu(self)
+        act_grow = menu.addAction("Grow Tree")
+        act_grow.setEnabled(node.is_leaf)
+        act_prune = menu.addAction("Prune Branch")
+        act_prune.setEnabled(not node.is_leaf)
+        chosen = menu.exec(QCursor.pos())
+        if chosen is act_prune:
+            if mode == "BANKING":
+                answer = QMessageBox.question(
+                    self,
+                    "Prune Branch",
+                    f"Podar la rama del nodo {node_id}: la intervención "
+                    "manual quedará registrada en el Manual Override Log "
+                    "y alterará el fingerprint del modelo. ¿Continuar?",
+                )
+                if answer != QMessageBox.StandardButton.Yes:
+                    return
+            ok = self._run_guarded(
+                self._session.intervene_node, node_id, "prune_branch"
+            )
+            if not ok:
+                return
+            new_tree = self._session.state.tree
+            self._tree_panel.set_model(new_tree, mode)
+            self._tree_map.set_model(new_tree)
+            self._refresh_session_indicator()
+            if self._logger is not None:
+                self._logger.info(
+                    "[gui] intervene prune_branch: node=%d | nodos=%d",
+                    node_id, len(new_tree.nodes),
+                )
+            self.statusBar().showMessage(
+                f"Prune Branch #{node_id} | "
+                f"fp={new_tree.params_fingerprint}",
+                8000,
+            )
+        elif chosen is act_grow:
+            # TODO(3.11.d.3): Grow Tree (y Select Predictor / Define
+            # Split) llegan cuando el backend implemente esas acciones
+            # en Session.intervene_node.
+            pass
 
     def _hud_reset(self) -> None:
         """Properties panel default: node detail if selected, else clear."""

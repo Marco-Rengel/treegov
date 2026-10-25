@@ -587,6 +587,10 @@ class TreeScene(QGraphicsScene):
 
     node_selected = Signal(int)
     selection_cleared = Signal()
+    # Phase 3.11.d.2: clic derecho sobre un NodeItem (menú contextual del
+    # analista). La emite TreeView.contextMenuEvent; MainWindow la
+    # captura y construye el QMenu (Grow / Prune / ...).
+    node_context_menu = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -697,6 +701,7 @@ class TreeView(QGraphicsView):
 
     def __init__(self, scene: TreeScene, parent: QWidget | None = None) -> None:
         super().__init__(scene, parent)
+        self._scene = scene
         self._zoom = 1.0
         # OBS 2 (audit 2.2): fluid panning with left-button drag
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -758,6 +763,20 @@ class TreeView(QGraphicsView):
             event.accept()
             return
         super().wheelEvent(event)
+
+    def contextMenuEvent(self, event) -> None:
+        """Clic derecho sobre el canvas (Phase 3.11.d.2).
+
+        Si el item bajo el cursor es un NodeItem, emite
+        TreeScene.node_context_menu(node_id) y acepta el evento; si no,
+        delega en la implementación base (sin menú).
+        """
+        item = self.itemAt(event.pos())
+        if isinstance(item, NodeItem):
+            self._scene.node_context_menu.emit(item.node_id)
+            event.accept()
+        else:
+            super().contextMenuEvent(event)
 
 
 # ---------------------------------------------------------------------------
