@@ -61,6 +61,7 @@ from frontend_v3.tree_view import (
     node_detail_lines,
 )
 from frontend_v3.metrics_panel import MetricsPanel
+from frontend_v3.data_viewer import DataViewer
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
 from frontend_v3.wizard import ModelWizard
@@ -435,6 +436,11 @@ class MainWindow(QMainWindow):
         self._left_panel.addWidget(self._left_gb_explorer)
         self._left_panel.addWidget(self._left_gb_treemap)
         self._left_panel.addWidget(self._left_gb_dataviewer)
+        # Phase 3.11.b.2: contenido del bloque Data Viewer (preview crudo
+        # del CSV via Session.get_data_preview; Explorer y Tree Map
+        # llegan en 3.11.b.3/b.4).
+        self._data_viewer = DataViewer(self._left_gb_dataviewer)
+        self._left_gb_dataviewer.layout().addWidget(self._data_viewer)
 
         self._hud_panel, self._hud_title = self._make_panel("hudPanel")
         # Phase 3.10.a: structured properties panel (Dataset / Node / Rule)
@@ -662,6 +668,9 @@ class MainWindow(QMainWindow):
                 self._logger.info("[gui] security warning shown on first dataset load")
         columns, types = self._session.describe_dataset()
         self._dataset_info = (columns, types)
+        # Phase 3.11.b.2: preview crudo del CSV en el Data Viewer
+        # (contrato D3; dict de tipos puros, nunca lanza sin dataset).
+        self._data_viewer.set_preview(self._session.get_data_preview())
         self._current_dataset_path = path
         self._act_new_wizard.setEnabled(True)
         self._act_train.setEnabled(True)
@@ -687,6 +696,7 @@ class MainWindow(QMainWindow):
             self._metrics_panel.set_report(None)
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
+            self._data_viewer.set_preview(None)
             self._hud_lbl_gov_fp.setText("—")
             self._hud_lbl_gov_mode.setText("—")
             self._hud_reset()
