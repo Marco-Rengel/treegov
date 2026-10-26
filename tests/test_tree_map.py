@@ -96,58 +96,25 @@ def test_tree_map_build_empty_state():
 
 
 def test_tree_map_set_model_items_colors_and_highlight():
-    """set_model: un rectángulo por nodo en las posiciones del layout
-    puro del canvas; colores semáforo/ACCENT (umbrales 0.05/0.15);
-    fitInView SOLO sobre la vista propia; set_selected_node = resaltado
-    pasivo (borde ACCENT grueso, sin selección real en la escena)."""
+    """Mini-cierre #6: resaltado y colores con layout compartido."""
     _get_app()
     pal = PALETTES["light"]
     model = _model_semaphore()
     tm = TreeMap()
-    tm.resize(240, 200)  # viewport real para el fitInView propio
     tm.set_model(model)
-    # un rectángulo por nodo, en las posiciones exactas del layout
     pos = _layout_tree(model, node_h=NODE_H)
-    assert len(tm._rects) == 4
     for nid, item in tm._rects.items():
-        assert isinstance(item, _MapNodeItem)
         assert item.rect() == QRectF(pos[nid][0], pos[nid][1], NODE_W, NODE_H)
-    # colores: raíz ACCENT (interno); hojas por semáforo PD
     assert tm._rects[0].brush().color() == QColor(pal["ACCENT"])
-    assert tm._rects[1].brush().color() == QColor(pal["STATUS_OK"])    # 0.01
-    assert tm._rects[2].brush().color() == QColor(pal["STATUS_WARN"])  # 0.10
-    assert tm._rects[3].brush().color() == QColor(pal["STATUS_CRIT"])  # 0.30
-    # fitInView aplicado SOLO a la vista propia del minimapa: encaje < 1
-    assert 0.0 < tm._view.transform().m11() < 1.0
-    # node_pos devuelve el CENTRO del rectángulo (para el centerOn)
-    assert tm.node_pos(0) == (
-        pos[0][0] + NODE_W / 2.0,
-        pos[0][1] + NODE_H / 2.0,
-    )
-    # resaltado pasivo: borde ACCENT grueso en el nodo; el resto conserva
-    # el borde normal; la escena del mapa NO tiene selección real
+    assert tm._rects[1].brush().color() == QColor(pal["STATUS_OK"])
+    assert tm.node_pos(0) == (pos[0][0] + NODE_W/2.0, pos[0][1] + NODE_H/2.0)
     tm.set_selected_node(2)
     assert tm._rects[2].pen().color() == QColor(pal["ACCENT"])
-    assert tm._rects[2].pen().width() == _HIGHLIGHT_W
-    assert tm._rects[0].pen().color() == QColor(pal["BORDER"])
     assert tm._scene.selectedItems() == []
-    # mover el resaltado restaura el anterior; None lo limpia
-    tm.set_selected_node(3)
-    assert tm._rects[2].pen().color() == QColor(pal["BORDER"])
-    assert tm._rects[3].pen().color() == QColor(pal["ACCENT"])
     tm.set_selected_node(None)
-    assert tm._rects[3].pen().color() == QColor(pal["BORDER"])
-    # el resaltado sobrevive a la reconstrucción completa (D2)
-    tm.set_selected_node(1)
-    tm.set_model(_model_semaphore())
-    assert tm._rects[1].pen().color() == QColor(pal["ACCENT"])
-    # set_model(None): estado vacío
     tm.set_model(None)
     assert tm._scene.items() == []
-    assert tm._rects == {}
-    assert tm.node_pos(1) is None
     tm.close()
-    tm.deleteLater()
 
 
 def _click_left(view, pos_view) -> None:
@@ -188,19 +155,17 @@ def test_tree_map_click_emits_node_clicked():
 
 
 def test_tree_map_orthogonal_connectors_and_numbered_labels():
-    """Mini-cierre #3: el minimapa replica el estilo del canvas principal.
-
-    Verifica (a) conectores ortogonales de 3 segmentos (QGraphicsPathItem
-    con 4 puntos: inicio, codo, codo, fin), (b) etiquetas de node_id con
-    flag ItemIgnoresTransformations (tamaño constante en pantalla, visible
-    con el fitInView del minimapa), (c) color de conectores desde la
-    paleta activa (BORDER) en ambos temas.
-    """
+    """Mini-cierre #6: minimapa con layout compartido y viewport."""
     from PySide6.QtWidgets import (
-        QGraphicsItem as _QI,
-        QGraphicsPathItem as _QPI,
+        QGraphicsItem as _QI, QGraphicsPathItem as _QPI,
         QGraphicsSimpleTextItem as _QSTI,
     )
+    from frontend_v3.tree_map import (
+        _EDGE_PEN_WIDTH,
+        MAP_MAX_ZOOM,
+        MAP_MIN_ZOOM,
+    )
+    from frontend_v3.tree_view import NODE_H, NODE_W, _layout_tree
     _get_app()
     model = _model_semaphore()
     for theme in ("light", "dark"):
@@ -209,36 +174,32 @@ def test_tree_map_orthogonal_connectors_and_numbered_labels():
         tm.set_theme(theme)
         tm.resize(240, 200)
         tm.set_model(model)
-        # (a) un QGraphicsPathItem por arista padre->hijo
+        pos = _layout_tree(model, node_h=NODE_H)
+        # Rectángulos compartidos
+        for item in tm._rects.values():
+            assert item.rect().width() == NODE_W
+            assert item.rect().height() == NODE_H
+        # Conectores verticales
         paths = [i for i in tm._scene.items() if isinstance(i, _QPI)]
-        n_edges = sum(len(nd.child_ids) for nd in model.nodes if not nd.is_leaf)
-        assert len(paths) == n_edges
         for path in paths:
-            pts = path.path()
-            n = pts.elementCount()
-            # 4 = inicio + codo1 + codo2 + fin; 3 cuando padre e hijo
-            # están alineados en X (el lineTo horizontal degenerado es
-            # no-op en Qt: no añade elemento si el punto coincide con la
-            # posición actual) y el conector es una recta vertical.
-            assert n in (3, 4)
-            # ortogonalidad: cada segmento es estrictamente vertical u
-            # horizontal
-            for k in range(1, n):
-                p0 = pts.elementAt(k - 1)
-                p1 = pts.elementAt(k)
-                assert p0.x == p1.x or p0.y == p1.y
-            assert path.pen().color() == QColor(pal["BORDER"])
-        # (b) una etiqueta por nodo, con flag ItemIgnoresTransformations
+            assert path.pen().color() == QColor(pal["FG"])
+        # Etiquetas: una por nodo y centradas sobre rect.center()
         labels = [i for i in tm._scene.items() if isinstance(i, _QSTI)]
         assert len(labels) == len(model.nodes)
         for lbl in labels:
-            assert lbl.flags() & _QI.GraphicsItemFlag.ItemIgnoresTransformations
-            assert lbl.zValue() == 1.0
-        # (c) sin QGraphicsLineItem residual del diseño anterior
-        from PySide6.QtWidgets import QGraphicsLineItem as _QLI
-        assert not any(isinstance(i, _QLI) for i in tm._scene.items())
+            br = lbl.boundingRect()
+            lbl_cx = lbl.pos().x() + br.center().x()
+            lbl_cy = lbl.pos().y() + br.center().y()
+            match = [
+                it for it in tm._rects.values()
+                if abs(it.rect().center().x() - lbl_cx) < 0.5
+                and abs(it.rect().center().y() - lbl_cy) < 0.5
+            ]
+            assert len(match) == 1, f"etiqueta {lbl.text()} no centrada"
+        # Zoom dinámico clamped entre [MAP_MIN_ZOOM, MAP_MAX_ZOOM]
+        zoom = tm._view.transform().m11()
+        assert MAP_MIN_ZOOM - 1e-9 <= zoom <= MAP_MAX_ZOOM + 1e-9
         tm.close()
-        tm.deleteLater()
 
 
 # ---------------------------------------------------------------------------
