@@ -377,6 +377,8 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Nota:** la especificación visual para todas las sub-fases 3.11.a.1 a 3.11.d vive en `docs/3.11_classic_tree_ui_reference.md`.
 
+**Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026.
+
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**
 

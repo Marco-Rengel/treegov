@@ -155,7 +155,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step3_scheme_none": "Do not validate",
         "step3_scheme_partition": "Partition (Holdout)",
         "step3_scheme_cv": "Cross-validation",
-        "step3_cv_notice": "Cross-validation will be available in Phase 2.1.b.",
+        "step3_cv_notice": "Cross-validation is not available in this version.",
         "step3_none_notice": (
             "Training without a holdout partition is not available yet; "
             "the stratified holdout is still applied."
@@ -405,6 +405,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "term_research_class_interest": "Class of interest",
         "term_banking_default": "Default",
         "term_research_default": "Outcome",
+        "menu_view_explorer": "Project Explorer",
+        "menu_view_treemap": "Tree Map",
+        "menu_view_dataviewer": "Data Viewer",
         "reports_no_model": "Train a model to view reports.",
     },
     "es": {
@@ -547,7 +550,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step3_scheme_none": "No validar",
         "step3_scheme_partition": "Partición (Holdout)",
         "step3_scheme_cv": "Validación cruzada",
-        "step3_cv_notice": "La validación cruzada estará disponible en la Fase 2.1.b.",
+        "step3_cv_notice": "La validación cruzada no está disponible en esta versión.",
         "step3_none_notice": (
             "Entrenar sin partición holdout aún no está disponible; "
             "la partición estratificada sigue aplicándose."
@@ -799,6 +802,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "term_research_class_interest": "Clase de interés",
         "term_banking_default": "Default",
         "term_research_default": "Resultado",
+        "menu_view_explorer": "Explorador del Proyecto",
+        "menu_view_treemap": "Mapa del Árbol",
+        "menu_view_dataviewer": "Visor de Datos",
         "reports_no_model": "Entrene un modelo para ver los reportes.",
     },
 }

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 25/10/2026 (Fase 3.11.b.3 cerrada: Tree Map, minimapa pasivo del panel izquierdo; release 1.0.0rc4)
+**Fecha de última actualización:** 25/10/2026 (Fases 3.11.a–d, 3.6.e y Hotfix Visual post-3.6.e cerradas; release 1.0.0rc4)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -492,6 +492,17 @@ Wholesale Customers y término neutro de `reports_matrix_bad_capture_rate`
 (`docs/roadmap.md`, Deferred). Diseño aprobado:
 `docs/3.6.e_design_non_banking.md`; decisión: `design_decisions.md`
 §18.10. 2 tests nuevos. Suite 477/477.
+
+**Hotfix Visual post-3.6.e** ✅ Aplicado (25/10/2026). Tree Map con
+conectores padre-hijo y etiquetas de `node_id` centradas, selección
+bidireccional (clic en el mapa → `centerOn` + `select_node` en el
+canvas, con el HUD actualizado) y hit-test corregido (la etiqueta del
+ID ya no intercepta el clic del rectángulo); Menú Ver granular
+(submenú con toggles individuales para Project Explorer, Tree Map y
+Data Viewer en lugar del toggle global del panel); texto del wizard de
+Validación Cruzada sin referencias a fases internas. Decisión:
+`docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md`
+entrada del 25/10/2026. Suite 477/477.
 **Próximo paso: recogida de feedback para la v1.0.0 estable o inicio de
 la Fase 4.0**.
 

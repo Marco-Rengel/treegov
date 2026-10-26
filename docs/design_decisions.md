@@ -2200,6 +2200,14 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 **Consecuencia:** Un mismo número renderiza con dos cadenas (una por modo) a partir del mismo DTO; jamás se computa dos veces ni con fórmulas distintas. La cobertura RESEARCH de la Fase 3.6.e abarca: cabeceras de la gains table y del export HTML, resumen y matriz del export HTML, matriz de clasificación en pantalla y tooltips de los nodos. Deuda registrada en `docs/roadmap.md` (Deferred): término neutro propio para `reports_matrix_bad_capture_rate` y dataset real Wholesale Customers (validación multi-dominio extensiva, ZG-3 del diseño). Diseño aprobado: `docs/3.6.e_design_non_banking.md`; cierre: `docs/audit_log.md` entrada del 25/10/2026.
 
+### 18.11 UI Granularity and Bidirectional Selection (Hotfix 25/10/2026)
+
+**Contexto:** El Menú Ver ofrecía un único toggle global para todo el panel izquierdo (`_act_toggle_left` → `_left_panel.setVisible`): ocultar un bloque implicaba ocultarlos todos. Además, el Tree Map (decisión D2 del diseño 3.11.b) era estrictamente pasivo: el clic sobre un rectángulo hacía `centerOn` en el canvas principal sin tocar la selección, lo que obligaba al analista a re-localizar el nodo en el canvas para ver su detalle en el HUD.
+
+**Decisión:** (a) El Menú Ver gana un submenú granular ("Toggle Left Panel") con tres acciones checkable —Project Explorer, Tree Map, Data Viewer— que ocultan/muestran los `QGroupBox` individuales del panel izquierdo (`_left_gb_explorer` / `_left_gb_treemap` / `_left_gb_dataviewer`); la acción global se conserva como atributo (compatibilidad con los smoke tests) pero sale del menú. (b) El Tree Map propaga la selección al canvas principal: el clic sobre un rectángulo hace `centerOn` y además `select_node(node_id)`, actualizando el HUD (mapa bidireccional); la dirección inversa (canvas → mapa) sigue siendo el resaltado pasivo de D2.
+
+**Consecuencia:** El analista puede ocultar bloques concretos del panel izquierdo sin perder los demás, y navegar/seleccionar directamente desde el minimapa. El invariante D2 se relaja solo en la dirección mapa → canvas (selección); el mapa sigue sin selección ni foco propios. Corrección asociada del mismo hotfix: el hit-test del minimapa barre todos los ítems del punto (la etiqueta del `node_id` queda visualmente sobre el rectángulo y no debe tragarse el clic). Cierre: `docs/audit_log.md` entrada del 25/10/2026.
+
 ---
 
 ## Maintenance
@@ -2238,6 +2246,9 @@ on 25/10/2026 to add §18.9 — Phase 3.11.d, manual intervention
 rebuilds the TreeModel with BFS reindex and logs overrides in
 `SessionState.manual_overrides`; on 25/10/2026 to add §18.10 — Phase
 3.6.e, dynamic terminology bound to the governance mode frozen in the
-fingerprint, BANKING labels bit-identical.)
+fingerprint, BANKING labels bit-identical, on 25/10/2026 to add §18.11
+— Hotfix Visual post-3.6.e (granular View menu toggles per left-panel
+block; bidirectional Tree Map selection map->canvas; scoped relaxation
+of D2).)
 
 ---

@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 24/10/2026
+**Última actualización:** 25/10/2026
 
 ---
 
@@ -385,13 +385,12 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 20/10/2026: Fases 0 a
-> 3.9 cerradas. Suite 438/438. Fase 3.9 (Poda Interactiva y
-> Ponderada: backend r_w(t), Session.get_prune_sequence(), GUI
-> PruneDialog) cerrada y publicada como 1.0.0rc4. Próximo paso:
-> recogida de feedback durante 2-4 semanas. Deuda diferida a
-> 1.0.0 estable: tags a1–a6 ausentes. Regla operativa: ráfagas cortas
-> con OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max para
+> "Retomamos TreeGov. Soy Marco. Estado al 25/10/2026: Fases 0 a
+> 3.11.d cerradas, más 3.6.e (modo no-bancario) y el Hotfix
+> Visual post-3.6.e. Suite 477/477. Release 1.0.0rc4 publicada
+> en PyPI. Próximo paso: recogida de feedback para 1.0.0 estable
+> o inicio de Fase 4.0. Regla operativa: ráfagas cortas con
+> OpenCode 1.19.0 + moonshotai/kimi-k3; reasoning=max para
 > código, high para docs."
 
 ---

@@ -43,6 +43,7 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QMouseEvent, QPainter, QPen
 from PySide6.QtWidgets import (
+    QGraphicsLineItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsView,
@@ -125,10 +126,14 @@ class _MapView(QGraphicsView):
     def mousePressEvent(self, event: QMouseEvent) -> None:
         # Solo el botón izquierdo navega; el resto se ignora. No se llama
         # a super(): la vista no tiene panning, rubber band ni selección.
+        # Se barren TODOS los ítems del punto (no solo el superior): el
+        # texto del ID queda visualmente sobre el rectángulo y el clic
+        # debe llegar al _MapNodeItem que hay debajo.
         if event.button() is Qt.MouseButton.LeftButton:
-            item = self.itemAt(event.position().toPoint())
-            if isinstance(item, _MapNodeItem):
-                self.node_clicked.emit(item.node_id)
+            for item in self.items(event.position().toPoint()):
+                if isinstance(item, _MapNodeItem):
+                    self.node_clicked.emit(item.node_id)
+                    break
         event.accept()
 
     def resizeEvent(self, event) -> None:
@@ -210,9 +215,8 @@ class TreeMap(QWidget):
             pen_normal.setCosmetic(True)
             for node in model.nodes:
                 x, y = pos[node.node_id]
-                item = _MapNodeItem(
-                    node.node_id, QRectF(x, y, NODE_W, NODE_H)
-                )
+                rect = QRectF(x, y, NODE_W, NODE_H)
+                item = _MapNodeItem(node.node_id, rect)
                 item.setBrush(
                     QBrush(QColor(self._palette[_fill_token(node)]))
                 )
@@ -223,6 +227,36 @@ class TreeMap(QWidget):
                     x + NODE_W / 2.0,
                     y + NODE_H / 2.0,
                 )
+                text = self._scene.addSimpleText(str(node.node_id))
+                text.setBrush(QBrush(QColor("#FFFFFF")))
+                # No interactivo: el clic debe atravesar el texto y
+                # llegar al rectángulo (_MapNodeItem -> node_clicked).
+                text.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+                text.setPos(
+                    rect.center().x() - text.boundingRect().width() / 2,
+                    rect.center().y() - text.boundingRect().height() / 2,
+                )
+            # TODO(zona_gris): el hotfix pedía dibujar los conectores
+            # ANTES del bucle de rectángulos sobre `self._items`; el
+            # atributo real es `self._rects` y debe estar poblado, así
+            # que el bloque va tras el bucle y con ZValue(-1) para que
+            # las líneas queden bajo los rectángulos (misma intención).
+            for node in model.nodes:
+                if not node.is_leaf:
+                    parent_rect = self._rects[node.node_id].rect()
+                    parent_center = parent_rect.center()
+                    for child_id in node.child_ids:
+                        child_rect = self._rects[child_id].rect()
+                        child_center = child_rect.center()
+                        line = QGraphicsLineItem(
+                            parent_center.x(),
+                            parent_center.y() + parent_rect.height() / 2,
+                            child_center.x(),
+                            child_center.y() - child_rect.height() / 2,
+                        )
+                        line.setPen(QPen(QColor("#888888"), 1))
+                        line.setZValue(-1)
+                        self._scene.addItem(line)
             self._scene.setSceneRect(
                 self._scene.itemsBoundingRect().adjusted(
                     -SCENE_MARGIN, -SCENE_MARGIN, SCENE_MARGIN, SCENE_MARGIN

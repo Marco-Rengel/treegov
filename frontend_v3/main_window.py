@@ -174,6 +174,10 @@ class MainWindow(QMainWindow):
         self._act_lang_es.setText(tr("menu_view_language_es"))
         self._act_toggle_left.setText(tr("menu_view_toggle_left"))
         self._act_toggle_hud.setText(tr("menu_view_toggle_right"))
+        self._menu_view_left.setTitle(tr("menu_view_toggle_left"))
+        self._act_toggle_explorer.setText(tr("menu_view_explorer"))
+        self._act_toggle_treemap.setText(tr("menu_view_treemap"))
+        self._act_toggle_dataviewer.setText(tr("menu_view_dataviewer"))
 
         self._act_about.setText(tr("menu_help_about"))
 
@@ -304,13 +308,29 @@ class MainWindow(QMainWindow):
         self._menu_view.addMenu(self._menu_language)
 
         self._menu_view.addSeparator()
+        # Atributo conservado por compatibilidad (smoke tests); ya no se
+        # añade al menú: la visibilidad granular vive en el submenú.
         self._act_toggle_left = self._new_action(
             "act_toggle_left", checkable=True, checked=True
         )
         self._act_toggle_hud = self._new_action(
             "act_toggle_hud", checkable=True, checked=True
         )
-        self._menu_view.addAction(self._act_toggle_left)
+        self._menu_view_left = QMenu(tr("menu_view_toggle_left"), self)
+        self._menu_view_left.setObjectName("menu_view_left")
+        self._act_toggle_explorer = self._new_action(
+            "act_toggle_explorer", checkable=True, checked=True
+        )
+        self._act_toggle_treemap = self._new_action(
+            "act_toggle_treemap", checkable=True, checked=True
+        )
+        self._act_toggle_dataviewer = self._new_action(
+            "act_toggle_dataviewer", checkable=True, checked=True
+        )
+        self._menu_view_left.addAction(self._act_toggle_explorer)
+        self._menu_view_left.addAction(self._act_toggle_treemap)
+        self._menu_view_left.addAction(self._act_toggle_dataviewer)
+        self._menu_view.addMenu(self._menu_view_left)
         self._menu_view.addAction(self._act_toggle_hud)
         bar.addMenu(self._menu_view)
 
@@ -537,6 +557,19 @@ class MainWindow(QMainWindow):
 
         self._act_toggle_left.toggled.connect(self._left_panel.setVisible)
         self._act_toggle_hud.toggled.connect(self._hud_panel.setVisible)
+        # TODO(zona_gris): el hotfix pedía estas conexiones en
+        # _build_menus, pero los QGroupBox se crean en _build_central
+        # (que corre después); van aquí, junto a las conexiones
+        # equivalentes de los paneles laterales.
+        self._act_toggle_explorer.toggled.connect(
+            self._left_gb_explorer.setVisible
+        )
+        self._act_toggle_treemap.toggled.connect(
+            self._left_gb_treemap.setVisible
+        )
+        self._act_toggle_dataviewer.toggled.connect(
+            self._left_gb_dataviewer.setVisible
+        )
         return splitter
 
     def _make_left_groupbox(self, name: str) -> QGroupBox:
@@ -994,11 +1027,12 @@ class MainWindow(QMainWindow):
 
     def _on_tree_map_node_clicked(self, node_id: int) -> None:
         """Clic en el minimapa -> panning del canvas principal al nodo
-        (centerOn sobre su centro), SIN tocar su zoom ni su selección
-        (D2; invariante 4 del diseño 3.11.b: el mapa es pasivo)."""
+        (centerOn sobre su centro), SIN tocar su zoom; el clic SÍ
+        selecciona el nodo en el canvas (mapa bidireccional)."""
         center = self._tree_map.node_pos(node_id)
         if center is not None:
             self._tree_panel._view.centerOn(*center)
+            self._tree_panel.select_node(node_id)
 
     def _on_tree_node_selected(self, node_id: int) -> None:
         """Show the selected node card (read-only, from the frozen tree)."""

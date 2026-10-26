@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 24/10/2026
+**Fecha de última actualización:** 25/10/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -118,8 +118,14 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
 | **3.10.a** | Rediseño Visual UI (H3, H4, H5, H7, H8) - Toolbar, nodos HTML, panel QGroupBox, tema oscuro | ✅ |
+| **3.11.a** | Rediseño Base: Tema Colab, pestañas tipo Excel a página completa, Wizard redimensionado, nodos QPainter "hoja de auditoría" | ✅ |
+| **3.11.a.1** | Hotfix Visual: layout clásico de 8 menús, toolbar IconOnly, panel izquierdo de 3 bloques, pestañas inferiores, tema oscuro forzado vía QPalette, aristas con cortes numéricos, Ctrl+C→TSV en tablas | ✅ |
+| **3.11.b** | Tree Map (minimapa pasivo), Data Viewer, Project Explorer, `pct_global` en fila Total del nodo | ✅ |
+| **3.11.c** | Árboles Univariados en lote + Matriz de Costos N×N | ✅ |
+| **3.11.d** | Menú Contextual + Manual Override Log | ✅ |
+| **3.6.e** | Modo No-Bancario: terminología dinámica vía `tr_term` (BANKING bit-idéntica, RESEARCH neutra) | ✅ |
 
-**Suite de tests:** 465/465 PASSED
+**Suite de tests:** 477/477 PASSED
 
 ## Entorno de desarrollo
 
@@ -327,6 +333,15 @@ Fase 3.11.c quedó cerrada el 25/10/2026 con suite 470/470 (misma
 jornada). La Fase
 3.11.b quedó cerrada el 25/10/2026 con suite 465/465 (commits
 `6e4c4b5`, `a856c2c`, el de la b.3 y `b5cb5e6` para b.4+b.5).
+
+**Hotfix Visual post-3.6.e (25/10/2026):** aplicado y cerrado
+(mini-cierre en `docs/audit_log.md`; decisión `docs/design_decisions.md`
+§18.11): Tree Map con conectores padre-hijo y etiquetas de `node_id`,
+selección bidireccional mapa↔canvas (clic en el mapa → `select_node` +
+HUD), Menú Ver granular (toggles por bloque del panel izquierdo) y
+texto del wizard de Validación Cruzada sin referencias a fases
+internas. Suite 477/477. El proyecto está listo para la **Fase 4.0** o
+la recogida de feedback de la `1.0.0` estable.
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema

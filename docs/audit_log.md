@@ -6091,3 +6091,18 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **TODO pendiente (deuda diferida registrada en `docs/roadmap.md`, sección Deferred)**: (a) `reports_matrix_bad_capture_rate` sigue siendo bancario en el export HTML en RESEARCH ("Bad capture rate"; requiere clave i18n neutra propia — `TODO(zona_gris)` en `_term_report_label`); (b) integración del dataset real Wholesale Customers (UCI) para validación multi-dominio extensiva (diferida por ZG-3 del diseño).
 
 **Referencias**: `docs/3.6.e_design_non_banking.md` (diseño aprobado, ZG-1/2/3 resueltas); `docs/design_decisions.md` §18.10 (terminología dinámica); `docs/api.md` (nota `tr_term`); cierre documental sincronizado en el mismo bloque: `docs/roadmap.md`, `docs/estado_proyecto.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `README.md` / `README.es.md`, `docs/api.md`, `docs/design_decisions.md`.
+
+### 25/10/2026 — Mini-cierre: Hotfix Visual post-3.6.e (Tree Map, Wizard, Menú Ver granular)
+
+**Estado**: ✅ Cerrado. Suite **477/477 PASSED** (sin tests nuevos ni retirados; el único fallo transitorio —`test_tree_map_click_emits_node_clicked`, el texto del `node_id` interponiéndose en el hit-test del minimapa— se corrigió dentro del mismo bloque).
+
+**Contexto**: corrección visual posterior al cierre de la Fase 3.6.e, fuera de cierre de sub-fase → mini-cierre según la regla de correcciones post-cierre (AGENTS.md). Ejecutado en ráfaga (código + este cierre documental), sin commits intermedios (Flujo de Ráfaga Estricto, Skill 5).
+
+**Artefactos tocados**:
+- `frontend_v3/tree_map.py` — conectores padre→hijo (`QGraphicsLineItem` gris `#888888`, `setZValue(-1)` para quedar bajo los rectángulos) y etiqueta de `node_id` centrada en blanco sobre cada rectángulo; hit-test de `_MapView.mousePressEvent` corregido (barre TODOS los ítems del punto y emite desde el primer `_MapNodeItem`: el texto queda visualmente encima y `itemAt` lo devolvía a él, tragándose el clic); texto marcado `setAcceptedMouseButtons(NoButton)`.
+- `frontend_v3/main_window.py` — (a) Tree Map bidireccional: `_on_tree_map_node_clicked` llama a `self._tree_panel.select_node(node_id)` tras el `centerOn` (el clic en el mapa selecciona en el árbol y actualiza el HUD); (b) Menú Ver granular: la acción única `_act_toggle_left` se conserva como atributo (compatibilidad con los smoke tests) pero sale del menú; nuevo submenú `_menu_view_left` con tres acciones checkable (`act_toggle_explorer` / `act_toggle_treemap` / `act_toggle_dataviewer`) conectadas a los `QGroupBox` individuales del panel izquierdo; textos añadidos a `retranslate_ui`.
+- `frontend_v3/i18n.py` — `step3_cv_notice` reescrito sin referencia a fases internas (EN/ES); 3 claves nuevas `menu_view_explorer` / `menu_view_treemap` / `menu_view_dataviewer` (paridad EN/ES).
+
+**Zonas grises resueltas (decisión conservadora, `# TODO(zona_gris)` en el código)**: (a) el brief pedía dibujar los conectores ANTES del bucle de rectángulos sobre `self._items`; el atributo real es `self._rects` y debe estar poblado → el bucle de conectores va después con `setZValue(-1)` (misma intención visual); (b) el brief pedía las conexiones del submenú en `_build_menus`, pero ese método corre antes de `_build_central` (donde nacen los `QGroupBox`) → van junto a la conexión existente de `_left_panel`.
+
+**Referencias cruzadas**: `docs/design_decisions.md` §18.11; `docs/roadmap.md` (nota en la sección 3.11); `docs/estado_proyecto.md` (nota en el bloque narrativo de la Fase 3.11); `docs/contexto_para_nueva_sesion.md` (próximo paso).

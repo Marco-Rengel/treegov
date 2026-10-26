@@ -59,6 +59,7 @@
 | **3.11.b** | `docs/3.11.b_design_treemap_dataviewer.md` | ✅ Completed (25/10/2026) |
 | **3.11.c** | `docs/3.11.c_design_univariate_cost_matrix.md` | ✅ Completed (25/10/2026) |
 | **3.11.d** | `docs/3.11.d_design_context_menu_interactivity.md` | ✅ Completed (25/10/2026) |
+| **3.6.e** | `docs/3.6.e_design_non_banking.md` | ✅ Completed (25/10/2026) |
 
 **Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.
 
