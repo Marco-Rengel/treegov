@@ -6106,3 +6106,17 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Zonas grises resueltas (decisión conservadora, `# TODO(zona_gris)` en el código)**: (a) el brief pedía dibujar los conectores ANTES del bucle de rectángulos sobre `self._items`; el atributo real es `self._rects` y debe estar poblado → el bucle de conectores va después con `setZValue(-1)` (misma intención visual); (b) el brief pedía las conexiones del submenú en `_build_menus`, pero ese método corre antes de `_build_central` (donde nacen los `QGroupBox`) → van junto a la conexión existente de `_left_panel`.
 
 **Referencias cruzadas**: `docs/design_decisions.md` §18.11; `docs/roadmap.md` (nota en la sección 3.11); `docs/estado_proyecto.md` (nota en el bloque narrativo de la Fase 3.11); `docs/contexto_para_nueva_sesion.md` (próximo paso).
+
+### 25/10/2026 — Mini-cierre #3: Tree Map — conectores ortogonales y etiquetas visibles
+
+**Estado**: ✅ Cerrado. Suite **478/478 PASSED** (477 previos + 1 test nuevo: `test_tree_map_orthogonal_connectors_and_numbered_labels`).
+
+**Contexto**: corrección post-hotfix del bloque `bf406c4`. Las capturas de la GUI mostraron tres divergencias del Tree Map respecto al canvas principal: (a) conectores diagonales rectos (`QGraphicsLineItem` de un solo tramo, color `#888888`) en lugar de ortogonales con codo como el canvas; (b) color de línea fijo que apenas se distinguía del fondo en claro y oscuro; (c) etiquetas de `node_id` invisibles bajo el `fitInView` (factor ~0.05-0.10 reduce un texto de 10 pt a <1 px en pantalla).
+
+**Artefactos**:
+- `frontend_v3/tree_map.py` — conectores reescritos como `QGraphicsPathItem` con tres segmentos (baja → horizontal → baja, mismo `mid_y = (y0b + y1t)/2.0` que el canvas principal); pluma desde el token `BORDER` de la paleta activa; etiquetas con flag `ItemIgnoresTransformations` (tamaño de pantalla constante bajo `fitInView`), `setZValue(1.0)` y color `FG` del tema.
+- `tests/test_tree_map.py` — `test_tree_map_orthogonal_connectors_and_numbered_labels`: verifica (a) `QGraphicsPathItem` por arista con 3 o 4 elementos (el no-op de `QPainterPath.lineTo` cuando padre e hijo están alineados en X deja 3 segmentos), ortogonalidad estructural de cada segmento, (b) flag `ItemIgnoresTransformations` y z=1.0 en cada etiqueta, (c) color de pluma == `BORDER` de la paleta, (d) ausencia de `QGraphicsLineItem` residual; todo en ambos temas.
+
+**Hallazgo empírico**: `QPainterPath.lineTo()` es no-op cuando el destino coincide con la posición actual (documentado en Qt 6). Para el caso `0 → 2` (padre e hijo con `parent_cx == child_cx`) el path resultante tiene 3 elementos (línea vertical recta), geométricamente correcto. El test acepta `n in (3, 4)` y valida además ortogonalidad por segmento, más fuerte que el conteo solo.
+
+**Referencias cruzadas**: `docs/design_decisions.md` §18.11 (ampliación); `docs/roadmap.md` (nota ampliada en la sección 3.11); `docs/estado_proyecto.md` (bloque Hotfix ampliado); `docs/contexto_para_nueva_sesion.md` (conteo 477→478).

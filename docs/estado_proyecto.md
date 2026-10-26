@@ -502,7 +502,7 @@ ID ya no intercepta el clic del rectángulo); Menú Ver granular
 Data Viewer en lugar del toggle global del panel); texto del wizard de
 Validación Cruzada sin referencias a fases internas. Decisión:
 `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md`
-entrada del 25/10/2026. Suite 477/477.
+entrada del 25/10/2026. Suite 477/477. Ampliación (25/10/2026, mini-cierre #3): conectores ortogonales con codo (`QGraphicsPathItem`, token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (visibles a cualquier zoom). Suite 478/478.
 **Próximo paso: recogida de feedback para la v1.0.0 estable o inicio de
 la Fase 4.0**.
 

@@ -187,6 +187,60 @@ def test_tree_map_click_emits_node_clicked():
     tm.deleteLater()
 
 
+def test_tree_map_orthogonal_connectors_and_numbered_labels():
+    """Mini-cierre #3: el minimapa replica el estilo del canvas principal.
+
+    Verifica (a) conectores ortogonales de 3 segmentos (QGraphicsPathItem
+    con 4 puntos: inicio, codo, codo, fin), (b) etiquetas de node_id con
+    flag ItemIgnoresTransformations (tamaño constante en pantalla, visible
+    con el fitInView del minimapa), (c) color de conectores desde la
+    paleta activa (BORDER) en ambos temas.
+    """
+    from PySide6.QtWidgets import (
+        QGraphicsItem as _QI,
+        QGraphicsPathItem as _QPI,
+        QGraphicsSimpleTextItem as _QSTI,
+    )
+    _get_app()
+    model = _model_semaphore()
+    for theme in ("light", "dark"):
+        pal = PALETTES[theme]
+        tm = TreeMap()
+        tm.set_theme(theme)
+        tm.resize(240, 200)
+        tm.set_model(model)
+        # (a) un QGraphicsPathItem por arista padre->hijo
+        paths = [i for i in tm._scene.items() if isinstance(i, _QPI)]
+        n_edges = sum(len(nd.child_ids) for nd in model.nodes if not nd.is_leaf)
+        assert len(paths) == n_edges
+        for path in paths:
+            pts = path.path()
+            n = pts.elementCount()
+            # 4 = inicio + codo1 + codo2 + fin; 3 cuando padre e hijo
+            # están alineados en X (el lineTo horizontal degenerado es
+            # no-op en Qt: no añade elemento si el punto coincide con la
+            # posición actual) y el conector es una recta vertical.
+            assert n in (3, 4)
+            # ortogonalidad: cada segmento es estrictamente vertical u
+            # horizontal
+            for k in range(1, n):
+                p0 = pts.elementAt(k - 1)
+                p1 = pts.elementAt(k)
+                assert p0.x == p1.x or p0.y == p1.y
+            assert path.pen().color() == QColor(pal["BORDER"])
+        # (b) una etiqueta por nodo, con flag ItemIgnoresTransformations
+        labels = [i for i in tm._scene.items() if isinstance(i, _QSTI)]
+        assert len(labels) == len(model.nodes)
+        for lbl in labels:
+            assert lbl.flags() & _QI.GraphicsItemFlag.ItemIgnoresTransformations
+            assert lbl.zValue() == 1.0
+        # (c) sin QGraphicsLineItem residual del diseño anterior
+        from PySide6.QtWidgets import QGraphicsLineItem as _QLI
+        assert not any(isinstance(i, _QLI) for i in tm._scene.items())
+        tm.close()
+        tm.deleteLater()
+
+
 # ---------------------------------------------------------------------------
 # ejecución directa sin pytest
 # ---------------------------------------------------------------------------

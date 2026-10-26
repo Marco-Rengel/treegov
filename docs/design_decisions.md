@@ -2208,6 +2208,8 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 **Consecuencia:** El analista puede ocultar bloques concretos del panel izquierdo sin perder los demás, y navegar/seleccionar directamente desde el minimapa. El invariante D2 se relaja solo en la dirección mapa → canvas (selección); el mapa sigue sin selección ni foco propios. Corrección asociada del mismo hotfix: el hit-test del minimapa barre todos los ítems del punto (la etiqueta del `node_id` queda visualmente sobre el rectángulo y no debe tragarse el clic). Cierre: `docs/audit_log.md` entrada del 25/10/2026.
 
+**Actualización (25/10/2026, mini-cierre #3):** Los conectores del minimapa ahora replican la geometría del canvas principal (`QGraphicsPathItem` con tres segmentos ortogonales y `mid_y = (y0b + y1t)/2.0`, pluma del token `BORDER` de la paleta activa) en lugar del `QGraphicsLineItem` diagonal de un solo tramo con color fijo. Las etiquetas de `node_id` usan `ItemIgnoresTransformations` para mantener tamaño de pantalla constante bajo el `fitInView` del minimapa (el factor de encaje típico de un árbol de ~15 hojas es ~0.05-0.10, insuficiente para texto normal), color `FG` del tema y `z=1.0` para quedar por encima de los rectángulos. Tests: `tests/test_tree_map.py::test_tree_map_orthogonal_connectors_and_numbered_labels`. Cierre: `docs/audit_log.md` entrada del 25/10/2026 (mini-cierre #3).
+
 ---
 
 ## Maintenance

@@ -40,10 +40,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QMouseEvent, QPainter, QPen
+from PySide6.QtCore import QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QMouseEvent,
+    QPainter,
+    QPainterPath,
+    QPen,
+)
 from PySide6.QtWidgets import (
-    QGraphicsLineItem,
+    QGraphicsItem,
+    QGraphicsPathItem,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsView,
@@ -228,35 +236,44 @@ class TreeMap(QWidget):
                     y + NODE_H / 2.0,
                 )
                 text = self._scene.addSimpleText(str(node.node_id))
-                text.setBrush(QBrush(QColor("#FFFFFF")))
+                text.setBrush(QBrush(QColor(self._palette["FG"])))
+                # Tamaño constante de pantalla: el fitInView del minimapa
+                # reduce el factor a ~0.05-0.10 en árboles medianos; sin
+                # este flag el texto desaparece visualmente (verificado
+                # en las capturas del mini-cierre #3).
+                text.setFlag(
+                    QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations,
+                    True,
+                )
+                text.setZValue(1.0)
                 # No interactivo: el clic debe atravesar el texto y
                 # llegar al rectángulo (_MapNodeItem -> node_clicked).
                 text.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-                text.setPos(
-                    rect.center().x() - text.boundingRect().width() / 2,
-                    rect.center().y() - text.boundingRect().height() / 2,
-                )
+                text.setPos(rect.center().x(), rect.center().y())
             # TODO(zona_gris): el hotfix pedía dibujar los conectores
             # ANTES del bucle de rectángulos sobre `self._items`; el
             # atributo real es `self._rects` y debe estar poblado, así
             # que el bloque va tras el bucle y con ZValue(-1) para que
             # las líneas queden bajo los rectángulos (misma intención).
+            edge_pen = QPen(QColor(self._palette["BORDER"]), 1)
             for node in model.nodes:
                 if not node.is_leaf:
                     parent_rect = self._rects[node.node_id].rect()
-                    parent_center = parent_rect.center()
+                    parent_cx = parent_rect.center().x()
+                    parent_yb = parent_rect.bottom()
                     for child_id in node.child_ids:
                         child_rect = self._rects[child_id].rect()
-                        child_center = child_rect.center()
-                        line = QGraphicsLineItem(
-                            parent_center.x(),
-                            parent_center.y() + parent_rect.height() / 2,
-                            child_center.x(),
-                            child_center.y() - child_rect.height() / 2,
-                        )
-                        line.setPen(QPen(QColor("#888888"), 1))
-                        line.setZValue(-1)
-                        self._scene.addItem(line)
+                        child_cx = child_rect.center().x()
+                        child_yt = child_rect.top()
+                        mid_y = (parent_yb + child_yt) / 2.0
+                        path = QPainterPath(QPointF(parent_cx, parent_yb))
+                        path.lineTo(parent_cx, mid_y)
+                        path.lineTo(child_cx, mid_y)
+                        path.lineTo(child_cx, child_yt)
+                        edge = QGraphicsPathItem(path)
+                        edge.setPen(edge_pen)
+                        edge.setZValue(-1)
+                        self._scene.addItem(edge)
             self._scene.setSceneRect(
                 self._scene.itemsBoundingRect().adjusted(
                     -SCENE_MARGIN, -SCENE_MARGIN, SCENE_MARGIN, SCENE_MARGIN
