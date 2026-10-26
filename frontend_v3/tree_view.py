@@ -926,6 +926,12 @@ class TreePanel(QWidget):
     def select_node(self, node_id: int) -> None:
         self._scene.select_node(node_id)
 
+    def center_on_node(self, node_id: int) -> None:
+        """Centra la vista del canvas en el nodo indicado."""
+        item = self._scene._items.get(node_id)
+        if item is not None:
+            self._view.centerOn(item)
+
     def zoom_in(self) -> None:
         self._view.zoom_in()
 

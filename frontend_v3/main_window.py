@@ -1026,13 +1026,11 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_tree_map_node_clicked(self, node_id: int) -> None:
-        """Clic en el minimapa -> panning del canvas principal al nodo
-        (centerOn sobre su centro), SIN tocar su zoom; el clic SÍ
-        selecciona el nodo en el canvas (mapa bidireccional)."""
-        center = self._tree_map.node_pos(node_id)
-        if center is not None:
-            self._tree_panel._view.centerOn(*center)
-            self._tree_panel.select_node(node_id)
+        """Clic en el minimapa -> selecciona y centra el nodo en el canvas.
+        Navegación por node_id (no por coordenadas): el minimapa usa un
+        layout abstracto desacoplado del canvas."""
+        self._tree_panel.select_node(node_id)
+        self._tree_panel.center_on_node(node_id)
 
     def _on_tree_node_selected(self, node_id: int) -> None:
         """Show the selected node card (read-only, from the frozen tree)."""
