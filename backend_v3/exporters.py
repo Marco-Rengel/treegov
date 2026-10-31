@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for static type checking
     from backend_v3.imputation import ImputationSpec
     from backend_v3.session_state import TreeModel
 
-__all__ = ["export_to_sql"]
+__all__ = ["export_to_python", "export_to_sql"]
 
 
 def _sql_literal(value: object) -> str:
@@ -104,12 +104,8 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
             f"got index {index}."
         )
 
-    if split.bin_edges is not None:
+    if split.bin_edges:
         edges = tuple(split.bin_edges)
-        if not edges:
-            raise ValueError(
-                f"Split on {split.predictor!r} declares empty bin_edges."
-            )
         if index == 0:
             return f"{expression} <= {_sql_literal(edges[0])}"
         if index == len(edges):
@@ -217,3 +213,293 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
         f"-- TreeGov Model Fingerprint: {model.params_fingerprint}\n"
         f"SELECT {body} AS prediction_score;"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Python exporter
+# --------------------------------------------------------------------------- #
+
+
+def _index_nodes(model: "TreeModel") -> dict:
+    """Index ``model.nodes`` by ``node_id``.
+
+    The public contract exposes ``nodes`` as a tuple, but a mapping keyed by
+    ``node_id`` is also accepted so the exporter keeps working if the session
+    state is serialised as a dict. Nothing is assumed about the position of a
+    node inside the sequence: the ``node_id`` attribute is the only key used.
+    """
+    raw_nodes = model.nodes
+    if isinstance(raw_nodes, dict):
+        return dict(raw_nodes)
+    return {node.node_id: node for node in raw_nodes}
+
+
+def _python_variable(predictor: str) -> str:
+    """Derive a valid Python identifier for a predictor column.
+
+    Column names may contain spaces, accents, dashes or leading digits, none of
+    which are legal in a Python identifier. Every other character is replaced by
+    an underscore and a leading underscore is added when the result would start
+    with a digit. The mapping is deterministic, which keeps the generated script
+    stable across exports of the same model.
+    """
+    cleaned = "".join(
+        char if (char.isalnum() or char == "_") else "_" for char in predictor
+    )
+    if not cleaned or cleaned[0].isdigit():
+        cleaned = "_" + cleaned
+    return "val_" + cleaned
+
+
+def _python_number(value: object) -> str:
+    """Render a numeric value as a Python literal without losing precision.
+
+    ``float`` is applied first so numpy scalars are converted to builtin floats:
+    ``repr`` on a ``numpy.float64`` would emit ``np.float64(0.1)`` and the
+    exported script must stay free of third-party dependencies.
+    """
+    return repr(float(value))
+
+
+def _python_tuple(values: object) -> str:
+    """Render a tuple of text values as a Python tuple literal.
+
+    ``repr`` is used for the elements because it already escapes quotes and
+    backslashes correctly. A single element keeps its trailing comma so the
+    literal stays a tuple instead of collapsing into a parenthesised string.
+    """
+    items = [repr(str(value)) for value in values]
+    if len(items) == 1:
+        return "(" + items[0] + ",)"
+    return "(" + ", ".join(items) + ")"
+
+
+def _python_imputation(predictor: str, variable: str, imputer: object) -> list:
+    """Build the ``row.get`` lines that impute one predictor.
+
+    The constants come from the :class:`ImputationSpec` fitted on the training
+    partition, so the exported script imputes with exactly the values the model
+    saw during training. This is the same anti-leakage guarantee that
+    ``COALESCE`` provides in the SQL exporter.
+
+    The returned lines are relative to the body of ``_eval_tree``; the caller
+    adds the base indentation.
+
+    TODO(zona_gris): the brief specifies a single ``row.get(col, default)``
+    line. That covers an absent key but not a key that is present with a
+    ``None`` value, while ``COALESCE`` in the SQL exporter covers both. A
+    ``None`` would reach the comparison and raise ``TypeError``, breaking the
+    prediction-parity invariant (§3 of the design note). The specified line is
+    emitted unchanged and a two-line guard is appended after it so both
+    exporters treat missing values identically.
+    """
+    means = getattr(imputer, "means", None) or {}
+    modes = getattr(imputer, "modes", None) or {}
+    key = repr(predictor)
+
+    if predictor in means:
+        default = _python_number(means[predictor])
+    elif predictor in modes:
+        default = repr(str(modes[predictor]))
+    else:
+        return [f"{variable} = row.get({key})"]
+
+    return [
+        f"{variable} = row.get({key}, {default})",
+        f"if {variable} is None:",
+        f"    {variable} = {default}",
+    ]
+
+
+def _python_predictors(root_id: int, nodes_by_id: dict) -> list:
+    """List the predictors used by the tree, in depth-first appearance order.
+
+    Only columns that actually appear in a split are collected, so the exported
+    script never contains dead imputation lines. The traversal is iterative and
+    left-to-right, which makes the emitted order deterministic.
+    """
+    ordered = []
+    seen = set()
+    stack = [root_id]
+
+    while stack:
+        node_id = stack.pop()
+        try:
+            node = nodes_by_id[node_id]
+        except KeyError as exc:
+            raise KeyError(
+                f"node_id {node_id} is not present in model.nodes."
+            ) from exc
+
+        if node.is_leaf:
+            continue
+
+        split = node.split
+        if split is None:
+            raise ValueError(
+                f"Internal node {node_id} has no SplitConfig; it cannot be exported."
+            )
+
+        if split.predictor not in seen:
+            seen.add(split.predictor)
+            ordered.append(split.predictor)
+
+        stack.extend(reversed(tuple(node.child_ids)))
+
+    return ordered
+
+
+def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
+    """Render one node as a list of Python source lines indented by ``depth``.
+
+    ``depth`` counts indentation levels of four spaces, so the generated script
+    always keeps strict Python indentation. Leaves emit ``return`` with the
+    class-of-interest probability (index 0 of ``pd_final``); internal nodes emit
+    an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children.
+    """
+    pad = "    " * depth
+
+    try:
+        node = nodes_by_id[node_id]
+    except KeyError as exc:
+        raise KeyError(
+            f"node_id {node_id} is not present in model.nodes."
+        ) from exc
+
+    if node.is_leaf:
+        return [f"{pad}return {_python_number(node.pd_final[0])}"]
+
+    split = node.split
+    if split is None:
+        raise ValueError(
+            f"Internal node {node_id} has no SplitConfig; it cannot be exported."
+        )
+
+    variable = _python_variable(split.predictor)
+    child_ids = tuple(node.child_ids)
+
+    if len(child_ids) < 2:
+        raise ValueError(
+            f"Internal node {node_id} must have at least 2 children, "
+            f"got {len(child_ids)}."
+        )
+
+    if split.threshold is not None:
+        if len(child_ids) != 2:
+            raise ValueError(
+                f"Threshold split on {split.predictor!r} has exactly 2 branches, "
+                f"got {len(child_ids)} children."
+            )
+        lines = [f"{pad}if {variable} <= {_python_number(split.threshold)}:"]
+        lines.extend(_python_node(child_ids[0], depth + 1, nodes_by_id))
+        lines.append(f"{pad}else:")
+        lines.extend(_python_node(child_ids[1], depth + 1, nodes_by_id))
+        return lines
+
+    if split.bin_edges:
+        edges = tuple(split.bin_edges)
+        if len(child_ids) != len(edges) + 1:
+            raise ValueError(
+                f"CHAID split on {split.predictor!r} with {len(edges)} edges needs "
+                f"{len(edges) + 1} children, got {len(child_ids)}."
+            )
+        lines = []
+        for index, edge in enumerate(edges):
+            keyword = "if" if index == 0 else "elif"
+            lines.append(f"{pad}{keyword} {variable} <= {_python_number(edge)}:")
+            lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
+        lines.append(f"{pad}else:")
+        lines.extend(_python_node(child_ids[-1], depth + 1, nodes_by_id))
+        return lines
+
+    if split.branches is not None:
+        branch_values = tuple(split.branches)
+        if len(branch_values) < len(child_ids) - 1:
+            raise ValueError(
+                f"Categorical split on {split.predictor!r} needs at least "
+                f"{len(child_ids) - 1} branch value sets, got {len(branch_values)}."
+            )
+        lines = []
+        for index in range(len(child_ids) - 1):
+            keyword = "if" if index == 0 else "elif"
+            values = _python_tuple(branch_values[index])
+            lines.append(f"{pad}{keyword} {variable} in {values}:")
+            lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
+        # TODO(zona_gris): the brief asks for `else:` on the last categorical
+        # branch, while export_to_sql emits `ELSE NULL`. For a category unseen
+        # at scoring time the two exporters therefore disagree: SQL returns
+        # NULL, Python falls into the last branch. Followed the brief here;
+        # reconcile both backends in a later turn.
+        lines.append(f"{pad}else:")
+        lines.extend(_python_node(child_ids[-1], depth + 1, nodes_by_id))
+        return lines
+
+    raise ValueError(
+        f"Split on {split.predictor!r} has neither threshold, bin_edges nor "
+        f"branches; it cannot be exported to Python."
+    )
+
+
+def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
+    """Export ``model`` as a self-contained, dependency-free Python script.
+
+    The generated module contains exactly two functions: ``predict(row)``, the
+    public entry point, and ``_eval_tree(row)``, which holds the unrolled tree
+    and the imputation constants. Only the standard library is used (``dict.get``
+    and builtin floats), so the file can be pasted into a legacy scoring system
+    that has no numpy or pandas installed.
+
+    The imputation assignments are emitted inside ``_eval_tree`` rather than in
+    ``predict``: ``predict`` is a thin wrapper, and a local variable created in
+    one function is not visible in another, so placing them in ``predict`` would
+    make the generated script raise ``NameError`` on the first split. The
+    constants still come from the training-time :class:`ImputationSpec`, which
+    preserves the anti-leakage guarantee.
+
+    The first line is a comment carrying ``model.params_fingerprint`` so the
+    artefact can be traced back to the model that generated it (MRM).
+
+    Args:
+        model: Trained decision tree. ``root_id``, ``nodes`` and
+            ``params_fingerprint`` are read; the model is never mutated.
+        imputer: Imputation specification fitted on the training partition.
+
+    Returns:
+        The source of a Python module, terminated by a newline.
+
+    Raises:
+        ValueError: if a split cannot be expressed as an ``if`` chain, or the
+            tree is structurally inconsistent.
+        KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
+    """
+    nodes_by_id = _index_nodes(model)
+    predictors = _python_predictors(model.root_id, nodes_by_id)
+
+    variables = {}
+    for predictor in predictors:
+        variable = _python_variable(predictor)
+        for other, taken in variables.items():
+            if taken == variable:
+                raise ValueError(
+                    f"Predictors {other!r} and {predictor!r} both map to the "
+                    f"variable {variable!r}; rename one of them before exporting."
+                )
+        variables[predictor] = variable
+
+    lines = [
+        f"# TreeGov Model Fingerprint: {model.params_fingerprint}",
+        "",
+        "def predict(row: dict) -> float:",
+        "    return _eval_tree(row)",
+        "",
+        "",
+        "def _eval_tree(row: dict) -> float:",
+    ]
+
+    for predictor in predictors:
+        for line in _python_imputation(predictor, variables[predictor], imputer):
+            lines.append("    " + line)
+
+    lines.extend(_python_node(model.root_id, 1, nodes_by_id))
+
+    return "\n".join(lines) + "\n"
