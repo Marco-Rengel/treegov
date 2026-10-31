@@ -705,7 +705,8 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| **Total** | **480** |
+| exporters.py | 4 |
+| **Total** | **487** |
 
 **Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 480/480 PASSED
 
