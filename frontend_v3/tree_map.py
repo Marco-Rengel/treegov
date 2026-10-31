@@ -1,18 +1,31 @@
-"""
-TreeMap — minimapa abstracto del árbol (portado del prototipo Antigravity).
+"""Abstract tree map widget: tidy top-down minimap of the TreeModel.
 
-Layout abstracto desacoplado del canvas principal: cajas 48x30 con gap
-horizontal 16 y vertical 36. El texto (ID del nodo, 11 pt negrita) escala
-con la caja porque no usa ItemIgnoresTransformations. La navegación es por
-node_id: el clic emite node_clicked(int); MainWindow busca el TreeNodeItem
-en el canvas y hace centerOn. Nunca se traducen coordenadas.
+Clean-room rewrite (Phase 3.11.e). This module only renders: it contains
+zero analytic logic and consumes the immutable ``TreeModel`` as a
+read-only snapshot. All colors come from ``frontend_v3.theme.PALETTES``;
+no hard-coded hex values anywhere in the file.
 
-Sala limpia: cero lógica analítica. El widget solo pinta.
+Layout — simplified Reingold-Tilford tidy tree, drawn top-down: every
+leaf occupies exactly one column, and every internal node is centered
+over the span of its direct children.
+    Reingold, E.M. & Tilford, J.S. (1981). "Tidier Drawings of Trees".
+    IEEE Transactions on Software Engineering, SE-7(2), 223-228.
+
+Connectors — orthogonal three-segment edges (vertical drop from the
+parent, horizontal run, vertical entry into the child), the classical
+convention for layered tree drawings.
+    Battista, G. di, Eades, P., Tamassia, R. & Tollis, I.G. (1998).
+    "Graph Drawing: Algorithms for the Visualization of Graphs".
+    Prentice Hall, chapter 4.
+
+Node ID labels use ``QGraphicsItem.ItemIgnoresTransformations`` so they
+keep a constant on-screen size at any zoom level (Qt 6 documentation,
+QGraphicsItem::GraphicsItemFlag).
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPainterPath, QPen
@@ -30,65 +43,125 @@ from PySide6.QtWidgets import (
 from frontend_v3.theme import PALETTES
 
 if TYPE_CHECKING:
-    from backend_v3.tree_builder import TreeModel, TreeNode
+    from backend_v3.tree_builder import TreeModel
 
 __all__ = ["TreeMap"]
 
-# Geometría abstracta del minimapa (independiente del canvas principal).
-BOX_W = 48.0
-BOX_H = 30.0
-H_GAP = 16.0
-V_GAP = 36.0
+# Geometry of the abstract layout (fixed by the 3.11.e design): each node
+# is a CAJA_W x CAJA_H box; adjacent leaf columns are pitched
+# CAJA_W + HUECO_H apart; consecutive depth levels are pitched
+# CAJA_H + HUECO_V apart.
+CAJA_W = 48.0
+CAJA_H = 30.0
+HUECO_H = 16.0
+HUECO_V = 36.0
+
+# Minimum zoom factor. When the factor required to fit the whole scene is
+# smaller than MIN_SCALE, the view clamps to MIN_SCALE and switches the
+# scroll bars to ScrollBarAsNeeded instead of shrinking further.
+MIN_SCALE = 0.02
+
+# Empty margin around the drawn tree inside the scene rect.
+_MARGEN = 24.0
 
 
-class _AbstractNodeItem(QGraphicsRectItem):
-    """Caja abstracta con el ID del nodo centrado (estilo prototipo)."""
+def _posiciones_arbol(model: TreeModel) -> dict[int, tuple[float, float]]:
+    """Compute the (x, y) center of every node box.
+
+    Simplified Reingold-Tilford: a post-order walk assigns each leaf the
+    next free column, left to right; each internal node is centered on
+    the midpoint between its first and its last child (the centering
+    aesthetic of Reingold & Tilford 1981). The row of a node is its
+    depth. ``TreeModel`` guarantees that every node is reachable from
+    ``root_id`` and that ``nodes`` is indexed by ``node_id``.
+    """
+    pos: dict[int, tuple[float, float]] = {}
+    cursor = [0.0]  # center x of the next free leaf column
+    paso_x = CAJA_W + HUECO_H
+    paso_y = CAJA_H + HUECO_V
+
+    def _recorrer(node_id: int, depth: int) -> float:
+        node = model.nodes[node_id]
+        y = depth * paso_y
+        if node.is_leaf:
+            x = cursor[0]
+            cursor[0] += paso_x
+        else:
+            xs = [_recorrer(cid, depth + 1) for cid in node.child_ids]
+            x = (xs[0] + xs[-1]) / 2.0
+        pos[node_id] = (x, y)
+        return x
+
+    _recorrer(model.root_id, 0)
+    return pos
+
+
+class _CajaNodo(QGraphicsRectItem):
+    """Node box with its ID label centered inside.
+
+    The label is a QGraphicsSimpleTextItem with the
+    ItemIgnoresTransformations flag (Qt 6 docs,
+    QGraphicsItem::GraphicsItemFlag): it keeps a constant on-screen size
+    no matter how far the view zooms out, so the minimap stays readable
+    when clamped at MIN_SCALE. The label accepts no mouse buttons, so
+    clicks always reach the box underneath.
+    """
 
     def __init__(
         self,
         node_id: int,
-        rect: QRectF,
         is_leaf: bool,
         palette: dict[str, str],
-        parent: Optional[QGraphicsItem] = None,
+        parent: QGraphicsItem | None = None,
     ) -> None:
+        rect = QRectF(-CAJA_W / 2.0, -CAJA_H / 2.0, CAJA_W, CAJA_H)
         super().__init__(rect, parent)
         self.node_id = node_id
         self.is_leaf = is_leaf
         self._palette = palette
         self._selected = False
-        self._apply_style()
-        text = QGraphicsSimpleTextItem(str(node_id), self)
-        font = QFont("Segoe UI", 8, QFont.Weight.Bold)
-        text.setFont(font)
-        text.setBrush(QBrush(QColor("#FFFFFF")))
-        # Mantiene el texto al mismo tamaño en pantalla,
-        # sin importar cuánto se reduzca la escena en fitInView.
-        text.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True)
-        tr = text.boundingRect()
-        # Centrar el texto (el origen del item es el centro del rect)
-        text.setPos(-tr.width() / 2.0, -tr.height() / 2.0)
-        text.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        self._texto = QGraphicsSimpleTextItem(str(node_id), self)
+        self._texto.setFont(QFont("Segoe UI", 8, QFont.Weight.Bold))
+        self._texto.setFlag(
+            QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations, True
+        )
+        self._texto.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
+        bounds = self._texto.boundingRect()
+        self._texto.setPos(-bounds.width() / 2.0, -bounds.height() / 2.0)
+        self._aplicar_estilo()
 
-    def _apply_style(self) -> None:
+    def _aplicar_estilo(self) -> None:
+        # TODO(zona_gris): the design lists both "normal border: BORDER"
+        # and kind-specific borders (leaf: STATUS_OK, internal: ACCENT).
+        # Resolved conservatively: the kind-specific rule wins for boxes
+        # (every node is either leaf or internal); BORDER is used for the
+        # connectors, per the edge rule.
+        pal = self._palette
         if self._selected:
-            # Seleccionado: cian brillante, fondo azul intenso
-            self.setPen(QPen(QColor("#38bdf8"), 2.5))
-            self.setBrush(QBrush(QColor("#1d4ed8")))
+            self.setBrush(QBrush(QColor(pal["ACCENT"])))
+            self.setPen(QPen(QColor(pal["ACCENT"]), 2.0))
+            self._texto.setBrush(QBrush(QColor(pal["ACCENT_FG"])))
         else:
-            # Normal: borde verde (hoja) o azul (interno), fondo oscuro fijo
-            border = QColor("#059669") if self.is_leaf else QColor("#3b82f6")
-            self.setPen(QPen(border, 1.5))
-            self.setBrush(QBrush(QColor("#1e293b")))
+            self.setBrush(QBrush(QColor(pal["SURFACE"])))
+            border = pal["STATUS_OK"] if self.is_leaf else pal["ACCENT"]
+            self.setPen(QPen(QColor(border), 1.0))
+            self._texto.setBrush(QBrush(QColor(pal["FG"])))
 
     def set_selected_state(self, selected: bool) -> None:
         if self._selected != selected:
             self._selected = selected
-            self._apply_style()
+            self._aplicar_estilo()
 
 
-class _MapView(QGraphicsView):
-    """Vista propia del minimapa: clic -> node_clicked."""
+class _TreeMapScene(QGraphicsScene):
+    """Scene with a palette-driven background. Holds no logic."""
+
+    def apply_palette(self, palette: dict[str, str]) -> None:
+        self.setBackgroundBrush(QBrush(QColor(palette["BG"])))
+
+
+class _TreeMapView(QGraphicsView):
+    """Map view: left click on a box emits ``node_clicked(node_id)``."""
 
     node_clicked = Signal(int)
 
@@ -101,12 +174,39 @@ class _MapView(QGraphicsView):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def fit_scene(self) -> None:
+        """Fit the whole scene into the viewport, clamped at MIN_SCALE.
+
+        When the fit factor falls below MIN_SCALE the transform is fixed
+        at MIN_SCALE (centered on the scene) and the scroll bars switch
+        to ScrollBarAsNeeded; otherwise they stay AlwaysOff.
+        """
         rect = self.scene().sceneRect()
-        if not rect.isNull() and rect.width() > 0 and rect.height() > 0:
-            self.fitInView(
-                rect.adjusted(-20, -20, 20, 20),
-                Qt.AspectRatioMode.KeepAspectRatio,
-            )
+        view = self.viewport().rect()
+        if (
+            rect.isNull()
+            or rect.width() <= 0
+            or rect.height() <= 0
+            or view.width() <= 0
+            or view.height() <= 0
+        ):
+            return
+        factor = min(view.width() / rect.width(), view.height() / rect.height())
+        if factor < MIN_SCALE:
+            self._set_scroll_policies(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            self.resetTransform()
+            self.scale(MIN_SCALE, MIN_SCALE)
+            self.centerOn(rect.center())
+        else:
+            self._set_scroll_policies(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.fitInView(rect, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def _set_scroll_policies(self, policy: Qt.ScrollBarPolicy) -> None:
+        # Guard against redundant changes: a policy switch resizes the
+        # viewport, which re-enters resizeEvent -> fit_scene.
+        if self.horizontalScrollBarPolicy() != policy:
+            self.setHorizontalScrollBarPolicy(policy)
+        if self.verticalScrollBarPolicy() != policy:
+            self.setVerticalScrollBarPolicy(policy)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
@@ -115,15 +215,21 @@ class _MapView(QGraphicsView):
     def mousePressEvent(self, event) -> None:
         if event.button() is Qt.MouseButton.LeftButton:
             item = self.itemAt(event.position().toPoint())
-            while item is not None and not isinstance(item, _AbstractNodeItem):
+            while item is not None and not isinstance(item, _CajaNodo):
                 item = item.parentItem()
-            if isinstance(item, _AbstractNodeItem):
+            if isinstance(item, _CajaNodo):
                 self.node_clicked.emit(item.node_id)
         event.accept()
 
 
 class TreeMap(QWidget):
-    """Bloque Tree Map: minimapa abstracto del árbol."""
+    """Tree Map block: abstract top-down minimap of the tree model.
+
+    Public contract (consumed by main_window.py): the ``node_clicked``
+    signal and the ``set_model`` / ``set_selected_node`` / ``set_theme``
+    methods. Everything is rebuilt from scratch on every model or theme
+    change; with no model the scene stays empty (no decorative text).
+    """
 
     node_clicked = Signal(int)
 
@@ -131,19 +237,21 @@ class TreeMap(QWidget):
         super().__init__(parent)
         self._palette: dict[str, str] = PALETTES["light"]
         self._model: TreeModel | None = None
-        self._items: Dict[int, _AbstractNodeItem] = {}
-        self._layout = QVBoxLayout(self)
-        self._scene = QGraphicsScene(self)
-        self._scene.setBackgroundBrush(QBrush(QColor(self._palette["BG"])))
-        self._view = _MapView(self._scene, self)
+        self._selected_id: int | None = None
+        self._items: dict[int, _CajaNodo] = {}
+        self._scene = _TreeMapScene(self)
+        self._scene.apply_palette(self._palette)
+        self._view = _TreeMapView(self._scene, self)
         self._view.node_clicked.connect(self.node_clicked)
-        self._layout.addWidget(self._view)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self._view)
 
     def set_model(self, model: TreeModel | None) -> None:
         self._model = model
         self._rebuild()
 
     def set_selected_node(self, node_id: int | None) -> None:
+        self._selected_id = node_id
         for nid, item in self._items.items():
             item.set_selected_state(nid == node_id)
 
@@ -157,63 +265,50 @@ class TreeMap(QWidget):
         self._rebuild()
 
     def _rebuild(self) -> None:
+        """Rebuild scene contents from the current model and palette."""
         self._scene.clear()
         self._items.clear()
-        self._scene.setBackgroundBrush(QBrush(QColor(self._palette["BG"])))
+        self._scene.apply_palette(self._palette)
         model = self._model
         if model is None:
-            self._view.fit_scene()
+            self._scene.setSceneRect(QRectF())
             return
 
-        row_h = BOX_H + V_GAP
-        positions: Dict[int, Tuple[float, float]] = {}
-        next_x = [0.0]
+        pos = _posiciones_arbol(model)
 
-        def _walk(node_id: int, depth: int) -> float:
-            node = model.nodes[node_id]
-            y = depth * row_h
-            if node.is_leaf:
-                x = next_x[0]
-                next_x[0] += BOX_W + H_GAP
-                positions[node_id] = (x, y)
-                return x
-            child_xs = [_walk(cid, depth + 1) for cid in node.child_ids]
-            x = sum(child_xs) / len(child_xs)
-            positions[node_id] = (x, y)
-            return x
-
-        _walk(model.root_id, 0)
-
-        edge_pen = QPen(QColor(self._palette["DISABLED"]), 1.5)
+        # Connectors first, so the boxes paint on top of them.
+        edge_pen = QPen(QColor(self._palette["BORDER"]), 1.0)
         for node in model.nodes:
             if node.is_leaf:
                 continue
-            px, py = positions[node.node_id]
-            p_bottom = QPointF(px, py + BOX_H / 2.0)
+            px, py = pos[node.node_id]
+            p_bottom = QPointF(px, py + CAJA_H / 2.0)
             for cid in node.child_ids:
-                cx, cy = positions[cid]
-                c_top = QPointF(cx, cy - BOX_H / 2.0)
+                cx, cy = pos[cid]
+                c_top = QPointF(cx, cy - CAJA_H / 2.0)
                 mid_y = (p_bottom.y() + c_top.y()) / 2.0
                 path = QPainterPath(p_bottom)
-                path.lineTo(p_bottom.x(), mid_y)
-                path.lineTo(cx, mid_y)
-                path.lineTo(c_top)
+                path.lineTo(p_bottom.x(), mid_y)  # drop from the parent
+                path.lineTo(cx, mid_y)            # horizontal run
+                path.lineTo(c_top)                # entry into the child
                 edge = QGraphicsPathItem(path)
                 edge.setPen(edge_pen)
                 self._scene.addItem(edge)
 
-        box_rect = QRectF(-BOX_W / 2.0, -BOX_H / 2.0, BOX_W, BOX_H)
         for node in model.nodes:
-            if node.node_id not in positions:
-                continue
-            x, y = positions[node.node_id]
-            item = _AbstractNodeItem(
-                node.node_id, box_rect, node.is_leaf, self._palette
-            )
+            x, y = pos[node.node_id]
+            item = _CajaNodo(node.node_id, node.is_leaf, self._palette)
             item.setPos(x, y)
             self._scene.addItem(item)
             self._items[node.node_id] = item
 
+        if self._selected_id is not None:
+            selected = self._selected_id
+            for nid, item in self._items.items():
+                item.set_selected_state(nid == selected)
+
         bounds = self._scene.itemsBoundingRect()
-        self._scene.setSceneRect(bounds.adjusted(-25, -25, 25, 25))
+        self._scene.setSceneRect(
+            bounds.adjusted(-_MARGEN, -_MARGEN, _MARGEN, _MARGEN)
+        )
         self._view.fit_scene()

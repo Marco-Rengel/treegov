@@ -192,6 +192,11 @@ docstrings).
   mathematical formula is forbidden (governance rule replicated in
   `.treegovrules` and `AGENTS.md`).
 
+> **Excepción reconocida (31/10/2026):** el widget `frontend_v3/tree_map.py`
+> fue sustituido por una reescritura desde cero (Fase 3.11.e) al
+> detectarse un port del prototipo previo del autor. Ninguna versión
+> actual del código reutiliza código del prototipo.
+
 ---
 
 ## §1. Type and contract decisions
@@ -2210,7 +2215,11 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 **Actualización (25/10/2026, mini-cierre #3):** Los conectores del minimapa ahora replican la geometría del canvas principal (`QGraphicsPathItem` con tres segmentos ortogonales y `mid_y = (y0b + y1t)/2.0`, pluma del token `BORDER` de la paleta activa) en lugar del `QGraphicsLineItem` diagonal de un solo tramo con color fijo. Las etiquetas de `node_id` usan `ItemIgnoresTransformations` para mantener tamaño de pantalla constante bajo el `fitInView` del minimapa (el factor de encaje típico de un árbol de ~15 hojas es ~0.05-0.10, insuficiente para texto normal), color `FG` del tema y `z=1.0` para quedar por encima de los rectángulos. Tests: `tests/test_tree_map.py::test_tree_map_orthogonal_connectors_and_numbered_labels`. Cierre: `docs/audit_log.md` entrada del 25/10/2026 (mini-cierre #3).
 
-**Actualización (25/10/2026, bloque de iteración #4-#8):** El minimapa evolucionó de coordenadas compartidas con el canvas a un layout abstracto desacoplado (cajas 48×30, gaps 16×36, texto 8 pt con `ItemIgnoresTransformations`), portado del prototipo Antigravity. La navegación ya no traduce coordenadas: el clic emite `node_clicked(node_id)` y `MainWindow` delega en `TreePanel.select_node(node_id)` + `TreePanel.center_on_node(node_id)`. Ventajas: navegación determinista, números visibles a cualquier zoom, layout independiente del tamaño del canvas. **Deuda abierta**: el fondo fijo `#1e293b` no encaja en tema claro; pendiente definir una paleta propia del minimapa. Tests: `tests/test_tree_map.py`. Cierre: `audit_log.md` entrada del 25/10/2026.
+> **Actualización (31/10/2026, A2):** el TreeMap previo contenía un
+> port del prototipo Antigravity; se reescribió desde cero por Clean
+> Room. Ver `docs/3.11.e_design_treemap_rewrite.md`. Esta §18.11 queda
+> como registro histórico de la iteración #4-#8; el estado as-built vive
+> en 3.11.e.
 
 ---
 

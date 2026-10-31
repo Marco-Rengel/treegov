@@ -1,6 +1,13 @@
-"""Tests del TreeMap (frontend_v3/tree_map.py). Dual: pytest o python directo.
+"""Acceptance tests for the clean-room TreeMap (frontend_v3/tree_map.py).
 
-Layout abstracto desacoplado (cajas 48x30); navegación por node_id.
+Part of mini-closure A2 (Clean Room rewrite, 31/10/2026): the TreeMap
+widget was rewritten from scratch against the fixed decisions D1-D7
+(Reingold-Tilford simplified layout, orthogonal 3-segment connectors,
+100% palette-driven colors, zoom-clamped fit). These tests encode the
+acceptance criteria for that rewrite; the previous four tests targeted
+the superseded prototype port and were removed.
+
+Dual runner: ``pytest tests/test_tree_map.py`` or ``python`` directly.
 """
 
 import os
@@ -10,15 +17,26 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QApplication, QGraphicsPathItem
+from PySide6.QtWidgets import (
+    QApplication,
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsSimpleTextItem,
+)
 
 from backend_v3.tree_builder import TreeModel, TreeNode
 from backend_v3.types import SplitConfig
 from frontend_v3.app import create_app
 from frontend_v3.theme import PALETTES
-from frontend_v3.tree_map import BOX_H, BOX_W, TreeMap
+from frontend_v3.tree_map import TreeMap
+
+# Hard-coded hex colors of the superseded prototype. None of them may
+# appear in any pen or brush of the rewritten scene (decision D3).
+_PROTOTYPE_HEXES = frozenset(
+    {"#1e293b", "#059669", "#3b82f6", "#38bdf8", "#1d4ed8"}
+)
 
 
 def _app() -> QApplication:
@@ -40,6 +58,7 @@ def _leaf(node_id: int, pd0: float) -> TreeNode:
 
 
 def _model() -> TreeModel:
+    """Fixture: one CHAID root with three leaves (4 nodes total)."""
     split = SplitConfig(
         predictor="seg", method="CHAID",
         statistic=100.0, statistic_name="chi2", df=(2,),
@@ -65,7 +84,7 @@ def _model() -> TreeModel:
     )
 
 
-def test_empty_state():
+def test_minimap_empty_state():
     _app()
     tm = TreeMap()
     assert tm._items == {}
@@ -75,48 +94,99 @@ def test_empty_state():
     tm.close()
 
 
-def test_layout_and_connectors():
+def test_minimap_layout_deterministic():
     _app()
-    tm = TreeMap()
-    tm.resize(240, 240)
+    tm1 = TreeMap()
+    tm1.set_model(_model())
+    tm2 = TreeMap()
+    tm2.set_model(_model())
+    # Same IDs in the same insertion order, same exact positions.
+    assert list(tm1._items.keys()) == list(tm2._items.keys())
+    for nid in tm1._items:
+        assert tm1._items[nid].pos() == tm2._items[nid].pos()
+    tm1.close()
+    tm2.close()
+
+
+def test_minimap_uses_palette_tokens():
+    _app()
+    tm = TreeMap()  # default palette: light
     tm.set_model(_model())
-    assert len(tm._items) == 4
-    # cajas 48x30, independientes del canvas
+    for item in tm._scene.items():
+        pen = item.pen()
+        if pen.style() != Qt.PenStyle.NoPen:
+            assert pen.color().name() not in _PROTOTYPE_HEXES
+        brush = item.brush()
+        if brush.style() != Qt.BrushStyle.NoBrush:
+            assert brush.color().name() not in _PROTOTYPE_HEXES
+    palette = PALETTES["light"]
+    # Connector borders: thin pen in BORDER (decision D2).
+    edges = [i for i in tm._scene.items() if isinstance(i, QGraphicsPathItem)]
+    assert edges, "fixture must produce connectors"
+    for edge in edges:
+        assert edge.pen().color() == QColor(palette["BORDER"])
+    # Leaf boxes: subtle differential border in STATUS_OK (decision D3).
     for item in tm._items.values():
-        assert item.rect().width() == BOX_W
-        assert item.rect().height() == BOX_H
-    # conectores: 3 QGraphicsPathItem (uno por arista padre->hijo)
-    paths = [i for i in tm._scene.items() if isinstance(i, QGraphicsPathItem)]
-    assert len(paths) == 3
-    # raíz arriba, hojas abajo
-    assert tm._items[0].pos().y() < tm._items[1].pos().y()
+        if item.is_leaf:
+            assert item.pen().color() == QColor(palette["STATUS_OK"])
     tm.close()
 
 
-def test_node_clicked_emits_id():
+def test_minimap_node_clicked_emits_id():
     _app()
     tm = TreeMap()
-    tm.resize(240, 240)
     tm.set_model(_model())
     captured: list[int] = []
     tm.node_clicked.connect(captured.append)
-    # emular el clic directo sobre la señal del view (evita hit-test frágil)
+    # Emit the view signal directly (avoids a fragile hit-test).
     tm._view.node_clicked.emit(2)
     assert captured == [2]
+    assert isinstance(captured[0], int)
     tm.close()
 
 
-def test_selected_node_state():
+def test_minimap_highlight_follows_selection():
     _app()
     tm = TreeMap()
     tm.set_model(_model())
-    tm.set_selected_node(1)
-    assert tm._items[1]._selected is True
-    assert tm._items[2]._selected is False
-    # Color del prototipo (cian brillante del estado seleccionado)
-    assert tm._items[1].pen().color() == QColor("#38bdf8")
+    palette = PALETTES["light"]
+    tm.set_selected_node(2)
+    assert tm._items[2].brush().color() == QColor(palette["ACCENT"])
+    assert tm._items[2]._texto.brush().color() == QColor(palette["ACCENT_FG"])
+    for nid, item in tm._items.items():
+        if nid != 2:
+            assert item.brush().color() == QColor(palette["SURFACE"])
     tm.set_selected_node(None)
-    assert all(not it._selected for it in tm._items.values())
+    for item in tm._items.values():
+        assert item.brush().color() == QColor(palette["SURFACE"])
+    tm.close()
+
+
+def test_minimap_renders_all_nodes():
+    _app()
+    tm = TreeMap()
+    tm.set_model(_model())
+    # 4 node boxes (1 root + 3 leaves) and 3 orthogonal connectors
+    # (one per parent->child edge).
+    assert len(tm._items) == 4
+    edges = [i for i in tm._scene.items() if isinstance(i, QGraphicsPathItem)]
+    assert len(edges) == 3
+    tm.close()
+
+
+def test_minimap_id_legible_bajo_zoom():
+    _app()
+    tm = TreeMap()
+    tm.set_model(_model())
+    texts = [
+        i for i in tm._scene.items()
+        if isinstance(i, QGraphicsSimpleTextItem) and i.text()
+    ]
+    assert len(texts) == 4
+    flag = QGraphicsItem.GraphicsItemFlag.ItemIgnoresTransformations
+    for text in texts:
+        assert bool(text.flags() & flag)
+        assert text.font().pointSize() == 8
     tm.close()
 
 

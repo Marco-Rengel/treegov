@@ -629,10 +629,13 @@ La Fase 3.6.e se validó con un fixture sintético no-bancario (`edad`, `presion
 
 El export HTML en modo RESEARCH mantiene la etiqueta bancaria "Bad capture rate" (`reports_matrix_bad_capture_rate`): requiere una clave i18n neutra propia (p. ej. `term_research_capture_rate`). `TODO(zona_gris)` en `frontend_v3/reports_panel.py::_term_report_label`. No afecta a los asertos del E2E (`"Bad rate" ∉ html` pasa: "Bad capture rate" no contiene la subcadena).
 
-### ⏳ Paleta propia del Tree Map (independiente del tema de la app)
-**Priority: LOW (registrada el 25/10/2026).**
+### ✅ Paleta propia del Tree Map — RESUELTO (31/10/2026)
+**Priority: LOW (registrada el 25/10/2026; resuelta el 31/10/2026).**
 
-El minimapa usa colores fijos del prototipo Antigravity (`#1e293b` fondo, `#059669`/`#3b82f6` bordes, `#38bdf8` selección) que funcionan en tema oscuro pero contrastan mal con el tema claro de la app. Pendiente un mini-diseño de "paleta propia del minimapa" (como la "hoja de auditoría" del canvas) que respete ambos temas. No bloquea la navegación (que ya funciona).
+El minimapa ahora usa los tokens de `PALETTES` (Design System §2.1) en
+lugar de colores hardcodeados del prototipo. Además, la reescritura
+desde cero (A2, `docs/3.11.e_design_treemap_rewrite.md`) cierra la deuda
+de Clean Room: cero código del prototipo.
 
 **Nota PyPI (regla del 20/10/2026):** los cambios en `README.md` / `README.es.md` de este bloque son cosméticos (conteo 477→478); no disparan una nueva release. PyPI sigue en `1.0.0rc4` hasta la próxima release material.
 

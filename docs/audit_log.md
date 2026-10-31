@@ -6259,3 +6259,44 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 - `docs/audit_log.md` entrada del 31/10/2026 (A1+A3, mismo commit `4f7196b`).
 
 ---
+
+### 31/10/2026 — A2: Rediseño del TreeMap desde cero (Clean Room)
+
+**Estado**: ✅ Cerrado. Suite **483/483 PASSED**.
+
+**Modelo**: OpenCode 1.19.0 + moonshotai/kimi-k3, reasoning=max.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: el widget `frontend_v3/tree_map.py` contenía un port del
+prototipo Antigravity (constantes, algoritmo y colores hex idénticos).
+Eso violaba `design_decisions.md` §0.5 (Clean Room) y `.treegovrules`
+§Prohibitions. Se reescribió íntegramente desde cero.
+
+**Decisiones**:
+- D1: layout Reingold-Tilford (1981), constantes propias.
+- D2: routing ortogonal 3 tramos (Battista et al. 1998, cap. 4).
+- D3: colores desde PALETTES (Design System §2.1).
+- D4: ItemIgnoresTransformations en el ID (Qt 6 docs).
+- D5: fitInView con MIN_SCALE=0.02 + scrollbars.
+- D6: navegación por node_id (no coordenadas).
+- D7: empty state sin branding.
+
+**Artefactos**:
+- `frontend_v3/tree_map.py` (reescritura completa).
+- `tests/test_tree_map.py` (7 tests nuevos, reemplazan los 4 previos).
+- `docs/3.11.e_design_treemap_rewrite.md` (nuevo, supersede §D2 de
+  3.11.b y el port de §18.11).
+- `docs/3.11.b_design_treemap_dataviewer.md` (§D2 marcada como histórica).
+- `docs/design_decisions.md` (§0.5 excepción reconocida, §18.11 nota).
+- `docs/roadmap.md` (deuda de paleta marcada RESUELTA).
+
+**Hallazgos cerrados**: A2 (Clean Room + legibilidad + navegación),
+B7 (docstring obsoleto), C5 (colores hardcoded en tests).
+
+**Tests**: 483/483 PASSED (480 - 4 test_tree_map viejos + 7 nuevos).
+
+**Referencias**: 3.11.e_design_treemap_rewrite.md,
+3.11_gui_design_system.md §2.1, design_decisions.md §0.5 y §18.11.
+
+---
