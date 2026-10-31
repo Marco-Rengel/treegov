@@ -203,6 +203,16 @@ class MainWindow(QMainWindow):
         self._hud_lbl_gov_mode_cap.setText(f"{tr('governance_mode')}:")
         self._hud_btn_view_audit.setText(tr("governance_view_audit"))
         self._hud_gb_dataset.setTitle(tr("hud_group_dataset"))
+        self._hud_lbl_file_cap.setText(tr("hud_lbl_file"))
+        self._hud_lbl_rows_cap.setText(tr("hud_lbl_rows"))
+        self._hud_lbl_cols_cap.setText(tr("hud_lbl_cols"))
+        self._hud_lbl_pop_cap.setText(tr("hud_lbl_pop"))
+        self._hud_lbl_events_cap.setText(tr("hud_lbl_events"))
+        self._hud_lbl_bad_rate_cap.setText(tr("hud_lbl_bad_rate"))
+        self._hud_lbl_rule_var_cap.setText(tr("hud_lbl_rule_var"))
+        self._hud_lbl_rule_cond_cap.setText(tr("hud_lbl_rule_cond"))
+        self._hud_lbl_rule_stat_cap.setText(tr("hud_lbl_rule_stat"))
+        self._hud_lbl_rule_p_cap.setText(tr("hud_lbl_rule_p"))
         self._hud_gb_node.setTitle(tr("hud_group_node"))
         self._hud_gb_rule.setTitle(tr("hud_group_rule"))
         self._hud_placeholder.setText(tr("tree_prop_empty"))
@@ -630,9 +640,12 @@ class MainWindow(QMainWindow):
         self._hud_lbl_file = QLabel("—")
         self._hud_lbl_rows = QLabel("—")
         self._hud_lbl_cols = QLabel("—")
-        form_ds.addRow("File:", self._hud_lbl_file)
-        form_ds.addRow("Rows:", self._hud_lbl_rows)
-        form_ds.addRow("Cols:", self._hud_lbl_cols)
+        self._hud_lbl_file_cap = QLabel()
+        self._hud_lbl_rows_cap = QLabel()
+        self._hud_lbl_cols_cap = QLabel()
+        form_ds.addRow(self._hud_lbl_file_cap, self._hud_lbl_file)
+        form_ds.addRow(self._hud_lbl_rows_cap, self._hud_lbl_rows)
+        form_ds.addRow(self._hud_lbl_cols_cap, self._hud_lbl_cols)
         layout.insertWidget(2, self._hud_gb_dataset)
 
         # 2. Nodo
@@ -644,9 +657,12 @@ class MainWindow(QMainWindow):
         self._hud_bar = QProgressBar()
         self._hud_bar.setTextVisible(False)
         self._hud_bar.setFixedHeight(12)
-        form_node.addRow("Pop:", self._hud_lbl_pop)
-        form_node.addRow("Events:", self._hud_lbl_events)
-        form_node.addRow("Bad Rate:", self._hud_lbl_bad_rate)
+        self._hud_lbl_pop_cap = QLabel()
+        self._hud_lbl_events_cap = QLabel()
+        self._hud_lbl_bad_rate_cap = QLabel()
+        form_node.addRow(self._hud_lbl_pop_cap, self._hud_lbl_pop)
+        form_node.addRow(self._hud_lbl_events_cap, self._hud_lbl_events)
+        form_node.addRow(self._hud_lbl_bad_rate_cap, self._hud_lbl_bad_rate)
         form_node.addRow(self._hud_bar)
         layout.insertWidget(3, self._hud_gb_node)
 
@@ -657,10 +673,14 @@ class MainWindow(QMainWindow):
         self._hud_lbl_rule_cond = QLabel("—")
         self._hud_lbl_rule_stat = QLabel("—")
         self._hud_lbl_rule_p = QLabel("—")
-        form_rule.addRow("Var:", self._hud_lbl_rule_var)
-        form_rule.addRow("Cond:", self._hud_lbl_rule_cond)
-        form_rule.addRow("Stat:", self._hud_lbl_rule_stat)
-        form_rule.addRow("p-val:", self._hud_lbl_rule_p)
+        self._hud_lbl_rule_var_cap = QLabel()
+        self._hud_lbl_rule_cond_cap = QLabel()
+        self._hud_lbl_rule_stat_cap = QLabel()
+        self._hud_lbl_rule_p_cap = QLabel()
+        form_rule.addRow(self._hud_lbl_rule_var_cap, self._hud_lbl_rule_var)
+        form_rule.addRow(self._hud_lbl_rule_cond_cap, self._hud_lbl_rule_cond)
+        form_rule.addRow(self._hud_lbl_rule_stat_cap, self._hud_lbl_rule_stat)
+        form_rule.addRow(self._hud_lbl_rule_p_cap, self._hud_lbl_rule_p)
         layout.insertWidget(4, self._hud_gb_rule)
 
         self._hud_placeholder = QLabel()
@@ -913,6 +933,8 @@ class MainWindow(QMainWindow):
             # the pre-inversion tree (same rule as _on_wizard_finished)
             self._tree_panel.set_model(tree, cfg_inv["governance_mode"])
             self._tree_map.set_model(tree)
+            self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
+            self._hud_lbl_gov_mode.setText(cfg_inv["governance_mode"])
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
         self._refresh_session_indicator()
@@ -1041,6 +1063,41 @@ class MainWindow(QMainWindow):
         self._update_hud_node(node)
         self.statusBar().showMessage(f"{tr('tree_prop_node')} #{node_id}", 5000)
 
+    def _execute_prune_branch(self, node_id: int) -> None:
+        """A1: prune_branch via backend + refresh of canvas, map and HUD.
+
+        Extraido de _on_tree_context_menu para hacerlo testeable sin
+        mockear QMenu/QMessageBox. La confirmacion BANKING vive en el
+        slot; este helper solo ejecuta y refresca.
+        """
+        if self._session is None:
+            return
+        ok = self._run_guarded(
+            self._session.intervene_node, node_id, "prune_branch"
+        )
+        if not ok:
+            return
+        new_tree = self._session.state.tree
+        mode = (
+            self._last_train_cfg.get("governance_mode", "BANKING")
+            if self._last_train_cfg is not None
+            else "BANKING"
+        )
+        self._tree_panel.set_model(new_tree, mode)
+        self._tree_map.set_model(new_tree)
+        self._hud_lbl_gov_fp.setText(new_tree.params_fingerprint)
+        self._refresh_session_indicator()
+        if self._logger is not None:
+            self._logger.info(
+                "[gui] intervene prune_branch: node=%d | nodos=%d",
+                node_id, len(new_tree.nodes),
+            )
+        self.statusBar().showMessage(
+            f"Prune Branch #{node_id} | "
+            f"fp={new_tree.params_fingerprint}",
+            8000,
+        )
+
     def _on_tree_context_menu(self, node_id: int) -> None:
         """Clic derecho sobre un nodo del canvas (Fase 3.11.d.2).
 
@@ -1079,25 +1136,7 @@ class MainWindow(QMainWindow):
                 )
                 if answer != QMessageBox.StandardButton.Yes:
                     return
-            ok = self._run_guarded(
-                self._session.intervene_node, node_id, "prune_branch"
-            )
-            if not ok:
-                return
-            new_tree = self._session.state.tree
-            self._tree_panel.set_model(new_tree, mode)
-            self._tree_map.set_model(new_tree)
-            self._refresh_session_indicator()
-            if self._logger is not None:
-                self._logger.info(
-                    "[gui] intervene prune_branch: node=%d | nodos=%d",
-                    node_id, len(new_tree.nodes),
-                )
-            self.statusBar().showMessage(
-                f"Prune Branch #{node_id} | "
-                f"fp={new_tree.params_fingerprint}",
-                8000,
-            )
+            self._execute_prune_branch(node_id)
         elif chosen is act_grow:
             # TODO(zona_gris): Grow Tree (y Select Predictor / Define
             # Split) llegan cuando el backend implemente esas acciones
@@ -1193,6 +1232,7 @@ class MainWindow(QMainWindow):
         )
         self._tree_panel.set_model(tree, mode)
         self._tree_map.set_model(tree)
+        self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
         self._metrics_panel.refresh()
         self._refresh_reports_panel()
         self._refresh_session_indicator()
@@ -1335,7 +1375,7 @@ class MainWindow(QMainWindow):
             if split.threshold is not None:
                 cond = f"≤ {split.threshold:.4g}"
             else:
-                cond = f"{len(split.branches or ())} groups"
+                cond = f"{len(split.branches or ())} {tr('tree_groups')}"
             self._hud_lbl_rule_cond.setText(cond)
             self._hud_lbl_rule_stat.setText(f"{split.statistic_name} = {split.statistic:.4g}")
             if split.p_value is not None:

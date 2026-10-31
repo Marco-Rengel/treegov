@@ -645,7 +645,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "hud_lbl_cols": "Variables:",
         "hud_lbl_pop": "Población:",
         "hud_lbl_events": "Eventos:",
-        "hud_lbl_bad_rate": "Bad Rate:",
+        "hud_lbl_bad_rate": "Tasa de malos:",
         "hud_lbl_rule_var": "Variable:",
         "hud_lbl_rule_cond": "Condición:",
         "hud_lbl_rule_stat": "Estadístico:",

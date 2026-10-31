@@ -4,7 +4,7 @@
     .venv\\Scripts\\python tests\\test_gui_smoke.py
 
 Headless: QT_QPA_PLATFORM defaults to offscreen here (setdefault, so a
-real display session keeps its platform). 10 tests: 7 smoke + 3 i18n.
+real display session keeps its platform). 14 tests: smoke + i18n.
 """
 
 import ast
@@ -356,6 +356,29 @@ def test_tr_term_dynamic():
         assert tr_term("event", "RESEARCH") == "Event"
     finally:
         set_language(prev)
+
+
+def test_hud_labels_translated():
+    """A3: las etiquetas del HUD usan tr() y cambian con el idioma."""
+    _get_app()
+    w = MainWindow()
+    prev = get_language()
+    try:
+        set_language("es")
+        w.retranslate_ui()
+        textos = [lbl.text() for lbl in w._hud_panel.findChildren(QLabel)]
+        for cadena_en in ("File:", "Rows:", "Cols:", "Pop:",
+                          "Events:", "Bad Rate:", "Var:", "Cond:",
+                          "Stat:", "p-val:"):
+            assert cadena_en not in textos, f"cadena en inglés visible: {cadena_en}"
+        set_language("en")
+        w.retranslate_ui()
+        textos_en = [lbl.text() for lbl in w._hud_panel.findChildren(QLabel)]
+        assert "File:" in textos_en
+    finally:
+        set_language(prev)
+        w.close()
+        w.deleteLater()
 
 
 if __name__ == "__main__":

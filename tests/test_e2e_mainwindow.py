@@ -276,6 +276,8 @@ def test_e2e_inversion_recovery_full_flow():
             assert st.tree is not None
             assert st.tree.params_fingerprint != fp_antes
             assert w._last_train_cfg["target_class"] == 0
+            # A1: el HUD de gobernanza refleja el fingerprint post-inversión
+            assert w._hud_lbl_gov_fp.text() != fp_antes
         finally:
             w.close()
             w.deleteLater()
@@ -460,6 +462,8 @@ def test_e2e_prune_dialog_flow():
             assert st.prune_alpha == seq[0]["alpha"]
             # el visor queda vinculado al arbol podado (no al original)
             assert w._tree_panel._model is st.pruned_tree
+            # A1: el HUD de gobernanza refleja el fingerprint del arbol podado
+            assert w._hud_lbl_gov_fp.text() == st.pruned_tree.params_fingerprint
         finally:
             w.close()
             w.deleteLater()
@@ -468,6 +472,26 @@ def test_e2e_prune_dialog_flow():
 # ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------
+
+def test_e2e_context_menu_prune_updates_hud():
+    """A1 (zona gris 1): el helper _execute_prune_branch refresca el HUD
+    de gobernanza. Extraido del slot para test sin QMenu offscreen.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv(Path(td) / "mini.csv")
+        w = _open_window(csv)
+        try:
+            w._on_wizard_finished(_cfg())
+            fp_antes = w._session.state.tree.params_fingerprint
+            w._execute_prune_branch(0)
+            st = w._session.state
+            assert st.tree.params_fingerprint != fp_antes
+            assert st.tree.params_fingerprint.endswith("-i1")
+            assert w._hud_lbl_gov_fp.text() == st.tree.params_fingerprint
+        finally:
+            w.close()
+            w.deleteLater()
+
 
 if __name__ == "__main__":
     tests = [
