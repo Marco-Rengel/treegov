@@ -305,8 +305,7 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso inmediato (25/10/2026):** la recogida de feedback para
-la `1.0.0` estable o el inicio de la **Fase 4.0**. La **Fase 3.6.e
+**Próximo paso (25/10/2026):** el bloque de iteración del Tree Map (mini-cierres #4-#8) queda cerrado con navegación funcional por `node_id` y layout abstracto. Deuda pendiente: fase de diseño para la paleta propia del minimapa (independiente del tema de la app). Después: recogida de feedback para la `1.0.0` estable o inicio de la Fase 4.0. La **Fase 3.6.e
 (Modo No-Bancario y Terminología Neutral) quedó cerrada el 25/10/2026
 con suite 477/477** (ráfaga e.1+e.2+e.3: resolvedor `tr_term` con 24
 claves `term_banking_*`/`term_research_*`, paneles con

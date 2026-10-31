@@ -386,12 +386,14 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
 > "Retomamos TreeGov. Soy Marco. Estado al 25/10/2026: Fases 0 a
-> 3.11.d cerradas, más 3.6.e (modo no-bancario) y el Hotfix
-> Visual post-3.6.e. Suite 477/477. Release 1.0.0rc4 publicada
-> en PyPI. Próximo paso: recogida de feedback para 1.0.0 estable
-> o inicio de Fase 4.0. Regla operativa: ráfagas cortas con
-> OpenCode 1.19.0 + moonshotai/kimi-k3; reasoning=max para
-> código, high para docs."
+> 3.11.d cerradas, más 3.6.e (modo no-bancario), Hotfix Visual
+> post-3.6.e y bloque de iteración del Tree Map (#4-#8, layout
+> abstracto con navegación por node_id). Suite 478/478. Release
+> 1.0.0rc4 publicada en PyPI. Deuda pendiente: paleta propia del
+> minimapa (independiente del tema). Próximo paso: recogida de
+> feedback para 1.0.0 estable o inicio de Fase 4.0. Regla
+> operativa: ráfagas cortas con OpenCode 1.19.0 +
+> moonshotai/kimi-k3; reasoning=max para código, high para docs."
 
 ---
 

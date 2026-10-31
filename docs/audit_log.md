@@ -6120,3 +6120,26 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 **Hallazgo empírico**: `QPainterPath.lineTo()` es no-op cuando el destino coincide con la posición actual (documentado en Qt 6). Para el caso `0 → 2` (padre e hijo con `parent_cx == child_cx`) el path resultante tiene 3 elementos (línea vertical recta), geométricamente correcto. El test acepta `n in (3, 4)` y valida además ortogonalidad por segmento, más fuerte que el conteo solo.
 
 **Referencias cruzadas**: `docs/design_decisions.md` §18.11 (ampliación); `docs/roadmap.md` (nota ampliada en la sección 3.11); `docs/estado_proyecto.md` (bloque Hotfix ampliado); `docs/contexto_para_nueva_sesion.md` (conteo 477→478).
+
+### 25/10/2026 — Bloque de iteración del Tree Map (mini-cierres #4-#8)
+
+**Estado**: ✅ Cerrado tras varias iteraciones del mismo día. Suite **478/478 PASSED** (477 previos + 1 test del #3; sin tests nuevos en #4-#8).
+
+**Contexto**: el mini-cierre #3 dejó el Tree Map con layout compartido con el canvas (NODE_W=220 × NODE_H=126, orientación vertical) y zoom dinámico. En árboles anchos (CHAID) el `fitInView` bajaba a ~0.1 y los números quedaban microscópicos. Se iteró cinco veces hasta converger en el layout abstracto portado del prototipo Antigravity.
+
+**Iteraciones**:
+- **#4**: zoom mínimo 0.35 + centrado del número con `br.center()`. Mal: números pisados, árbol fuera de vista.
+- **#5**: giro horizontal del minimapa + layout propio (MAP_NODE_W=60). Mal: se perdió la navegación (coordenadas desacopladas).
+- **#6**: revertir a coordenadas compartidas + viewport rect. Mal: `fitInView` seguía comprimiendo.
+- **#7**: zoom dinámico con clamp `[0.10, 0.30]`. Parcial: números visibles solo en árboles pequeños.
+- **#8** ✅: layout abstracto desacoplado (cajas 48×30, gaps 16/36, texto 8pt con `ItemIgnoresTransformations`), navegación por `node_id` (`TreePanel.center_on_node`), colores del prototipo (fondo `#1e293b`, bordes `#059669`/`#3b82f6`, selección `#38bdf8` sobre `#1d4ed8`). **La navegación funciona; los números se ven a cualquier zoom.**
+
+**Deuda registrada** (diferida): el fondo fijo `#1e293b` no encaja en el tema claro. Pendiente una fase de diseño para la "paleta propia del minimapa" (análoga a la "hoja de auditoría" del canvas). Registrado en `roadmap.md` (Deferred).
+
+**Artefactos**:
+- `frontend_v3/tree_map.py` — reescritura completa (layout abstracto).
+- `frontend_v3/tree_view.py` — `TreePanel.center_on_node(node_id)`.
+- `frontend_v3/main_window.py` — `_on_tree_map_node_clicked` navega por `node_id`.
+- `tests/test_tree_map.py` — reescrito para layout abstracto.
+
+**Referencias**: `docs/design_decisions.md` §18.11 (actualización); `docs/roadmap.md` (nota + Deferred); `docs/estado_proyecto.md` (ampliación); `docs/contexto_para_nueva_sesion.md` (próximo paso).

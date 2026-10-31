@@ -377,7 +377,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Nota:** la especificación visual para todas las sub-fases 3.11.a.1 a 3.11.d vive en `docs/3.11_classic_tree_ui_reference.md`.
 
-**Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478.
+**Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478. **Nota (25/10/2026, iteración #4-#8):** Tree Map reescrito con layout abstracto desacoplado (cajas 48×30, orientación vertical, colores del prototipo Antigravity) y navegación por `node_id` (`TreePanel.center_on_node`). Sustituye el diseño de coordenadas compartidas que dejaba los números ilegibles en árboles anchos. Suite 478/478. Decisión: `design_decisions.md` §18.11 (actualización). Deuda diferida: paleta propia del minimapa.
 
 ### ⏳ Phase 4 — Advanced reports + export
 **Priority: MEDIUM**
@@ -618,6 +618,13 @@ La Fase 3.6.e se validó con un fixture sintético no-bancario (`edad`, `presion
 **Priority: LOW (registrado 25/10/2026, cierre de la Fase 3.6.e).**
 
 El export HTML en modo RESEARCH mantiene la etiqueta bancaria "Bad capture rate" (`reports_matrix_bad_capture_rate`): requiere una clave i18n neutra propia (p. ej. `term_research_capture_rate`). `TODO(zona_gris)` en `frontend_v3/reports_panel.py::_term_report_label`. No afecta a los asertos del E2E (`"Bad rate" ∉ html` pasa: "Bad capture rate" no contiene la subcadena).
+
+### ⏳ Paleta propia del Tree Map (independiente del tema de la app)
+**Priority: LOW (registrada el 25/10/2026).**
+
+El minimapa usa colores fijos del prototipo Antigravity (`#1e293b` fondo, `#059669`/`#3b82f6` bordes, `#38bdf8` selección) que funcionan en tema oscuro pero contrastan mal con el tema claro de la app. Pendiente un mini-diseño de "paleta propia del minimapa" (como la "hoja de auditoría" del canvas) que respete ambos temas. No bloquea la navegación (que ya funciona).
+
+**Nota PyPI (regla del 20/10/2026):** los cambios en `README.md` / `README.es.md` de este bloque son cosméticos (conteo 477→478); no disparan una nueva release. PyPI sigue en `1.0.0rc4` hasta la próxima release material.
 
 ## Recorded architectural decisions
 
