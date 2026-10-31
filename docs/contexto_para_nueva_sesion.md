@@ -125,7 +125,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.11.d** | Menú Contextual + Manual Override Log | ✅ |
 | **3.6.e** | Modo No-Bancario: terminología dinámica vía `tr_term` (BANKING bit-idéntica, RESEARCH neutra) | ✅ |
 
-**Suite de tests:** 478/478 PASSED
+**Suite de tests:** 480/480 PASSED
 
 ## Entorno de desarrollo
 

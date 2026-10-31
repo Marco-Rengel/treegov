@@ -34,7 +34,7 @@ numpy/pandas/scipy.stats):
 
   * Extension ponderada (Fase 3.2.g): compute_oos_metrics acepta `weights`
     keyword-only. Con pesos, cada formula acumula masa ponderada en lugar
-    de contar filas (Heeringa, West & Berglund 2010, §5.5). El AUC se
+    de contar filas (Heeringa, West & Berglund 2010, §5.3). El AUC se
     calcula por formula directa de pares con medio-credito en empates,
     numericamente equivalente al mid-rank cuando los pesos son uniformes.
     Con weights=None, resultados identicos al pre-3.2.

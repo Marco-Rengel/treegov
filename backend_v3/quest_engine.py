@@ -379,8 +379,9 @@ class QuestEngine:
     ) -> SplitConfig | None:
         """Alias de evaluate() para paridad de API con ChaidEngine/CrtEngine.
 
-        QUEST siempre exige target binario (Fase 0); target_type se ignora.
-        weights se propaga a evaluate (Fase 3.2.d).
+        target_type se ignora (QUEST deriva la naturaleza del target de y).
+        Acepta K >= 2 desde la Fase 3.4.b. weights se propaga a evaluate
+        (Fase 3.2.d).
         """
         return self.evaluate(X, y, spec, weights=weights)
 

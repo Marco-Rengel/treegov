@@ -33,6 +33,11 @@ DATASETS = {
         "target_idx": 0,
         "target_map": {"L": "0", "B": "1", "R": "2"}
     },
+    # Nota as-built (31/10/2026, B9): el diseno 3.6_design_public_datasets.md
+    # §3.5 pedia nombres descriptivos (radius_mean, texture_mean, ...); la
+    # implementacion usa f1..f30 por simplicidad. Los fingerprints UCI
+    # (e46011f55ed957bf, 389f70f0fba1a180) estan anclados a esta eleccion;
+    # corregir los nombres requeriria una recaptura con rotura de rc4.
     "breast_cancer_wdbc": {
         "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/wdbc.data",
         "sha256": "d606af411f3e5be8a317a5a8b652b425aaf0ff38ca683d5327ffff94c3695f4a",

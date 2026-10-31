@@ -63,8 +63,9 @@ class PruneStep:
     alpha: float
     n_leaves: int      # hojas del arbol DESPUES de este paso
     r_subtree: float   # errores totales del arbol DESPUES de este paso
-                       # (int si el arbol no pondera; float si pondera,
-                       # Fase 3.9)
+                       # (siempre float: en arboles sin pesos el valor es
+                       # numericamente identico al conteo pre-3.9; ver
+                       # design_decisions.md §8.5 nota del 20/10/2026)
 
 
 class Pruner:
@@ -208,9 +209,11 @@ class Pruner:
     ) -> TreeModel:
         """Nuevo TreeModel con ids reindexados 0..m-1 por BFS desde la raiz.
 
-        Los metadatos se heredan del nodo original (n, n_events, pd_jeffreys, pd_final, class_labels);
-        depth/parent_id se recalculan; las hojas creadas por la poda reciben
-        leaf_reason="podado"; las preexistentes conservan su razon.
+        Los metadatos se heredan del nodo original (n, n_events, pd_jeffreys,
+        pd_final, class_labels, w_events); depth/parent_id se recalculan;
+        las hojas creadas por la poda reciben leaf_reason="podado"; las
+        preexistentes conservan su razon. Nota B18: w_events (Fase 3.2.e)
+        se propaga por consistencia; sin efecto numerico.
         """
         mapa: dict[int, int] = {}
         orden: list[int] = []
@@ -250,6 +253,7 @@ class Pruner:
                 leaf_reason=(
                     "podado" if (es_hoja and nd.child_ids) else nd.leaf_reason
                 ),
+                w_events=nd.w_events,
             ))
         fp = f"{model.params_fingerprint}-p{alpha:.12g}"
         modelo = TreeModel(

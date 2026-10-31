@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 478 / 478 tests PASSED<br/>📅 Oct 25, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 480 / 480 tests PASSED<br/>📅 Oct 31, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -276,7 +276,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 478/478 passing.**
+**Test suite: 480/480 passing.**
 
 ---
 

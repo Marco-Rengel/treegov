@@ -22,9 +22,10 @@ Pipeline (todo registrado en logs/opencode_debug_<timestamp>.log, nivel DEBUG):
      particion test queda reservada para validacion OOS de la Fase 1; nunca
      se toca en esta demo).
   8. Demo de los 4 motores sobre train:
-       CHAID y CHAID_EXHAUSTIVE reciben el spec SIN predictores CONTINUOUS
-       (el motor los rechaza por contrato; el orquestador filtra y lo
-       declara en el log). CRT y QUEST reciben el spec completo.
+       Los 4 motores reciben el spec COMPLETO. CHAID y CHAID_EXHAUSTIVE
+       aceptan predictores CONTINUOUS desde la Fase 3.10.b (H14) via
+       binning automatico por cuantiles (11 bins, SplitConfig.bin_edges).
+       CRT y QUEST tambien aceptan continuos (barrido de umbral / QDA).
   9. Reporte final en consola (ASCII) + exit code de 3 estados:
        >=1 split valido            -> 0
        0 splits pero sin excepcion -> 0 + WARNING al log (pipeline sano,
@@ -123,16 +124,15 @@ def run_engines(
     log: logging.Logger,
 ) -> list[EngineReport]:
     """Ejecuta los 4 motores sobre train; nunca propaga excepciones."""
-    spec_chaid = {k: v for k, v in spec.items() if v != PredictorType.CONTINUOUS}
     log.info(
-        "[treegov] CHAID: %d/%d predictores evaluados (%d CONTINUOUS excluidos "
-        "por contrato del motor)",
-        len(spec_chaid), len(spec), len(spec) - len(spec_chaid),
+        "[treegov] CHAID: %d predictores (incluye CONTINUOUS via binning "
+        "automatico H14)",
+        len(spec),
     )
     motores = [
-        ("CHAID", ChaidEngine(logger=get_logger("chaid")), spec_chaid),
+        ("CHAID", ChaidEngine(logger=get_logger("chaid")), spec),
         ("CHAID_EXHAUSTIVE", ChaidEngine(exhaustive=True, logger=get_logger("chaid")),
-         spec_chaid),
+         spec),
         ("CRT", CrtEngine(logger=get_logger("crt")), spec),
         ("QUEST", QuestEngine(logger=get_logger("quest")), spec),
     ]
@@ -184,8 +184,8 @@ def print_report(
           f"(estratificado, seed={meta['seed']}, Hamilton-Hare)")
     print("Imputer : fit SOLO train | test reservado para OOS (Fase 1)")
     print("Guardia : import_guard ACTIVO (verificado en runtime)")
-    print(f"Nota    : CHAID recibio {meta['n_chaid']}/{meta['n_pred']} predictores "
-          f"({meta['n_pred'] - meta['n_chaid']} CONTINUOUS excluidos por contrato)")
+    print(f"Nota    : CHAID evaluo {meta['n_chaid']}/{meta['n_pred']} predictores "
+          f"(CONTINUOUS habilitados via binning automatico H14)")
     print()
     print(f"{'Motor':<18} {'Ganador':<22} {'Estadistico':<18} {'p_adj / dI':<14} s")
     print("-" * 76)
@@ -258,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
             "eventos": int((pd.Series(y).map({uniq[0]: 0, uniq[1]: 1})).sum()),
             "tasa": 100.0 * float((y == uniq[1]).mean()),
             "n_pred": len(spec),
-            "n_chaid": sum(v != PredictorType.CONTINUOUS for v in spec.values()),
+            "n_chaid": len(spec),  # ya no excluye CONTINUOUS (H14)
             "n_cont": sum(v == PredictorType.CONTINUOUS for v in spec.values()),
             "n_ord": sum(v == PredictorType.ORDINAL for v in spec.values()),
             "n_nom": sum(v == PredictorType.NOMINAL for v in spec.values()),

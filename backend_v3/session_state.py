@@ -829,10 +829,12 @@ class Session:
     def partition(self, train_frac: float = 0.7, seed: int = 42) -> SessionState:
         """SPEC_FIXED -> PARTITIONED (Hamilton-Hare + imputer SOLO train).
 
-        Fase 3.2: si fix_spec declaro `weight_col`, los pesos se pasan a
-        stratified_split (cuotas por masa ponderada, check B2 activo) y se
-        materializan los sub-vectores `_w_train`/`_w_test`. Sin weight_col,
-        comportamiento identico al pre-3.2.
+        Fase 3.2: si fix_spec declaro `weight_col`, los pesos se VALIDAN
+        en stratified_split (check B2 activo) pero la estratificacion
+        sigue siendo Hamilton-Hare clasico sobre CONTEO DE FILAS. Los
+        pesos viajan con cada fila (no cambian el split) y se materializan
+        en los sub-vectores `_w_train`/`_w_test`. Sin weight_col,
+        comportamiento identico al pre-3.2. Ver design_decisions.md §13.6.2.
         """
         self._require(FlowState.SPEC_FIXED, "partition")
         assert self._df is not None
@@ -934,8 +936,10 @@ class Session:
         Fase 3.1.c: la clase de interes y las etiquetas canonicas se leen
         de SessionState (fijadas en fix_spec). La clase de interes se lee
         exclusivamente de SessionState (fijada en fix_spec).
-        Fase 3.4.b: todos los motores admiten K > 2. Las métricas y
-        reportes downstream siguen bloqueados hasta la Fase 3.5.
+        Fase 3.4.b: todos los motores admiten K > 2. La Fase 3.5
+        desbloqueó las métricas, reportes y estabilidad multiclase
+        downstream (evaluate_oos, evaluate_oot, get_gains_table,
+        get_classification_matrix operan con K > 2 desde 3.5.c).
 
         Fase 3.2: si la sesion esta ponderada (fix_spec con weight_col),
         los pesos de train (`_w_train`) se propagan a TreeBuilder junto
@@ -1096,8 +1100,10 @@ class Session:
 
         Fase 3.11.c.1 (diseno: docs/3.11.c_design_univariate_cost_matrix.md):
         para cada predictor del spec entrena un arbol de profundidad
-        ``max_depth`` con el MISMO motor del modelo principal y parametros
-        de gobernanza BANKING (Jeffreys + pd_floor), lo evalua sobre test
+        ``max_depth`` con el MISMO motor del modelo principal y los
+        parametros de gobernanza persistidos por ``train()`` en
+        ``_last_train_params`` (ZG-3, 25/10/2026: ya no fuerza BANKING;
+        hereda el modo efectivo del modelo principal), lo evalua sobre test
         (mismo camino que ``evaluate_oos``) y devuelve un DTO plano: lista
         de dicts con claves ``predictor`` (str), ``gini`` (float),
         ``ks`` (float) y ``cut_points`` (list[tuple[str, float]], umbrales
@@ -1468,11 +1474,12 @@ class Session:
         consecutivos 0..N-1 en orden BFS. `model` aporta solo los
         metadatos (method, class_labels, target_class...).
 
-        TODO(zona_gris): el diseno 3.11.d construia un TreeModel temporal
-        intermedio antes del re-indexado, pero TreeModel.__post_init__
+        Nota de diseno: el plan original de 3.11.d construia un TreeModel
+        temporal intermedio antes del re-indexado, pero TreeModel.__post_init__
         rechaza nodos inalcanzables desde la raiz, asi que el BFS se hace
-        sobre la lista de nodos directamente. Decision conservadora:
-        preservar la invariante de alcanzabilidad. Resolver en 3.11.d.2.
+        sobre la lista de nodos modificada directamente. Decision
+        conservadora (aplicada en 3.11.d.1): preservar la invariante de
+        alcanzabilidad. Resuelto en 3.11.d.1.
         """
         mapa = {}
         orden = []

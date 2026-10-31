@@ -106,7 +106,8 @@ class SplitConfig:
     branches: tuple[tuple[Hashable, ...], ...] | None = None
     impurity_gain: float | None = None
     # Fase 3.10.b (H14): cortes del binning automatico de predictores
-    # continuos en CHAID (deciles). () = split categorico clasico.
+    # continuos en CHAID (11 bins por cuantiles 1/11..10/11; ver
+    # 3.10.b_design_chaid_binning.md §4.2). () = split categorico clasico.
     bin_edges: tuple[float, ...] = ()
 
     # ---------------- validaciones estructurales ----------------

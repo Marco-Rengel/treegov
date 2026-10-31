@@ -110,8 +110,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 477/477 PASSED (Fase 3.6.e cerrada: modo
-  no-bancario vía `tr_term`; saneamiento ZG-1/2/3/5, 25/10/2026).
+- **Suite de tests:** 480/480 PASSED (31/10/2026: bloque A1+A3 cerrado).
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*

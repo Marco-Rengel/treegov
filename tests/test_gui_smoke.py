@@ -148,7 +148,8 @@ def test_menus_exist():
     } <= menu_names
 
     # (objectName, expected enabled) - wizard gated hasta DATA_LOADED (2.1);
-    # evaluate_oos / load_oot siguen como placeholder hasta Phase 2.3
+    # evaluate_oos / load_oot ya operativos desde la Fase 2.3 (comentario
+    # actualizado 31/10/2026, C4).
     expected = [
         ("act_new_wizard", False),
         ("act_open", True),

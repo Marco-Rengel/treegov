@@ -647,7 +647,12 @@ class ChaidEngine:
                 pendientes = []
             else:
                 pendientes.append(i)
-        if pendientes:               # salvaguarda (no alcanzable: ver docstring)
+        if pendientes:
+            # Salvaguarda: alcanzable solo con ties extremos en el maximo
+            # de x (p. ej. todos los valores superiores al ultimo cuantil
+            # identicos), donde el ultimo bin puede quedar vacio. Se
+            # absorbe con el bin superior para mantener la cobertura total
+            # de cfg.bin_edges.
             grupos[-1].extend(pendientes)
         return [tuple(g) for g in grupos]
 

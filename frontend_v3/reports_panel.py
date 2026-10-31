@@ -247,6 +247,7 @@ class ReportsPanel(QWidget):
         summary_layout = QVBoxLayout(summary)
         summary_layout.setContentsMargins(15, 15, 15, 15)
         self._summary_title = QLabel(summary)
+        self._summary_title.setObjectName("panelTitle")
         summary_layout.addWidget(self._summary_title)
         self._lbl_summary_text = QLabel(summary)
         self._lbl_summary_text.setWordWrap(True)
@@ -431,8 +432,8 @@ class ReportsPanel(QWidget):
                 self, tr("reports_export_title"), tr("reports_export_empty")
             )
             return
-        html = self._build_report_html()
-        self._open_export_dialog(html)
+        html_doc = self._build_report_html()
+        self._open_export_dialog(html_doc)
 
     def _build_report_html(self) -> str:
         """Self-contained HTML report: header + gains table + summary + matrix.

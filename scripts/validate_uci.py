@@ -8,7 +8,12 @@ from backend_v3.session_state import Session
 FIXTURES = Path("tests/fixtures/uci")
 
 # 14 pares (dataset, motor) que verifica tests/test_uci_integration.py.
-# CHAID se omite donde hay predictores CONTINUOUS (contrato del motor).
+# Decision as-built (31/10/2026, B8): CHAID se omite en 4 datasets
+# (german_credit, breast_cancer_wdbc, iris, blood_transfusion) por
+# ALCANCE de la Fase 3.6 original, no por contrato del motor. CHAID
+# acepta CONTINUOUS desde H14 (3.10.b). Si se quiere incluir, es una
+# Fase 3.6.x separada que regenere el informe con 18 filas y recapture
+# 4 fingerprints nuevos en tests/test_uci_integration.py.
 VALID_ENGINES: dict[str, list[str]] = {
     "german_credit": ["CRT", "QUEST"],
     "car_evaluation": ["CRT", "CHAID", "QUEST"],

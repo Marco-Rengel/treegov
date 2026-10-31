@@ -26,6 +26,10 @@ PALETTES: dict[str, dict[str, str]] = {
         "SURFACE": "#F8F9FA",
         "SURFACE_ELEVATED": "#FFFFFF",
         "NODE_BG": "#FFFFFF",
+        # NODE_BG: token retenido por compatibilidad historica con 3.11.a;
+        # el nodo del canvas usa _NODE_SHEET_BG = #FFFFFF fijo (QPainter,
+        # ver tree_view.py); el minimapa usara PALETTES via subset (A2,
+        # pendiente). No consumir hasta decidir su deprecacion formal.
         "FG": "#202124",
         "BORDER": "#DADCE0",
         "ACCENT": "#1A73E8",
@@ -41,6 +45,10 @@ PALETTES: dict[str, dict[str, str]] = {
         "SURFACE": "#252526",
         "SURFACE_ELEVATED": "#2D2D2D",
         "NODE_BG": "#000000",
+        # NODE_BG: token retenido por compatibilidad historica con 3.11.a;
+        # el nodo del canvas usa _NODE_SHEET_BG = #FFFFFF fijo (QPainter,
+        # ver tree_view.py); el minimapa usara PALETTES via subset (A2,
+        # pendiente). No consumir hasta decidir su deprecacion formal.
         "FG": "#E0E0E0",
         "BORDER": "#3C3C3C",
         "ACCENT": "#4C9AFF",

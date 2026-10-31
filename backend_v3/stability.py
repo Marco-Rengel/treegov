@@ -187,7 +187,9 @@ class GiniDropReport:
     """Gini Drop OOS/OOT.
 
     Si compute_oos_metrics() en la cohorte X devuelve Gini=None (cohorte
-    monoclase), drop_X queda None y el semaforo es "NONE".
+    monoclase), drop_X queda None y el semaforo es "UNDETERMINED"
+    (nunca "NONE": una degradacion indefinida no es ausencia de alerta;
+    ver gini_drop_alert).
     Si gini_train == 0 (modelo sin poder discriminante), ambos drops quedan
     None (division por cero evitada; se loggea WARNING).
     """

@@ -6143,3 +6143,119 @@ Verificación punto a punto contra el código real (rg + lectura directa):
 - `tests/test_tree_map.py` — reescrito para layout abstracto.
 
 **Referencias**: `docs/design_decisions.md` §18.11 (actualización); `docs/roadmap.md` (nota + Deferred); `docs/estado_proyecto.md` (ampliación); `docs/contexto_para_nueva_sesion.md` (próximo paso).
+
+
+### 31/10/2026 — Cierre del bloque A1 + A3 (gobernanza HUD + i18n HUD)
+
+**Estado**: ✅ Cerrado. Suite **480/480 PASSED**. Commit `4f7196b`.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high (dos prompts quirúrgicos + dos prompts correctivos de zona gris).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: bloque de resolución de los dos hallazgos funcionales detectados durante la auditoría de contexto del 31/10/2026 (post-brief de traspaso, `0e5ea4d`). El resto de hallazgos (B1–B20, C1–C9) se cierran en el bloque documental siguiente. A2 (minimapa) se trata como mini-diseño independiente.
+
+### A1 — HUD de gobernanza stale tras poda / intervención / inversión
+
+**Problema.** Tras las tres acciones que reconstruyen el `TreeModel` con fingerprint nuevo (`Session.prune`, `Session.intervene_node("prune_branch")`, `_on_inversion_requested`), el panel de gobernanza (`_hud_lbl_gov_fp`, `_hud_lbl_gov_mode`) no se sincronizaba con el modelo visible. Como el HUD es el canal MRM por el que el analista confirma la identidad del modelo antes de auditar/exportar, la inconsistencia era de gobernanza, no cosmética. Ningún test lo cubría.
+
+**Fix.** Añadidos tres refrescos puntuales (`setText` tras `set_model` en `_on_prune`, `_on_tree_context_menu` rama `prune_branch`, y `_on_inversion_requested`). El slot `_on_tree_context_menu` fue refactorizado: la rama `prune_branch` se extrajo a un helper `MainWindow._execute_prune_branch(node_id)` directamente testeable (sin mockear `QMenu`/`QMessageBox`, que es el origen del problema en modo offscreen). La confirmación BANKING permanece en el slot; el helper solo ejecuta y refresca.
+
+**Cobertura (3 tests):**
+- `test_e2e_mainwindow.py::test_e2e_prune_dialog_flow` — tras `_on_prune`, el HUD refleja el fingerprint sufijado `-p{alpha}` del `pruned_tree`.
+- `test_e2e_mainwindow.py::test_e2e_context_menu_prune_updates_hud` (nuevo) — llama al helper `_execute_prune_branch(0)`, verifica que el fingerprint cambia y termina en `-i1`, y que el HUD lo refleja. Sin tautología: el helper es el punto único de sincronización.
+- `test_e2e_mainwindow.py::test_e2e_inversion_recovery_full_flow` — tras la inversión, el HUD refleja un fingerprint distinto del original.
+
+**Artefactos A1:**
+- `frontend_v3/main_window.py` — 3 refrescos puntuales + helper `_execute_prune_branch` + reducción del slot a una llamada.
+- `tests/test_e2e_mainwindow.py` — 2 asserts añadidos + 1 test nuevo.
+- `tests/test_manual_override.py` — sin cambios netos vs `0e5ea4d` (la emulación tautológica que Kimi introdujo en el primer intento se retiró al extraer el helper; el archivo queda idéntico a HEAD).
+
+### A3 — i18n del HUD incompleto
+
+**Problema.** `MainWindow._build_hud_panel_content` usaba doce etiquetas `addRow("File:", …)`, `addRow("Pop:", …)`, etc., en inglés literal. Las claves `hud_lbl_*` existían en `frontend_v3/i18n.py` sin consumidor. Adicional: `_update_hud_node` componía `"N groups"` sin `tr()` pese a existir `tree_groups`. En español, el panel mezclaba "Propiedades / Dataset / Nodo Seleccionado" (traducidos) con "File: / Pop: / Var:" (fijos).
+
+**Fix.** Las doce etiquetas pasaron a `QLabel` con referencia guardada (`_hud_lbl_*_cap`) y se reasignan en `retranslate_ui()` con `tr("hud_lbl_*")`. `"N groups"` pasa por `tr("tree_groups")`. Además se corrigió una traducción ES incompleta detectada empíricamente por el propio test: `hud_lbl_bad_rate` tenía `"Bad Rate:"` como valor en español; ahora es `"Tasa de malos:"` (consistente con `reports_col_bad_rate` → `"Tasa malos"` y `reports_sum_bad_rate_global` → `"Tasa malos"`).
+
+**Cobertura (1 test nuevo):**
+- `test_gui_smoke.py::test_hud_labels_translated` — con ES activo, ninguna etiqueta visible del HUD contiene las diez cadenas EN (`File:`, `Rows:`, `Cols:`, `Pop:`, `Events:`, `Bad Rate:`, `Var:`, `Cond:`, `Stat:`, `p-val:`); con EN activo, `"File:"` reaparece.
+
+**Artefactos A3:**
+- `frontend_v3/main_window.py` — 12 etiquetas con referencia + 10 `setText(tr(...))` en `retranslate_ui` + 1 `tr("tree_groups")`.
+- `frontend_v3/i18n.py` — `hud_lbl_bad_rate` ES: `"Bad Rate:"` → `"Tasa de malos:"`.
+- `tests/test_gui_smoke.py` — nuevo `test_hud_labels_translated` (14 tests en el módulo) + docstring de cabecera actualizado.
+
+**Zonas grises resueltas durante la ráfaga:**
+1. **Emulación tautológica en `test_view_audit_button_flow`.** Primer intento de Kimi: assert A1 verificado sobre una línea de refresh emulada manualmente (parcialmente tautológica respecto al fix). Decisión del asistente estratégico: extraer el helper `_execute_prune_branch` en `MainWindow` (único punto donde el HUD se sincroniza tras `intervene_node`), revertir la emulación, y añadir un test real del helper. Refleja el patrón "verificación empírica en ambas direcciones".
+2. **Traducción ES de `hud_lbl_bad_rate`.** Primer intento del test detectó `"Bad Rate:"` visible en ES. Causa raíz verificada contra `frontend_v3/i18n.py`: el valor ES era literalmente `"Bad Rate:"` (duplicado del EN, sin traducir). Decisión: corregir la traducción a `"Tasa de malos:"` y restaurar `"Bad Rate:"` en la lista prohibida del test. Cierra el gap interno del proyecto (las otras 9 claves sí traducían).
+
+**Verificación:**
+- `python -m pytest tests -q` → **480 passed in 18.33s** (479 previos + 1 test nuevo; los asserts A1 dentro de tests existentes no cambian el conteo).
+- `git diff --stat` → 4 archivos, 119 insertions(+), 32 deletions(-).
+- `git status` post-push → working tree clean.
+- `git log --oneline -5`: `4f7196b` (HEAD) sobre `0e5ea4d`.
+
+**Referencias cruzadas:**
+- `docs/3.11_gui_design_system.md` §2.4 (tipografía) — el HUD usa el mismo patrón de título accent ya definido.
+- `docs/design_decisions.md` §18.9 — invariante de inmutabilidad del `TreeModel` (el HUD no puede quedar stale respecto al `TreeModel` visible).
+- `docs/audit_log.md` entrada del 25/10/2026 — contexto del HUD de gobernanza introducido en 3.11.a.
+- `.treegovrules` "Verificación empírica en ambas direcciones" — los dos intentos de Kimi que detectaron zonas grises son la evidencia práctica.
+
+**Estado post-bloque:** A1 y A3 cerrados en código y tests. Pendientes del review del 31/10: A2 (mini-diseño del minimapa desde cero) y B/C (mini-cierre documental de B1–B20 + C1–C9, salvo B6 que A2 absorbe).
+
+### 31/10/2026 — Mini-cierre B/C (saneamiento documental B1–B20 + C1–C9)
+
+**Estado**: ✅ Cerrado. Suite **480/480 PASSED**. Commit en el mismo bloque que A1+A3.
+
+**Modelo**: OpenCode 1.19.0 + `moonshotai/kimi-k3`, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: mini-cierre documental de saneamiento tras la auditoría del 31/10/2026. Cierra hallazgos B1–B20 (trazabilidad documental del brief §4.2 y nuevos detectados durante el review) y C1–C9 (cosméticos/nomenclatura), **excluyendo B7 y C5** (dependen del rediseño A2 del minimapa) y **C3** (ya resuelto en el bloque A3).
+
+**Decisiones as-built fijadas en este bloque**:
+- **B8** (`validate_uci.py`): CHAID excluido en 4 datasets por *alcance* de la Fase 3.6, no por contrato del motor (H14 habilitó CHAID para continuas). Se documenta; no se regenera el informe.
+- **B9** (`fetch_datasets.py` WDBC): `f1..f30` en lugar de nombres descriptivos del §3.5. Fingerprints UCI anclados a esta elección; corregirlo rompe rc4 sin ganancia analítica. Se documenta.
+- **B18** (`pruning._rebuild` no propagaba `w_events`): se corrige propagando el campo. Sin efecto numérico (verificado: `w_events` es informativo-solo).
+
+**Artefactos tocados** (por ruta exacta):
+- `backend_v3/session_state.py` — docstrings de `train`, `_reindex_tree`, `partition`, `get_univariate_trees` (B10, B11, B13, B15).
+- `backend_v3/stability.py` — docstring de `GiniDropReport` (B14).
+- `backend_v3/quest_engine.py` — docstring de `best_split` (B16).
+- `backend_v3/pruning.py` — docstring de `_rebuild`, propagación de `w_events` en el cuerpo (B18), docstring de `PruneStep` (B19).
+- `backend_v3/chaid_engine.py` — comentario de `_premerge_empty_bins` (B20).
+- `backend_v3/validation.py` — cita Heeringa §5.5 → §5.3 en el header (C6).
+- `backend_v3/types.py` — comentario de `bin_edges` en `SplitConfig` ("deciles" → 11 bins) (C7).
+- `treegov.py` — docstring del módulo (paso 8), `run_engines` (filtro CHAID eliminado), `meta["n_chaid"]` (B12).
+- `scripts/validate_uci.py` — cabecera, nota as-built B8.
+- `scripts/fetch_datasets.py` — nota as-built B9 en `breast_cancer_wdbc`.
+- `frontend_v3/main_window.py` — docstring de `_build_central` (B17).
+- `frontend_v3/resources/styles.qss` — regla `QFrame#leftPanel` eliminada (C1).
+- `frontend_v3/theme.py` — `NODE_BG` documentado como token retenido (C2).
+- `frontend_v3/reports_panel.py` — `_summary_title.setObjectName("panelTitle")` (C8); variable `html` → `html_doc` en `_on_export_clicked` (C9).
+- `tests/test_gui_smoke.py` — comentario de `test_menus_exist` (C4).
+- `docs/3.11_design_interactive_tree.md` — Status actualizado (B5).
+- `docs/3.11.b_design_treemap_dataviewer.md` — Status actualizado (B6).
+- `README.md` / `README.es.md` — Mermaid 478→480, fecha 25/10→31/10, "478/478 passing" → "480/480 passing".
+- `docs/estado_proyecto.md` — §7 tabla de tests, total 477→480, filas `gui_smoke` 13→14 y `e2e_mainwindow` 10→11; §3 fase 3.6.e marcada como completada (B2, B4).
+- `docs/contexto_para_nueva_sesion.md` — suite 478→480.
+- `docs/prompt_para_asistente.md` — suite 478→480 (B3).
+- `docs/roadmap.md` — A1 y A3 marcados como ✅ RESUELTO 31/10/2026 con commit 4f7196b.
+
+**Hallazgos cerrados**:
+- B1 (test fantasma `test_tree_map_orthogonal_connectors...`): eliminado del registro y pendiente de A2 para crear los tests reales del rediseño.
+- B2, B3, B4, B5, B6, B8, B9, B10-B16, B17, B18, B19, B20.
+- C1, C2, C4, C6, C7, C8, C9.
+
+**Pendiente**:
+- B7 (docstring `tree_map.py` 11pt/8pt) y C5 (colores hardcoded en `test_tree_map.py`) → se cierran con A2.
+- B1 (test fantasma): el rediseño A2 crea los tests reales (ortogonalidad, `ItemIgnoresTransformations`, labels con `node_id`).
+
+**Tests**: 480/480 PASSED (sin cambios de conteo; los cambios son docstrings, cosméticos o comentarios). Commit en el mismo bloque que A1+A3 (`4f7196b`).
+
+**Referencias cruzadas**:
+- `.treegovrules` §Mini-cierre.
+- `AGENTS.md` §Documentación obligatoria.
+- `docs/audit_log.md` entrada del 31/10/2026 (A1+A3, mismo commit `4f7196b`).
+
+---

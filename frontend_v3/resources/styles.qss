@@ -11,10 +11,16 @@ QDialog, QWizard {
     background: $BG;
 }
 
-QFrame#leftPanel, QFrame#hudPanel {
+QFrame#hudPanel {
     background: $SURFACE_ELEVATED;
     border: 1px solid $BORDER;
 }
+/* Nota C1 (31/10/2026): QFrame#leftPanel eliminado del selector. El panel
+   izquierdo es un QSplitter (no un QFrame) desde la 3.11.a.1; la regla
+   previa era dead code.
+   TODO(zona_gris): el prompt pedia comentario con '#' pero QSS solo
+   admite comentarios C-style; se usa sintaxis C para no romper el
+   parser de Qt. */
 
 QMainWindow::separator {
     background: $BORDER;

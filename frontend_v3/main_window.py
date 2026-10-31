@@ -499,8 +499,9 @@ class MainWindow(QMainWindow):
         self._hud_panel.setMaximumWidth(400)
 
         # Phase 2.2: interactive tree canvas (empty until TRAINED).
-        # Phase 3.11.a.1 (classic layout): the canvas is the FIXED upper
-        # pane of the central vertical splitter, above the main tabs.
+        # Phase 3.11.a.1 (Excel-sheet layout): el canvas ES la pestaña 0
+        # del QTabWidget principal (TabPosition.South); NO hay splitter
+        # vertical central. Ver design_decisions.md §17.2.
         self._tree_panel = TreePanel()
         self._tree_panel.setObjectName("treePanel")
         self._tree_panel.node_selected.connect(self._on_tree_node_selected)

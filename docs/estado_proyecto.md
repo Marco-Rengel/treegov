@@ -520,7 +520,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Completada (4 sub-fases a-d).
 - **Fase 3.6.a** — Diseño del plan de validación con *datasets* públicos. ✅ Completada (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
 - **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
-- **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Pendiente.
+- **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). ✅ Completada (25/10/2026).
 - **Fase 3.7** — Cierre Fase 3 + v1.0.0rc1 ✅ Completada (18/10/2026).
 - **Fase 3.7.a** — Auditoría de seguridad ✅.
 - **Fase 3.7.b** — Simetrización KS por pares ✅.
@@ -691,11 +691,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 13 |
+| gui_smoke (frontend) | 14 |
 | wizard (frontend) | 28 |
 | tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
-| e2e_mainwindow (frontend) | 10 |
+| e2e_mainwindow (frontend) | 11 |
 | reports_panel (frontend) | 13 |
 | prune_dialog (frontend) | 1 |
 | data_viewer (frontend) | 4 |
@@ -705,9 +705,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| **Total** | **477** |
+| **Total** | **480** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 477/477 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 480/480 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

@@ -609,6 +609,16 @@ Los ítems provenían de una auditoría externa posterior al cierre de la Fase 3
 
 Suite 474 → 475 (nuevo `tests/test_wizard.py::test_wizard_cost_matrix_multiclass`). Cierre: `docs/audit_log.md` entrada del 25/10/2026 (mini-cierre).
 
+### ✅ Bloque A1 + A3 (gobernanza HUD + i18n HUD) — RESUELTO (31/10/2026)
+**Priority: MEDIUM (detectado y resuelto el 31/10/2026, mismo bloque; commit `4f7196b`).**
+
+Los ítems provenían de la auditoría del 31/10/2026 y se resolvieron en el mismo bloque (convención ✅ de la sección Deferred):
+
+- **A1** — HUD de gobernanza stale tras poda / intervención / inversión del fingerprint: `_on_prune`, `_on_tree_context_menu` (rama `act_prune`, extraída al helper testeable `_execute_prune_branch`) y `_on_inversion_requested` actualizan `_hud_lbl_gov_fp` (y `_hud_lbl_gov_mode` en inversión) (`frontend_v3/main_window.py`).
+- **A3** — i18n del HUD incompleto: las 12 etiquetas de los formularios del HUD pasan a `QLabel` con `tr()` en `retranslate_ui`; `"N groups"` pasa por `tr("tree_groups")`; corrección ES `hud_lbl_bad_rate` → "Tasa de malos:" (`frontend_v3/main_window.py`, `frontend_v3/i18n.py`).
+
+Suite 478 → 480 (tests nuevos: `test_e2e_context_menu_prune_updates_hud`, `test_hud_labels_translated`). Cierre: `docs/audit_log.md` entrada del 31/10/2026.
+
 ### ⏳ Dataset real no-bancario (Wholesale Customers, UCI)
 **Priority: LOW (diferido por ZG-3 del diseño 3.6.e, registrado 25/10/2026).**
 
