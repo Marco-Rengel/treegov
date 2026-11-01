@@ -7,7 +7,6 @@ all data on the local machine.
 
 from __future__ import annotations
 import logging
-from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -33,7 +32,10 @@ app = FastMCP("TreeGov")
 @app.tool()
 def get_session_state() -> dict:
     """Current FlowState and a summary of the session."""
-    return _jsonable(_get_session().state)
+    st = _jsonable(_get_session().state)
+    st.pop("train_idx", None)
+    st.pop("test_idx", None)
+    return st
 
 @app.tool()
 def load_dataset(csv_path: str) -> dict:
@@ -150,16 +152,12 @@ def train(
 
 @app.tool()
 def evaluate_oos(n_groups: int | None = None) -> dict:
-    """Compute OOS metrics. None adapts n_groups to the OOS size (D20)."""
-    # TODO(zona_gris): default cambia de 10 (paste del asistente) a
-    # adaptativo max(3, min(10, n_test // 5)), espejo de la regla D20 de
-    # build_gains_table. Motivo empirico: guard de validation.py:337
-    # ("n_groups=10 exige >= 50 obs") con datasets pequeños. El asistente
-    # confirma el nuevo default en el siguiente turno.
+    """Compute OOS metrics."""
+    s = _get_session()
     if n_groups is None:
-        test_idx = _get_session().state.test_idx or ()
-        n_groups = max(3, min(10, len(test_idx) // 5))
-    return _jsonable(_get_session().evaluate_oos(n_groups=n_groups))
+        n_test = len(s.state.test_idx) if s.state.test_idx else 0
+        n_groups = max(3, min(10, n_test // 5))
+    return _jsonable(s.evaluate_oos(n_groups=n_groups))
 
 @app.tool()
 def get_oos_oot_report() -> dict:
