@@ -6380,3 +6380,48 @@ menú Archivo, respetando la sala limpia (frontend no importa
 + 4 de `test_e2e_exporters_gui.py`). Si el conteo real difiere, se
 anota aquí con el texto "Conteo real N/N tras verificación" antes
 del commit.
+
+---
+
+### 01/11/2026 — Mini-cierre post-4.0.c: desviación de ráfaga y fix ZG-D
+
+**Estado**: ✅ Cerrado. Suite 502/502 PASSED (sin cambios de código,
+documental pura).
+
+**Modelo**: GLM-5.3-Flash-Free (OpenCode v2.2.5, OpenCode Zen).
+
+**Contexto**: la Fase 4.0.c cerró en el commit 9b67dc2 (15 archivos,
+739 inserciones) con suite 502/502. Dos hechos del cierre no
+quedaron registrados en la entrada principal del 01/11/2026 y se
+documentan aquí en cumplimiento de la regla de mini-cierre.
+
+**Hallazgos registrados**:
+
+1. **Desviación de Skill 5 (`/rafaga_estricta`).** La Fase 4.0.c se
+   cerró en DOS commits (`ae2b396` para P1 backend + `9b67dc2` para
+   P2-P7 + fix ZG-D), no en uno solo como exige el Skill 5. Causa
+   raíz: el asistente estratégico entregó los prompts por pasos y
+   permitió verificación + commit intermedios tras P1, rompiendo la
+   regla "un solo commit por sub-fase". Lección para próximas fases:
+   el asistente entrega TODOS los prompts del bloque de una vez; el
+   humano NO verifica ni commitea entre prompts individuales, solo al
+   final del bloque, antes del único commit.
+
+2. **Fix ZG-D (nota PyPI Deferred stale).** La nota "Desincronización
+   vigente" de `docs/roadmap.md` describía el estado de los READMEs
+   con "477/477 tests", ya stale tras el cierre de 4.0.c. Corregida a
+   "502/502 tests" (línea 419) antes del commit de cierre. Los
+   registros históricos de la misma nota (líneas 380, 386, 387, 647,
+   con `477/477` y `487/487`) se conservan intactos por append-only.
+
+**Artefactos tocados en este mini-cierre**: `docs/audit_log.md` (esta
+entrada). Sin cambios de código.
+
+**Tests**: 502/502 PASSED (verificado antes del commit 9b67dc2; sin
+cambios posteriores).
+
+**Referencias cruzadas**:
+- `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c).
+- `docs/playbook.md` Skill 5 (`/rafaga_estricta`).
+- `AGENTS.md` §Documentación obligatoria (mini-cierre).
+- `docs/prompt_para_asistente.md` §4 (mini-cierre).
