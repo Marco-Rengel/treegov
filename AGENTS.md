@@ -187,6 +187,12 @@ Se ha migrado el flujo principal de Moonshot AI (Kimi K3 de pago) a **OpenCode Z
 *   **Modelo de rotación:** `qwen3.6-plus-free` o `nemotron-3-ultra-free` (cuando DeepSeek agote su ventana o falle).
 *   **Saldo de pago:** El remanente de Moonshot (~$7) se reserva exclusivamente como comodín para atascos críticos. La configuración antigua de Kimi K3 se conserva abajo como registro histórico.
 
+**Actualización (01/11/2026): Política Multi-Proveedor.**
+La herramienta activa es OpenCode con rotación de modelos:
+1. **Principal (Código y Docs):** OpenCode Zen (GLM-5.3-Flash-Free / DeepSeek V4 Flash Free). Sin límites asfixiantes de RPM, ideal para agentes de código.
+2. **Alternativa:** Google Gemini (vía API Key). Útil para consultas puntuales o ventanas de contexto gigantes, pero limitado a ~5 peticiones por minuto en el tier gratuito.
+3. **Comodín de Pago:** Moonshot Kimi K3.1 Pro (saldo reservado, ~$7). Usado solo para bugs críticos cuando los gratuitos fallen.
+
 ### Herramienta de respaldo — Aider 0.86.2
 
 Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.

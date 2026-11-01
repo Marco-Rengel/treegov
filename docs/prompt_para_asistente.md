@@ -209,6 +209,15 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
 - **Modelo de rotación:** `qwen3.6-plus-free` o `nemotron-3-ultra-free`.
 - **Regla de oro (ahorro de tokens):** Prompts hiper-quirúrgicos. NUNCA pedirle a la IA que "lea" un archivo completo; darle el bloque de código exacto (diff) para reemplazar. Si la ventana de contexto pasa del 50% o falla 2 veces, cambiar de modelo con `/models` (esto limpia la ventana).
 - **Respaldo de pago:** El saldo de Moonshot (~$7) queda reservado como comodín exclusivo para atascos críticos.
+
+### Actualización (01/11/2026): OpenCode v2.2.5 + Multi-Proveedor
+
+La política de herramientas evoluciona a una rotación multi-proveedor, manteniendo el histórico anterior intacto:
+- **Principal (Código/Docs):** OpenCode Zen (GLM / DeepSeek Flash).
+- **Alternativa (Contexto masivo):** Google Gemini (API Key, ~5 RPM).
+- **Comodín (Emergencias):** Moonshot Kimi K3.1 Pro.
+- **Regla:** Cerrar la pestaña al superar el 50% de contexto para preservar cuotas y caché.
+
 #### Atributos de la configuración antigua (Histórico - Kimi K3)
 > **NOTA:** Los siguientes datos de configuración, costes y caché pertenecen al paradigma de pago (Kimi K3) y se conservan como registro histórico. La herramienta actual es gratuita (OpenCode Zen).
 - **Nivel de razonamiento:** `high` por defecto. Reservar `max` para

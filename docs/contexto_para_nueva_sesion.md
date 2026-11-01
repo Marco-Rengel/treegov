@@ -180,6 +180,8 @@ WSL (bash):
   **Nota:** Kimi Code CLI 2.1.1 se probó como alternativa, pero su
   inyección de metadatos dinámicos rompe el *prefix matching* de la
   caché. OpenCode se mantiene como herramienta principal.
+- **Actualización (01/11/2026):** OpenCode ahora opera con rotación multi-proveedor. El modelo principal para código es **OpenCode Zen (DeepSeek Flash)**, la alternativa para ventanas de contexto masivas es **Google Gemini** (limitado a ~5 RPM), y el comodín de pago es **Moonshot Kimi K3.1 Pro** (reservado para emergencias). Cerrar la pestaña de OpenCode si se supera el 50% de contexto.
+
 - **Aider 0.86.2** — herramienta de respaldo desde el 09/10/2026. Instalación global vía pipx con Python 3.11.9 (C:\Users\maren\.local\bin\aider.exe). NO instalar Aider dentro del .venv del proyecto: eso ya ocurrió el 27/09/2026 y se resolvió el 16/10/2026 (ver audit_log). Configuración local en .aider.conf.yml (no versionado). Modelo moonshot/kimi-k3 vía Moonshot AI directo.
 - **build 1.6.1 / twine 7.0.0** — herramientas de empaquetado PyPI, instaladas globalmente vía pipx con Python 3.14.7. Se usan para las publicaciones de TreeGov en PyPI. NO instalar en el .venv del proyecto (regla del 16/10/2026).
 
