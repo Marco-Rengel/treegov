@@ -51,3 +51,18 @@ To mitigate the risk of accidental leakage, TreeGov implements a mandatory, non-
 - The GUI does not encrypt files on disk.
 
 This warning is shown once per session to avoid friction, but its presence is recorded in the log. 
+
+### §5. Auditoría de seguridad de la Capa MCP (Fase 5.0)
+
+**Riesgos aceptados:**
+- **Acceso a rutas locales:** `load_dataset` y `load_oot` permiten
+  rutas absolutas. El servidor MCP corre bajo el usuario del SO y
+  tiene los mismos permisos de lectura que la GUI. Se documenta como
+  responsabilidad del analista.
+- **Transporte:** Solo stdio local (D5). Sin puertos abiertos ni
+  telemetría. El protocolo MCP no persiste datos fuera del proceso.
+
+**Mitigaciones implementadas:**
+- Invariante I-7: el servidor no escribe en disco excepto los logs
+  locales vía `log_config`.
+- D11: sin herramientas de exploración de directorios (browsing/glob).

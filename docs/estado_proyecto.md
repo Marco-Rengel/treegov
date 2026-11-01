@@ -535,7 +535,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). ✅ Completada (24/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
-- **Fase 5** — Capa MCP
+- **Fase 5** — Capa MCP ✅ Completada (01/11/2026).
 - **Fase 6** — Scoring batch y champion-challenger
 - **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
 
@@ -600,6 +600,16 @@ y envía la rama superior al `ELSE` residual. Tres tests de regresión en
 sobre los árboles reales fue exacta en OOS y en el barrido de bins.
 Suite 525/525. Decisión: `docs/design_decisions.md` §16.4. Cierre:
 `docs/audit_log.md` entrada del 01/11/2026.
+
+### Fase 5.0.d — Cierre de la Capa MCP ✅ Completada (01/11/2026)
+
+Auditoría de seguridad de la capa MCP documentada en
+`docs/security_audit.md` §5: acceso a rutas locales como riesgo aceptado,
+transporte exclusivamente stdio, invariante I-7 de no escritura salvo logs
+y ausencia de herramientas de exploración de directorios (D11). El diseño
+`docs/5.0_design_mcp.md` queda marcado como implementado (as-built) y los
+READMEs incorporan el quickstart de instalación y arranque. Suite 525/525.
+Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
 ---
 

@@ -272,7 +272,7 @@ TreeGov/
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
-| **5** | MCP layer for LLM agents | In progress (5.0.a–5.0.c completed) |
+| **5** | MCP layer for LLM agents | ✅ Completed (01/11/2026) |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
@@ -312,6 +312,12 @@ TreeGov/
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---
+
+### MCP Layer (Phase 5.0)
+TreeGov expone su backend analítico a agentes LLM mediante el
+estándar Model Context Protocol (MCP).
+Instalación: `pip install treegov[mcp]`
+Uso: `treegov-mcp` (arranca el servidor stdio).
 
 ## License
 

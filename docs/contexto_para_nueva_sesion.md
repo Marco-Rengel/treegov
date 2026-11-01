@@ -131,6 +131,8 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 5.0.a | Esqueleto headless MCP (`mcp_v3`: `_jsonable` + 24 ToolDescriptor) | ✅ |
 | 5.0.b | Servidor MCP stdio + entry point (`treegov-mcp`) | ✅ |
 | 5.0.c | Paridad E2E MCP + exportadores CHAID con bins fusionados (§16.4) | ✅ |
+| 5.0.d | Auditoría de seguridad MCP + cierre documental as-built | ✅ |
+| **5.0** | **Capa MCP (fase completa)** | **✅ Cerrada** |
 
 **Suite de tests:** 525/525 PASSED
 
@@ -322,12 +324,11 @@ Python, 31/10/2026), 4.0.b (Markdown, 01/11/2026) y 4.0.c
 Session, no exposición de `_imputer`): `docs/design_decisions.md`
 §19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
-**Próximo paso:** sub-fase **5.0.d** — auditoría de seguridad y cierre
-documental de la Fase 5.0 (apéndice I-7 en `docs/security_audit.md`,
-quickstart MCP en READMEs). Cerradas 5.0.a, 5.0.b y 5.0.c el 01/11/2026.
-La 5.0.c añadió paridad E2E con los 4 motores y resolvió H-5.0.c-1
-(exportación CHAID por rama consolidada, `design_decisions.md` §16.4).
-Suite 525/525. Plan: `docs/5.0_design_mcp.md` §6.
+**Fase 5.0 — Capa MCP: ✅ cerrada (01/11/2026, suite 525/525).**
+Cerradas 5.0.a, 5.0.b, 5.0.c y 5.0.d. La auditoría de seguridad vive en
+`docs/security_audit.md` §5; el diseño `docs/5.0_design_mcp.md` está
+marcado como implementado (as-built) y los READMEs incluyen el quickstart.
+**Próximo paso:** Fase 6 — scoring batch y champion-challenger.
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema

@@ -389,7 +389,8 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Diseño:** `docs/4.0_design_exports.md`. **Decisión:** `docs/design_decisions.md` §19.1. **Cierre:** `docs/audit_log.md` entrada del 01/11/2026.
 
-### ⏳ Phase 5 — MCP layer
+### ✅ Phase 5 — MCP layer
+**Status**: ✅ Completed (01/11/2026, suite 525/525).
 **Priority: MEDIUM**
 
 - MCP (Model Context Protocol) layer for consumption from LLM agents.
@@ -412,8 +413,10 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
   exportadores ahora enrutan splits CHAID continuos por rama consolidada
   (`_merged_bin_branches`; `docs/design_decisions.md` §16.4), con 3
   tests de regresión y paridad de scoring exacta. ✅ Completada
-  (01/11/2026, suite 525/525). Próximo paso: 5.0.d (auditoría de
-  seguridad y cierre de la Fase 5.0).
+  (01/11/2026, suite 525/525).
+- **5.0.d** Auditoría de seguridad MCP (`docs/security_audit.md` §5),
+  diseño marcado como implementado (as-built) y quickstart en READMEs.
+  ✅ Completada (01/11/2026, suite 525/525). Fase 5.0 cerrada.
 
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.

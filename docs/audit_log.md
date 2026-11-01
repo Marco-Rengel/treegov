@@ -6751,3 +6751,13 @@ bug H-5.0.c-1 se corrigió con el helper `_merged_bin_branches` y 3
 tests de regresión en `test_exporters.py`. Se sincronizaron todos los
 documentos a 525/525.
 
+### 01/11/2026 — Fase 5.0.d: Cierre de la Capa MCP
+
+**Estado**: ✅ Fase 5.0 cerrada. Suite 525/525 PASSED.
+
+**Contexto**: Auditoría de seguridad documentada en
+`security_audit.md`. Quickstart añadido a los READMEs. Diseño 5.0
+marcado como implementado (as-built). Se documentó la política
+multi-proveedor de IA (OpenCode Zen principal, Gemini alternativa,
+Kimi comodín).
+
