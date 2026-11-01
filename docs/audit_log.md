@@ -6536,3 +6536,218 @@ vía MCP (ruido de contexto del agente; candidata a resumen en 5.0.c/d);
 **Tests**: 517/517 PASSED (exit 0).
 
 **Referencias cruzadas**: `docs/audit_log.md` 01/11/2026 (Fase 5.0.b, sección TODOs(zona_gris)); `docs/design_decisions.md` §20.1.
+
+---
+
+### 01/11/2026 — Fase 5.0.c (en curso): test de paridad E2E MCP + Hallazgo H-5.0.c-1 (exportadores vs splits CHAID continuos fusionados)
+
+**Estado**: 🔴 Sub-fase 5.0.c NO cierra aún. Suite: 522 tests (520 PASSED,
+2 FAILED). Ambos fallos son el nuevo `tests/test_mcp_parity.py`
+actuando de instrumento sobre el hallazgo H-5.0.c-1; cero fallos
+preexistentes. El working tree queda a la espera del prompt de fix.
+
+**Modelo**: GLM-5.3-Flash-Free (OpenCode v2.2.5, OpenCode Zen).
+
+**Contexto**: este bloque crea el test de integración de paridad E2E
+`tests/test_mcp_parity.py` (5 tests: 4 motores × flujo completo
+cargar→fix_spec→partition→train→evaluate_oos→export_sql/python/
+markdown + 1 de superficie JSON-strict). En la primera ejecución
+empírica CRT y QUEST pasan; CHAID y CHAID_EXHAUSTIVE fallan en
+`export_python()`/`export_markdown()` y revelan inconsistencia
+silenciosa en `export_sql()`. Reconstrucción mínima reproducible
+(probe ejecutado y borrado; secuencia completa en esta entrada):
+`Session` + CSV seed=42 (200 filas, `y = edad >= 40`, predictores
+`edad`/`seg`), `train(engine="CHAID", max_depth=3, min_child_size=10)`.
+
+**Hallazgo H-5.0.c-1 (bug preexistente no cubierto por la suite
+anterior)**: para un split CHAID CONTINUO CON RAMAS FUSIONADAS,
+los tres exportadores de `backend_v3/exporters.py` no respetan la
+decisión arquitectónica `design_decisions.md` §16.3 ("Routing: bins
+to consolidated branches"; partición por RAMA consolidada, no por
+bin individual; implementada en `tree_builder.py:608-625` y espejo
+OOS `validation.py:141-155`).
+
+1. **Árbol real de la reconstrucción** (consistente con §16.3 y con
+   el motor `chaid_engine.py:317-437`): split raíz sobre `edad` con
+   `bin_edges` de 10 cortes (11 bins), `n_merges=8`, 3 ramas
+   fusionadas `branches=(('bin_0'..'bin_4'), ('bin_5',),
+   ('bin_6'..'bin_10'))`, `child_ns=(67, 13, 60)`. Cortes relevantes:
+   bin_4 añade el corte 42.0; los cuantiles de 200 filas enteras
+   producen merges forzosos de Cochran (W `chaid_engine.py:327`,
+   8 fusiones en 140 filas de train).
+2. **`export_to_python` LANZA** (`exporters.py:401-405`, `_python_node`):
+   guarda `len(child_ids) == len(bin_edges)+1` asume bins NO
+   fusionados; con 3 hijos vs 11 bins → `ValueError: CHAID split on
+   'edad' with 10 edges needs 11 children, got 3.` (2 hijos en la
+   variante EXHAUSTIVE). El tool MCP `export_python` propaga la
+   excepción al cliente LLM.
+3. **`export_to_markdown` LANZA con el mismo patrón**
+   (`exporters.py:603-613`, `_md_node`): `ValueError` idéntico en
+   `exporters.py:606`.
+4. **`export_to_sql` NO lanza pero produce SQL INCONSISTENTE con el
+   modelo** (`_sql_condition`, `exporters.py:107-120`): itera índices
+   de rama y los traduce a predicados de BIN INDIVIDUAL. Salida real
+   del probe (recorte textual): `WHEN COALESCE(edad, 39.707142857142856)
+   <= 23.636363636363637 THEN 0.007352941176470588` para la rama
+   fusionada bin_0..bin_4 (pd=0.0074, 67 filas, rango real `<= 42.0`),
+   seguido de predicados de los bins 1 y 2 con pds de las ramas 2 y 3.
+   Efecto: una fila con `edad=30` (más cercana a la media, siempre
+   pertenece a la rama 0 del árbol de training, 60/140 eventos) se
+   punctúa ~0.82–0.99 por SQL y 0.0074 por el modelo de training;
+   filas en `(32.0, 42.0]` no matchean ningún WHEN → `ELSE NULL`.
+   Es la variante de falla SILENCIOSA (pd min vs max) en export.
+5. **Coberatura durmiente**: `test_session_exporters.py`
+   (`_trained_session`, línea 71) entrena SOLO CRT (splits threshold),
+   por lo que ninguna ruta de exportador había sido ejercitada
+   contra `bin_edges` no vacío con ramas < bins+1. Los tests
+   `test_exporters.py` construyen modelos sintéticos manuales. La
+   paridad 4-motores de 5.0.c es la primera cruzada real.
+
+**Decisión aplicada (zona gris, regla de ráfaga)**: el test SOBRE EL
+CONTRATO (I-3 + no-crash + paridad de fingerprint en los 4 motores)
+se mantiene EXACTO; la suite queda roja por los 2 parametrizados
+como instrumento del hallazgo, con `# TODO(zona_gris)` en el propio
+archivo (`tests/test_mcp_parity.py`, sección "5. Exportar"). NO se
+tocó `backend_v3/exporters.py` en este bloque (anti-patrón #1:
+ninguna corrección sin auditoría de diseño previa).
+
+**Segundo desvío menor (registrado por trazabilidad)**: el brief
+original llamaba `server.export_to_python()` /
+`server.export_to_markdown()`; esas firmas existen solo en
+`backend_v3.session_state.Session`. La capa servidor (Grupo F,
+`mcp_v3/server.py:221-234`) expone `export_sql`/`export_python`/
+`export_markdown`. El test (que simula un cliente LLM consumiendo el
+SERVER, no el backend) usa los nombres de la capa servidor.
+`TODO(zona_gris)` al pie del archivo.
+
+**Artefactos tocados (por ruta exacta)**:
+- `tests/test_mcp_parity.py` (NUEVO, 5 tests, 2 FAILED por H-5.0.c-1
+  hasta que se corrija el fix; TODO(zona_gris) ×2 en el archivo).
+- `docs/audit_log.md` (esta entrada).
+
+**Diseño propuesto para el fix (a auditar antes de implementar)**:
+en los tres exportadores, cuando `bin_edges` no esté vacío Y
+`split.branches` esté presente, derivar los predicados por RAMA
+fusionada usando las etiquetas `bin_i` de `branches` (mismo
+algoritmo que `tree_builder.py:619-626` sobre `np.digitize`):
+rama con bins contiguos min..max → SQL
+`(> edges[min_i-1] | nada si bin_0) AND <= edges[max_i-1]`… con la
+regla exacta a fijar contra §16.3; Python y Markdown espejan esa
+lógica. La guarda `len(child_ids) == len(edges)+1` solo aplica a
+splits sin fusiones (r == bins+1). Incluye: test de exportadores
+CHAID fusionado (dataset seed=42 de esta entrada), verificación de
+paridad de scoring entre SQL emitido y `Session.predict_leaf_assignment`,
+y sincronización documental forzada (8 documentos) al cierre 5.0.c.
+
+**Tests**: `python -m pytest tests -q` → **520 PASSED, 2 FAILED**
+(los 2: `test_parity_all_engines[CHAID]`,
+`test_parity_all_engines[CHAID_EXHAUSTIVE]`; total 522 = 517 + 5
+nuevos). Los 517 preexistentes: PASSED. `git status` pre-commit:
+untracked `tests/test_mcp_parity.py`, `docs/audit_log.md` modificado.
+La sub-fase NO se cierra: el cierre de 5.0.c exige suite verde
+(por lo que este commit NO es el commit de cierre; el humano decide
+el momento, Skill 5 asegura un solo commit para el bloque completo).
+
+---
+
+### 01/11/2026 — Fase 5.0.c (fix): resolución de H-5.0.c-1 en los tres exportadores
+
+**Estado**: ✅ H-5.0.c-1 RESUELTO. Suite **525/525 PASSED** (517
+preexistentes + 5 de `test_mcp_parity.py` + 3 nuevos de regresión en
+`test_exporters.py`; el brief esperaba 522, el delta +3 son los tests
+de regresión de scoring fusionado). Working tree listo para el commit
+único de 5.0.c y su checklist documental de cierre (8 documentos).
+
+**Modelo**: GLM-5.3-Flash-Free (OpenCode v2.2.5, OpenCode Zen).
+
+**Contexto**: el asistente estratégico aprobó el diagnóstico y diseñó
+el fix: condiciones por RAMA consolidada leyendo `split.branches`
+(índices reales de los bins fusionados), con la guarda
+`len(bin_edges)+1` solo en el camino legacy sin fusión. Se aplicó en
+`_sql_condition`, `export_to_sql` (bucle CASE), `_python_node` y
+`_md_node`, con un helper compartido.
+
+**Implementación (por artefacto)**:
+- `backend_v3/exporters.py`:
+  - Nuevo helper `_merged_bin_branches(split)` →
+    `list[(min_bin, max_bin)] | None`. Devuelve `None` si no hay
+    `bin_edges`+`branches` (fallback legacy). Parsea las etiquetas
+    `bin_i` y VALIDA que las ramas son una partición ordenada,
+    contigua y exhaustiva de los bins `0..len(edges)` (invariante del
+    motor: bins ORDINAL, fusión solo de adyacentes,
+    `chaid_engine.py:234-237`, `design_decisions.md` §16.1; routing
+    por rama, §16.3). Modelo inconsistente → `ValueError` (exportar un
+    routing distinto en silencio es peor que fallar).
+  - `_sql_condition`: camino fusionado → `<= edges[hi]` por rama; la
+    rama que contiene el bin superior (sin corte por encima) devuelve
+    `> edges[lo-1]` (predicado standalone correcto; el llamador la
+    renderiza como ELSE). Fallback legacy intacto.
+  - `export_to_sql` (`_sql_node`): guarda
+    `len(child_ids) == len(branches)`; la rama superior se emite como
+    `ELSE <pd>` del CASE (ya no `ELSE NULL`, que quedaba inalcanzable
+    o mis-enrutaba bins fusionados); `ELSE NULL` se conserva para el
+    resto de codificaciones.
+  - `_python_node`: if/elif por `<= edges[hi]` por rama consolidada +
+    `else:` residual. La guarda `len(child_ids) != len(edges)+1` solo
+    se aplica en el fallback legacy.
+  - `_md_node`: mismas reglas (`If/Elif <= edges[hi]`, `Else`).
+  - Nota de contrato: el fallback legacy (bin_edges sin branches) es
+    inalcanzable con un `SplitConfig` válido — `types.py:235-239`
+    exige `branches` cuando `bin_edges` no está vacío —; se conserva
+    por robustez, tal como pedía el brief.
+- `tests/test_exporters.py` (+3 tests de regresión): modelo CHAID
+  sintético con `bin_edges=(10,20,30)` (4 bins) y ramas
+  `((bin_0,bin_1),(bin_2),(bin_3,))` (3 hijos).
+  `test_export_sql_merged_chaid_branches` (un WHEN por rama, ELSE
+  residual, ausencia de predicados por bin individual y de ELSE NULL);
+  `test_export_python_merged_chaid_parity` (ejecuta el módulo
+  exportado: paridad de scoring en fronteras 10/20/30, en el bin
+  fusionado intermedio 15, en el residual 35 y con imputación por
+  media 35.5); `test_export_markdown_merged_chaid_branches`.
+- `tests/test_mcp_parity.py`: comentario de la sección "5. Exportar"
+  actualizado (H-5.0.c-1 resuelto; ya no "permanece rojo").
+- `docs/audit_log.md` (esta entrada).
+
+**Verificación empírica post-fix (árbol REAL seed=42 del hallazgo,
+no solo el sintético)**:
+1. `pytest tests/test_mcp_parity.py -v` → 5/5 PASSED.
+2. Scoring exportado vs backend (`predict_leaf_assignment` +
+   `pd_final[0]`): **paridad EXACTA** (max_abs_diff = 0.00e+00) en las
+   60 filas OOS y en 44 filas sintéticas con `edad` 18..61 (cubren
+   todos los bins), para CHAID y CHAID_EXHAUSTIVE.
+3. SQL real post-fix (cita textual): `WHEN COALESCE(edad,
+   39.707142857142856) <= 38.0 THEN 0.007352941176470588` / `WHEN ...
+   <= 42.0 THEN 0.8214285714285714` / `ELSE 0.9918032786885246`. Los
+   cortes corresponden a `edges[4]` (rama bin_0..bin_4) y `edges[5]`
+   (bin_5); la rama residual bin_6..bin_10 va al ELSE. Coherente con
+   `child_ns=(67,13,60)` y con `y = edad >= 40`.
+4. Suite completa: 525/525 PASSED (88s).
+
+**Errata menor de la entrada anterior (append-only, se corrige aquí)**:
+el análisis manual decía que la rama fusionada bin_0..bin_4 cubría
+"`<= 42.0`"; el corte superior real es `edges[4] = 38.0` (bin_4 =
+(35.55, 38.0]). La salida post-fix del punto 3 lo confirma. Los pd,
+conteos y el diagnóstico de fondo eran correctos.
+
+**Invariantes**: sala limpia intacta (solo `backend_v3/exporters.py`,
+cero Qt, cero dependencias nuevas); K=2 y fingerprints sin cambios;
+cero fórmulas nuevas (el fix es de renderizado del routing ya
+documentado en §16.1/§16.3, no de estadística). CRT/QUEST/categóricos
+bit a bit iguales (suite preexistente verde).
+
+**Pendiente para el cierre de 5.0.c** (bloque documental único):
+checklist de 8 documentos; candidata entrada en
+`docs/design_decisions.md` (§16.4: convención de exportación por rama
+consolidada) y conteo real 525/525 en README/estado_proyecto.
+
+---
+
+### 01/11/2026 — Fase 5.0.c: Paridad E2E y Fix de Exportadores
+
+**Estado**: ✅ Cerrado. Suite 525/525 PASSED. Commit único de 5.0.c.
+
+**Contexto**: Test de paridad E2E añadido (`test_mcp_parity.py`). El
+bug H-5.0.c-1 se corrigió con el helper `_merged_bin_branches` y 3
+tests de regresión en `test_exporters.py`. Se sincronizaron todos los
+documentos a 525/525.
+

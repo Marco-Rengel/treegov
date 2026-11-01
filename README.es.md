@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 502/502 passing
+**Suite de tests**: 525/525 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 4.0 completas<br/>🔧 Foco: Fase 5.0 / Capa MCP<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 517 / 517 tests PASSED<br/>📅 01 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 4.0 completas<br/>🔧 Foco: Fase 5.0 / Capa MCP<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 525 / 525 tests PASSED<br/>📅 01 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -272,11 +272,11 @@ TreeGov/
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
 | **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
 | **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
-| **5** | Capa MCP para agentes LLM | Planificada |
+| **5** | Capa MCP para agentes LLM | En progreso (5.0.a–5.0.c completadas) |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 502/502 passing.**
+**Suite de tests: 525/525 passing.**
 
 ---
 

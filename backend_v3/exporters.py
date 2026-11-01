@@ -80,15 +80,71 @@ def _imputed_predictor(split: object, imputer: object) -> str:
     return predictor
 
 
+def _merged_bin_branches(split: object) -> list[tuple[int, int]] | None:
+    """Return ``(min_bin, max_bin)`` per branch of a CHAID continuous split.
+
+    Applies only when ``bin_edges`` and ``branches`` are both populated;
+    returns ``None`` otherwise, so callers fall back to the legacy unmerged
+    bin-per-branch encoding.
+
+    The engine labels bins ``"bin_i"`` (``chaid_engine``
+    ``_reduce_continuous_predictor``) and merges only ADJACENT groups (bins
+    are ORDINAL, ``chaid_engine.py:234-237``; design_decisions.md §16.1), so
+    every branch is a contiguous bin interval and the branches partition
+    bins ``0..len(edges)`` in order. Export conditions are therefore built
+    per consolidated branch, mirroring the branch-based routing of
+    ``tree_builder._partition`` (design_decisions.md §16.3) instead of one
+    condition per individual bin (H-5.0.c-1).
+
+    Raises:
+        ValueError: if the branches are not an ordered, contiguous and
+            exhaustive partition of the bins (structurally inconsistent
+            model): silently exporting a different routing is worse than
+            failing loudly.
+    """
+    if not split.bin_edges or not split.branches:
+        return None
+    n_edges = len(split.bin_edges)
+    bounds: list[tuple[int, int]] = []
+    expected = 0
+    for group in split.branches:
+        bins = sorted(int(str(label).split("_")[1]) for label in group)
+        if bins[0] != expected or bins[-1] > n_edges:
+            raise ValueError(
+                f"CHAID split on {split.predictor!r}: bin branches do not "
+                "form an ordered partition of the bins; the model is "
+                "inconsistent (design_decisions.md §16.1/§16.3)."
+            )
+        if bins != list(range(bins[0], bins[-1] + 1)):
+            raise ValueError(
+                f"CHAID split on {split.predictor!r}: non-contiguous bin "
+                "branch; the engine only merges adjacent bins "
+                "(design_decisions.md §16.1)."
+            )
+        bounds.append((bins[0], bins[-1]))
+        expected = bins[-1] + 1
+    if expected != n_edges + 1:
+        raise ValueError(
+            f"CHAID split on {split.predictor!r}: bin branches do not cover "
+            "all bins; the model is inconsistent."
+        )
+    return bounds
+
+
 def _sql_condition(split: object, index: int, imputer: object) -> str:
     """Build the ``WHEN`` predicate for the branch ``index`` of a split.
 
     Three split encodings are supported, in this priority order:
 
     * ``threshold``: binary numeric split, branch 0 is ``<=``, branch 1 is ``>``.
-    * ``bin_edges``: CHAID continuous split with ``k`` cut points and ``k + 1``
-      branches; branch 0 is ``<= edge[0]``, the last one is ``> edge[-1]`` and
-      the intermediate ones are ``> edge[i-1] AND <= edge[i]``.
+    * ``bin_edges``: CHAID continuous split. With consolidated ``branches``
+      (the general case; only adjacent bins merge, design_decisions.md
+      §16.1) each branch is rendered from its own bin interval —
+      ``<= edge[hi]``, or ``> edge[lo-1]`` for the top branch — mirroring
+      the branch-based routing of ``tree_builder._partition`` (§16.3).
+      Without ``branches`` (legacy encoding) one predicate per bin is
+      emitted: branch 0 is ``<= edge[0]``, the last one is ``> edge[-1]``
+      and the intermediate ones are ``> edge[i-1] AND <= edge[i]``.
     * ``branches``: categorical split, rendered as ``IN ('a', 'b')``.
     """
     expression = _imputed_predictor(split, imputer)
@@ -106,6 +162,15 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
 
     if split.bin_edges:
         edges = tuple(split.bin_edges)
+        merged = _merged_bin_branches(split)
+        if merged is not None:
+            # CHAID continuo con ramas fusionadas (H-5.0.c-1): una condicion
+            # por RAMA consolidada, no por bin individual.
+            lo, hi = merged[index]
+            if hi == len(edges):
+                # Rama superior (sin corte por encima): dominio residual.
+                return f"{expression} > {_sql_literal(edges[lo - 1])}"
+            return f"{expression} <= {_sql_literal(edges[hi])}"
         if index == 0:
             return f"{expression} <= {_sql_literal(edges[0])}"
         if index == len(edges):
@@ -198,13 +263,29 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
         # silently emitting an empty CASE block.
         child_ids = tuple(node.child_ids)
 
+        merged = _merged_bin_branches(split)
+        if merged is not None and len(child_ids) != len(merged):
+            raise ValueError(
+                f"CHAID split on {split.predictor!r} has {len(merged)} "
+                f"consolidated branches, got {len(child_ids)} children."
+            )
+
         lines = ["CASE"]
+        has_else = False
         for index, child_id in enumerate(child_ids):
-            condition = _sql_condition(split, index, imputer)
             child_sql = _sql_node(child_id, indent + 1)
+            if merged is not None and merged[index][1] == len(split.bin_edges):
+                # Rama superior de un split CHAID fusionado (H-5.0.c-1): cubre
+                # el dominio residual completo, se renderiza como ELSE.
+                lines.append(f"{pad}ELSE")
+                lines.append(f"{pad} {child_sql}")
+                has_else = True
+                continue
+            condition = _sql_condition(split, index, imputer)
             lines.append(f"{pad}WHEN {condition} THEN")
             lines.append(f"{pad} {child_sql}")
-        lines.append(f"{pad}ELSE NULL")
+        if not has_else:
+            lines.append(f"{pad}ELSE NULL")
         lines.append(f"{pad}END")
         return "\n".join(lines)
 
@@ -398,6 +479,28 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
 
     if split.bin_edges:
         edges = tuple(split.bin_edges)
+        merged = _merged_bin_branches(split)
+        if merged is not None:
+            # CHAID continuo con ramas fusionadas (H-5.0.c-1): if/elif por
+            # corte superior de cada RAMA consolidada; la rama que contiene
+            # el bin superior es el else residual. La guarda bins+1 solo
+            # aplica a la codificacion antigua sin ramas fusionadas.
+            if len(child_ids) != len(merged):
+                raise ValueError(
+                    f"CHAID split on {split.predictor!r} has {len(merged)} "
+                    f"consolidated branches, got {len(child_ids)} children."
+                )
+            lines = []
+            for index, (_lo, hi) in enumerate(merged):
+                if hi == len(edges):
+                    lines.append(f"{pad}else:")
+                else:
+                    keyword = "if" if index == 0 else "elif"
+                    lines.append(
+                        f"{pad}{keyword} {variable} <= {_python_number(edges[hi])}:"
+                    )
+                lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
+            return lines
         if len(child_ids) != len(edges) + 1:
             raise ValueError(
                 f"CHAID split on {split.predictor!r} with {len(edges)} edges needs "
@@ -602,6 +705,28 @@ def export_to_markdown(model: "TreeModel") -> str:
 
         if split.bin_edges:
             edges = tuple(split.bin_edges)
+            merged = _merged_bin_branches(split)
+            if merged is not None:
+                # CHAID continuo con ramas fusionadas (H-5.0.c-1): reglas por
+                # RAMA consolidada, espejo del routing de tree_builder (§16.3).
+                if len(child_ids) != len(merged):
+                    raise ValueError(
+                        f"CHAID split on {split.predictor!r} has {len(merged)} "
+                        f"consolidated branches, got {len(child_ids)} children."
+                    )
+                for index, (_lo, hi) in enumerate(merged):
+                    if hi == len(edges):
+                        lines.append(
+                            f"{indent}  - Else:\n"
+                            + _md_node(child_ids[index], depth + 1)
+                        )
+                        continue
+                    keyword = "If" if index == 0 else "Elif"
+                    lines.append(
+                        f"{indent}  - {keyword} <= {edges[hi]}:\n"
+                        + _md_node(child_ids[index], depth + 1)
+                    )
+                return "".join(lines)
             if len(child_ids) != len(edges) + 1:
                 raise ValueError(
                     f"CHAID split on {split.predictor!r} with {len(edges)} edges "

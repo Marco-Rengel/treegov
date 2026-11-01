@@ -209,3 +209,134 @@ def test_export_markdown_signature_is_model_only(export_case: ExportCase) -> Non
     """
     md = export_to_markdown(export_case.model)
     assert md
+
+
+# ---------------------------------------------------------------------------
+# H-5.0.c-1: CHAID continuous splits with consolidated (merged) bin branches
+# ---------------------------------------------------------------------------
+
+
+def _merged_chaid_case() -> ExportCase:
+    """CHAID continuous split whose engine merged adjacent bins.
+
+    ``bin_edges`` (10, 20, 30) define 4 bins (bin_0..bin_3), but bin_0 and
+    bin_1 were consolidated into one branch, so the tree has 3 children for
+    4 bins. Before the H-5.0.c-1 fix, ``export_to_python`` and
+    ``export_to_markdown`` raised ``ValueError`` and ``export_to_sql``
+    emitted one predicate per individual bin, silently mis-scoring every
+    row of the merged branch (see docs/audit_log.md, 01/11/2026).
+    """
+    split = SplitConfig(
+        predictor="edad",
+        method="CHAID",
+        statistic=25.0,
+        statistic_name="chi2",
+        df=(2,),
+        parent_n=100,
+        child_ns=(50, 20, 30),
+        p_value=0.000001,
+        p_value_adjusted=0.000055,
+        bonferroni_multiplier=55,
+        n_merges=1,
+        branches=(("bin_0", "bin_1"), ("bin_2",), ("bin_3",)),
+        bin_edges=(10.0, 20.0, 30.0),
+    )
+    root = TreeNode(
+        node_id=0,
+        depth=0,
+        parent_id=None,
+        n=100,
+        n_events=(42, 58),
+        pd_jeffreys=(0.42, 0.58),
+        pd_final=(0.42, 0.58),
+        class_labels=CLASS_LABELS,
+        is_leaf=False,
+        split=split,
+        child_ids=(1, 2, 3),
+        leaf_reason=None,
+    )
+    leaves = tuple(
+        TreeNode(
+            node_id=i + 1,
+            depth=1,
+            parent_id=0,
+            n=n,
+            n_events=events,
+            pd_jeffreys=pd,
+            pd_final=pd,
+            class_labels=CLASS_LABELS,
+            is_leaf=True,
+            split=None,
+            child_ids=(),
+            leaf_reason="max_depth",
+        )
+        for i, (n, events, pd) in enumerate(
+            (
+                (50, (5, 45), (0.1, 0.9)),
+                (20, (10, 10), (0.5, 0.5)),
+                (30, (27, 3), (0.9, 0.1)),
+            )
+        )
+    )
+    model = TreeModel(
+        root_id=0,
+        nodes=(root, *leaves),
+        method="CHAID",
+        params_fingerprint="fp-merged-chaid",
+        class_labels=CLASS_LABELS,
+        target_class=1,
+        target_class_index=0,
+    )
+    imputer = ImputationSpec(means={"edad": 35.5}, modes={}, fitted_n=100)
+    return ExportCase(model=model, imputer=imputer)
+
+
+def test_export_sql_merged_chaid_branches() -> None:
+    """One WHEN per consolidated branch; the top branch is the CASE ELSE."""
+    case = _merged_chaid_case()
+    sql = export_to_sql(case.model, case.imputer)
+
+    # Branch 0 = bins 0+1 (edad <= 20.0), branch 1 = bin 2 (<= 30.0).
+    assert "WHEN COALESCE(edad, 35.5) <= 20.0 THEN" in sql
+    assert "WHEN COALESCE(edad, 35.5) <= 30.0 THEN" in sql
+    # No per-bin predicate may survive: bin_0/bin_1 are not separate arms.
+    assert "<= 10.0" not in sql
+    # The top consolidated branch covers the residual domain via ELSE.
+    assert "ELSE\n 0.9\nEND" in sql
+    assert "ELSE NULL" not in sql
+    assert case.model.params_fingerprint in sql
+
+
+def test_export_python_merged_chaid_parity() -> None:
+    """Scoring parity of the exported module on merged-bin boundaries."""
+    case = _merged_chaid_case()
+    namespace = _load_python_export(export_to_python(case.model, case.imputer))
+    predict = namespace["predict"]
+
+    # Branch 0 (bins 0+1): includes bin_1 rows, mis-scored before the fix.
+    assert predict({"edad": 5}) == 0.1
+    assert predict({"edad": 10}) == 0.1  # digitize(right=True): bin_0 edge
+    assert predict({"edad": 15}) == 0.1  # merged bin_1
+    assert predict({"edad": 20}) == 0.1  # bin_1 edge
+    # Branch 1 (bin_2).
+    assert predict({"edad": 25}) == 0.5
+    assert predict({"edad": 30}) == 0.5  # bin_2 edge
+    # Branch 2 (bin_3): residual else.
+    assert predict({"edad": 35}) == 0.9
+    # Training-time imputation follows the same consolidated routing.
+    assert predict({}) == 0.9  # mean 35.5 -> top branch
+
+
+def test_export_markdown_merged_chaid_branches() -> None:
+    """The report renders one rule per consolidated branch, without raising."""
+    case = _merged_chaid_case()
+    md = export_to_markdown(case.model)
+
+    assert "- If <= 20.0:" in md
+    assert "- Elif <= 30.0:" in md
+    assert "- Else:" in md
+    assert "<= 10.0" not in md
+    assert "Probability = 0.1000" in md
+    assert "Probability = 0.5000" in md
+    assert "Probability = 0.9000" in md
+    assert case.model.params_fingerprint in md

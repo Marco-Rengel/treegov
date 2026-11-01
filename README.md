@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 502/502 passing
+**Test suite**: 525/525 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 4.0 complete<br/>🔧 Focus: Phase 5.0 / MCP layer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 517 / 517 tests PASSED<br/>📅 Nov 1, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 4.0 complete<br/>🔧 Focus: Phase 5.0 / MCP layer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 525 / 525 tests PASSED<br/>📅 Nov 1, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -272,11 +272,11 @@ TreeGov/
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
-| **5** | MCP layer for LLM agents | Planned |
+| **5** | MCP layer for LLM agents | In progress (5.0.a–5.0.c completed) |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 502/502 passing.**
+**Test suite: 525/525 passing.**
 
 ---
 

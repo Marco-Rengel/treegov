@@ -63,6 +63,7 @@
 | **5.0** | `docs/5.0_design_mcp.md` | ✅ Approved (01/11/2026) |
 | **5.0.a** | `docs/5.0_design_mcp.md` (as-built §1) | ✅ Completed (01/11/2026) |
 | **5.0.b** | `docs/5.0_design_mcp.md` (as-built §2) | ✅ Completed (01/11/2026) |
+| **5.0.c** | `docs/5.0_design_mcp.md` (paridad E2E; exportación CHAID en `docs/design_decisions.md` §16.4) | ✅ Completed (01/11/2026) |
 
 **Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.
 

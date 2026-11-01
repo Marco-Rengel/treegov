@@ -2126,6 +2126,10 @@ El cálculo de los cortes (deciles) usa `np.quantile` sin ponderar, incluso si l
 ### 16.3 Routing: bins to consolidated branches
 El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultaría en 11 hijos fijos). En su lugar, mapea cada bin a la rama consolidada que el motor CHAID determinó tras el proceso de fusión. Esto garantiza que el árbol construido refleje la estructura final y mantenga la integridad de `child_ns`.
 
+### 16.4 Exportación de árboles con bins fusionados (CHAID)
+**Contexto:** Los exportadores asumían que un nodo continuo tenía siempre N+1 ramas (una por bin). En CHAID, los bins se fusionan.
+**Decisión:** Los exportadores leen `split.branches` para derivar condiciones por rama consolidada (`<= edges[max_bin]`), enviando la última rama al `ELSE` residual. La función `_merged_bin_branches` valida que la partición sea contigua y exhaustiva antes de exportar.
+
 ---
 
 ## §17. Layout and Theme Decisions (Phase 3.11.a)

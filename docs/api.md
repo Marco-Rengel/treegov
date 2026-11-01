@@ -82,6 +82,13 @@ underscore) are internal and may change without notice.
   Takes only the model: no imputation is needed because the
   artefact is descriptive, not scoring. (Phase 4.0.b, 01/11/2026.)
 
+Since Phase 5.0.c, all three exporters route CHAID continuous splits by
+their consolidated `SplitConfig.branches`, not by individual bins: each
+branch yields a condition from its real merged-bin interval and the top
+branch is the residual `ELSE`. This preserves scoring parity after CHAID
+adjacent-bin merges (H-5.0.c-1; `docs/design_decisions.md` §16.4). No
+public signature changed.
+
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
@@ -291,6 +298,8 @@ underscore) are internal and may change without notice.
   `mcp>=1.0.0,<2.0.0` (v2 renames FastMCP → MCPServer). `evaluate_oos`
   adapts `n_groups` to the OOS partition size by default (D20 rule);
   all dict/list outputs go through `_jsonable` (Invariant I-3).
+  Phase 5.0.c verifies the full four-engine flow and strict JSON output
+  end to end (`tests/test_mcp_parity.py`); no public symbol was added.
 - `treegov_mcp` — root entry point registered as the `treegov-mcp`
   console script (`treegov_mcp:main`); requires the `[mcp]` extra.
 
