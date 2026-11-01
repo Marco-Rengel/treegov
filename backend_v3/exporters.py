@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for static type checking
     from backend_v3.imputation import ImputationSpec
     from backend_v3.session_state import TreeModel
 
-__all__ = ["export_to_python", "export_to_sql"]
+__all__ = ["export_to_markdown", "export_to_python", "export_to_sql"]
 
 
 def _sql_literal(value: object) -> str:
@@ -503,3 +503,156 @@ def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
     lines.extend(_python_node(model.root_id, 1, nodes_by_id))
 
     return "\n".join(lines) + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# Markdown exporter
+# --------------------------------------------------------------------------- #
+
+
+def export_to_markdown(model: "TreeModel") -> str:
+    """Export ``model`` as a human-readable Markdown report.
+
+    The report reproduces the tree structure as nested bullet points: every
+    internal node states the predictor it splits on, and every leaf states the
+    class-of-interest probability (index 0 of ``pd_final``, rendered with four
+    decimals). Its purpose is documentation and audit review, not machine
+    consumption: prediction parity is guaranteed by :func:`export_to_sql` and
+    :func:`export_to_python`, while this exporter only renders what is already
+    stored in the model.
+
+    The header carries ``model.params_fingerprint`` and ``model.method`` so a
+    reviewer can trace the report back to the exact artefact that produced it
+    (MRM requirement).
+
+    The module performs no I/O and imports nothing at runtime: the return value
+    is a plain ``str`` the caller is free to write to disk or embed elsewhere.
+
+    Args:
+        model: Trained decision tree. ``root_id``, ``method``, ``nodes`` and
+            ``params_fingerprint`` are read; the model is never mutated.
+
+    Returns:
+        A Markdown document terminated by a newline.
+
+    Raises:
+        ValueError: if the tree is structurally inconsistent (an internal node
+            without ``SplitConfig``, fewer than two children, or a branch count
+            that does not match the split encoding).
+        KeyError: if a child references a ``node_id`` absent from
+            ``model.nodes``.
+    """
+    nodes_by_id = _index_nodes(model)
+
+    def _md_node(node_id: int, depth: int) -> str:
+        """Render one node and its descendants as a nested Markdown list.
+
+        ``depth`` counts indentation levels of two spaces. Leaves render as a
+        single bullet with the leaf probability; internal nodes render as a
+        bullet naming the split predictor followed by one indented sub-bullet
+        per branch, whose bodies recurse into the children.
+        """
+        try:
+            node = nodes_by_id[node_id]
+        except KeyError as exc:
+            raise KeyError(
+                f"node_id {node_id} is not present in model.nodes."
+            ) from exc
+
+        indent = "  " * depth
+
+        if node.is_leaf:
+            return (
+                f"{indent}- **Leaf {node.node_id}**: "
+                f"Probability = {node.pd_final[0]:.4f}\n"
+            )
+
+        split = node.split
+        if split is None:
+            raise ValueError(
+                f"Internal node {node_id} has no SplitConfig; it cannot be exported."
+            )
+
+        child_ids = tuple(node.child_ids)
+        if len(child_ids) < 2:
+            raise ValueError(
+                f"Internal node {node_id} must have at least 2 children, "
+                f"got {len(child_ids)}."
+            )
+
+        lines = [
+            f"{indent}- **Node {node.node_id}** (Split on `{split.predictor}`):\n"
+        ]
+
+        if split.threshold is not None:
+            if len(child_ids) != 2:
+                raise ValueError(
+                    f"Threshold split on {split.predictor!r} has exactly 2 "
+                    f"branches, got {len(child_ids)} children."
+                )
+            lines.append(
+                f"{indent}  - If <= {split.threshold}:\n"
+                + _md_node(child_ids[0], depth + 1)
+            )
+            lines.append(
+                f"{indent}  - Else:\n"
+                + _md_node(child_ids[1], depth + 1)
+            )
+            return "".join(lines)
+
+        if split.bin_edges:
+            edges = tuple(split.bin_edges)
+            if len(child_ids) != len(edges) + 1:
+                raise ValueError(
+                    f"CHAID split on {split.predictor!r} with {len(edges)} edges "
+                    f"needs {len(edges) + 1} children, got {len(child_ids)}."
+                )
+            for index, edge in enumerate(edges):
+                keyword = "If" if index == 0 else "Elif"
+                lines.append(
+                    f"{indent}  - {keyword} <= {edge}:\n"
+                    + _md_node(child_ids[index], depth + 1)
+                )
+            lines.append(
+                f"{indent}  - Else:\n" + _md_node(child_ids[-1], depth + 1)
+            )
+            return "".join(lines)
+
+        if split.branches:
+            branch_values = tuple(split.branches)
+            if len(branch_values) < len(child_ids) - 1:
+                raise ValueError(
+                    f"Categorical split on {split.predictor!r} needs at least "
+                    f"{len(child_ids) - 1} branch value sets, got "
+                    f"{len(branch_values)}."
+                )
+            # TODO(zona_gris): the brief renders categorical splits with exactly
+            # two branches ("If in {branches[0]}" / "Else"). If a categorical
+            # split ever carries more than two children, emitting only two of
+            # them would silently drop whole subtrees from the report, so any
+            # intermediate child is rendered as "Elif in {branches[i]}".
+            # In the binary case (one branch value set plus one Else) the
+            # output is exactly the one specified by the brief.
+            for index in range(len(child_ids) - 1):
+                keyword = "If" if index == 0 else "Elif"
+                lines.append(
+                    f"{indent}  - {keyword} in {branch_values[index]}:\n"
+                    + _md_node(child_ids[index], depth + 1)
+                )
+            lines.append(
+                f"{indent}  - Else:\n" + _md_node(child_ids[-1], depth + 1)
+            )
+            return "".join(lines)
+
+        raise ValueError(
+            f"Split on {split.predictor!r} has neither threshold, bin_edges nor "
+            f"branches; it cannot be exported to Markdown."
+        )
+
+    header = (
+        "# TreeGov Decision Tree\n\n"
+        f"**Fingerprint:** {model.params_fingerprint}\n"
+        f"**Method:** {model.method}\n\n"
+        "## Decision Rules\n\n"
+    )
+    return header + _md_node(model.root_id, 0)

@@ -6317,3 +6317,19 @@ B7 (docstring obsoleto), C5 (colores hardcoded en tests).
 **Cobertura**: 4 tests en `tests/test_exporters.py` (paridad cruzada SQL ↔ Python verificada en 5 topologías distintas).
 
 **Artefactos**: `backend_v3/exporters.py`, `tests/test_exporters.py`, `docs/4.0_design_exports.md`.
+
+### 01/11/2026 — Fase 4.0.b: Exportador Markdown
+
+**Estado**: ✅ Cerrado. Suite **487/487 PASSED**.
+
+**Modelo**: GLM-5.3-Flash-Free (OpenCode Zen, vía OpenCode 2.2.5).
+
+**Contexto**: Implementación de la función `export_to_markdown` en `backend_v3/exporters.py`. Esta función genera un documento Markdown estructurado que detalla el fingerprint, el método y las reglas de decisión del árbol (utilizando indentación jerárquica para representar los splits por umbral, bins o ramas categóricas).
+
+**Hallazgos y Zonas Grises (resueltas por el agente)**:
+1. El agente reutilizó el helper `_index_nodes()` existente en el módulo en lugar de duplicar lógica de recorrido de árbol.
+2. Se detectó una zona gris con splits categóricos de más de 2 ramas (el diseño solo preveía 2). El agente aplicó la decisión conservadora: renderiza los intermedios como "Elif in {branches[i]}", dejando un `# TODO(zona_gris)` en el código para su futura formalización. En el caso binario (el estándar actual), la salida es idéntica a la especificada.
+
+**Artefactos**: `backend_v3/exporters.py`.
+
+**Referencias**: `docs/4.0_design_exports.md`.
