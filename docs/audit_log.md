@@ -6425,3 +6425,23 @@ cambios posteriores).
 - `docs/playbook.md` Skill 5 (`/rafaga_estricta`).
 - `AGENTS.md` §Documentación obligatoria (mini-cierre).
 - `docs/prompt_para_asistente.md` §4 (mini-cierre).
+
+---
+
+### 01/11/2026 — Apertura de la Fase 5.0 (Capa MCP)
+
+**Estado**: ✅ Aprobado. Diseño auditado. Cero cambios de código.
+Suite 502/502 PASSED.
+
+**Contexto**: Tras el cierre de la Fase 4.0, se redactó el diseño de la
+Fase 5.0 (Capa MCP) en `docs/5.0_design_mcp.md`. El diseño expone el
+flujo de `Session` a agentes LLM mediante 24 herramientas MCP (stdio
+local), respetando la sala limpia mediante una nueva capa `mcp_v3/`.
+El asistente estratégico auditó el diseño y emitió veredicto APROBADO,
+con tres observaciones menores anotadas para las sub-fases de
+implementación (aislamiento de dependencias en pyproject, riesgo de
+rutas locales en security_audit, y manejo del ImportError del SDK).
+
+**Artefactos**: `docs/5.0_design_mcp.md` (creado y commiteado en 0cbac99).
+
+**Referencias**: `docs/playbook.md` (Skill 1, Skill 4).
