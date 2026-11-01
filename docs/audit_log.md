@@ -6516,3 +6516,23 @@ vía MCP (ruido de contexto del agente; candidata a resumen en 5.0.c/d);
   (517/517), `docs/roadmap.md` (5.0.b ✅), `docs/playbook.md` (Skill 4).
 
 **Tests**: 517/517 PASSED.
+
+---
+
+### 01/11/2026 (post-cierre) — Mini-cierre: resolución de los 4 TODO(zona_gris) de la Fase 5.0.b
+
+**Estado**: ✅ Resuelto. Suite 517/517 PASSED (verificada tras el bloque). Base: el commit único de 5.0.b ya se materializó (7a0df90, incluye el cierre documental); los deltas de este mini-cierre quedan en el working tree para el próximo commit (decisión humana).
+
+**Artefactos tocados**: `mcp_v3/server.py` (3 cambios), `treegov_mcp.py` (bloque lazy), `docs/audit_log.md` (esta entrada).
+
+**Resoluciones** (cada una con evidencia empírica):
+1. **(d) `typing.Any`** eliminado de `mcp_v3/server.py` (import no usado).
+2. **(c) Fuga de índices**: `get_session_state` hace `pop("train_idx"/"test_idx")` — verificado con CSV de 100 filas tras fix_spec+partition: `leak_absent: True` (27 claves restantes en el DTO).
+3. **(a) Default adaptativo de `evaluate_oos`**: confirmado en la forma del asistente (`n_test = len(s.state.test_idx) if s.state.test_idx else 0`; docstring simplificado; regla D20 sin cambios de fondo; decisión §20.1 de design_decisions sigue vigente).
+4. **(b) Import lazy**: bloque eager + TODO sustituido por try/except ImportError dentro de `main()`; verificado por simulación (poison `sys.modules["mcp"] = None` en subproceso): `module_import_ok: True` (el módulo importa SIN SDK) y `main()` escribe "Error: El SDK de MCP no está instalado. Ejecuta: pip install treegov[mcp]" en stderr con exit 1.
+
+**Nota**: la nota intra-main sobre logs→stderr de FastMCP desapareció con la forma entregada por el asistente; D8 no cambia y sus riesgos (R3/R8 del diseño §7) siguen cubiertos por FastMCP.
+
+**Tests**: 517/517 PASSED (exit 0).
+
+**Referencias cruzadas**: `docs/audit_log.md` 01/11/2026 (Fase 5.0.b, sección TODOs(zona_gris)); `docs/design_decisions.md` §20.1.
