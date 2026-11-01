@@ -708,7 +708,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | exporters.py | 4 |
 | **Total** | **487** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 480/480 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 487/487 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

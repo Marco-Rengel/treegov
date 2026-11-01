@@ -276,7 +276,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 483/483 passing.**
+**Test suite: 487/487 passing.**
 
 ---
 
