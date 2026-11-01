@@ -110,7 +110,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** 480/480 PASSED (31/10/2026: bloque A1+A3 cerrado).
+- **Suite de tests:** **487/487 PASSED** (01/11/2026: Fase 4.0.a Exportadores SQL/Python cerrada).
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -197,6 +197,17 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   eliminó los 504 recurrentes de NIM que históricamente forzaban
   aplazamientos (incluidos los de documentación de cierre).
 - **Modelo:** `moonshotai/kimi-k3` (Kimi K3, contexto 1M).
+
+### Herramienta activa — OpenCode 2.2.5 + IA Gratuita (Actualización 01/11/2026)
+
+- **Herramienta:** OpenCode 2.2.5 (global vía `npm`).
+- **Proveedor:** OpenCode Zen (Gratuito).
+- **Modelo principal:** `deepseek-v4-flash-free` (200K de contexto).
+- **Modelo de rotación:** `qwen3.6-plus-free` o `nemotron-3-ultra-free`.
+- **Regla de oro (ahorro de tokens):** Prompts hiper-quirúrgicos. NUNCA pedirle a la IA que "lea" un archivo completo; darle el bloque de código exacto (diff) para reemplazar. Si la ventana de contexto pasa del 50% o falla 2 veces, cambiar de modelo con `/models` (esto limpia la ventana).
+- **Respaldo de pago:** El saldo de Moonshot (~$7) queda reservado como comodín exclusivo para atascos críticos.
+#### Atributos de la configuración antigua (Histórico - Kimi K3)
+> **NOTA:** Los siguientes datos de configuración, costes y caché pertenecen al paradigma de pago (Kimi K3) y se conservan como registro histórico. La herramienta actual es gratuita (OpenCode Zen).
 - **Nivel de razonamiento:** `high` por defecto. Reservar `max` para
   tareas complejas (refactorización estructural, depuración de bugs).
   Para documentación y ediciones quirúrgicas, `high` es suficiente y
@@ -384,15 +395,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 25/10/2026: Fases 0 a
-> 3.11.d cerradas, más 3.6.e (modo no-bancario), Hotfix Visual
-> post-3.6.e y bloque de iteración del Tree Map (#4-#8, layout
-> abstracto con navegación por node_id). Suite 478/478. Release
-> 1.0.0rc4 publicada en PyPI. Deuda pendiente: paleta propia del
-> minimapa (independiente del tema). Próximo paso: recogida de
-> feedback para 1.0.0 estable o inicio de Fase 4.0. Regla
-> operativa: ráfagas cortas con OpenCode 1.19.0 +
-> moonshotai/kimi-k3; reasoning=max para código, high para docs."
+> "Retomamos TreeGov. Soy Marco. Estado al 01/11/2026: Fases 0 a 3.11.d cerradas, más 3.6.e (modo no-bancario). Suite 487/487. Fase 4.0.a (Exportadores SQL/Python) cerrada. Release 1.0.0rc4 publicada en PyPI. Deuda pendiente: Fase 4.0.b (Markdown/JSON) y 4.0.c (GUI). Herramienta activa: OpenCode 2.2.5 + IA Gratuita (DeepSeek V4 Flash Free). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 
@@ -406,6 +409,8 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 ---
 
 ## 11. Protocolo de Redacción de Prompts (Lecciones de la Fase 3.8)
+
+> **NOTA DE ACTUALIZACIÓN (01/11/2026):** Donde el texto diga "Kimi K3", debe leerse "el agente actual (DeepSeek V4 Flash Free / OpenCode Zen)".
 
 Para evitar zonas grises, asunciones falsas y roturas de documentación, todo prompt generado por el asistente para OpenCode (Kimi K3) debe cumplir estas reglas estrictas:
 

@@ -6300,3 +6300,20 @@ B7 (docstring obsoleto), C5 (colores hardcoded en tests).
 3.11_gui_design_system.md §2.1, design_decisions.md §0.5 y §18.11.
 
 ---
+
+### 31/10/2026 — Fase 4.0.a: Exportadores de Producción (SQL y Python)
+
+**Estado**: ✅ Cerrado. Suite **487/487 PASSED**. Commit `12685da`.
+
+**Modelo**: DeepSeek V4.1 Flash Free (OpenCode v2.2.5).
+
+**Contexto**: Creación del módulo `backend_v3/exporters.py` para extraer el conocimiento del `TreeModel` a código ejecutable en sistemas legados. Se implementó `export_to_sql` (ANSI, CASE WHEN anidado con COALESCE para el ImputationSpec) y `export_to_python` (Python puro, sin dependencias).
+
+**Hallazgos y zonas grises resueltas (por el agente)**:
+1. **Doble CASE en SQL**: Resuelto omitiendo el `SELECT CASE` inicial y emitiendo directamente el bloque CASE anidado del nodo raíz.
+2. **`bin_edges` en `SplitConfig` es `()` no `None`**: El agente detectó en runtime que validar `is not None` rompía todos los splits categóricos. Corregido usando validación de verdad (`if split.bin_edges:`).
+3. **Ámbito de `_eval_tree` en Python**: La lógica de imputación se movió dentro de `_eval_tree` (en lugar de `predict`) para evitar `NameError` y se añadió guarda de `None` (el `.get()` simple no cubría valores nulos, solo llaves ausentes).
+
+**Cobertura**: 4 tests en `tests/test_exporters.py` (paridad cruzada SQL ↔ Python verificada en 5 topologías distintas).
+
+**Artefactos**: `backend_v3/exporters.py`, `tests/test_exporters.py`, `docs/4.0_design_exports.md`.

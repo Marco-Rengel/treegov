@@ -22,7 +22,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de 477/477 tests, no se commitea.
+Si la suite baja de **487/487** tests (conteo al 01/11/2026), no se commitea.
 
 **Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
 a los 5 minutos de inactividad. Verificar en PowerShell entre cada
@@ -32,6 +32,8 @@ bloque al final, luego commit. Ver sección "## Trabajo en ráfaga" más
 abajo.
 
 ## Trabajo en ráfaga
+
+> **NOTA DE ACTUALIZACIÓN (01/11/2026):** El siguiente análisis sobre la caché de Moonshot y costes ($0.113) es histórico. En el paradigma actual de IA Gratuita (OpenCode Zen + DeepSeek), la ráfaga sigue siendo la regla de oro, pero el motivo principal ya no es el TTL de 5 minutos, sino **no agotar la ventana de contexto de 200K tokens**. Si la ventana se llena (llegando al 50-80%), la IA empezará a olvidar las instrucciones iniciales. La rotación de modelo (`/models`) reinicia la ventana a cero.
 
 La caché de prompt de Moonshot funciona solo si el prefijo entre
 peticiones es idéntico y hay menos de 5 minutos entre ellas.
@@ -89,7 +91,18 @@ Reglas operativas derivadas:
 Prohibido importar: sklearn, statsmodels, xgboost, lightgbm, catboost.
 Toda fórmula estadística con cita bibliográfica explícita.
 
+## Proveedor de IA: OpenCode Zen (Gratuito - Actualizado 01/11/2026)
+
+*   **Herramienta activa:** OpenCode v2.2.5.
+*   **Modelos:** `deepseek-v4-flash-free` (principal), `qwen3.6-plus-free` (alternativa de rotación).
+*   **Restricción de contexto:** Ventana de 200K tokens. Los prompts deben ser hiper-quirúrgicos (basados en diffs exactos, no lectura de archivos enteros).
+*   **Estrategia de rotación:** Si un modelo falla dos veces seguidas en el mismo prompt o la ventana de contexto supera el 50%, se cierra la sesión y se cambia de modelo con `/models`. No se insiste.
+*   **Reversión:** Si se decide volver al modelo de pago, cambiar los campos `model` y `small_model` en `opencode.json` a `moonshotai/kimi-k3` y restaurar la API key en OpenCode.
+
 ## Prompts grandes
+
+> **NOTA DE ACTUALIZACIÓN (01/11/2026):** Estas reglas siguen vigentes, pero donde dice "Kimi", debe leerse "el agente actual (DeepSeek V4 Flash Free)". Recuerda que el formato preferido ahora es el de **diff exacto** (reemplazar bloque X por bloque Y) en lugar de prosa libre, para ahorrar tokens y evitar que la IA se pierda en la ventana de 200K.
+
 
 **Reglas actualizadas tras migración a Moonshot AI (03/10/2026) y
 aprendizajes de las sesiones del 03 y 04/10/2026:**
@@ -167,7 +180,7 @@ push, y cerrar OpenCode. La siguiente sub-fase arranca con un cliente
 nuevo y prefijo pequeño. Otras razones para cerrar y reabrir OpenCode:
 un cambio en `opencode.json` que requiera recarga de configuración.
 
-## Proveedor de IA: Moonshot AI directo (desde 03/10/2026)
+## Proveedor de IA: Moonshot AI directo (Histórico - 03/10/2026 a 31/10/2026)
 
 Cliente activo desde 09/10/2026: OpenCode 1.18.35, autenticado con key
 propia de Moonshot (conexión directa al endpoint `api.moonshot.ai`,

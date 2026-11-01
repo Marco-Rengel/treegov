@@ -181,6 +181,12 @@ propia de Moonshot; con esta combinación (OpenCode 1.19.0 + Moonshot
 directo) los problemas anteriores no se reproducen y el consumo de
 tokens es sustancialmente menor. Actualizado a 1.19.0 el 11/10/2026.
 
+**Actualización Metodológica (01/11/2026): Migración a IA Gratuita.** 
+Se ha migrado el flujo principal de Moonshot AI (Kimi K3 de pago) a **OpenCode Zen (Gratuito)** en su versión **v2.2.5**. 
+*   **Modelo principal:** `deepseek-v4-flash-free` (ventana 200K, ideal para plomería y código acotado).
+*   **Modelo de rotación:** `qwen3.6-plus-free` o `nemotron-3-ultra-free` (cuando DeepSeek agote su ventana o falle).
+*   **Saldo de pago:** El remanente de Moonshot (~$7) se reserva exclusivamente como comodín para atascos críticos. La configuración antigua de Kimi K3 se conserva abajo como registro histórico.
+
 ### Herramienta de respaldo — Aider 0.86.2
 
 Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
@@ -205,7 +211,12 @@ Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
     Remove-Variable key
     aider <archivo1> <archivo2>
 
-### Configuración correcta del modelo
+### Configuración correcta del modelo (Histórico - Kimi K3)
+
+> **NOTA DE ACTUALIZACIÓN (01/11/2026):** Esta sección se conserva como registro del incidente del 05-06/10/2026. En la actualidad, el `opencode.json` usa `deepseek-v4-flash-free` (ver bloque de Migración a IA Gratuita arriba).
+
+El archivo `opencode.json` del proyecto debe tener
+`"model": "moonshotai/kimi-k3"` y `"small_model": "moonshotai/kimi-k3"`
 
 El archivo `opencode.json` del proyecto debe tener
 `"model": "moonshotai/kimi-k3"` y `"small_model": "moonshotai/kimi-k3"`
@@ -216,7 +227,11 @@ Inference respectivamente). Verificado: los logs de OpenCode mostraban
 "Model not found: moonshot/kimi-k3. Did you mean: moonshotai,
 moonshotai-cn?".
 
-### Plugin de caché
+### Plugin de caché (Histórico - Obsoleto en OpenCode v2)
+
+> **NOTA DE ACTUALIZACIÓN (01/11/2026):** Este plugin fue eliminado en la migración a OpenCode v2.2.5 porque la nueva versión ya tiene una caché nativa. No intentar instalarlo.
+
+El plugin `@jimmyyen/opencode-context-cache` debe estar en el array
 
 El plugin `@jimmyyen/opencode-context-cache` debe estar en el array
 `plugin` del `opencode.json`. Sin él, la caché de prompt de Moonshot
@@ -243,7 +258,7 @@ El criterio central: **si el cambio puede romper consumidores en cascada, `max`*
 
 Evidencia: durante la Fase 3.3.d, la configuración por defecto de OpenCode quedó en `low` tras la actualización a 1.19.0, y produjo 15 fallos evitables en la suite. Al subir a `max`, los errores se detectan antes de escribir el código. El coste por prompt sube de ~$0.15 a ~$0.37, pero el ahorro en correcciones lo compensa.
 
-Verificación: la cabecera del chat de OpenCode muestra el nivel activo (p. ej. `Build · Kimi K3 Moonshot AI · max`).
+Verificación: la cabecera del chat de OpenCode muestra el nivel activo (p. ej. `Build · DeepSeek V4.1 Flash Free · max` en la versión actual).
 
 ## Gobernanza
 
