@@ -37,6 +37,7 @@ import pandas as pd
 
 from .chaid_engine import ChaidEngine
 from .crt_engine import CrtEngine
+from .exporters import export_to_markdown, export_to_python, export_to_sql
 from .imputation import TrainOnlyImputer
 from .log_config import get_logger
 from .profiling import _infer_column, infer_spec  # _infer_column: reuso interno backend
@@ -1185,6 +1186,47 @@ class Session:
                     "cut_points": [],
                 })
         return results
+
+    def export_to_sql(self) -> str | None:
+        """Export the trained model as ANSI SQL (Phase 4.0.c).
+
+        Returns None when no model is trained (paridad con
+        get_gains_table / get_classification_matrix). RuntimeError if
+        the model exists but the imputer cache is missing: partition()
+        always populates _imputer when a tree is produced, so this is
+        a defensive guard for a broken invariant.
+        """
+        if self._state.tree is None:
+            return None
+        if self._imputer is None:
+            raise RuntimeError(
+                "[session] export_to_sql sin imputer en cache "
+                "(partition() no ejecutado)"
+            )
+        return export_to_sql(self._state.tree, self._imputer.spec)
+
+    def export_to_python(self) -> str | None:
+        """Export the trained model as a dependency-free Python module
+        (Phase 4.0.c). None when no model is trained. RuntimeError on
+        a broken imputer invariant (see export_to_sql).
+        """
+        if self._state.tree is None:
+            return None
+        if self._imputer is None:
+            raise RuntimeError(
+                "[session] export_to_python sin imputer en cache "
+                "(partition() no ejecutado)"
+            )
+        return export_to_python(self._state.tree, self._imputer.spec)
+
+    def export_to_markdown(self) -> str | None:
+        """Export the trained model as a human-readable Markdown report
+        (Phase 4.0.c). None when no model is trained. Does not require
+        the imputer (the markdown exporter is descriptive only).
+        """
+        if self._state.tree is None:
+            return None
+        return export_to_markdown(self._state.tree)
 
     def load_oot(self, csv_path: str, *, time_col: str | None = None) -> SessionState:
         """TRAINED -> OOT_LOADED: ingesta de la cohorte temporal posterior.
