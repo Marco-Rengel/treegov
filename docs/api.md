@@ -275,6 +275,20 @@ underscore) are internal and may change without notice.
 
 - `install_import_guard()`, `is_installed()`
 
+## mcp_v3 (Phase 5.0.a — headless MCP skeleton)
+
+- `mcp_v3.tools.TOOLS` — registry of 24 frozen `ToolDescriptor`
+  entries (`name`, `description`, `method_name`, `min_state`), each
+  mapping 1:1 to a public `Session` method/property (Invariant I-4).
+  Intended consumer: the MCP server built in Phase 5.0.b.
+- `mcp_v3.dto._jsonable` — underscore prefix = internal under the
+  stability rule above. Invariant I-3: `json.dumps(_jsonable(x),
+  allow_nan=False)` never raises (NaN/Inf → None).
+
+> TODO(zona_gris): declarar el registro como API pública/estable 1.x
+> solo cuando exista el servidor MCP (Fase 5.0.b); hasta entonces es
+> esqueleto interno de la Fase 5.
+
 ---
 
 ## Cross-reference — design decisions

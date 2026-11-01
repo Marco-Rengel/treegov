@@ -124,8 +124,13 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.11.c** | Árboles Univariados en lote + Matriz de Costos N×N | ✅ |
 | **3.11.d** | Menú Contextual + Manual Override Log | ✅ |
 | **3.6.e** | Modo No-Bancario: terminología dinámica vía `tr_term` (BANKING bit-idéntica, RESEARCH neutra) | ✅ |
+| 4.0.a | Exportadores SQL y Python (`backend_v3/exporters.py`) | ✅ |
+| 4.0.b | Exportador Markdown (`export_to_markdown`) | ✅ |
+| 4.0.c | Integración GUI de exportadores (menú Archivo + `QFileDialog`) | ✅ |
+| **4.0** | **Export to production (fase completa)** | **✅ Cerrada** |
+| 5.0.a | Esqueleto headless MCP (`mcp_v3`: `_jsonable` + 24 ToolDescriptor) | ✅ |
 
-**Suite de tests:** 502/502 PASSED
+**Suite de tests:** 513/513 PASSED
 
 ## Entorno de desarrollo
 
@@ -313,9 +318,9 @@ Python, 31/10/2026), 4.0.b (Markdown, 01/11/2026) y 4.0.c
 Session, no exposición de `_imputer`): `docs/design_decisions.md`
 §19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
-**Próximo paso:** recogida de feedback de `1.0.0rc4` para la `1.0.0`
-estable, o inicio de una nueva fase (MCP layer, Fase 5; batch
-scoring, Fase 6; IFRS 9/ECL, Fase 7). Decisión a tomar con el autor.
+**Próximo paso:** sub-fase **5.0.b** — servidor MCP (adapter stdio)
+sobre el registro `mcp_v3/tools.py`; esqueleto 5.0.a cerrado el
+01/11/2026 (suite 513/513). Plan de sub-fases: `docs/5.0_design_mcp.md` §6.
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema

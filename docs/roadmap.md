@@ -395,6 +395,13 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - MCP (Model Context Protocol) layer for consumption from LLM agents.
   Headless backend as the base; MCP as an adapter (does not replace
   the GUI).
+- **5.0.a** Esqueleto headless MCP: paquete `mcp_v3/` — `dto.py`
+  (conversor JSON-nativo `_jsonable`; Invariante I-3) y `tools.py`
+  (24 `ToolDescriptor` frozen; Invariante I-4). ✅ Completada
+  (01/11/2026, suite 513/513). Próximo paso: 5.0.b (servidor stdio).
+
+**Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
+entrada del 01/11/2026.
 
 ### ⏳ Phase 6 — Batch scoring and production
 **Priority: MEDIUM**
@@ -416,7 +423,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b completa (b.1–b.5) + 3.11.c completa (c.1–c.3) + 3.11.d completa (d.1–d.3) + el bloque de saneamiento post-auditoría externa (ZG-1/2/3/5) + la Fase 3.6.e (modo no-bancario, terminología dinámica `tr_term`) y 502/502 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (01/11/2026):** tras el cierre de la Fase 4.0 y la sub-fase 5.0.a, los READMEs del repo reflejan "Phases 0 → 4.0 complete" (foco Fase 5, capa MCP) y 513/513 tests con fecha 01 nov 2026; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (diagrama Mermaid, fecha, conteo de tests): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material — la primera candidata es el cierre de la Fase 5.0, que incorpora el paquete `mcp_v3` al wheel (siguiendo el protocolo PyPI, cambio material).
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**

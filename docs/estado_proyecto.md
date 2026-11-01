@@ -558,6 +558,18 @@ la Fase 4.0.b: 4 tests nuevos para `export_to_markdown` en
 `docs/4.0_design_exports.md`. Decisión: `docs/design_decisions.md`
 §19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
+### Fase 5.0.a — Esqueleto headless MCP ✅ Completada (01/11/2026)
+
+Se crea la capa `mcp_v3/` (sin SDK de MCP, testeable headless): `dto.py`
+con el conversor JSON-nativo `_jsonable` (NaN/Inf → `None`; Invariante
+I-3: `json.dumps(payload, allow_nan=False)` nunca lanza) y `tools.py`
+con el registro plano de 24 `ToolDescriptor` frozen (nombre,
+descripción, `method_name` en `Session`, `min_state` de la máquina
+`FlowState`; Invariante I-4). 11 tests nuevos en
+`tests/test_mcp_tools.py` y el paquete entra en el wheel
+(`pyproject.toml`). Suite 513/513. Diseño: `docs/5.0_design_mcp.md`.
+Cierre: `docs/audit_log.md` entrada del 01/11/2026.
+
 ---
 
 ## 4. Arquitectura
@@ -575,7 +587,8 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
-├── tests/ # Suite de tests (477 tests)
+├── mcp_v3/ # Capa MCP headless (Fase 5)
+├── tests/ # Suite de tests (513 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -723,9 +736,10 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | exporters.py | 8 |
 | session_exporters (backend) | 7 |
 | e2e_exporters_gui (frontend) | 4 |
-| **Total** | **502** |
+| mcp_tools (backend) | 11 |
+| **Total** | **513** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 502/502 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 513/513 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

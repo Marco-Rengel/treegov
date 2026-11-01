@@ -6445,3 +6445,27 @@ rutas locales en security_audit, y manejo del ImportError del SDK).
 **Artefactos**: `docs/5.0_design_mcp.md` (creado y commiteado en 0cbac99).
 
 **Referencias**: `docs/playbook.md` (Skill 1, Skill 4).
+
+---
+
+### 01/11/2026 — Fase 5.0.a: Esqueleto headless MCP
+
+**Estado**: ✅ Cerrado. Suite 513/513 PASSED. Commit único de 5.0.a.
+
+**Contexto**: Creación de la capa `mcp_v3/` (esqueleto) con el registro de 24 herramientas y el conversor JSON-nativo (`_jsonable`). GLM detectó que faltaba `mcp_v3` en `pyproject.toml` (corregido en este bloque) y actualizó los Mermaid de los READMEs con los datos reales.
+
+**Artefactos**:
+- `mcp_v3/__init__.py` (nuevo)
+- `mcp_v3/dto.py` (nuevo, Invariante I-3)
+- `mcp_v3/tools.py` (nuevo, 24 descriptores frozen, Invariante I-4)
+- `tests/test_mcp_tools.py` (nuevo, 11 tests)
+- `pyproject.toml` (+mcp_v3)
+- `README.md` / `README.es.md` (Mermaid actualizado)
+- `docs/roadmap.md` (fila 5.0.a completada y nota PyPI Deferred vigente actualizada)
+- `docs/estado_proyecto.md` (conteo 513/513, fila mcp_tools: 11, bloque narrativo 5.0.a)
+- `docs/contexto_para_nueva_sesion.md` (próximo paso: 5.0.b)
+- `docs/prompt_para_asistente.md` (conteo 513/513)
+- `docs/api.md` (nota 5.0.a: esqueleto mcp_v3; registro no declarado aún API estable 1.x, TODO(zona_gris))
+- `docs/playbook.md` (marcar 5.0.a completada en Skill 4)
+
+**Tests**: 513/513 PASSED.

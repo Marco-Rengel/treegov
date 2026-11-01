@@ -39,7 +39,7 @@ Homepage = "https://github.com/Marco-Rengel/treegov"
 Repository = "https://github.com/Marco-Rengel/treegov"
 
 [tool.setuptools]
-packages = ["backend_v3", "frontend_v3", "frontend_v3.resources"]
+packages = ["backend_v3", "frontend_v3", "frontend_v3.resources", "mcp_v3"]
 
 [tool.setuptools.package-data]
 frontend_v3 = ["resources/*.qss"]

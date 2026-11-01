@@ -61,6 +61,7 @@
 | **3.11.d** | `docs/3.11.d_design_context_menu_interactivity.md` | ✅ Completed (25/10/2026) |
 | **3.6.e** | `docs/3.6.e_design_non_banking.md` | ✅ Completed (25/10/2026) |
 | **5.0** | `docs/5.0_design_mcp.md` | ✅ Approved (01/11/2026) |
+| **5.0.a** | `docs/5.0_design_mcp.md` (as-built §1) | ✅ Completed (01/11/2026) |
 
 **Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.
 

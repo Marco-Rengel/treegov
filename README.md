@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 3.11 complete<br/>🔧 Focus: Phase 4.0 / v1.0.0<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 487 / 487 tests PASSED<br/>📅 Oct 31, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 4.0 complete<br/>🔧 Focus: Phase 5.0 / MCP layer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 513 / 513 tests PASSED<br/>📅 Nov 1, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
