@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 25/10/2026
+**Fecha de última actualización:** 01/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -125,7 +125,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.11.d** | Menú Contextual + Manual Override Log | ✅ |
 | **3.6.e** | Modo No-Bancario: terminología dinámica vía `tr_term` (BANKING bit-idéntica, RESEARCH neutra) | ✅ |
 
-**Suite de tests:** 487/487 PASSED
+**Suite de tests:** 502/502 PASSED
 
 ## Entorno de desarrollo
 
@@ -305,42 +305,17 @@ documental.
 
 **Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
 
-**Próximo paso (25/10/2026):** el bloque de iteración del Tree Map (mini-cierres #4-#8) queda cerrado con navegación funcional por `node_id` y layout abstracto. Deuda pendiente: fase de diseño para la paleta propia del minimapa (independiente del tema de la app). Después: recogida de feedback para la `1.0.0` estable o inicio de la Fase 4.0. La **Fase 3.6.e
-(Modo No-Bancario y Terminología Neutral) quedó cerrada el 25/10/2026
-con suite 477/477** (ráfaga e.1+e.2+e.3: resolvedor `tr_term` con 24
-claves `term_banking_*`/`term_research_*`, paneles con
-`set_governance_mode` cableados al `GovernanceMode` del fingerprint,
-E2E con fixture no-bancario). El **bloque de saneamiento
-post-auditoría externa quedó cerrado el 25/10/2026** (ZG-1 fingerprint
-`-iN`, ZG-2 matriz de costos N×N dinámica, ZG-3 parámetros de `train()`
-propagados a univariados, ZG-5 `np.digitize(right=True)`, fugas frontend
-`html.escape` y `closeEvent` en DataViewer). La **Fase
-3.11.d (Menú Contextual e Interactividad) quedó cerrada el 25/10/2026
-con suite 477/477** (cierre documental en bloque único, regla de
-ráfaga): d.1 (Backend interactivo: `Session.intervene_node` con
-`prune_branch`, re-indexado BFS `_reindex_tree` —invariante
-`node_id == index`—, `SessionState.manual_overrides` inmutable y
-fingerprint sufijado `-iN` (renombrado de `-pN` en el saneamiento del
-25/10/2026)), d.2 (menú contextual del canvas: señal
-`node_context_menu`, QMenu Grow/Prune con confirmación BANKING vía
-`QMessageBox`) y d.3 (`ManualOverrideDialog` —tabla Time | Node |
-Action | FP Before | FP After, Ctrl+C → TSV— y botón "Ver Auditoría"
-del HUD habilitado tras entrenar). Con esto, la **Fase 3.11 queda
-cerrada por completo**. Diseño de referencia:
-`docs/3.11.d_design_context_menu_interactivity.md` (auditado). La
-Fase 3.11.c quedó cerrada el 25/10/2026 con suite 470/470 (misma
-jornada). La Fase
-3.11.b quedó cerrada el 25/10/2026 con suite 465/465 (commits
-`6e4c4b5`, `a856c2c`, el de la b.3 y `b5cb5e6` para b.4+b.5).
+**Fase 4.0 — Exportadores de producción: ✅ cerrada (01/11/2026,
+suite 502/502).** Tres sub-fases en rápida secuencia: 4.0.a (SQL y
+Python, 31/10/2026), 4.0.b (Markdown, 01/11/2026) y 4.0.c
+(integración GUI, 01/11/2026, este bloque). Diseño:
+`docs/4.0_design_exports.md`. Decisión arquitectónica (wrapper en
+Session, no exposición de `_imputer`): `docs/design_decisions.md`
+§19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
-**Hotfix Visual post-3.6.e (25/10/2026):** aplicado y cerrado
-(mini-cierre en `docs/audit_log.md`; decisión `docs/design_decisions.md`
-§18.11): Tree Map con conectores padre-hijo y etiquetas de `node_id`,
-selección bidireccional mapa↔canvas (clic en el mapa → `select_node` +
-HUD), Menú Ver granular (toggles por bloque del panel izquierdo) y
-texto del wizard de Validación Cruzada sin referencias a fases
-internas. Suite 477/477. El proyecto está listo para la **Fase 4.0** o
-la recogida de feedback de la `1.0.0` estable.
+**Próximo paso:** recogida de feedback de `1.0.0rc4` para la `1.0.0`
+estable, o inicio de una nueva fase (MCP layer, Fase 5; batch
+scoring, Fase 6; IFRS 9/ECL, Fase 7). Decisión a tomar con el autor.
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema

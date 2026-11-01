@@ -6333,3 +6333,50 @@ B7 (docstring obsoleto), C5 (colores hardcoded en tests).
 **Artefactos**: `backend_v3/exporters.py`.
 
 **Referencias**: `docs/4.0_design_exports.md`.
+
+---
+
+### 01/11/2026 — Fase 4.0.c: Integración de los exportadores en la GUI
+
+**Estado**: ✅ Cerrado. Suite 502/502 PASSED. Commit único del bloque
+de ráfaga (P1 → P7).
+
+**Modelo**: DeepSeek V4 Flash Free / GLM-5.3-Flash-Free (OpenCode
+v2.2.5, OpenCode Zen). Ejecución en ráfaga (Skill 5), un solo
+commit, un solo push al final.
+
+**Contexto**: la Fase 4.0.a/b (exportadores SQL / Python / Markdown)
+dejó el módulo `backend_v3/exporters.py` completo pero aislado: el
+usuario no podía exportar el modelo entrenado desde la GUI. La
+sub-fase 4.0.c cierra la Fase 4.0 conectando los exportadores al
+menú Archivo, respetando la sala limpia (frontend no importa
+`backend_v3.exporters`) y añadiendo tests backend + E2E headless.
+
+**Artefactos tocados (por ruta exacta)**:
+
+- `backend_v3/session_state.py` — 3 métodos públicos `Session.export_to_sql/python/markdown` (wrappers de `backend_v3.exporters`), import del módulo, ~42 líneas. Los métodos devuelven `str | None` (paridad con `get_gains_table`/`get_classification_matrix`) y solo exigen `_imputer` para SQL y Python (el exportador Markdown es descriptivo, no necesita `ImputationSpec`).
+- `frontend_v3/i18n.py` — 12 claves nuevas por idioma (24 líneas en total): `menu_file_export_{sql,python,markdown}`, `export_{sql,python,markdown}_filter`, `export_{sql,python,markdown}_dialog_title`, `export_{sql,python,markdown}_default_filename`. Los mensajes de éxito/error reutilizan las claves existentes `reports_export_*`.
+- `frontend_v3/main_window.py` — 3 acciones nuevas en el menú Archivo (`act_export_sql`, `act_export_python`, `act_export_markdown`) deshabilitadas por defecto; cableado en `_refresh_session_indicator` vía `has_tree`; tres `setText`/`setToolTip` en `retranslate_ui`; tres slots nuevos: `_on_export(kind)`, `_export_payload(kind)` (devuelve `(content, file_filter, default_name) | None`, testeable headless) y `_save_export(kind, content, file_filter, default_name)` (QFileDialog + escritura UTF-8 + QMessageBox de éxito/error reutilizando `reports_export_*`).
+- `tests/test_session_exporters.py` (NUEVO) — 7 tests del contrato `Session.export_to_*`: 3 del retorno `None` sin modelo, 3 del contenido tras entrenar un CRT real (verifican encabezado con fingerprint, marcas estructurales de cada formato) y 1 de consistencia (fingerprint presente en los tres formatos).
+- `tests/test_exporters.py` (AMPLIACIÓN) — 4 tests nuevos de `export_to_markdown`: header + fingerprint + method; rama de threshold (`If <= 40.0` / `Else`); hojas con probabilidad a 4 decimales; firma sin imputer. Cierra la deuda silenciosa de la Fase 4.0.b, que se cerró sin tests del exportador Markdown.
+- `tests/test_e2e_exporters_gui.py` (NUEVO) — 4 tests E2E headless (offscreen): acciones deshabilitadas sin modelo; acciones habilitadas tras `_on_wizard_finished`; `_export_payload` devuelve tupla bien formada con el fingerprint correcto en cada formato; `_export_payload` devuelve `None` sin modelo.
+
+**Hallazgos / decisiones**:
+
+1. **Wrappers en `Session` (sala limpia)**: la GUI no importa `backend_v3.exporters` ni accede a `_imputer`. Toda la comunicación pasa por `Session.export_to_*` — mismo patrón que `get_gains_table`/`get_classification_matrix`. Documentado en `docs/design_decisions.md` §19.1.
+2. **`export_to_markdown` sin imputer**: la firma del exportador Markdown solo toma `TreeModel` (`backend_v3/exporters.py`). Se refleja en `Session.export_to_markdown`, que no comprueba `_imputer` (a diferencia de SQL y Python). Evita un `RuntimeError` falso cuando el modelo existe pero el imputer no (caso teórico imposible tras `train()`, pero la guarda debe ser semánticamente exacta).
+3. **`_export_payload` separado de `_save_export`**: el payload (contenido + filtro + nombre por defecto) es testeable sin diálogo modal (E2E headless). El save (QFileDialog + escritura + feedback) solo corre en un entorno interactivo real, protegido por `platformName() != "offscreen"`.
+4. **Deuda ZG-C cerrada**: la Fase 4.0.b cerró sin tests del exportador Markdown; 4.0.c los añade (P5). Se documenta el cierre en `docs/roadmap.md` §Deferred y se anota el update en la propia entrada de 4.0.b del `audit_log.md` (append-only: nueva entrada con "update" al final, no se reescribe el histórico).
+
+**Invariantes preservadas**:
+
+- Sala limpia: `frontend_v3/` no importa `backend_v3.exporters`; `backend_v3/` no importa Qt. Verificado con `test_frontend_clean_room`.
+- Caja blanca: los exportadores siguen derivando del `TreeModel` y del `ImputationSpec`; el fingerprint viaja como comentario en cada artefacto.
+- K=2 paridad: ninguna fórmula del modelo cambia; los wrappers son pass-through.
+- `SessionState` intacto: ninguna llamada de exportación muta el estado, el `event_log` ni el `params_fingerprint`.
+
+**Tests**: 502/502 PASSED (`python -m pytest tests -q`; 487 previos
++ 7 de `test_session_exporters.py` + 4 nuevos de `test_exporters.py`
++ 4 de `test_e2e_exporters_gui.py`). Si el conteo real difiere, se
+anota aquí con el texto "Conteo real N/N tras verificación" antes
+del commit.

@@ -543,6 +543,21 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 
 La GUI se abrió en pantalla real por primera vez y se recorrió el flujo completo con el *dataset* sintético `data/credit_risk_dataset.csv`: cargar CSV, asistente de 4 pasos, entrenamiento CRT, evaluación OOS, gains table, matriz de clasificación con umbrales variables, export HTML y tema oscuro. Todos los pasos funcionaron correctamente y los valores numéricos mostrados coinciden con la corrida headless (PD raíz 6.65%, Gini OOS 0.4265, KS 0.3614). Se registraron 8 hallazgos de usabilidad y estética (H1 a H8) como deuda diferida. Ver `docs/roadmap.md` sección Deferred y `docs/audit_log.md` entrada del 13/10/2026.
 
+### Fase 4.0.c — Integración GUI de exportadores ✅ Completada (01/11/2026)
+
+Cierra la Fase 4.0. Tres acciones nuevas en el menú Archivo
+(`act_export_sql`, `act_export_python`, `act_export_markdown`)
+deshabilitadas hasta que exista un modelo entrenado, cableadas a
+`Session.export_to_{sql,python,markdown}` (wrappers de
+`backend_v3.exporters`). El slot `_export_payload(kind)` construye
+`(contenido, filtro, nombre_por_defecto)` sin tocar diálogos
+(testable en headless); `_save_export(kind, ...)` abre el
+`QFileDialog` y escribe UTF-8. Cierra también la deuda silenciosa de
+la Fase 4.0.b: 4 tests nuevos para `export_to_markdown` en
+`tests/test_exporters.py`. Suite 502/502. Diseño:
+`docs/4.0_design_exports.md`. Decisión: `docs/design_decisions.md`
+§19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
+
 ---
 
 ## 4. Arquitectura
@@ -705,10 +720,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| exporters.py | 4 |
-| **Total** | **487** |
+| exporters.py | 8 |
+| session_exporters (backend) | 7 |
+| e2e_exporters_gui (frontend) | 4 |
+| **Total** | **502** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 487/487 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 502/502 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

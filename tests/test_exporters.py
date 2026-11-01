@@ -15,7 +15,11 @@ from typing import NamedTuple
 
 import pytest
 
-from backend_v3.exporters import export_to_python, export_to_sql
+from backend_v3.exporters import (
+    export_to_markdown,
+    export_to_python,
+    export_to_sql,
+)
 from backend_v3.imputation import ImputationSpec
 from backend_v3.tree_builder import TreeModel, TreeNode
 from backend_v3.types import PredictorType, SplitConfig, TargetType  # noqa: F401
@@ -165,3 +169,43 @@ def test_python_parity_row_2(export_case: ExportCase) -> None:
     predict = namespace["predict"]
 
     assert predict({"edad": 50, "seg": "A"}) == 0.8
+
+
+def test_export_markdown_runs(export_case: ExportCase) -> None:
+    """The Markdown export is a non-empty string with the header,
+    fingerprint and method.
+    """
+    md = export_to_markdown(export_case.model)
+    assert isinstance(md, str)
+    assert md.strip()
+    assert md.startswith("# TreeGov Decision Tree")
+    assert f"**Fingerprint:** {export_case.model.params_fingerprint}" in md
+    assert f"**Method:** {export_case.model.method}" in md
+    assert "## Decision Rules" in md
+
+
+def test_export_markdown_threshold_branch(export_case: ExportCase) -> None:
+    """The threshold split on ``edad`` renders as If <= 40.0 / Else."""
+    md = export_to_markdown(export_case.model)
+    assert "Node 0" in md
+    assert "`edad`" in md
+    assert "If <= 40.0" in md
+    assert "Else" in md
+
+
+def test_export_markdown_leaf_probabilities(export_case: ExportCase) -> None:
+    """Both leaf probabilities appear with 4-decimal formatting."""
+    md = export_to_markdown(export_case.model)
+    assert "Probability = 0.1000" in md
+    assert "Probability = 0.8000" in md
+    assert "Leaf 1" in md
+    assert "Leaf 2" in md
+
+
+def test_export_markdown_signature_is_model_only(export_case: ExportCase) -> None:
+    """The Markdown exporter takes only the model (no imputer): it is a
+    descriptive artefact, not a scoring artefact. Calling it must work
+    without an ImputationSpec.
+    """
+    md = export_to_markdown(export_case.model)
+    assert md

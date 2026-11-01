@@ -68,6 +68,20 @@ underscore) are internal and may change without notice.
 
 - `TreeBuilder`, `TreeModel`, `TreeNode`
 
+## backend_v3.exporters
+
+- `export_to_sql(model: TreeModel, imputer: ImputationSpec) -> str` —
+  ANSI SQL with nested `CASE WHEN` and `COALESCE` for training-time
+  imputation; the fingerprint rides as a leading comment. (Phase
+  4.0.a, 31/10/2026.)
+- `export_to_python(model: TreeModel, imputer: ImputationSpec) -> str` —
+  dependency-free Python module (`predict(row: dict) -> float`),
+  same fingerprint header. (Phase 4.0.a, 31/10/2026.)
+- `export_to_markdown(model: TreeModel) -> str` — human-readable
+  Markdown report (fingerprint + method + nested decision rules).
+  Takes only the model: no imputation is needed because the
+  artefact is descriptive, not scoring. (Phase 4.0.b, 01/11/2026.)
+
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
@@ -121,6 +135,20 @@ underscore) are internal and may change without notice.
   (list[tuple[str, float]] of internal-node thresholds). A failing
   predictor degrades to `0.0` metrics with a WARNING in the log.
   Requires a trained model (`ValueError` otherwise).
+- `Session.export_to_sql() -> str | None` — wrapper of
+  `backend_v3.exporters.export_to_sql` using the trained tree and
+  the training-partition imputer. `None` without a trained model;
+  `RuntimeError` if the model exists but the imputer cache is empty
+  (defensive guard for a broken invariant). (Phase 4.0.c,
+  01/11/2026.)
+- `Session.export_to_python() -> str | None` — wrapper of
+  `backend_v3.exporters.export_to_python`. Same contract as
+  `export_to_sql`. (Phase 4.0.c, 01/11/2026.)
+- `Session.export_to_markdown() -> str | None` — wrapper of
+  `backend_v3.exporters.export_to_markdown`. `None` without a
+  trained model; does not require the imputer (the Markdown
+  artefact is descriptive, not scoring). (Phase 4.0.c,
+  01/11/2026.)
 - `Session.intervene_node(node_id, action, payload=None) -> SessionState` —
   manual intervention entry point (Phase 3.11.d.1). Implemented action:
   `"prune_branch"` (the node becomes a leaf with `leaf_reason="podado"`,

@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 25/10/2026
+**Última actualización:** 01/11/2026
 
 ---
 
@@ -110,7 +110,8 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** **487/487 PASSED** (01/11/2026: Fase 4.0.a Exportadores SQL/Python cerrada).
+- **Suite de tests:** **502/502 PASSED** (01/11/2026: Fases
+  4.0.a, 4.0.b y 4.0.c cerradas; 4.0.c = integración GUI).
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -395,7 +396,15 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 01/11/2026: Fases 0 a 3.11.d cerradas, más 3.6.e (modo no-bancario). Suite 487/487. Fase 4.0.a (Exportadores SQL/Python) cerrada. Release 1.0.0rc4 publicada en PyPI. Deuda pendiente: Fase 4.0.b (Markdown/JSON) y 4.0.c (GUI). Herramienta activa: OpenCode 2.2.5 + IA Gratuita (DeepSeek V4 Flash Free). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
+> "Retomamos TreeGov. Soy Marco. Estado al 01/11/2026: Fases 0 a
+> 3.11.d cerradas, más 3.6.e (modo no-bancario) y la Fase 4.0
+> completa (4.0.a/b/c: exportadores SQL/Python/Markdown + GUI).
+> Suite 502/502. Release 1.0.0rc4 publicada en PyPI. Próximo paso:
+> recogida de feedback para la `1.0.0` estable, o inicio de una
+> nueva fase (MCP layer, Fase 5; batch scoring, Fase 6; IFRS 9/ECL,
+> Fase 7). Herramienta activa: OpenCode 2.2.5 + IA Gratuita
+> (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free). Regla operativa:
+> prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

@@ -2223,6 +2223,77 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 
 ---
 
+## §19. Exporters (Phase 4.0)
+
+### 19.1 Session wrappers for the production exporters (Phase 4.0.c)
+
+**Context.** Phase 4.0.a/b delivered `backend_v3/exporters.py` with
+three pure functions (`export_to_sql`, `export_to_python`,
+`export_to_markdown`), each requiring only the frozen `TreeModel`
+(Markdown) or `TreeModel` + `ImputationSpec` (SQL and Python, which
+bake training-time imputation into the emitted code). The GUI needed
+to call these from the File menu without breaking the clean-room
+rule (`frontend_v3/` does not import analytical modules). The
+obvious alternatives — exposing `Session._imputer` as a public
+property, or adding export methods that reach across the boundary —
+were rejected because they would either expose an internal cache
+(anti-pattern with respect to the rest of the API) or require the
+frontend to know the `ImputationSpec` contract.
+
+**Decision.** Three public wrapper methods on `Session`:
+
+    Session.export_to_sql() -> str | None
+    Session.export_to_python() -> str | None
+    Session.export_to_markdown() -> str | None
+
+Each returns the exporter's string output, or `None` when
+`SessionState.tree is None` (parity with `get_gains_table` and
+`get_classification_matrix`, which also return `None` on empty
+state). The SQL and Python wrappers raise `RuntimeError` if the
+model exists but `_imputer` is `None` — a broken invariant after
+`train()`, never reachable in normal use, but surfaced loudly to
+avoid silently exporting a model without its training-time
+imputation constants. The Markdown wrapper does not consult
+`_imputer`: the Markdown artefact is descriptive only, and
+requiring an imputer would conflate two contracts (scoring vs.
+documentation).
+
+**Rationale.** This mirrors the pattern already used by
+`get_gains_table`, `get_classification_matrix`, `get_oos_oot_report`,
+`get_univariate_trees` and `get_prune_sequence`: every read-only
+analytical operation is a method on `Session` that returns a plain
+Python type to the frontend. Adding three more follows the project's
+architectural contract without inventing a new pattern for what is,
+essentially, another read-only accessor. The `None | str` return
+type preserves the parity invariant: the frontend can render the
+same "not trained yet" state for exports as it already does for
+gains tables and confusion matrices.
+
+**Consequences.**
+
+- The GUI never imports `backend_v3.exporters`; only `Session` does
+  (via `from .exporters import ...` inside `session_state.py`).
+- `_imputer` stays a private attribute, no public property added.
+- Exports are non-mutating: `SessionState`, `params_fingerprint` and
+  `event_log` are unchanged by any export call (the wrapper only
+  reads `tree` and `_imputer`).
+- The three wrappers are covered by `tests/test_session_exporters.py`
+  (7 tests: `None` before train, content markers after train, shared
+  fingerprint across formats).
+- Four headless E2E tests (`tests/test_e2e_exporters_gui.py`) verify
+  that the menu actions toggle `enabled` correctly and that
+  `MainWindow._export_payload` returns a well-formed
+  `(content, file_filter, default_name)` without ever opening a
+  `QFileDialog`.
+
+**Cross-reference.** `docs/4.0_design_exports.md` §1 (D1–D5,
+especially D1 "new module `backend_v3/exporters.py`" and D5
+"fingerprint as header"); `docs/audit_log.md` entries of 31/10/2026
+(4.0.a), 01/11/2026 (4.0.b) and 01/11/2026 (4.0.c); `docs/api.md`
+(§backend_v3.exporters and the three `Session.export_to_*` entries).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

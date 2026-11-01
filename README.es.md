@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 487/487 passing
+**Suite de tests**: 502/502 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -271,12 +271,12 @@ TreeGov/
 | **3.11.c.2** | Frontend de árboles univariados: `UnivariateDialog` (Predictor \| Gini \| KS \| Cortes), Ctrl+C → TSV (REGLA 4.1.1), exportación CSV, acción del menú Análisis habilitada en TRAINED | Completada |
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
 | **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
-| **4** | Reportes avanzados + exportación (SQL, Python, MD/JSON) | Planificada |
+| **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
 | **5** | Capa MCP para agentes LLM | Planificada |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 487/487 passing.**
+**Suite de tests: 502/502 passing.**
 
 ---
 

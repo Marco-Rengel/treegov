@@ -133,6 +133,9 @@ class MainWindow(QMainWindow):
         self._act_new_wizard.setText(tr("menu_file_new_wizard"))
         self._act_open.setText(tr("menu_file_open"))
         self._act_exit.setText(tr("menu_file_exit"))
+        self._act_export_sql.setText(tr("menu_file_export_sql"))
+        self._act_export_python.setText(tr("menu_file_export_python"))
+        self._act_export_markdown.setText(tr("menu_file_export_markdown"))
         self._act_edit_undo.setText(tr("menu_edit_undo"))
         self._act_format_node_display.setText(tr("menu_format_node_display"))
         self._act_analysis_var_types.setText(tr("menu_analysis_var_types"))
@@ -153,6 +156,9 @@ class MainWindow(QMainWindow):
         # TODO(zona_gris): el brief asumía que las acciones ya tenían
         # tooltip; no lo tenían (ni menús ni zoom). Se añaden aquí.
         for act, key in (
+            (self._act_export_sql, "menu_file_export_sql"),
+            (self._act_export_python, "menu_file_export_python"),
+            (self._act_export_markdown, "menu_file_export_markdown"),
             (self._act_open, "menu_file_open"),
             (self._act_new_wizard, "menu_file_new_wizard"),
             (self._act_train, "menu_model_train"),
@@ -257,10 +263,32 @@ class MainWindow(QMainWindow):
         self._act_new_wizard.triggered.connect(self._on_new_wizard)
         self._act_open = self._new_action("act_open", "Ctrl+O")
         self._act_open.triggered.connect(self._on_open_dataset)
+        self._act_export_sql = self._new_action(
+            "act_export_sql", enabled=False
+        )
+        self._act_export_sql.triggered.connect(
+            lambda _checked=False: self._on_export("sql")
+        )
+        self._act_export_python = self._new_action(
+            "act_export_python", enabled=False
+        )
+        self._act_export_python.triggered.connect(
+            lambda _checked=False: self._on_export("python")
+        )
+        self._act_export_markdown = self._new_action(
+            "act_export_markdown", enabled=False
+        )
+        self._act_export_markdown.triggered.connect(
+            lambda _checked=False: self._on_export("markdown")
+        )
         self._act_exit = self._new_action("act_exit", "Ctrl+Q")
         self._act_exit.triggered.connect(self.close)
         self._menu_file.addAction(self._act_new_wizard)
         self._menu_file.addAction(self._act_open)
+        self._menu_file.addSeparator()
+        self._menu_file.addAction(self._act_export_sql)
+        self._menu_file.addAction(self._act_export_python)
+        self._menu_file.addAction(self._act_export_markdown)
         self._menu_file.addSeparator()
         self._menu_file.addAction(self._act_exit)
         bar.addMenu(self._menu_file)
@@ -1028,6 +1056,10 @@ class MainWindow(QMainWindow):
             self._act_zoom_in.setEnabled(has_tree)
             self._act_zoom_out.setEnabled(has_tree)
             self._act_zoom_fit.setEnabled(has_tree)
+        if hasattr(self, "_act_export_sql"):
+            self._act_export_sql.setEnabled(has_tree)
+            self._act_export_python.setEnabled(has_tree)
+            self._act_export_markdown.setEnabled(has_tree)
         state = (
             self._session.state.state
             if self._session is not None
@@ -1210,6 +1242,88 @@ class MainWindow(QMainWindow):
     def _load_oot_pipeline(self, path: str) -> None:
         self._session.load_oot(path)
         self._session.evaluate_oot()
+
+    def _on_export(self, kind: str) -> None:
+        """Dispatch an export request from the File menu (4.0.c)."""
+        payload = self._export_payload(kind)
+        if payload is None:
+            app = QApplication.instance()
+            if app is not None and app.platformName() != "offscreen":
+                QMessageBox.warning(
+                    self,
+                    tr("reports_export_error_title"),
+                    tr("reports_export_empty"),
+                )
+            return
+        self._save_export(kind, *payload)
+
+    def _export_payload(self, kind: str) -> tuple[str, str, str] | None:
+        """Build the export payload for ``kind``.
+
+        Returns ``(content, file_filter, default_filename)`` when a
+        trained model is available, ``None`` otherwise. Headless-safe:
+        never touches a QFileDialog, so it can be exercised from E2E
+        tests offscreen.
+        """
+        if self._session is None:
+            return None
+        if kind == "sql":
+            content = self._session.export_to_sql()
+        elif kind == "python":
+            content = self._session.export_to_python()
+        elif kind == "markdown":
+            content = self._session.export_to_markdown()
+        else:
+            raise ValueError(f"unknown export kind: {kind!r}")
+        if content is None:
+            return None
+        return (
+            content,
+            tr(f"export_{kind}_filter"),
+            tr(f"export_{kind}_default_filename"),
+        )
+
+    def _save_export(
+        self,
+        kind: str,
+        content: str,
+        file_filter: str,
+        default_name: str,
+    ) -> None:
+        """Prompt for a save path and write ``content`` as UTF-8 (4.0.c)."""
+        path, _selected = QFileDialog.getSaveFileName(
+            self,
+            tr(f"export_{kind}_dialog_title"),
+            default_name,
+            file_filter,
+        )
+        if not path:
+            return
+        try:
+            with open(path, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(content)
+        except OSError as exc:
+            if self._logger is not None:
+                self._logger.exception(
+                    "[gui] export %s failed to write %s", kind, path
+                )
+            app = QApplication.instance()
+            if app is not None and app.platformName() != "offscreen":
+                QMessageBox.warning(
+                    self,
+                    tr("reports_export_error_title"),
+                    tr("reports_export_error_body").format(error=str(exc)),
+                )
+            return
+        app = QApplication.instance()
+        if app is not None and app.platformName() != "offscreen":
+            QMessageBox.information(
+                self,
+                tr("reports_export_saved_title"),
+                tr("reports_export_saved_body").format(path=path),
+            )
+        if self._logger is not None:
+            self._logger.info("[export] %s saved to %s", kind, path)
 
     def _on_prune(self) -> None:
         """Model > Prune Tree: interactive cost-complexity pruning (3.9).

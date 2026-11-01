@@ -379,13 +379,15 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478. **Nota (25/10/2026, iteración #4-#8):** Tree Map reescrito con layout abstracto desacoplado (cajas 48×30, orientación vertical, colores del prototipo Antigravity) y navegación por `node_id` (`TreePanel.center_on_node`). Sustituye el diseño de coordenadas compartidas que dejaba los números ilegibles en árboles anchos. Suite 478/478. Decisión: `design_decisions.md` §18.11 (actualización). Deuda diferida: paleta propia del minimapa.
 
-### ⏳ Phase 4 — Advanced reports + export
-**Priority: MEDIUM**
+### ✅ Phase 4.0 — Export to production (SQL / Python / Markdown)
 
-- Dual export: nested SQL + pure Python.
-- Rule export (Markdown / JSON).
-- Automatic model documentation.
-- **Nota (saneamiento 25/10/2026):** al diseñar el export SQL anidado, evaluar la imputación con semántica `COALESCE` (cadena de respaldo por columna: valor observado → regla del imputer de train → sentinel), para que el SQL exportado reproduzca exactamente el anti-leakage de `TrainOnlyImputer`.
+**Priority: MEDIUM** · **Cerrada el 01/11/2026.**
+
+- **4.0.a** Exportadores SQL y Python (`backend_v3/exporters.py`). ✅ Completada (31/10/2026, suite 487/487).
+- **4.0.b** Exportador Markdown (`export_to_markdown`). ✅ Completada (01/11/2026, suite 487/487).
+- **4.0.c** Integración en la GUI: 3 acciones en el menú Archivo (`act_export_sql`/`act_export_python`/`act_export_markdown`), wrappers `Session.export_to_{sql,python,markdown}`, `_export_payload` testeable headless, `_save_export` con QFileDialog. ✅ Completada (01/11/2026, suite 502/502).
+
+**Diseño:** `docs/4.0_design_exports.md`. **Decisión:** `docs/design_decisions.md` §19.1. **Cierre:** `docs/audit_log.md` entrada del 01/11/2026.
 
 ### ⏳ Phase 5 — MCP layer
 **Priority: MEDIUM**
@@ -414,7 +416,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b completa (b.1–b.5) + 3.11.c completa (c.1–c.3) + 3.11.d completa (d.1–d.3) + el bloque de saneamiento post-auditoría externa (ZG-1/2/3/5) + la Fase 3.6.e (modo no-bancario, terminología dinámica `tr_term`) y 477/477 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
+**Desincronización vigente (25/10/2026):** los READMEs del repo reflejan ahora las Fases 3.11.a + 3.11.a.1 + 3.11.b completa (b.1–b.5) + 3.11.c completa (c.1–c.3) + 3.11.d completa (d.1–d.3) + el bloque de saneamiento post-auditoría externa (ZG-1/2/3/5) + la Fase 3.6.e (modo no-bancario, terminología dinámica `tr_term`) y 502/502 tests; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (tabla de fases, diagrama Mermaid, fecha, conteo de tests, nota Clean Room en Filosofía): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -638,6 +640,11 @@ desde cero (A2, `docs/3.11.e_design_treemap_rewrite.md`) cierra la deuda
 de Clean Room: cero código del prototipo.
 
 **Nota PyPI (regla del 20/10/2026):** los cambios en `README.md` / `README.es.md` de este bloque son cosméticos (conteo 477→478); no disparan una nueva release. PyPI sigue en `1.0.0rc4` hasta la próxima release material.
+
+### ✅ ZG-C — Tests del exportador Markdown — RESUELTO (01/11/2026)
+**Priority: LOW (registrado y resuelto el 01/11/2026, mismo bloque).**
+
+La Fase 4.0.b se cerró el 01/11/2026 con suite 487/487 sin añadir tests para `export_to_markdown` (deuda silenciosa: el exportador existía pero no estaba verificado empíricamente). Los 4 tests nuevos de `tests/test_exporters.py` (P5 de la Fase 4.0.c) cierran la deuda: header/fingerprint/method, rama de threshold, probabilidades por hoja, firma sin imputer. Cierre: `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c, hallazgo #4).
 
 ## Recorded architectural decisions
 
