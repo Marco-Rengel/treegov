@@ -570,6 +570,22 @@ descripción, `method_name` en `Session`, `min_state` de la máquina
 (`pyproject.toml`). Suite 513/513. Diseño: `docs/5.0_design_mcp.md`.
 Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
+### Fase 5.0.b — Servidor MCP stdio ✅ Completada (01/11/2026)
+
+Se implementa el servidor con el SDK oficial FastMCP (pin
+`mcp>=1.0.0,<2.0.0`: la v2 renombra FastMCP → MCPServer) y el entry
+point `treegov_mcp.py` (consola `treegov-mcp`). La ejecución empírica
+con el SDK real reveló 3 bugs, resueltos: (1) `_jsonable` sin rama
+`enum.Enum` — los estados se serializaban crudos ("FlowState.X"; hoy
+riden as `"DATA_LOADED"` vía `.name`); (2) el default
+`evaluate_oos(n_groups=10)` violaba el guard de Hosmer-Lemeshow en
+datasets pequeños — adaptativo `max(3, min(10, n_test//5))` (D20);
+(3) 5 herramientas DTO devolvían NaN/Inf crudos, ahora envueltas con
+`_jsonable` (I-3). 3 tests E2E en `tests/test_mcp_server.py`
+(SDK 1.30.0 en el .venv, `pip check` limpio). Suite 517/517. Diseño:
+`docs/5.0_design_mcp.md`. Cierre: `docs/audit_log.md` entrada del
+01/11/2026.
+
 ---
 
 ## 4. Arquitectura
@@ -588,7 +604,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (513 tests)
+├── tests/ # Suite de tests (517 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -736,10 +752,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | exporters.py | 8 |
 | session_exporters (backend) | 7 |
 | e2e_exporters_gui (frontend) | 4 |
-| mcp_tools (backend) | 11 |
-| **Total** | **513** |
+| mcp_tools (backend) | 12 |
+| mcp_server (backend) | 3 |
+| **Total** | **517** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 513/513 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 517/517 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

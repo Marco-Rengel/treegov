@@ -2294,6 +2294,22 @@ especially D1 "new module `backend_v3/exporters.py`" and D5
 
 ---
 
+## §20. MCP Layer (Phase 5.0)
+
+### 20.1 SDK MCP v1 fijado y adaptación de tipos (Phase 5.0.b)
+
+**Contexto:** El SDK oficial de MCP saltó a la versión 2.0 durante el
+desarrollo, renombrando `FastMCP` a `MCPServer` (cita textual del propio
+error del SDK 2.3.0 en el .venv: "This is mcp 2.x, where FastMCP was
+renamed to MCPServer"; ver `docs/audit_log.md` entrada del 01/11/2026,
+Fase 5.0.b).
+**Decisión:** Fijar `mcp>=1.0.0,<2.0.0` en `pyproject.toml` (instalada
+la 1.30.0 en el .venv). La migración a la v2 se difiere a una fase
+futura.
+**Consecuencias:** `mcp_v3/dto.py` gana una rama para `enum.Enum` que
+usa `.name` (cumple I-3). `evaluate_oos` en el servidor usa un
+`n_groups` adaptativo para no romper con datasets de prueba pequeños.
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

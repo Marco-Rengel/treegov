@@ -1,5 +1,6 @@
 """Tests for the MCP registry and DTO conversion (Phase 5.0.a)."""
 
+import enum
 import json
 import math
 from dataclasses import dataclass
@@ -89,6 +90,15 @@ def test_every_tool_maps_to_a_real_session_attribute():
 def test_every_tool_has_valid_min_state():
     for tool in TOOLS:
         assert isinstance(tool.min_state, FlowState)
+
+
+class _Color(enum.Enum):
+    RED = "red"
+    LEVEL = 3
+
+def test_jsonable_enum_to_name():
+    assert _jsonable(_Color.RED) == "RED"
+    assert _jsonable(_Color.LEVEL) == "LEVEL"
 
 
 def test_tool_descriptors_are_frozen():

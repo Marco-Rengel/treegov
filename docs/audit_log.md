@@ -6469,3 +6469,50 @@ rutas locales en security_audit, y manejo del ImportError del SDK).
 - `docs/playbook.md` (marcar 5.0.a completada en Skill 4)
 
 **Tests**: 513/513 PASSED.
+
+---
+
+### 01/11/2026 — Fase 5.0.b: Servidor MCP stdio y Entry point
+
+**Estado**: ✅ Cerrado. Suite 517/517 PASSED. Commit único de 5.0.b.
+
+**Contexto**: Implementación de `mcp_v3/server.py` con el SDK oficial
+de MCP (fijado a `<2.0.0` por el break de la v2), el entry point
+`treegov_mcp.py` y los tests de servidor. Durante la ejecución
+empírica con el SDK real, se detectaron y resolvieron 3 bugs:
+1. `mcp_v3/dto.py` no manejaba Enums (`FlowState` se serializaba
+   como string crudo). Se añadió la rama `enum.Enum` usando `.name`.
+2. `evaluate_oos` por defecto usaba `n_groups=10`, violando el guard
+   de Hosmer-Lemeshow en datasets pequeños. Se hizo adaptativo
+   (`max(3, min(10, n_test//5))`).
+3. 5 herramientas DTO devolvían NaNs crudos. Se envolvieron con
+   `_jsonable` para cumplir el Invariante I-3.
+
+**Detalle adicional del entorno**: el .venv traía `mcp` 2.3.0 y el
+`importorskip` dejaba de proteger (collection ERROR, exit 2). Downgrade
+a 1.30.0 con `pip check` limpio y pins core intactos (numpy 1.26.4,
+scipy 1.15.3, pandas 3.0.6). Break v2 citado textualmente por el propio
+SDK 2.3.0: "This is mcp 2.x, where FastMCP was renamed to MCPServer".
+
+**TODOs(zona_gris) abiertos** (asistente resuelve en su próximo turno):
+(a) confirmación del default adaptativo de `evaluate_oos` (comentario
+en `mcp_v3/server.py`); (b) manejo del ImportError del SDK en
+`treegov_mcp.py` (import lazy del diseño §6 vs eager actual);
+(c) el DTO de `state` expone listas `train_idx`/`test_idx` completas
+vía MCP (ruido de contexto del agente; candidata a resumen en 5.0.c/d);
+(d) `import sys` (treegov_mcp.py) y `typing.Any` (server.py) sin uso.
+
+**Artefactos**:
+- `pyproject.toml` (extra `mcp` fijado a `<2.0.0`; `[project.scripts]`: `treegov-mcp`)
+- `mcp_v3/server.py` (nuevo, 24 tools FastMCP)
+- `mcp_v3/dto.py` (fix: Enum -> .name)
+- `treegov_mcp.py` (nuevo, entry point)
+- `tests/test_mcp_server.py` (nuevo, 3 tests E2E)
+- `tests/test_mcp_tools.py` (fix: test para Enum, +1 test)
+- `.venv`: SDK `mcp` downgraded 2.3.0 -> 1.30.0
+- Documentación sincronizada: `docs/design_decisions.md` (§20.1),
+  `docs/api.md` (server + entry point), README.md/README.es.md/
+  estado_proyecto/contexto_para_nueva_sesion/prompt_para_asistente
+  (517/517), `docs/roadmap.md` (5.0.b ✅), `docs/playbook.md` (Skill 4).
+
+**Tests**: 517/517 PASSED.

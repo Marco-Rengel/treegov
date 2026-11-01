@@ -110,9 +110,9 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** **513/513 PASSED** (01/11/2026: Fases
+- **Suite de tests:** **517/517 PASSED** (01/11/2026: Fases
   4.0.a, 4.0.b y 4.0.c cerradas; 4.0.c = integración GUI; 5.0.a =
-  esqueleto headless MCP).
+  esqueleto MCP; 5.0.b = servidor MCP stdio + entry point).
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -400,12 +400,12 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 > "Retomamos TreeGov. Soy Marco. Estado al 01/11/2026: Fases 0 a
 > 3.11.d cerradas, más 3.6.e (modo no-bancario), la Fase 4.0
 > completa (4.0.a/b/c: exportadores SQL/Python/Markdown + GUI) y la
-> sub-fase 5.0.a (esqueleto headless MCP: paquete `mcp_v3`, registro
-> de 24 herramientas). Suite 513/513. Release 1.0.0rc4 publicada en
-> PyPI. Próximo paso: 5.0.b — servidor MCP stdio. Herramienta
-> activa: OpenCode 2.2.5 + IA Gratuita (DeepSeek V4 Flash Free /
-> GLM-5.3-Flash-Free). Regla operativa: prompts hiper-quirúrgicos,
-> ráfagas cortas."
+> familia 5.0.a/5.0.b (esqueleto MCP + servidor stdio con el SDK v1
+> fijado; 24 herramientas). Suite 517/517. Release 1.0.0rc4
+> publicada en PyPI. Próximo paso: 5.0.c (paridad E2E headless).
+> Herramienta activa: OpenCode 2.2.5 + IA Gratuita (DeepSeek V4
+> Flash Free / GLM-5.3-Flash-Free). Regla operativa: prompts
+> hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

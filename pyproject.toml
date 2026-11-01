@@ -33,10 +33,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
+mcp = ["mcp>=1.0.0,<2.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/Marco-Rengel/treegov"
 Repository = "https://github.com/Marco-Rengel/treegov"
+
+[project.scripts]
+treegov-mcp = "treegov_mcp:main"
 
 [tool.setuptools]
 packages = ["backend_v3", "frontend_v3", "frontend_v3.resources", "mcp_v3"]

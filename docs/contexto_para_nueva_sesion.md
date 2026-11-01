@@ -130,7 +130,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **4.0** | **Export to production (fase completa)** | **✅ Cerrada** |
 | 5.0.a | Esqueleto headless MCP (`mcp_v3`: `_jsonable` + 24 ToolDescriptor) | ✅ |
 
-**Suite de tests:** 513/513 PASSED
+**Suite de tests:** 517/517 PASSED
 
 ## Entorno de desarrollo
 
@@ -318,9 +318,10 @@ Python, 31/10/2026), 4.0.b (Markdown, 01/11/2026) y 4.0.c
 Session, no exposición de `_imputer`): `docs/design_decisions.md`
 §19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
-**Próximo paso:** sub-fase **5.0.b** — servidor MCP (adapter stdio)
-sobre el registro `mcp_v3/tools.py`; esqueleto 5.0.a cerrado el
-01/11/2026 (suite 513/513). Plan de sub-fases: `docs/5.0_design_mcp.md` §6.
+**Próximo paso:** sub-fase **5.0.c** — paridad E2E headless (flujo
+completo vía el registro, aserto I-3 parametrizado sobre las 24
+herramientas). Cerradas 5.0.a el 01/11/2026 (suite 513/513) y 5.0.b el
+01/11/2026 (suite 517/517). Plan: `docs/5.0_design_mcp.md` §6.
 
 **Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
 Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema

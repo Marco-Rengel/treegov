@@ -283,7 +283,16 @@ underscore) are internal and may change without notice.
   Intended consumer: the MCP server built in Phase 5.0.b.
 - `mcp_v3.dto._jsonable` — underscore prefix = internal under the
   stability rule above. Invariant I-3: `json.dumps(_jsonable(x),
-  allow_nan=False)` never raises (NaN/Inf → None).
+  allow_nan=False)` never raises (NaN/Inf → None). Enums serialize
+  as their `.name` (Phase 5.0.b: `FlowState` rides as `"DATA_LOADED"`
+  etc.).
+- `mcp_v3.server` (Phase 5.0.b) — FastMCP server exposing the 24
+  registered tools against `backend_v3.Session` over stdio; SDK pinned
+  `mcp>=1.0.0,<2.0.0` (v2 renames FastMCP → MCPServer). `evaluate_oos`
+  adapts `n_groups` to the OOS partition size by default (D20 rule);
+  all dict/list outputs go through `_jsonable` (Invariant I-3).
+- `treegov_mcp` — root entry point registered as the `treegov-mcp`
+  console script (`treegov_mcp:main`); requires the `[mcp]` extra.
 
 > TODO(zona_gris): declarar el registro como API pública/estable 1.x
 > solo cuando exista el servidor MCP (Fase 5.0.b); hasta entonces es

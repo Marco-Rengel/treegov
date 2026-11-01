@@ -398,7 +398,15 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - **5.0.a** Esqueleto headless MCP: paquete `mcp_v3/` — `dto.py`
   (conversor JSON-nativo `_jsonable`; Invariante I-3) y `tools.py`
   (24 `ToolDescriptor` frozen; Invariante I-4). ✅ Completada
-  (01/11/2026, suite 513/513). Próximo paso: 5.0.b (servidor stdio).
+  (01/11/2026, suite 513/513).
+- **5.0.b** Servidor MCP stdio + entry point: `mcp_v3/server.py` (24
+  tools FastMCP; SDK fijado `mcp>=1.0.0,<2.0.0` — la v2 renombra
+  FastMCP a MCPServer), `treegov_mcp.py` (consola `treegov-mcp`) y 3
+  tests E2E (`pytest.importorskip`). Correcciones empíricas: enums →
+  `.name` en `_jsonable`, `n_groups` adaptativo en `evaluate_oos`
+  (D20) y 5 DTOs envueltos en `_jsonable` (I-3). ✅ Completada
+  (01/11/2026, suite 517/517). Próximo paso: 5.0.c (paridad E2E
+  headless).
 
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.

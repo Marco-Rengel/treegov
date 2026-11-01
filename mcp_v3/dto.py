@@ -5,6 +5,7 @@ allow_nan=False) must never raise for any tool output.
 """
 
 import dataclasses
+import enum
 import math
 from typing import Any
 
@@ -17,6 +18,7 @@ def _jsonable(obj: Any) -> Any:
 
     - dataclasses (frozen or not) -> dict
     - numpy scalars -> int / float / bool
+    - enums -> their .name (JSON-native string)
     - numpy arrays / pandas Series -> list
     - pandas DataFrame -> list of dicts
     - NaN / Inf (float or numpy) -> None
@@ -25,6 +27,8 @@ def _jsonable(obj: Any) -> Any:
     """
     if obj is None:
         return None
+    if isinstance(obj, enum.Enum):
+        return _jsonable(obj.name)
     if isinstance(obj, (str, int, bool)):
         return obj
     if isinstance(obj, float):
