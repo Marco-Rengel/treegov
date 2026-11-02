@@ -7087,3 +7087,63 @@ Kimi comodín).
 
 **Referencias cruzadas**: `tests/test_ecl.py`; `backend_v3/ecl.py::calculate_ecl`; `docs/7.0_design_ifrs9.md` §5 Q1–Q4.
 
+### 02/11/2026 — Fase 7: diálogo GUI `frontend_v3/ecl_dialog.py`
+
+**Estado**: 🟡 Diálogo y worker implementados y verificados offscreen; 7.0.b no se declara cerrada. No se añadieron acción de menú, cableado en `MainWindow` ni claves i18n nuevas. Suite **557/557 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `frontend_v3/ecl_dialog.py` — nuevo `ECLWorker(QThread)` y `ECLDialog(QDialog)` para recoger CSV, columna PD y EIR opcional, ejecutar `Session.calculate_ecl` y presentar el resumen.
+- `docs/audit_log.md` — esta entrada de trazabilidad obligatoria por cambio de código GUI.
+
+**Hallazgos y decisiones**:
+
+1. **Sala limpia y ejecución asíncrona.** El worker llama a `Session.calculate_ecl` con `pd_column` y `eir` keyword-only, emite `finished_ok(dict)` o `failed(str)` y no contiene validación ni analítica ECL. La GUI solo recoge parámetros y pinta el DTO.
+2. **Contrato visual.** El formulario incluye CSV con selector, PD default `pd_current`, EIR default 0.0 habilitado por «Aplicar descuento», botones Cancelar/Calcular y gating por ruta no vacía. Al calcular se deshabilitan los inputs; en éxito se oculta Calcular y se muestra la tabla; en error se restaura el formulario y se muestra `QMessageBox.critical`.
+3. **Resumen acotado.** La tabla oculta inicialmente tiene dos columnas y cinco filas en orden fijo: ECL 12m, ECL Lifetime y Etapas 1/2/3. Los floats usan dos decimales y `None` se representa como `—`; no se retornan ni pintan detalles por exposición.
+4. **Design System.** Se aplican `NoEditTriggers`, `SelectRows`, filas alternas, cabecera vertical oculta y Ctrl+C → TSV mediante el helper canónico de `ReportsPanel`. No hay colores inline. La ordenación interactiva queda desactivada deliberadamente en esta tabla de resumen de orden contractual: el smoke detectó que activarla reordenaba automáticamente las cinco métricas y se corrigió antes de cerrar el bloque.
+
+**Tests**: **557/557 PASSED** (`python -m pytest tests -q`, 22.16 s) y `python -m py_compile frontend_v3/ecl_dialog.py` correcto. Smoke offscreen verificó señales de éxito/error del worker, llamada exacta a `Session`, gating del botón, toggle EIR, ejecución del hilo, cinco filas en orden, formato de valores, tabla/botón tras éxito y restauración más mensaje crítico tras error. No se añadieron archivos de tests en este bloque.
+
+**Referencias cruzadas**: `frontend_v3/ecl_dialog.py`; `backend_v3/session_state.py::Session.calculate_ecl`; `docs/7.0_design_ifrs9.md` §2 D7 y §3; `docs/3.11_gui_design_system.md` §4.1 y §4.3.
+
+### 02/11/2026 — Fase 7: acción ECL en `MainWindow` y recursos i18n
+
+**Estado**: 🟡 Diálogo ECL cableado en el menú Analysis y verificado offscreen; 7.0.b continúa abierta. Suite **557/557 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `frontend_v3/i18n.py` — 13 claves EN/ES nuevas para la acción de menú, el diálogo, sus campos y las métricas/etapas ECL.
+- `frontend_v3/main_window.py` — import de `ECLDialog`, acción `_act_ecl`, retraducción, gating por `has_tree` y slot `_on_ecl_calculation`.
+- `docs/audit_log.md` — esta entrada de trazabilidad obligatoria por cambio de código GUI.
+
+**Hallazgos y decisiones**:
+
+1. **Acción transaccional gated.** `_act_ecl` se crea en `menu_analysis` con objectName `act_ecl`, deshabilitada al inicio y conectada a `_on_ecl_calculation`. `_refresh_session_indicator` la habilita exactamente con `has_tree`, al igual que batch scoring y Champion-Challenger.
+2. **Apertura delegada y modal.** El slot vuelve a comprobar sesión y árbol, instancia `ECLDialog(self._session, self)` y ejecuta `dialog.exec()` sin lógica analítica en `MainWindow`.
+3. **Paridad i18n.** Se añadieron las mismas 13 claves en EN y ES, incluidos `menu_analysis_ecl` y `ecl_dlg_title`; `retranslate_ui` actualiza el texto de la acción. La verificación de igualdad de conjuntos de claves no detectó desajustes.
+
+**Tests**: **557/557 PASSED** (`python -m pytest tests -q`, 21.69 s) y `python -m py_compile frontend_v3/i18n.py frontend_v3/main_window.py` correcto. Smoke offscreen verificó acción deshabilitada sin árbol, habilitación con árbol, objectName/texto, apertura del diálogo con la sesión y ventana correctas, `exec()` y retraducción EN/ES. La paridad de claves y valores principales se comprobó además en proceso Python.
+
+**Referencias cruzadas**: `frontend_v3/main_window.py::_on_ecl_calculation`; `frontend_v3/ecl_dialog.py`; `frontend_v3/i18n.py`; `docs/7.0_design_ifrs9.md` §2 D7 y §3; `docs/3.11_gui_design_system.md` §3.1.
+
+### 02/11/2026 — Fase 7: tests headless del diálogo ECL
+
+**Estado**: 🟡 Tres tests GUI headless añadidos y verificados; 7.0.b continúa abierta. Suite final **560/560 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `tests/test_ecl_dialog.py` — nuevo fixture con CSV de scoring válido y modelo CRT entrenado, más tests de creación del diálogo, población de resultados y habilitación de la acción principal.
+- `docs/audit_log.md` — esta entrada de trazabilidad obligatoria por cambio de tests.
+
+**Hallazgos y decisiones**:
+
+1. **Fixture real, ejecución acotada.** `_setup_session(tmp_path)` genera las siete columnas ECL requeridas/opcionales, más `age` y `target`, y entrena un CRT determinista. Los tests usan `QT_QPA_PLATFORM=offscreen` y reutilizan el singleton `QApplication`.
+2. **Sin hilos reales.** La creación solo cambia la ruta en `QLineEdit`; la tabla se verifica llamando directamente `_on_finished` con un DTO simulado. Ningún test invoca `_on_calculate`, `ECLWorker.start` ni `dialog.exec`.
+3. **Contratos anclados.** Se comprueba el gating de Calcular, las cinco filas en orden y sus valores formateados (`99.00`, `405.00`, conteos), la tabla visible/botón oculto y `_act_ecl` habilitada con árbol.
+4. **Incidencia no reproducible durante la verificación.** La primera ejecución completa produjo un `ArrayMemoryError` en el test preexistente `test_humo_n200k` de QUEST. Ese test pasó de forma aislada y la repetición completa terminó verde; no se modificó QUEST ni tests ajenos. Queda registrado el hecho, sin atribuir una causa no demostrada.
+
+**Tests**: `python -m pytest tests/test_ecl_dialog.py -v` → **3/3 PASSED** (1.48 s). Primera suite completa: 559 passed + 1 fallo preexistente no reproducible; test aislado `test_humo_n200k` → **1/1 PASSED**; repetición `python -m pytest tests -q` → **560/560 PASSED** (24.66 s). La suite aumentó de 557 a 560 tests.
+
+**Referencias cruzadas**: `tests/test_ecl_dialog.py`; `frontend_v3/ecl_dialog.py`; `frontend_v3/main_window.py::_refresh_session_indicator`; `tests/test_quest_engine.py::test_humo_n200k`; `docs/7.0_design_ifrs9.md` §3.
+

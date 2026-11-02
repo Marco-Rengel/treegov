@@ -63,6 +63,7 @@ from frontend_v3.tree_view import (
 from frontend_v3.metrics_panel import MetricsPanel
 from frontend_v3.manual_override_dialog import ManualOverrideDialog
 from frontend_v3.data_viewer import DataViewer
+from frontend_v3.ecl_dialog import ECLDialog
 from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
@@ -146,6 +147,7 @@ class MainWindow(QMainWindow):
         self._act_univariate.setText(tr("menu_analysis_univariate"))
         self._act_batch.setText(tr("menu_analysis_batch"))
         self._act_cc.setText(tr("menu_analysis_cc"))
+        self._act_ecl.setText(tr("menu_analysis_ecl"))
         self._act_window_tile.setText(tr("menu_window_tile"))
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
@@ -406,6 +408,11 @@ class MainWindow(QMainWindow):
         self._act_cc = self._new_action("act_cc", enabled=False)
         self._act_cc.triggered.connect(self._on_champion_challenger)
         self._menu_analysis.addAction(self._act_cc)
+        self._act_ecl = QAction(tr("menu_analysis_ecl"), self)
+        self._act_ecl.setObjectName("act_ecl")
+        self._act_ecl.setEnabled(False)
+        self._act_ecl.triggered.connect(self._on_ecl_calculation)
+        self._menu_analysis.addAction(self._act_ecl)
         bar.addMenu(self._menu_analysis)
 
         # --- Tree (former Model menu: train opens the wizard; OOS/OOT
@@ -1075,6 +1082,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "_act_batch"):
             self._act_batch.setEnabled(has_tree)
             self._act_cc.setEnabled(has_tree)
+            self._act_ecl.setEnabled(has_tree)
         state = (
             self._session.state.state
             if self._session is not None
@@ -1407,6 +1415,13 @@ class MainWindow(QMainWindow):
         if self._session is None or self._session.state.tree is None:
             return
         dialog = ChampionChallengerDialog(self._session, self)
+        dialog.exec()
+
+    def _on_ecl_calculation(self) -> None:
+        """Analysis > IFRS 9 / ECL: open the Phase 7 modal dialog."""
+        if self._session is None or self._session.state.tree is None:
+            return
+        dialog = ECLDialog(self._session, self)
         dialog.exec()
 
     def _on_reports_partition_changed(self, _partition: str) -> None:
