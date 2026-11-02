@@ -7006,3 +7006,84 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/6.0_design_batch_scoring.md` §6; `docs/design_decisions.md` §21; `docs/api.md` §`backend_v3.scoring` y §`backend_v3.session_state`; `docs/security_audit.md` §6; `docs/roadmap.md` §Phase 6; `docs/estado_proyecto.md` §3 y §7; `docs/playbook.md` Skill 4.
 
+### 02/11/2026 — Mini-cierre: diseño estructural propuesto para la Fase 7.0 (IFRS 9 / ECL)
+
+**Estado**: 🟡 Diseño propuesto, pendiente de revisión y aprobación humana. No se implementó código ni se cerró una sub-fase de implementación. Suite **553/553 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `docs/7.0_design_ifrs9.md` — nuevo diseño canónico propuesto: alcance ECL y staging, estado actual, decisiones D1–D8, sub-fases 7.0.a–7.0.c, diez invariantes, once riesgos y preguntas Q1–Q8.
+- `docs/audit_log.md` — esta entrada de mini-cierre documental.
+
+**Hallazgos y decisiones**:
+
+1. **Brecha as-built confirmada.** TreeGov ya calcula y transporta PD por hoja y exposición, pero no existe contrato de LGD/EAD, evaluación SICR, staging, cálculo ECL, panel GUI ni tools MCP para esta finalidad.
+2. **Fórmula delimitada sin falsa conformidad.** El diseño presenta ECL = PD × LGD × EAD como representación simplificada y deja explícitos los requisitos adicionales de horizonte, vida, descuento, escenarios y definición de default; no declara que el árbol actual sea un modelo IFRS 9 completo.
+3. **Separación regulatoria/contable.** Se recoge la nota del roadmap: la PD IFRS 9 no heredará silenciosamente el piso CRE de Basilea y coexistirá con la PD regulatoria como una vista separada del mismo árbol.
+4. **Arquitectura y superficies propuestas.** Se propone un núcleo puro `backend_v3/ecl.py` con fachada `Session`, un panel GUI y tools MCP adaptadoras. Las decisiones sobre granularidad LGD/EAD, reglas SICR, horizonte temporal y salida detallada quedan abiertas para el asistente estratégico antes de autorizar 7.0.a.
+5. **Auditoría del entregable.** Se leyó el documento completo tras crearlo y se verificaron el encabezado, las secciones §0–§5, D1–D8 y Q1–Q8. El archivo no contiene bloques de código ni código de implementación; conserva la puerta de aprobación previa exigida por `docs/playbook.md` Skill 1.
+
+**Tests**: **553/553 PASSED** (`python -m pytest tests -q`, 22.12 s) tras crear el diseño. No se modificaron `backend_v3/`, `frontend_v3/`, `mcp_v3/` ni tests.
+
+**Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §0–§5; `docs/methodology.md` §6 y §8.6; `docs/design_decisions.md` §0.5 y §1.4; `docs/6.0_design_batch_scoring.md` §2 y §4; `docs/5.0_design_mcp.md` §1.3; `docs/3.11_gui_design_system.md`; `docs/roadmap.md` §Phase 7; `docs/playbook.md` Skills 1, 2, 4 y 5.
+
+### 02/11/2026 — Fase 7: cierre de Q1–Q8 y esqueleto `backend_v3/ecl.py`
+
+**Estado**: 🟡 Esqueleto backend implementado y verificado; la sub-fase 7.0.a no se declara cerrada. No se añadieron integración con `Session`, GUI ni MCP. Suite **553/553 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `docs/7.0_design_ifrs9.md` — §5 sustituida por «Decisiones de las preguntas abiertas»: Q1–Q8 resueltas y contrato mínimo fijado; la antigua puerta se actualizó para autorizar únicamente este esqueleto backend.
+- `backend_v3/ecl.py` — nuevo módulo Qt-free con DTOs frozen `ECLConfig`, `ECLRow` y `ECLSummary`, más la función pública `calculate_ecl`.
+- `docs/audit_log.md` — esta entrada de trazabilidad.
+
+**Hallazgos y decisiones**:
+
+1. **Contrato por exposición.** `exposure_id`, `ead`, `lgd`, `days_past_due`, `pd_initial` y la columna indicada por `pd_column` son obligatorias. `pd_lifetime` e `is_default` son opcionales; no existen constantes globales ocultas de LGD/EAD.
+2. **Staging determinista.** Etapa 3 tiene precedencia con `days_past_due > 90` o `is_default`; Etapa 2 aplica `days_past_due > 30` o `pd_current > 2 * pd_initial`; el resto queda en Etapa 1. Los límites usan `>` estricto.
+3. **Cálculo y degradación visible.** Ambas ECL usan PD × LGD × EAD. Si falta `pd_lifetime`, se reutiliza la PD a 12 meses con `UserWarning`. Un EIR configurado aplica el factor simplificado `1 / (1 + eir)` a ambos importes; sin EIR no hay descuento.
+4. **Fail-fast e inmutabilidad.** Se validan columnas, valores numéricos finitos, EAD no negativa, LGD y probabilidades en [0, 1], días de mora no negativos y flags booleanos o 0/1. El EIR debe ser finito y mayor que -1. El DataFrame no se muta; los DTOs son frozen y los totales usan `math.fsum`.
+5. **Trazabilidad regulatoria.** El módulo y §5 citan IFRS 9, Sección 5.5, y distinguen explícitamente las simplificaciones TreeGov de una certificación IFRS 9. El cálculo no altera la optimización de umbrales de Fase 3.
+
+**Tests**: **553/553 PASSED** (`python -m pytest tests -q`, 21.86 s) y `python -m py_compile backend_v3/ecl.py` correcto. Smoke funcional adicional verificó las tres etapas y su precedencia, conteos, fórmulas con y sin descuento, warning/fallback de `pd_lifetime`, inmutabilidad del DataFrame y de los DTOs, columnas ausentes, dominios inválidos y EIR inválido. No se añadieron archivos de tests en este bloque acotado a los artefactos solicitados.
+
+**Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §5 Q1–Q8; `backend_v3/ecl.py`; IFRS 9, Sección 5.5; `docs/methodology.md` §8.6; `docs/playbook.md` Skill 1.
+
+### 02/11/2026 — Fase 7: fachada `Session.calculate_ecl`
+
+**Estado**: 🟡 Método de sesión implementado y verificado; 7.0.a continúa abierta. No se añadieron persistencia de detalle, GUI ni MCP. Suite **553/553 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/session_state.py` — import de `ECLConfig`, `ECLSummary` y `calculate_ecl`; nuevo método público `Session.calculate_ecl`.
+- `docs/audit_log.md` — esta entrada de trazabilidad obligatoria por cambio de código.
+
+**Hallazgos y decisiones**:
+
+1. **Guarda de modelo y lectura delegada.** El método exige `self._state.tree is not None` antes de leer el CSV, carga el archivo con `pd.read_csv` y delega toda la validación y analítica en `backend_v3.ecl.calculate_ecl` con `ECLConfig(eir=eir)`.
+2. **Retorno acotado.** Devuelve únicamente `dataclasses.asdict` del `ECLSummary`: `total_ecl_12m`, `total_ecl_lifetime` y `stage_counts`. La lista de `ECLRow` se descarta deliberadamente; no se añadió escritura CSV opcional en este bloque.
+3. **Sin transición.** La operación no modifica `SessionState`, el árbol ni el event log. El argumento `pd_column` tiene default `pd_current` y `eir` se propaga sin aplicar defaults adicionales.
+
+**Tests**: **553/553 PASSED** (`python -m pytest tests -q`, 21.90 s) y `python -m py_compile backend_v3/session_state.py` correcto. Smoke funcional verificó la guarda sin modelo antes de lectura, el esquema exacto del dict, totales manuales 12m/vida, conteos por etapa, descuento con EIR y preservación de la identidad de `SessionState`.
+
+**Referencias cruzadas**: `backend_v3/session_state.py::Session.calculate_ecl`; `backend_v3/ecl.py::calculate_ecl`; `docs/7.0_design_ifrs9.md` §5 Q4–Q6.
+
+### 02/11/2026 — Fase 7: tests iniciales del cálculo ECL
+
+**Estado**: 🟡 Cuatro tests unitarios añadidos y verificados; 7.0.a continúa abierta. Suite **557/557 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `tests/test_ecl.py` — nuevo fixture `_mock_ecl_df` con tres exposiciones y cuatro tests de staging, SICR por PD, aritmética ECL y validación de LGD.
+- `docs/audit_log.md` — esta entrada de trazabilidad obligatoria por cambio de tests.
+
+**Hallazgos y decisiones**:
+
+1. **Cobertura de etapas.** A queda en Etapa 1; B entra en Etapa 2 por más de 30 días de mora y permanece allí con mora cero porque su PD corriente supera el doble de la inicial; C entra en Etapa 3 por más de 90 días.
+2. **Cobertura aritmética.** Se anclan los cálculos manuales de A (`ecl_12m = 9.0`, `ecl_lifetime = 45.0`) y el total a 12 meses de las tres exposiciones (`99.0`).
+3. **Cobertura fail-fast.** Un LGD de 1.5 produce `ValueError` con referencia explícita al parámetro. No se modificó la implementación ECL en este bloque.
+
+**Tests**: `python -m pytest tests/test_ecl.py -v` → **4/4 PASSED** (0.61 s); `python -m pytest tests -q` → **557/557 PASSED** (21.61 s). La suite aumentó de 553 a 557 tests.
+
+**Referencias cruzadas**: `tests/test_ecl.py`; `backend_v3/ecl.py::calculate_ecl`; `docs/7.0_design_ifrs9.md` §5 Q1–Q4.
+

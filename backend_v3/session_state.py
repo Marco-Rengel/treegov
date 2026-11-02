@@ -37,6 +37,7 @@ import pandas as pd
 
 from .chaid_engine import ChaidEngine
 from .crt_engine import CrtEngine
+from .ecl import ECLConfig, ECLSummary, calculate_ecl
 from .exporters import export_to_markdown, export_to_python, export_to_sql
 from .imputation import TrainOnlyImputer
 from .log_config import get_logger
@@ -1236,6 +1237,27 @@ class Session:
             f"|majority={result['majority_fallback_rows']}",
         )
         return result
+
+    def calculate_ecl(
+        self,
+        csv_path: str,
+        *,
+        pd_column: str = "pd_current",
+        eir: float | None = None,
+    ) -> dict[str, Any]:
+        """Calcula el resumen ECL de un CSV sin transicion de estado.
+
+        Los detalles por exposicion se descartan deliberadamente para no
+        saturar la sesion; su persistencia queda para una sub-fase posterior.
+        """
+        if self._state.tree is None:
+            raise ValueError("[session] calculate_ecl requiere un modelo entrenado")
+        df = pd.read_csv(csv_path)
+        summary: ECLSummary
+        summary, _rows = calculate_ecl(
+            df, pd_column=pd_column, config=ECLConfig(eir=eir)
+        )
+        return asdict(summary)
 
     def compare_champion_challenger(
         self,
