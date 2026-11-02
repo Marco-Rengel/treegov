@@ -401,13 +401,13 @@ entrada del 01/11/2026.
 
 ## Deferred (no blocking current work)
 
-### ✅ PyPI synchronization (Resolved: 1.0.0rc4, 20/10/2026)
+### ✅ PyPI synchronization (Resolved: 1.0.0rc5, 02/11/2026)
 
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
-**Desincronización vigente (01/11/2026):** tras el cierre de la Fase 4.0 y las sub-fases 5.0.a–5.0.c, los READMEs del repo reflejan "Phases 0 → 4.0 complete" (foco Fase 5, capa MCP) y 532/532 tests con fecha 01 nov 2026; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (diagrama Mermaid, fecha, conteo de tests): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material — la primera candidata es el cierre de la Fase 5.0, que incorpora el paquete `mcp_v3` al wheel (siguiendo el protocolo PyPI, cambio material).
+**Desincronización registrada (01/11/2026):** tras el cierre de la Fase 4.0 y las sub-fases 5.0.a–5.0.c, los READMEs del repo reflejaban "Phases 0 → 4.0 complete" (foco Fase 5, capa MCP) y 532/532 tests con fecha 01 nov 2026; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Los cambios cosméticos (diagrama Mermaid, fecha, conteo de tests) quedaron diferidos a la siguiente release material conforme a la regla del 20/10/2026.
 
-**Desincronización vigente (02/11/2026): READMEs y PyPI.** Tras 4.0.1.b (cambio material), decisión de publicar `1.0.0rc5` en este mismo bloque o diferir a la próxima release material — pendiente de aprobación explícita del revisor. Mientras tanto, la versión publicada y la declarada en los READMEs permanece en `1.0.0rc4`.
+**Resolución (02/11/2026): READMEs y PyPI.** La desincronización quedó resuelta con la publicación de `1.0.0rc5`, que incluye los cambios materiales de la Fase 4.0.1 y sincroniza los READMEs publicados con el estado del repositorio.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**
@@ -690,6 +690,11 @@ La Fase 4.0.b se cerró el 01/11/2026 con suite 532/532 sin añadir tests para `
 
 ## Releases
 
+- **v1.0.0rc5** (02/11/2026) — Release candidate. Incluye los modos
+  `"error"` y `"majority"` en los exportadores SQL, Python y Markdown,
+  junto con el modo `"exclude"` y el forwarding de `unseen_policy` en los
+  wrappers. Commit `ab8849a`; tag `v1.0.0rc5`. Suite: 537/537.
+  URL: https://pypi.org/project/treegov/1.0.0rc5/
 - **v1.0.0rc2** (19/10/2026) — Release candidate. Corrección de la
   atribución regulatoria del PD floor: referencia y valor. Default
   `pd_floor` pasa de 0.0003 a 0.0005 (BCBS CRE 32.4, no soberano).

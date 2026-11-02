@@ -6883,3 +6883,25 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/4.0.1_design_categorical_exporters.md` §3 y §5; `docs/design_decisions.md` §19.4; `docs/api.md` §`backend_v3.exporters`; `docs/roadmap.md` §4.0.1 y §Deferred/PyPI synchronization; `docs/estado_proyecto.md` §3 y §7; `README.md` / `README.es.md` (Project status / Estado del proyecto); `backend_v3/validation.py::predict_leaf_assignment`.
 
+### 02/11/2026 — Publicación de v1.0.0rc5 y mini-cierre de 4.0.1
+
+**Estado**: ✅ Release Candidate publicada y mini-cierre documental completado. Suite **537/537 PASSED**.
+
+**Publicación**: se publicó `treegov 1.0.0rc5` en PyPI tras el cierre de la Fase 4.0.1.b. URL: https://pypi.org/project/treegov/1.0.0rc5/. La release incorpora los cambios materiales de los exportadores categóricos y resuelve la desincronización de los READMEs con PyPI.
+
+**Correcciones manuales previas al build**:
+
+- En `README.md` y `README.es.md` se eliminó el emoji ✅ de la tabla de fases.
+- En `README.md` se corrigió "Completada" a "Completed" en la tabla de fases.
+
+**Trazabilidad de la release**:
+
+- Commit: `ab8849a` (`chore(release): bump version to 1.0.0rc5`).
+- Tag: `v1.0.0rc5`.
+
+**Artefactos tocados en este mini-cierre**: `docs/audit_log.md` (esta entrada); `docs/roadmap.md`; `docs/estado_proyecto.md`; `docs/contexto_para_nueva_sesion.md`; `docs/prompt_para_asistente.md`. No se modificó código ni tests.
+
+**Tests**: **537/537 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/roadmap.md` §Deferred/PyPI synchronization y §Releases; `docs/estado_proyecto.md` §1 y §9; `docs/contexto_para_nueva_sesion.md` §Estado de release; `docs/prompt_para_asistente.md` §9.
+

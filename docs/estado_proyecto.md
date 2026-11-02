@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 02/11/2026 (Fases 4.0, 4.0.1 y 5.0 cerradas; suite 537/537; release 1.0.0rc4 vigente)
+**Fecha de última actualización:** 02/11/2026 (Fases 4.0, 4.0.1 y 5.0 cerradas; suite 537/537; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc4 (release candidate) |
+| Versión | 1.0.0rc5 (release candidate) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc4/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc5/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -814,7 +814,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc4/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc5/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |

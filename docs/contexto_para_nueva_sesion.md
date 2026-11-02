@@ -258,10 +258,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc4` en PyPI (20/10/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc4/
+**Última versión publicada:** `treegov 1.0.0rc5` en PyPI (02/11/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc5/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2 y v1.0.0rc4 verificados el 21/10/2026 con `git show-ref --tags`. El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -274,22 +274,22 @@ implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, 
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
-La espera decidida el 16/10/2026 quedó cerrada definitivamente. Tras la
-publicación de `1.0.0rc1`, la corrección regulatoria de la Fase 3.8 y el
-cierre de la Fase 3.9, la versión actual es `1.0.0rc4` (rc3 quedó
-quemada por un conflicto de inmutabilidad en PyPI: se subió solo con
-los cambios de D13). El README de PyPI está sincronizado con el
-repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
+La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
+releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
+de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
+cierre de la Fase 4.0.1, la versión actual es `1.0.0rc5`; el README de PyPI
+está sincronizado con el repo y refleja 537/537 tests. Ver docs/roadmap.md,
+protocolo PyPI.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 4.0.1 cerradas; la Fase 5.0 también permanece cerrada. Suite **537/537 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026).
+**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 4.0.1 cerradas; la Fase 5.0 también permanece cerrada. Suite **537/537 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
 
 **Fase 4.0.1 — Exportadores categóricos: ✅ cerrada (02/11/2026).** Los modos `"error"`, `"exclude"` y `"majority"` están implementados en SQL, Python y Markdown, con tests de wrappers y artefactos. Diseño as-built y A1–A6: `docs/4.0.1_design_categorical_exporters.md`; decisión: `docs/design_decisions.md` §19.4.
 
 **Próximo paso:** Decisión entre **(A)** preparar `1.0.0` estable, **(B)** iniciar la Fase 6 (batch scoring y champion-challenger) o **(C)** iniciar la Fase 7 (IFRS 9 / ECL).
 
-**Nota de release:** `1.0.0rc4` sigue publicada en PyPI. La decisión de publicar `1.0.0rc5` tras el cambio material de 4.0.1.b queda pendiente de aprobación explícita del revisor; no se ha hecho bump de versión.
+**Nota de release:** `1.0.0rc5` está publicada en PyPI tras el cambio material de 4.0.1.b. La publicación quedó registrada en el commit `ab8849a` y el tag `v1.0.0rc5`.
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera
