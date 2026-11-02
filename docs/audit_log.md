@@ -6905,3 +6905,46 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/roadmap.md` §Deferred/PyPI synchronization y §Releases; `docs/estado_proyecto.md` §1 y §9; `docs/contexto_para_nueva_sesion.md` §Estado de release; `docs/prompt_para_asistente.md` §9.
 
+### 02/11/2026 — Mini-cierre: diseño estructural propuesto para la Fase 6.0
+
+**Estado**: 🟡 Diseño propuesto, pendiente de revisión y aprobación humana. No se implementó código ni se cerró una sub-fase de implementación. Suite **537/537 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `docs/6.0_design_batch_scoring.md` — nuevo diseño canónico propuesto para batch scoring y Champion-Challenger: alcance, estado actual, decisiones D1–D12, sub-fases 6.0.a–6.0.d, invariantes, riesgos y preguntas Q1–Q3.
+- `docs/audit_log.md` — esta entrada de mini-cierre documental.
+
+**Hallazgos y decisiones**:
+
+1. **Brecha as-built confirmada.** Los routers, PD, imputación train-only, métricas y exportadores ya existen, pero no hay una operación de `Session` que puntúe un CSV nuevo y publique un archivo de predicciones, ni una comparación Champion-Challenger.
+2. **Zona gris de contexto resuelta.** Dos `TreeModel` y un dataset no bastan para una comparación reproducible: el diseño añade `ScoringBundle` con imputación, spec de predictores y clases originales, sin recalcular contexto desde el CSV nuevo.
+3. **Paridad poblacional y memoria.** Las métricas primarias se calculan sobre la intersección enrutable por ambos modelos. El batch usa chunks, salida atómica y resumen acotado; la comparación conserva una limitación O(N) explícita por las métricas existentes.
+4. **Sin promoción ni persistencia implícita.** El campeón permanece inmutable. El retador GUI/MCP se propone ad hoc y aislado; la serialización de modelos, la promoción automática y el scoring en tiempo real quedan fuera de alcance.
+5. **Preguntas estratégicas abiertas.** Q1 (origen del retador), Q2 (archivo + resumen MCP frente a contenido completo in-band) y Q3 (criterio de promoción) deben resolverse antes de autorizar 6.0.a.
+
+**Tests**: **537/537 PASSED** (`python -m pytest tests -q`, 21.56 s) tras crear el diseño. No se modificaron `backend_v3/`, `frontend_v3/`, `mcp_v3/` ni tests.
+
+**Referencias cruzadas**: `docs/6.0_design_batch_scoring.md` §0–§5; `docs/4.0_design_exports.md` §3; `docs/4.0.1_design_categorical_exporters.md` §2 y §4; `docs/5.0_design_mcp.md` §1.3, §3 y §5; `docs/design_decisions.md` §6.2, §7.6, §19 y §20; `docs/3.11_gui_design_system.md` §4; `docs/roadmap.md` §Phase 6; `docs/playbook.md` Skills 1, 2, 4 y 5.
+
+### 02/11/2026 — Fase 6.0.a: núcleo `backend_v3/scoring.py` (bloque en curso)
+
+**Estado**: 🟡 Implementación en curso. El módulo de scoring batch queda creado y verificado; no se declara cerrada la sub-fase porque este bloque no incluye wrappers de `Session`, GUI ni MCP. Suite **537/537 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/scoring.py` — DTOs frozen `ScoringBundle`/`BatchScoreSummary`, generación de rutas raíz → hoja, imputación congelada, scoring por chunks, estados de ruta, JSON por fila, resumen acumulado y publicación atómica del CSV.
+- `docs/audit_log.md` — esta entrada de trazabilidad del bloque.
+
+**Hallazgos y decisiones**:
+
+1. **Imputación sin fuga y sin cambiar DTOs.** `ImputationSpec` es un dataclass de datos y no tiene `transform`; el helper privado `_apply_imputation` aplica sus medias/modas a una copia de trabajo, sin `fit`, sin reajustar por chunk y conservando intactos los valores crudos de salida.
+2. **Paridad con el router existente.** Hojas y PDs se obtienen con `predict_leaf_assignment` y `predict_pd`. En modo `majority`, una asignación preliminar con `exclude` identifica qué filas usaron fallback para marcar `MAJORITY_FALLBACK` y acumular su conteo sin cambiar el comportamiento del router.
+3. **Salida completa y determinista.** `treegov_row_id` es continuo entre chunks; la salida conserva columnas originales y añade fingerprint, hoja, PD, vector JSON, regla, estado e imputaciones por fila. Las columnas reservadas preexistentes se rechazan.
+4. **Reglas legibles.** Los caminos reconstruyen padres desde el modelo y renderizan umbrales, conjuntos categóricos aplanados e intervalos CHAID `(a, b]`, sin exponer `bin_N` ni serializar `SplitConfig.branches` directamente.
+5. **Atomicidad y recursos.** El temporal se crea en la carpeta destino, el lector se cierra en éxito/error, `os.replace` publica solo al completar y cualquier excepción elimina el temporal antes de relanzarse.
+6. **Verificación funcional adicional.** Smoke tests ejecutados en memoria/temporales cubrieron cuatro escenarios end-to-end (exclude, majority, error sin archivo final e input=output) y tres caminos CHAID con bins; comprobaron JSON, imputación, continuidad de IDs, paridad del fallback y limpieza de temporales. No se añadió archivo de tests en este bloque de un solo archivo.
+
+**Tests**: **537/537 PASSED** (`python -m pytest tests -q`, 24.86 s) y `python -m py_compile backend_v3/scoring.py` correcto. No se modificaron tests ni módulos preexistentes de backend/frontend/MCP.
+
+**Referencias cruzadas**: `docs/6.0_design_batch_scoring.md` §2 D1–D6, §4 I-1–I-10; `backend_v3/imputation.py::TrainOnlyImputer.transform`; `backend_v3/validation.py::predict_leaf_assignment` y `predict_pd`; `docs/design_decisions.md` §6.2 y §7.6.
+

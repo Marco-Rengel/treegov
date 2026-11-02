@@ -49,6 +49,7 @@ from .reporting import (
     build_gains_table,
     build_oos_oot_report,
 )
+from .scoring import BatchScoreSummary, ScoringBundle, score_batch_to_csv
 from .splitting import stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
@@ -1186,6 +1187,48 @@ class Session:
                     "cut_points": [],
                 })
         return results
+
+    def score_batch(
+        self,
+        csv_path: str,
+        output_path: str,
+        *,
+        unseen_policy: str = "exclude",
+        chunksize: int = 50000,
+        include_rules: bool = True,
+    ) -> dict[str, Any]:
+        """Puntua un CSV nuevo con el modelo activo, sin transicion de estado."""
+        if self._state.tree is None:
+            raise ValueError("[session] score_batch requiere un modelo entrenado")
+        if self._imputer is None:
+            raise RuntimeError("[session] score_batch sin imputer en cache")
+
+        bundle = ScoringBundle(
+            model=self._state.tree,
+            imputation=self._imputer.spec,
+            predictor_spec=self._state.spec,
+            target_classes=self._state.target_classes,
+            target_class=self._state.target_class,
+        )
+        summary: BatchScoreSummary = score_batch_to_csv(
+            bundle,
+            csv_path,
+            output_path,
+            unseen_policy=unseen_policy,
+            chunksize=chunksize,
+            include_rules=include_rules,
+        )
+        result = asdict(summary)
+        self._log.info(
+            "[session] score_batch completado: %s",
+            f"input={os.path.basename(csv_path)}"
+            f"|output={os.path.basename(output_path)}"
+            f"|filas={result['total_rows']}"
+            f"|scored={result['scored_rows']}"
+            f"|excluded={result['excluded_rows']}"
+            f"|majority={result['majority_fallback_rows']}",
+        )
+        return result
 
     def export_to_sql(
         self,

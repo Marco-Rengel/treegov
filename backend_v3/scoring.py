@@ -1,0 +1,339 @@
+"""Batch scoring de modelos TreeGov (Fase 6.0.a).
+
+El modulo aplica un ``TreeModel`` y su ``ImputationSpec`` congelado a un CSV
+por lotes. No reentrena ni reajusta la imputacion, conserva las columnas crudas
+y publica el CSV de salida de forma atomica.
+
+Nota de contrato: ``ImputationSpec`` contiene las reglas (medias y modas), pero
+no es un transformador. ``_apply_imputation`` reproduce sobre una copia el
+``transform`` de ``TrainOnlyImputer`` sin modificar el DTO ni crear otro ajuste.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+from .imputation import ImputationSpec
+from .tree_builder import TreeModel
+from .types import PredictorType
+from .validation import predict_leaf_assignment, predict_pd
+
+__all__ = [
+    "ScoringBundle",
+    "BatchScoreSummary",
+    "score_batch_to_csv",
+]
+
+
+@dataclass(frozen=True)
+class ScoringBundle:
+    """Contexto inmutable necesario para reproducir el scoring de un modelo."""
+
+    model: TreeModel
+    imputation: ImputationSpec
+    predictor_spec: tuple[tuple[str, PredictorType], ...]
+    target_classes: tuple
+    target_class: int | str
+
+
+@dataclass(frozen=True)
+class BatchScoreSummary:
+    """Resumen acotado de una ejecucion batch completada."""
+
+    input_path: str
+    output_path: str
+    model_fingerprint: str
+    unseen_policy: str
+    chunksize: int
+    total_rows: int
+    scored_rows: int
+    excluded_rows: int
+    majority_fallback_rows: int
+    imputation_counts: tuple[tuple[str, int], ...]
+
+
+def _format_category(value: object) -> str:
+    """Representa una categoria como literal legible, no como tupla tecnica."""
+    if isinstance(value, np.generic):
+        value = value.item()
+    return repr(value)
+
+
+def _generate_rule_path(model: TreeModel, leaf_id: int) -> str:
+    """Devuelve el camino canonico raiz -> ``leaf_id`` en formato legible.
+
+    Los umbrales usan ``<=``/``>``, los bins CHAID usan intervalos ``(a, b]``
+    y los splits categoricos muestran solo el conjunto de la rama recorrida.
+    """
+    parent_by_id: dict[int, int] = {}
+    for node in model.nodes:
+        for child_id in node.child_ids:
+            parent_by_id[child_id] = node.node_id
+
+    path_ids = [int(leaf_id)]
+    current = int(leaf_id)
+    while current != model.root_id:
+        if current not in parent_by_id:
+            raise ValueError(
+                f"[scoring] nodo {current} desconectado de la raiz {model.root_id}"
+            )
+        current = parent_by_id[current]
+        path_ids.append(current)
+    path_ids.reverse()
+
+    conditions: list[str] = []
+    for parent_id, child_id in zip(path_ids, path_ids[1:]):
+        parent = model.nodes[parent_id]
+        if parent.split is None:
+            raise ValueError(f"[scoring] nodo interno {parent_id} sin SplitConfig")
+        split = parent.split
+        try:
+            branch_index = parent.child_ids.index(child_id)
+        except ValueError:
+            raise ValueError(
+                f"[scoring] nodo {child_id} no es hijo de {parent_id}"
+            ) from None
+        predictor = split.predictor
+
+        if split.threshold is not None:
+            threshold = str(float(split.threshold))
+            if branch_index == 0:
+                conditions.append(f"{predictor} <= {threshold}")
+            elif branch_index == 1:
+                conditions.append(f"{predictor} > {threshold}")
+            else:
+                raise ValueError(
+                    f"[scoring] split umbral con rama invalida {branch_index}"
+                )
+            continue
+
+        if split.bin_edges:
+            if split.branches is None:
+                raise ValueError("[scoring] split con bin_edges sin branches")
+            branch = split.branches[branch_index]
+            bins = sorted(int(str(label).split("_", 1)[1]) for label in branch)
+            if not bins:
+                raise ValueError("[scoring] rama CHAID sin bins")
+            lo, hi = bins[0], bins[-1]
+            edges = split.bin_edges
+            if hi == len(edges):
+                lower = str(float(edges[lo - 1]))
+                conditions.append(f"{predictor} > {lower}")
+            elif lo == 0:
+                upper = str(float(edges[hi]))
+                conditions.append(f"{predictor} <= {upper}")
+            else:
+                lower = str(float(edges[lo - 1]))
+                upper = str(float(edges[hi]))
+                conditions.append(f"{predictor} in ({lower}, {upper}]")
+            continue
+
+        if split.branches is not None:
+            values = ", ".join(
+                _format_category(value) for value in split.branches[branch_index]
+            )
+            conditions.append(f"{predictor} in {{{values}}}")
+            continue
+
+        raise ValueError(
+            f"[scoring] split de {predictor!r} sin umbral, bins ni categorias"
+        )
+
+    conditions.append(f"Hoja {int(leaf_id)}")
+    return " → ".join(conditions)
+
+
+def _apply_imputation(spec: ImputationSpec, work_df: pd.DataFrame) -> pd.DataFrame:
+    """Aplica medias/modos congeladas a una copia de trabajo, sin reajuste."""
+    reglas = [(c, v) for c, v in spec.means.items()] + [
+        (c, v) for c, v in spec.modes.items()
+    ]
+    for col, fill in reglas:
+        if col not in work_df.columns:
+            raise ValueError(f"[scoring] columna ausente en transform: {col!r}")
+        work_df[col] = work_df[col].fillna(fill)
+    return work_df
+
+
+def score_batch_to_csv(
+    bundle: ScoringBundle,
+    input_csv: str,
+    output_csv: str,
+    *,
+    unseen_policy: str = "exclude",
+    chunksize: int = 50000,
+    include_rules: bool = True,
+) -> BatchScoreSummary:
+    """Puntua ``input_csv`` por lotes y publica atomicamente ``output_csv``.
+
+    ``scored_rows`` incluye las filas enviadas a la hoja mayoritaria;
+    ``majority_fallback_rows`` identifica ese subconjunto. Por tanto,
+    ``total_rows == scored_rows + excluded_rows``.
+    """
+    if unseen_policy not in ("error", "majority", "exclude"):
+        raise ValueError(f"[scoring] unseen_policy invalida: {unseen_policy!r}")
+    if not isinstance(chunksize, int) or isinstance(chunksize, bool) or chunksize <= 0:
+        raise ValueError("[scoring] chunksize debe ser un entero positivo")
+
+    input_path = Path(input_csv)
+    output_path = Path(output_csv)
+    if input_path.resolve() == output_path.resolve():
+        raise ValueError("[scoring] input_csv y output_csv deben ser archivos distintos")
+
+    predictor_columns = tuple(col for col, _ in bundle.predictor_spec)
+    imputation_totals = {col: 0 for col in predictor_columns}
+    reserved_columns = {
+        "treegov_row_id",
+        "treegov_model_fingerprint",
+        "treegov_leaf_id",
+        "treegov_pd",
+        "treegov_pd_vector",
+        "treegov_rule_path",
+        "treegov_route_status",
+        "treegov_imputed_columns",
+    }
+
+    total_rows = 0
+    scored_rows = 0
+    excluded_rows = 0
+    majority_fallback_rows = 0
+    first_chunk = True
+    tmp_path: str | None = None
+    reader = None
+    rule_cache: dict[int, str] = {}
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            mode="w",
+            newline="",
+            suffix=".tmp",
+            dir=str(output_path.parent),
+            encoding="utf-8",
+        ) as tmp_file:
+            tmp_path = tmp_file.name
+            reader = pd.read_csv(input_csv, chunksize=chunksize)
+            for chunk in reader:
+                if first_chunk:
+                    collisions = reserved_columns.intersection(chunk.columns)
+                    if collisions:
+                        raise ValueError(
+                            "[scoring] columnas reservadas presentes en input_csv: "
+                            f"{sorted(collisions)!r}"
+                        )
+
+                missing = [col for col in predictor_columns if col not in chunk.columns]
+                if missing:
+                    raise ValueError(
+                        f"[scoring] columnas predictoras ausentes: {missing!r}"
+                    )
+
+                n_rows = len(chunk)
+                work_df = chunk.copy()
+                original_na = work_df.loc[:, predictor_columns].isna()
+                work_df = _apply_imputation(bundle.imputation, work_df)
+                imputed_mask = original_na & work_df.loc[:, predictor_columns].notna()
+                for col in predictor_columns:
+                    imputation_totals[col] += int(imputed_mask[col].sum())
+
+                if unseen_policy == "majority":
+                    base_assignment = predict_leaf_assignment(
+                        bundle.model, work_df, unseen_policy="exclude"
+                    )
+                else:
+                    base_assignment = None
+                leaf_assignment = predict_leaf_assignment(
+                    bundle.model, work_df, unseen_policy=unseen_policy
+                )
+                pd_vectors = predict_pd(
+                    bundle.model, work_df, unseen_policy=unseen_policy
+                )
+
+                excluded_mask = leaf_assignment < 0
+                if base_assignment is None:
+                    fallback_mask = np.zeros(n_rows, dtype=bool)
+                else:
+                    fallback_mask = (base_assignment < 0) & ~excluded_mask
+
+                out = chunk.copy()
+                out["treegov_row_id"] = np.arange(
+                    total_rows, total_rows + n_rows, dtype=np.int64
+                )
+                out["treegov_model_fingerprint"] = bundle.model.params_fingerprint
+                out["treegov_leaf_id"] = [
+                    int(leaf_id) if leaf_id >= 0 else "" for leaf_id in leaf_assignment
+                ]
+                out["treegov_pd"] = pd_vectors[:, 0]
+                out["treegov_pd_vector"] = [
+                    ""
+                    if np.isnan(pd_vec[0])
+                    else json.dumps([float(x) for x in pd_vec])
+                    for pd_vec in pd_vectors
+                ]
+
+                if include_rules:
+                    rule_paths: list[str] = []
+                    for leaf_id in leaf_assignment:
+                        leaf_id = int(leaf_id)
+                        if leaf_id < 0:
+                            rule_paths.append("")
+                            continue
+                        if leaf_id not in rule_cache:
+                            rule_cache[leaf_id] = _generate_rule_path(
+                                bundle.model, leaf_id
+                            )
+                        rule_paths.append(rule_cache[leaf_id])
+                    out["treegov_rule_path"] = rule_paths
+                else:
+                    out["treegov_rule_path"] = ""
+
+                statuses = np.full(n_rows, "SCORED", dtype=object)
+                statuses[excluded_mask] = "EXCLUDED_UNSEEN"
+                statuses[fallback_mask] = "MAJORITY_FALLBACK"
+                out["treegov_route_status"] = statuses
+                out["treegov_imputed_columns"] = [
+                    json.dumps([
+                        str(col)
+                        for col, was_imputed in zip(predictor_columns, row_mask)
+                        if bool(was_imputed)
+                    ])
+                    for row_mask in imputed_mask.to_numpy()
+                ]
+
+                out.to_csv(tmp_file, header=first_chunk, index=False)
+                first_chunk = False
+                total_rows += n_rows
+                scored_rows += int((~excluded_mask).sum())
+                excluded_rows += int(excluded_mask.sum())
+                majority_fallback_rows += int(fallback_mask.sum())
+            reader.close()
+
+        os.replace(tmp_path, output_csv)
+    except BaseException:
+        if reader is not None:
+            reader.close()
+        if tmp_path is not None and os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+    return BatchScoreSummary(
+        input_path=str(input_csv),
+        output_path=str(output_csv),
+        model_fingerprint=bundle.model.params_fingerprint,
+        unseen_policy=unseen_policy,
+        chunksize=chunksize,
+        total_rows=total_rows,
+        scored_rows=scored_rows,
+        excluded_rows=excluded_rows,
+        majority_fallback_rows=majority_fallback_rows,
+        imputation_counts=tuple(
+            (col, imputation_totals[col]) for col in predictor_columns
+        ),
+    )
