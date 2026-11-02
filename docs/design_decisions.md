@@ -58,8 +58,8 @@ models on default/attrition/prepayment, subject to MRM review.
 | **Multiclass targets** (low/medium/high risk) | ❌ | Planned: Phase 3.1 |
 | **Cost-optimal threshold** (IFRS 9 §8.6) | 🟡 | Formula documented, not implemented |
 | **Monotonicity constraints** (age, income) | ❌ | Expert idea; not scheduled |
-| **Champion-challenger** | ❌ | Phase 6 |
-| **Batch scoring** (apply to full portfolio) | ❌ | Phase 6 |
+| **Champion-challenger** | ✅ | `backend_v3/scoring.py`, `Session.compare_champion_challenger` (Phase 6) |
+| **Batch scoring** (apply to full portfolio) | ✅ | `backend_v3/scoring.py`, `Session.score_batch` (Phase 6) |
 | **Export to production** (SQL, pure Python) | ❌ | Phase 4 |
 
 **Verdict.** A credit-risk econometrician **can use TreeGov today** for
@@ -2386,6 +2386,72 @@ futura.
 **Consecuencias:** `mcp_v3/dto.py` gana una rama para `enum.Enum` que
 usa `.name` (cumple I-3). `evaluate_oos` en el servidor usa un
 `n_groups` adaptativo para no romper con datasets de prueba pequeños.
+
+## §21. Batch Scoring y Champion-Challenger (Phase 6)
+
+### 21.1 Escritura batch por chunks, atómica y sin overwrite
+
+**Contexto.** La Fase 4 exportaba el modelo, pero no existía una operación
+in-band que puntuara un CSV completo conservando filas, PDs, reglas y
+trazabilidad. Cargar toda la cartera y permitir reemplazar un artefacto previo
+habría creado riesgos de memoria y pérdida accidental de evidencia.
+
+**Decisión.** `backend_v3/scoring.py::score_batch_to_csv` procesa el CSV en
+chunks configurables (default 50 000), aplica la imputación congelada a una copia
+de trabajo y conserva los valores crudos en la salida. Cada fila recibe un ID
+posicional continuo, fingerprint, hoja, PD, vector JSON, regla, estado de ruta e
+imputaciones. El resultado se escribe en un temporal de la carpeta destino y se
+publica con `os.replace` únicamente al completar. Cualquier error elimina el
+temporal. Si el destino ya existe, se lanza `FileExistsError` antes de crearlo;
+input y output deben ser rutas diferentes.
+
+**Consecuencias.** La memoria del batch depende del chunk, no de la cartera
+completa; no hay salida final parcial ni sobrescritura por defecto.
+`Session.score_batch` devuelve solo un dict-resumen y MCP nunca transporta el
+CSV completo in-band.
+
+### 21.2 `ScoringBundle` como contexto mínimo de scoring
+
+**Contexto.** Un `TreeModel` aislado no contiene las medias/modas de train, el
+spec completo de predictores ni el dominio original del target. Inferir esos
+datos desde el CSV nuevo rompería la reproducibilidad y la regla anti-leakage.
+
+**Decisión.** `ScoringBundle` es un dataclass frozen que reúne `model`,
+`imputation`, `predictor_spec`, `target_classes` y `target_class`. El batch y la
+comparación consumen ese contexto sin llamar a `fit` ni reajustar reglas. En
+Champion-Challenger cada bundle aplica su propia imputación. El retador creado
+por `Session.compare_champion_challenger` usa una instancia nueva del motor,
+datos y pesos de train existentes y parámetros clonados con overrides explícitos.
+
+**Consecuencias.** El campeón, su fingerprint, imputador, caches y estado de
+sesión permanecen inmutables. No se introduce persistencia de modelos ni una
+promoción automática; esas capacidades quedan fuera del contrato de Fase 6.
+
+### 21.3 Población común y tabla descriptiva de métricas
+
+**Contexto.** Si cada modelo excluye filas distintas, calcular sus métricas en
+sus respectivas poblaciones produciría una comparación sesgada de desempeño.
+
+**Decisión.** `compare_champion_challenger` valida target, dominio de clases y
+clase de interés, y calcula `valid_mask = (asign_champ >= 0) &
+(asign_chall >= 0)`. Las métricas primarias se evalúan solo sobre esa
+intersección; las coberturas se reportan por separado sobre toda la cohorte. En
+`error`, una fila no enrutable aborta; en `majority`, los fallbacks quedan
+contados. La tabla devuelve AUC, Gini, KS, PR-AUC, Brier y Brier Skill con
+`delta = challenger − champion`; si una métrica es `None`, el delta también lo
+es. No se declara ganador ni significancia estadística.
+
+**Consecuencias.** La comparación es descriptiva y poblacionalmente pareada, no
+una regla de despliegue. GUI y MCP son simples adaptadores: la GUI pinta el DTO
+con Ctrl+C → TSV y MCP expone las dos tools (26 en total) con JSON estricto.
+
+**Cross-reference.** `docs/6.0_design_batch_scoring.md` §6;
+`docs/api.md` §`backend_v3.scoring` y §`backend_v3.session_state`;
+`backend_v3/scoring.py`; `backend_v3/session_state.py`;
+`docs/security_audit.md` §6; `docs/audit_log.md`, cierre de Fase 6 del
+02/11/2026.
+
+---
 
 ## Maintenance
 

@@ -103,6 +103,30 @@ tie-break, replicating `validation.predict_leaf_assignment`. The generated
 Python functions are annotated `float` in `"error"` and `"majority"` modes;
 they remain `float | None` in `"exclude"` mode.
 
+## backend_v3.scoring
+
+Phase 6.0 public scoring contracts:
+
+- `ScoringBundle` (frozen dataclass) — immutable scoring context containing a
+  `TreeModel`, its training-fitted `ImputationSpec`, predictor spec, original
+  target classes and class of interest.
+- `BatchScoreSummary` (frozen dataclass) — bounded batch metadata: paths,
+  fingerprint, policy, chunksize, row/fallback counts and per-predictor
+  imputation counts.
+- `score_batch_to_csv(bundle, input_csv, output_csv, *, unseen_policy="exclude",
+  chunksize=50000, include_rules=True) -> BatchScoreSummary` — scores a CSV in
+  chunks, preserves input rows/order and publishes atomically. An existing
+  output raises `FileExistsError` before the temporary file is created; input
+  and output must be different paths.
+- `ChampionChallengerRequest` and `ChampionChallengerResult` (frozen
+  dataclasses) — comparison inputs/outputs, including both bundles, common
+  routed count, coverage and six metric rows `(name, champion, challenger,
+  delta)`.
+- `compare_champion_challenger(req) -> ChampionChallengerResult` — applies each
+  bundle's frozen imputation and computes AUC, Gini, KS, PR-AUC, Brier and
+  Brier Skill on the intersection routed by both models. Missing metric values
+  and their deltas remain `None`; no champion promotion is performed.
+
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
@@ -156,6 +180,21 @@ they remain `float | None` in `"exclude"` mode.
   (list[tuple[str, float]] of internal-node thresholds). A failing
   predictor degrades to `0.0` metrics with a WARNING in the log.
   Requires a trained model (`ValueError` otherwise).
+- `Session.score_batch(csv_path, output_path, *, unseen_policy="exclude",
+  chunksize=50000, include_rules=True) -> dict[str, Any]` — public Phase 6
+  facade over `backend_v3.scoring.score_batch_to_csv`. Builds a `ScoringBundle`
+  from the active tree and training imputer, writes the scored CSV and returns
+  `BatchScoreSummary` as a plain dict. Requires a trained model and a populated
+  imputer cache; does not change `FlowState` or the model. Existing output paths
+  are rejected without being overwritten.
+- `Session.compare_champion_challenger(evaluation_csv, *,
+  challenger_engine=None, challenger_params=None, target=None, weight_col=None,
+  unseen_policy="exclude", n_groups=10) -> dict[str, Any]` — trains an isolated
+  challenger with a new engine instance and the cloned training parameters plus
+  explicit overrides, then evaluates champion and challenger on the common
+  routed population. Returns `ChampionChallengerResult` as a plain dict with
+  both fingerprints, coverage and metric deltas. The champion, its fingerprint,
+  training caches and session state remain unchanged; no promotion is applied.
 - `Session.export_to_sql(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_sql` using the trained tree and
   the training-partition imputer. `None` without a trained model;

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 02/11/2026 (Fases 4.0, 4.0.1 y 5.0 cerradas; suite 537/537; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 02/11/2026 (Fase 6.0 cerrada; suite 553/553; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -512,31 +512,31 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 
 **Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con datasets públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor: tres *datasets* de UCI (German Credit binario, Car Evaluation multiclase categórico K=4, Balance Scale multiclase ordinal K=3); script de descarga con verificación SHA256; contrato de CSV TreeGov-ready; fixtures completas versionadas en `tests/fixtures/uci/` (~150 KB) en lugar de subset + skip; matriz de costes de German Credit ignorada; entregable triple (scripts + informe + tests); baseline propio cuantitativo + comentario cualitativo de literatura. Sin cambios de código: `backend_v3/` no se toca, suite 416/416 intacta.
 
-### Fases pendientes
+### Fases pendientes y cierres recientes
 
 - **Fase 2.1.b** — Extras de endurecimiento (validación cruzada, guardrail runtime de imports backend)
-- **Fase 3.3** — Categorías de población ✅ Completada
-- **Fase 3.4** — CRT y QUEST multiclase. ✅ Completada (3.4.a C&RT + 3.4.b QUEST).
-- **Fase 3.5** — Reportes adaptados (multiclase + ponderación). ✅ Completada (4 sub-fases a-d).
-- **Fase 3.6.a** — Diseño del plan de validación con *datasets* públicos. ✅ Completada (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
-- **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). ✅ Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
-- **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). ✅ Completada (25/10/2026).
-- **Fase 3.7** — Cierre Fase 3 + v1.0.0rc1 ✅ Completada (18/10/2026).
-- **Fase 3.7.a** — Auditoría de seguridad ✅.
-- **Fase 3.7.b** — Simetrización KS por pares ✅.
-- **Fase 3.7.c** — min_child_weight expuesto ✅.
-- **Fase 3.7.d** — Tests UCI ampliados ✅.
-- **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor ✅.
-- **Fase 3.8** — Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 ✅ Completada (19/10/2026).
-- **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`) ✅ Completada (20/10/2026).
-- **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). ✅ Completada (22/10/2026).
-- **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). ✅ Completada (23/10/2026).
-- **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
-- **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). ✅ Completada (24/10/2026).
+- **Fase 3.3** — Categorías de población. Completada.
+- **Fase 3.4** — CRT y QUEST multiclase. Completada (3.4.a C&RT + 3.4.b QUEST).
+- **Fase 3.5** — Reportes adaptados (multiclase + ponderación). Completada (4 sub-fases a-d).
+- **Fase 3.6.a** — Diseño del plan de validación con *datasets* públicos. Completada (`docs/3.6_design_public_datasets.md`, commit `1df08b0`).
+- **Fase 3.6** — Validación con *datasets* públicos (German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion). Completada (3.6.a diseño, 3.6.b fetch + fixtures, 3.6.c tests de integración + informe, 3.6.d cierre documental). Suite 422/422.
+- **Fase 3.6.e** — Modo no-bancario (terminología neutral + ejemplos + validación multi-dominio extensiva: marketing, ecología). Completada (25/10/2026).
+- **Fase 3.7** — Cierre Fase 3 + v1.0.0rc1. Completada (18/10/2026).
+- **Fase 3.7.a** — Auditoría de seguridad. Completada.
+- **Fase 3.7.b** — Simetrización KS por pares. Completada.
+- **Fase 3.7.c** — min_child_weight expuesto. Completada.
+- **Fase 3.7.d** — Tests UCI ampliados. Completada.
+- **Fase 3.7.e** — Correcciones pre-release H1/H2/pd_floor. Completada.
+- **Fase 3.8** — Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2. Completada (19/10/2026).
+- **Fase 3.9** — Poda Interactiva y Ponderada (backend, Session y GUI `PruneDialog`). Completada (20/10/2026).
+- **Fase 3.10.a** — Rediseño Visual UI (H3-H8). Toolbar, nodos enriquecidos con HTML, panel de propiedades estructurado y jerarquía de tema oscuro (VS Code Dark+). Completada (22/10/2026).
+- **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). Completada (23/10/2026).
+- **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
+- **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). Completada (24/10/2026).
 - **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
-- **Fase 5** — Capa MCP ✅ Completada (01/11/2026).
-- **Fase 6** — Scoring batch y champion-challenger
+- **Fase 5** — Capa MCP. Completada (01/11/2026).
+- **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
 - **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
 
 ### Verificación manual de la GUI (13/10/2026)
@@ -620,6 +620,33 @@ SQL emite `ELSE 1/0` con warnings de portabilidad; Python lanza `ValueError` o d
 `_majority_leaf_pd` replica el criterio del backend con `n` físico; el default `"exclude"` conserva sus artefactos byte a byte.
 Suite: 537/537. Diseño as-built y A1–A6: `docs/4.0.1_design_categorical_exporters.md`; decisión: `docs/design_decisions.md` §19.4.
 
+### Fase 6.0 — Batch Scoring y Champion-Challenger Completada (02/11/2026)
+
+**6.0.a y 6.0.b — Backend.** `backend_v3/scoring.py` implementa los DTOs
+`ScoringBundle`, `BatchScoreSummary`, `ChampionChallengerRequest` y
+`ChampionChallengerResult`, scoring por chunks, imputación congelada, rutas de
+decisión y comparación por métricas. `Session.score_batch` publica un CSV con
+las ocho columnas `treegov_*`, escritura atómica y rechazo de destinos
+preexistentes (`FileExistsError` antes del temporal).
+`Session.compare_champion_challenger` entrena un retador aislado con motor nuevo,
+evalúa ambos modelos sobre la intersección enrutable y no muta el campeón ni
+promueve automáticamente. La tabla incluye AUC, Gini, KS, PR-AUC, Brier y Brier
+Skill con deltas y coberturas separadas.
+
+**6.0.c — GUI.** `frontend_v3/scoring_dialogs.py` incorpora
+`BatchScoringDialog`, `ChampionChallengerDialog` y sus workers `QThread`.
+`frontend_v3/main_window.py` añade las acciones `_act_batch` y `_act_cc`,
+habilitadas con `has_tree`; `frontend_v3/i18n.py` contiene las claves bilingües.
+La tabla comparativa cumple Ctrl+C → TSV y la UI no contiene lógica analítica.
+
+**6.0.d — MCP y hardening.** `mcp_v3/tools.py` y `mcp_v3/server.py` exponen
+`score_batch` y `compare_champion_challenger`, para un total de 26 tools. El
+batch exige `output_path`, escribe localmente y devuelve solo resumen JSON; la
+comparación no escribe archivos. `docs/security_audit.md` §6 y el hotfix de
+`docs/audit_log.md` dejan trazada la excepción I-7 y la protección
+anti-overwrite. Diseño as-built: `docs/6.0_design_batch_scoring.md` §6;
+decisión: `docs/design_decisions.md` §21. Suite: **553/553 PASSED**.
+
 ---
 
 ## 4. Arquitectura
@@ -638,7 +665,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (537 tests)
+├── tests/ # Suite de tests (553 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -789,9 +816,13 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | mcp_tools (backend) | 12 |
 | mcp_server (backend) | 3 |
 | mcp_parity (backend) | 5 |
-| **Total** | **537** |
+| scoring.py (backend) | 5 |
+| champion_challenger.py (backend) | 5 |
+| scoring_dialogs.py (frontend) | 4 |
+| mcp_scoring.py (backend/MCP) | 2 |
+| **Total** | **553** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 537/537 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 553/553 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

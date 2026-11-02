@@ -50,17 +50,17 @@ OpenCode el 27/09/2026 y a Moonshot AI directo el 03/10/2026; ver
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
-| 2.3.a Diseño estructural | ✅ | Dónde encaja el panel; archivos a crear/modificar |
-| 2.3.b Claves i18n | ✅ | 23 claves EN/ES con paridad estricta |
-| 2.3.c Esqueleto del panel | ✅ | Clase widget + 3 tests de construcción |
-| 2.3.d Backend de reporting | ✅ | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` + 6 tests |
-| 2.3.e.1 Normalización de semáforos | ✅ | Alfabeto backend en inglés (`STABLE`/`MODERATE`/`UNSTABLE`/`UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE`) |
-| 2.3.e.2 Claves i18n por estado | ✅ | Renombrado `status_green/yellow/red` → `status_stable/moderate/unstable` + 4 claves nuevas |
-| 2.3.e.3 Tokens QSS semánticos | ✅ | 4 tokens (`STATUS_OK/WARN/CRIT/UNKNOWN`) en ambas paletas + 4 selectores QSS |
-| 2.3.e.4 MetricsPanel funcional | ✅ | Consume el DTO + badges con QSS + 6 tests nuevos |
-| 2.3.e.5 Cableado MainWindow ↔ MetricsPanel | ✅ | Handlers de menú + refresco automático del panel |
-| 2.3.f Tests E2E + cierre | ✅ | 5 tests E2E nuevos (178/178); Fase 2.3 completa |
-| 2.3 ✅ | OOS/OOT metrics panel — **cerrada** | La Fase 2.3 completa (a-f) está operativa end-to-end |
+| 2.3.a Diseño estructural | Completada | Dónde encaja el panel; archivos a crear/modificar |
+| 2.3.b Claves i18n | Completada | 23 claves EN/ES con paridad estricta |
+| 2.3.c Esqueleto del panel | Completada | Clase widget + 3 tests de construcción |
+| 2.3.d Backend de reporting | Completada | `backend_v3/reporting.py` + `Session.get_oos_oot_report()` + 6 tests |
+| 2.3.e.1 Normalización de semáforos | Completada | Alfabeto backend en inglés (`STABLE`/`MODERATE`/`UNSTABLE`/`UNDETERMINED`/`CRITICAL`/`WARNING`/`NONE`) |
+| 2.3.e.2 Claves i18n por estado | Completada | Renombrado `status_green/yellow/red` → `status_stable/moderate/unstable` + 4 claves nuevas |
+| 2.3.e.3 Tokens QSS semánticos | Completada | 4 tokens (`STATUS_OK/WARN/CRIT/UNKNOWN`) en ambas paletas + 4 selectores QSS |
+| 2.3.e.4 MetricsPanel funcional | Completada | Consume el DTO + badges con QSS + 6 tests nuevos |
+| 2.3.e.5 Cableado MainWindow ↔ MetricsPanel | Completada | Handlers de menú + refresco automático del panel |
+| 2.3.f Tests E2E + cierre | Completada | 5 tests E2E nuevos (178/178); Fase 2.3 completa |
+| 2.3 | OOS/OOT metrics panel — **cerrada** | La Fase 2.3 completa (a-f) está operativa end-to-end |
 
 **Regla de proveedor:**
 - **Aider 0.86.2 + Kimi K3 vía Moonshot AI directo**: implementación,
@@ -84,15 +84,15 @@ clasificación y exportación HTML autocontenido.
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
-| 2.4.a Diseño estructural | ✅ | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
-| 2.4.b Backend de reportes | ✅ Completada | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; 5 tests con valores verificados a mano |
-| 2.4.c.1 Backend de Session | ✅ Completada | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
-| 2.4.c.2.a Panel funcional | ✅ Completada | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
-| 2.4.c.2.b Cableado MainWindow | ✅ Completada | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
-| 2.4.c.2.c.1 Export HTML | ✅ Completada | QDialog + QTextBrowser + save-as |
-| 2.4.c.2.c.2 Limpieza i18n | ✅ Completada | 14 claves huérfanas eliminadas |
-| 2.4.c.2.c.3 Tests del panel | ✅ Completada | 7 tests unitarios en `tests/test_reports_panel.py` |
-| 2.4.d Tests E2E + cierre | ✅ Completada | 4 tests E2E en `test_e2e_reports.py`; screenshot diferido a 2.4.e |
+| 2.4.a Diseño estructural | Completada | Pestaña Reports + `reports_panel.py` (placeholder) + 2 claves i18n + tests ajustados |
+| 2.4.b Backend de reportes | Completada | `GainsTable` + `ClassificationMatrix` en `backend_v3/reporting.py`; 5 tests con valores verificados a mano |
+| 2.4.c.1 Backend de Session | Completada | `get_gains_table` + `get_classification_matrix` en `Session`; 5 tests |
+| 2.4.c.2.a Panel funcional | Completada | `reports_panel.py` + 65 claves i18n; sin Export HTML ni cableado |
+| 2.4.c.2.b Cableado MainWindow | Completada | 4 señales conectadas + refresh tras entrenar/evaluar/cargar OOT |
+| 2.4.c.2.c.1 Export HTML | Completada | QDialog + QTextBrowser + save-as |
+| 2.4.c.2.c.2 Limpieza i18n | Completada | 14 claves huérfanas eliminadas |
+| 2.4.c.2.c.3 Tests del panel | Completada | 7 tests unitarios en `tests/test_reports_panel.py` |
+| 2.4.d Tests E2E + cierre | Completada | 4 tests E2E en `test_e2e_reports.py`; screenshot diferido a 2.4.e |
 
 **Diseño acordado (30/09/2026):**
 
@@ -158,12 +158,12 @@ reversión).
 
 | Sub-paso | Estado | Alcance |
 |---|---|---|
-| 3.1.a | ✅ | TreeNode/TreeModel con tuple fields (pd_final/pd_jeffreys/n_events) + class_labels + TreeBuilder.target_class |
-| 3.1.b | ✅ | Jeffreys multivariante (k_c + 0.5) / (n + K*0.5) + pd_floor renormalizado + reordenamiento canónico (target_class en índice 0) |
-| 3.1.c | ✅ | Session.fix_spec + SessionState con target_class/class_labels obligatorios + bloqueo C&RT/QUEST con K>2 |
-| 3.1.d | ✅ | predict_pd devuelve 2D (n_rows, K) + bloqueos K>2 en evaluate_oos/evaluate_oot/get_gains_table/get_classification_matrix |
-| 3.1.e | ✅ | Wizard multiclase: tabla de clases (label/valor/count/radio de interés) + warning amber si se elige la clase mayoritaria |
-| 3.1.f | ✅ | MetricsPanel: badge rojo si gini<0 + botón de reversión de clase + handler de reentrenamiento en MainWindow |
+| 3.1.a | Completada | TreeNode/TreeModel con tuple fields (pd_final/pd_jeffreys/n_events) + class_labels + TreeBuilder.target_class |
+| 3.1.b | Completada | Jeffreys multivariante (k_c + 0.5) / (n + K*0.5) + pd_floor renormalizado + reordenamiento canónico (target_class en índice 0) |
+| 3.1.c | Completada | Session.fix_spec + SessionState con target_class/class_labels obligatorios + bloqueo C&RT/QUEST con K>2 |
+| 3.1.d | Completada | predict_pd devuelve 2D (n_rows, K) + bloqueos K>2 en evaluate_oos/evaluate_oot/get_gains_table/get_classification_matrix |
+| 3.1.e | Completada | Wizard multiclase: tabla de clases (label/valor/count/radio de interés) + warning amber si se elige la clase mayoritaria |
+| 3.1.f | Completada | MetricsPanel: badge rojo si gini<0 + botón de reversión de clase + handler de reentrenamiento en MainWindow |
 
 **Invariante no negociable.** Para K=2 con target_class=1 y labels
 estándar, el modelo producido es numéricamente idéntico al pre-3.1.
@@ -185,11 +185,11 @@ siguen binarios hasta Fase 3.5.
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.3.a | SessionState + Session: campos, caches, fix_spec, partition, load_oot, reset, describe_population_column | ✅ Completada |
-| 3.3.b | TreeBuilder: population_col y population_ok_values en fingerprint | ✅ Completada |
-| 3.3.c | reporting.build_oos_oot_report: rename n_excluded → n_excluded_routing + nuevos contadores de población | ✅ Completada |
-| 3.3.d | Wizard: combo de población, regla espejo, tabla de valores OK, i18n | ✅ Completada |
-| 3.3.e | Tests E2E del flujo de población + cierre documental | ✅ Completada |
+| 3.3.a | SessionState + Session: campos, caches, fix_spec, partition, load_oot, reset, describe_population_column | Completada |
+| 3.3.b | TreeBuilder: population_col y population_ok_values en fingerprint | Completada |
+| 3.3.c | reporting.build_oos_oot_report: rename n_excluded → n_excluded_routing + nuevos contadores de población | Completada |
+| 3.3.d | Wizard: combo de población, regla espejo, tabla de valores OK, i18n | Completada |
+| 3.3.e | Tests E2E del flujo de población + cierre documental | Completada |
 
 **Cierre de la Fase 3.3.** Las 5 sub-fases (a-e) quedan cerradas el 11/10/2026. La categoría de población es un filtro opt-in declarado en `fix_spec`: filas cuyo valor de columna de población no está en la whitelist declarada se excluyen antes del split, antes del train y antes de la evaluación OOS/OOT; se reportan en `n_excluded_population` y `population_breakdown`. Invariante C1: sin `population_col`, comportamiento idéntico al pre-3.3. Suite: 377/377 PASSED.
 
@@ -199,8 +199,8 @@ siguen binarios hasta Fase 3.5.
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.4.a | C&RT multiclase: levantar el bloqueo en Session.train | ✅ Completada |
-| 3.4.b | QUEST multiclase: Etapa 1 F de K grupos + tie-breaker BF K grupos; Etapa 2 QDA K=2 / barrido Gini K>2; retirar bloqueo; §3.8 en methodology | ✅ Completada |
+| 3.4.a | C&RT multiclase: levantar el bloqueo en Session.train | Completada |
+| 3.4.b | QUEST multiclase: Etapa 1 F de K grupos + tie-breaker BF K grupos; Etapa 2 QDA K=2 / barrido Gini K>2; retirar bloqueo; §3.8 en methodology | Completada |
 
 **Cierre de la Fase 3.4.** Las dos sub-fases (a: C&RT; b: QUEST) quedan cerradas el 12/10/2026. Ningún motor bloquea ya targets con K > 2 en Session.train. Los bloqueos downstream (validation, reporting, stability) siguen activos hasta Fase 3.5. Invariante K=2: los motores producen modelos numéricamente idénticos al pre-3.4. *Fingerprint* sin cambios: la conducta multiclase se captura por `class_labels` / `n_classes` desde 3.1. Suite: 384/384 PASSED.
 
@@ -210,10 +210,10 @@ siguen binarios hasta Fase 3.5.
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.5.a | validation.py multiclase + desbloqueo K>2 | ✅ Completada |
-| 3.5.b | reporting.py multiclase + desbloqueo K>2 | ✅ Completada |
-| 3.5.c | stability + Session: evaluate_oot multiclase | ✅ Completada |
-| 3.5.d | auditoría de frontend + methodology + cierre documental | ✅ Completada |
+| 3.5.a | validation.py multiclase + desbloqueo K>2 | Completada |
+| 3.5.b | reporting.py multiclase + desbloqueo K>2 | Completada |
+| 3.5.c | stability + Session: evaluate_oot multiclase | Completada |
+| 3.5.d | auditoría de frontend + methodology + cierre documental | Completada |
 
 **Cierre de la Fase 3.5.** Las cuatro sub-fases (a-d) cierran el *pipeline*
 completo de validación, reporte y monitoreo a targets multiclase
@@ -259,11 +259,11 @@ documentada en el diseño §1.2 y en audit_log (entrada 15/10/2026).
 
 | Sub-fase | Alcance | Estado |
 |---|---|---|
-| 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | ✅ Completada |
-| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | ✅ Completada |
-| 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | ✅ Completada |
-| 3.6.d | Cierre documental de la fase | ✅ Completada |
-| 3.6.e | Modo no-bancario (terminología neutral dinámica vía `tr_term`; validación multi-dominio extensiva —marketing, ecología— diferida) | ✅ Completada (25/10/2026) |
+| 3.6.a | Diseño del plan de validación (6 datasets UCI, contrato CSV TreeGov-ready, script de descarga con SHA256, fixtures versionadas, informe de validación) | Completada |
+| 3.6.b | Script de descarga (scripts/fetch_datasets.py) + fixtures versionadas (tests/fixtures/uci/) | Completada |
+| 3.6.c | Tests de integración (tests/test_uci_integration.py) + script de validación (scripts/validate_uci.py) + informe de resultados (docs/validation_results_3.6.md) | Completada |
+| 3.6.d | Cierre documental de la fase | Completada |
+| 3.6.e | Modo no-bancario (terminología neutral dinámica vía `tr_term`; validación multi-dominio extensiva —marketing, ecología— diferida) | Completada |
 
 **Cierre de 3.6.a (16/10/2026).** El diseño completo vive en `docs/3.6_design_public_datasets.md` (811 líneas). Nueve decisiones D1-D9: tres *datasets* (German Credit, Car Evaluation, Balance Scale) para cubrir tres ejes (binario/multiclase × categórico/ordinal/numérico × balanceado/desbalanceado); script de descarga con verificación SHA256; contrato de CSV "TreeGov-ready"; fixtures completas versionadas en lugar de subset+skip; matriz de costes de German Credit ignorada explícitamente; entregable triple (scripts + informe + tests); Balance Scale permanece ORDINAL; baseline propio + comentario cualitativo de literatura; códigos originales de UCI preservados. Sin cambios de código: `backend_v3/` no se toca.
 
@@ -296,17 +296,39 @@ como convención de la industria, no como prescripción de Basilea ni EBA.
 
 | Sub-fase | Estado | Alcance |
 |---|---|---|
-| 3.8.a | ✅ | Backend: default 0.0005 + docstrings + PSI en `stability.py` |
-| 3.8.b | ✅ | Frontend: i18n + wizard + bug `step2_target_placeholder` |
-| 3.8.c | ✅ | `scripts/validate_uci.py`: 14 pares + generación del md |
-| 3.8.d | ✅ | Tests: 16 asertos + 14 fingerprints UCI recapturados |
-| 3.8.e | ✅ | 3 tests nuevos (hard bound default, fingerprint, spin box) |
-| 3.8.f | ✅ | Documentación: 15 archivos + bump a `1.0.0rc2` |
+| 3.8.a | Completada | Backend: default 0.0005 + docstrings + PSI en `stability.py` |
+| 3.8.b | Completada | Frontend: i18n + wizard + bug `step2_target_placeholder` |
+| 3.8.c | Completada | `scripts/validate_uci.py`: 14 pares + generación del md |
+| 3.8.d | Completada | Tests: 16 asertos + 14 fingerprints UCI recapturados |
+| 3.8.e | Completada | 3 tests nuevos (hard bound default, fingerprint, spin box) |
+| 3.8.f | Completada | Documentación: 15 archivos + bump a `1.0.0rc2` |
 
 **Suite: 434/434 PASSED.**
 
 **Referencias:** `docs/audit_log.md` entrada del 19/10/2026 (tarde);
 `docs/validation_results_3.6.md` §Revision notes.
+
+### Phase 6 — Batch scoring and Champion-Challenger
+
+**Status**: Completed (02/11/2026, suite 553/553).
+**Priority: MEDIUM**
+
+| Sub-fase | Estado | Alcance |
+|---|---|---|
+| 6.0.a | Completada | Backend batch: `backend_v3/scoring.py`, `Session.score_batch`, scoring por chunks, imputación congelada, reglas, publicación atómica y protección anti-overwrite. |
+| 6.0.b | Completada | Backend Champion-Challenger: DTOs, `Session.compare_champion_challenger`, retador aislado, métricas sobre población común e inmutabilidad del campeón. |
+| 6.0.c | Completada | GUI: `frontend_v3/scoring_dialogs.py`, workers, dos diálogos, acciones Analysis, i18n y tabla Ctrl+C → TSV. |
+| 6.0.d | Completada | MCP y hardening: `score_batch` y `compare_champion_challenger` en `mcp_v3/tools.py`/`server.py`, 26 tools, JSON estricto, seguridad y cierre documental. |
+
+**Cierre as-built.** Batch scoring conserva una fila por entrada, publica de
+forma atómica sin sobrescribir destinos existentes y devuelve un resumen acotado.
+Champion-Challenger calcula AUC, Gini, KS, PR-AUC, Brier y Brier Skill sobre la
+intersección enrutable por ambos modelos, sin promoción automática. La GUI y MCP
+son adaptadores de `Session`; no contienen lógica analítica.
+
+**Diseño:** `docs/6.0_design_batch_scoring.md` §6. **Decisión:**
+`docs/design_decisions.md` §21. **Cierre:** `docs/audit_log.md`, entrada de
+cierre de la Fase 6.0 del 02/11/2026.
 
 ## Upcoming phases
 
@@ -384,12 +406,6 @@ A1–A6: `docs/4.0.1_design_categorical_exporters.md` §5. Decisión:
 
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.
-
-### ⏳ Phase 6 — Batch scoring and production
-**Priority: MEDIUM**
-
-- Apply the tree to the full portfolio.
-- Champion-challenger: compare engines and versions.
 
 ### ⏳ Phase 7 — IFRS 9 / ECL
 **Priority: LOW (depends on integration with banking systems)**

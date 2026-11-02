@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 537/537 passing
+**Suite de tests**: 553/553 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 5.0 y 4.0.1 completas<br/>🔀 Próximo: 1.0.0 / Fase 6 / Fase 7<br/>📦 v1.0.0rc5 publicada en PyPI<br/>🧪 537 / 537 tests PASSED<br/>📅 02 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 6.0 completas<br/>🔀 Próximo: Fase 7 (IFRS 9 / ECL)<br/>📦 v1.0.0rc5 publicada en PyPI<br/>🧪 553 / 553 tests PASSED<br/>📅 02 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -277,10 +277,10 @@ TreeGov/
 | **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
 | **4.0.1** | Exporters: categorical unseen_policy | Completada |
 | **5** | Capa MCP para agentes LLM | Completada |
-| **6** | Scoring batch + champion-challenger | Planificada |
+| **6** | Batch scoring + champion-challenger | Completada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
 
-**Suite de tests: 537/537 passing.**
+**Suite de tests: 553/553 passing.**
 
 ---
 

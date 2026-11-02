@@ -6970,3 +6970,39 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/security_audit.md` §6; `docs/6.0_design_batch_scoring.md` §4 I-8 y R7/R13; `backend_v3/scoring.py::score_batch_to_csv`; `tests/test_mcp_tools.py::test_tools_registry_has_26_tools`; `tests/test_mcp_server.py::test_server_tools_registered`.
 
+### 02/11/2026 — Cierre completo de la Fase 6.0 (Batch Scoring y Champion-Challenger)
+
+**Estado**: ✅ Fase 6.0 completada. Sub-fases 6.0.a–6.0.d implementadas y documentadas as-built. Suite **553/553 PASSED**. Working tree preparado para revisión humana; sin commit realizado por el agente.
+
+**Artefactos de implementación cerrados**:
+
+- `backend_v3/scoring.py` — DTOs, scoring por chunks, reglas, comparación por población común y publicación atómica anti-overwrite.
+- `backend_v3/session_state.py` — `Session.score_batch` y `Session.compare_champion_challenger`, sin transición ni mutación del campeón.
+- `frontend_v3/scoring_dialogs.py`, `frontend_v3/main_window.py`, `frontend_v3/i18n.py` — workers, dos diálogos, acciones Analysis y textos bilingües.
+- `mcp_v3/tools.py`, `mcp_v3/server.py` — `score_batch` y `compare_champion_challenger`; **26 tools MCP** en total.
+- `tests/test_scoring.py` (5), `tests/test_champion_challenger.py` (5), `tests/test_scoring_dialogs.py` (4) y `tests/test_mcp_scoring.py` (2): **16 tests nuevos** sobre la base documentada de 537.
+
+**Artefactos del cierre documental**:
+
+- `docs/6.0_design_batch_scoring.md` — estado completado, sub-fases implementadas y §6 as-built.
+- `docs/roadmap.md` — Fase 6 movida a Completed; tablas de estado sin emoji ✅ ni fechas en las celdas de estado.
+- `docs/estado_proyecto.md` — narrativa Fase 6, estructura y §7 con 553 tests y los cuatro módulos de prueba nuevos.
+- `docs/contexto_para_nueva_sesion.md` y `docs/prompt_para_asistente.md` — Fase 6 cerrada, suite actualizada y próximo paso Fase 7.
+- `README.md` y `README.es.md` — cabecera, Mermaid y tabla con Fases 0–6 completas y 553/553; estados solo Completed/Completada.
+- `docs/api.md` — módulo `backend_v3.scoring` y ambos métodos públicos de `Session`.
+- `docs/design_decisions.md` — nueva §21: chunks/atomicidad, `ScoringBundle` y población común.
+- `docs/philosophy.md`, `docs/philosophy.es.md`, `CONVENTIONS.md` y `docs/playbook.md` — estado, umbral de suite y registro del diseño canónico.
+- `docs/audit_log.md` — esta entrada.
+
+**Hallazgos y decisiones de cierre**:
+
+1. **Batch atómico y acotado.** El CSV se procesa por chunks con imputación train-only y publicación temporal + `os.replace`. La guarda anti-overwrite rechaza destinos preexistentes antes de crear el temporal; el smoke verificó preservación byte a byte y ausencia de temporales.
+2. **Comparación justa.** Champion-Challenger calcula métricas sobre la intersección enrutable por ambos modelos y coberturas sobre la cohorte completa. El retador usa motor nuevo y el campeón permanece inmutable; no hay promoción automática.
+3. **Superficies coherentes.** GUI y MCP delegan toda la analítica en `Session`. La GUI cumple Ctrl+C → TSV; MCP devuelve JSON estricto y solo resumen batch. El registro histórico de 24 tools queda actualizado a 26.
+4. **Sincronización documental y de estilo.** Los READMEs y el roadmap no conservan emoji ✅ en las tablas de estado; las fases muestran únicamente Completed/Completada. El histórico 243/243 de `AGENTS.md` se conserva deliberadamente por ser una verificación fechada, no un conteo vigente.
+5. **Release.** No se publica una nueva versión en este bloque documental. `1.0.0rc5` permanece como release vigente; la página de PyPI conserva su README histórico de 537 tests mientras el repositorio registra 553.
+
+**Tests**: **553/553 PASSED** (`python -m pytest tests -q`). Desglose Fase 6: backend batch 5, Champion-Challenger 5, GUI 4 y MCP 2. Verificaciones adicionales durante la fase: smoke binario/multiclase, workers y diálogos offscreen, JSON `allow_nan=False`, población común y anti-overwrite.
+
+**Referencias cruzadas**: `docs/6.0_design_batch_scoring.md` §6; `docs/design_decisions.md` §21; `docs/api.md` §`backend_v3.scoring` y §`backend_v3.session_state`; `docs/security_audit.md` §6; `docs/roadmap.md` §Phase 6; `docs/estado_proyecto.md` §3 y §7; `docs/playbook.md` Skill 4.
+

@@ -134,8 +134,13 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 5.0.c | Paridad E2E MCP + exportadores CHAID con bins fusionados (§16.4) | ✅ |
 | 5.0.d | Auditoría de seguridad MCP + cierre documental as-built | ✅ |
 | **5.0** | **Capa MCP (fase completa)** | **✅ Cerrada** |
+| 6.0.a | Backend batch scoring + `Session.score_batch` + atomicidad anti-overwrite | ✅ |
+| 6.0.b | Backend Champion-Challenger + población común + campeón inmutable | ✅ |
+| 6.0.c | Diálogos GUI + workers + acciones Analysis + i18n | ✅ |
+| 6.0.d | Tools MCP de scoring + hardening (26 tools totales) | ✅ |
+| **6.0** | **Batch scoring y Champion-Challenger (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 537/537 PASSED
+**Suite de tests:** 553/553 PASSED
 
 ## Entorno de desarrollo
 
@@ -277,17 +282,18 @@ PySide6). Verificación de instalación limpia completada.
 La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
 releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
-cierre de la Fase 4.0.1, la versión actual es `1.0.0rc5`; el README de PyPI
-está sincronizado con el repo y refleja 537/537 tests. Ver docs/roadmap.md,
-protocolo PyPI.
+cierre de la Fase 4.0.1, la versión publicada sigue siendo `1.0.0rc5`; su README
+de PyPI refleja 537/537 tests, mientras el repositorio cerró la Fase 6 con
+553/553. La sincronización de la página queda pendiente de una decisión de
+release; este bloque es exclusivamente documental y no cambia la versión publicada.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 4.0.1 cerradas; la Fase 5.0 también permanece cerrada. Suite **537/537 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
+**Estado actual:** Fases 0–6.0 cerradas, incluidas 3.6.e y 4.0.1. Suite **553/553 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
 
-**Fase 4.0.1 — Exportadores categóricos: ✅ cerrada (02/11/2026).** Los modos `"error"`, `"exclude"` y `"majority"` están implementados en SQL, Python y Markdown, con tests de wrappers y artefactos. Diseño as-built y A1–A6: `docs/4.0.1_design_categorical_exporters.md`; decisión: `docs/design_decisions.md` §19.4.
+**Fase 6.0 — Batch scoring y Champion-Challenger: ✅ cerrada (02/11/2026).** Backend por chunks con escritura atómica anti-overwrite, comparación sobre población común, dos diálogos GUI y dos nuevas tools MCP (26 en total). Diseño as-built: `docs/6.0_design_batch_scoring.md` §6; decisión: `docs/design_decisions.md` §21.
 
-**Próximo paso:** Decisión entre **(A)** preparar `1.0.0` estable, **(B)** iniciar la Fase 6 (batch scoring y champion-challenger) o **(C)** iniciar la Fase 7 (IFRS 9 / ECL).
+**Próximo paso:** Iniciar la Fase 7 (IFRS 9 / ECL), comenzando por su diseño formal antes de cualquier implementación.
 
 **Nota de release:** `1.0.0rc5` está publicada en PyPI tras el cambio material de 4.0.1.b. La publicación quedó registrada en el commit `ab8849a` y el tag `v1.0.0rc5`.
 
