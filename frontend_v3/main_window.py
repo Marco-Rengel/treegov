@@ -66,6 +66,10 @@ from frontend_v3.data_viewer import DataViewer
 from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
+from frontend_v3.scoring_dialogs import (
+    BatchScoringDialog,
+    ChampionChallengerDialog,
+)
 from frontend_v3.univariate_dialog import UnivariateDialog
 from frontend_v3.wizard import ModelWizard
 
@@ -140,6 +144,8 @@ class MainWindow(QMainWindow):
         self._act_format_node_display.setText(tr("menu_format_node_display"))
         self._act_analysis_var_types.setText(tr("menu_analysis_var_types"))
         self._act_univariate.setText(tr("menu_analysis_univariate"))
+        self._act_batch.setText(tr("menu_analysis_batch"))
+        self._act_cc.setText(tr("menu_analysis_cc"))
         self._act_window_tile.setText(tr("menu_window_tile"))
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
@@ -394,6 +400,12 @@ class MainWindow(QMainWindow):
         self._act_univariate = self._new_action("act_univariate", enabled=False)
         self._act_univariate.triggered.connect(self._on_univariate)
         self._menu_analysis.addAction(self._act_univariate)
+        self._act_batch = self._new_action("act_batch", enabled=False)
+        self._act_batch.triggered.connect(self._on_batch_scoring)
+        self._menu_analysis.addAction(self._act_batch)
+        self._act_cc = self._new_action("act_cc", enabled=False)
+        self._act_cc.triggered.connect(self._on_champion_challenger)
+        self._menu_analysis.addAction(self._act_cc)
         bar.addMenu(self._menu_analysis)
 
         # --- Tree (former Model menu: train opens the wizard; OOS/OOT
@@ -1060,6 +1072,9 @@ class MainWindow(QMainWindow):
             self._act_export_sql.setEnabled(has_tree)
             self._act_export_python.setEnabled(has_tree)
             self._act_export_markdown.setEnabled(has_tree)
+        if hasattr(self, "_act_batch"):
+            self._act_batch.setEnabled(has_tree)
+            self._act_cc.setEnabled(has_tree)
         state = (
             self._session.state.state
             if self._session is not None
@@ -1379,6 +1394,20 @@ class MainWindow(QMainWindow):
         dlg = UnivariateDialog(self, logger=self._logger)
         dlg.set_data(data)
         dlg.exec()
+
+    def _on_batch_scoring(self) -> None:
+        """Analysis > Batch Scoring: open the Phase 6 modal dialog."""
+        if self._session is None or self._session.state.tree is None:
+            return
+        dialog = BatchScoringDialog(self._session, self)
+        dialog.exec()
+
+    def _on_champion_challenger(self) -> None:
+        """Analysis > Champion-Challenger: open the comparison dialog."""
+        if self._session is None or self._session.state.tree is None:
+            return
+        dialog = ChampionChallengerDialog(self._session, self)
+        dialog.exec()
 
     def _on_reports_partition_changed(self, _partition: str) -> None:
         """Partition combo changed: recompute gains table and matrix."""
