@@ -6801,3 +6801,26 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/roadmap.md` (Upcoming phases sin Phase 3); `docs/design_decisions.md` §19.2; `AGENTS.md` §Herramienta de desarrollo: OpenCode; `CONVENTIONS.md` §Proveedor de IA: OpenCode Zen; `docs/contexto_para_nueva_sesion.md` §Herramientas y §Próximos pasos; `docs/prompt_para_asistente.md` §5 y §6; `docs/api.md` §mcp_v3.
 
+### 01/11/2026 — Sub-fase 4.0.1.a: Paridad SQL/Python en categorías no vistas (exclude mode)
+
+**Estado**: ✅ 4.0.1.a cerrada. Suite **532/532 PASSED**.
+
+**Modelo**: OpenCode v2.2.5 + `moonshotai/kimi-k3`.
+
+**Contexto**: resolución del hallazgo #1 (divergencia SQL/Python en categorías no vistas) y los TODOs 35, 260, 369, 531 y 754 de `backend_v3/exporters.py`. La Sub-fase 4.0.1.b implementará los modos `"error"` y `"majority"`.
+
+**Artefactos tocados**:
+- `docs/4.0.1_design_categorical_exporters.md` (creado y reconciliado con el código).
+- `backend_v3/exporters.py` (kwarg `unseen_policy`, validación `_ensure_unseen_policy`, routing `exclude` para categóricos, cabeceras de política en los 3 formatos, guarda D4).
+- `backend_v3/session_state.py` (wrappers `Session.export_to_*` reenvían `unseen_policy`).
+- `mcp_v3/server.py` (tools `export_*` reenvían `unseen_policy`).
+- `tests/test_exporters.py` y `tests/test_session_exporters.py` (tests de routing categórico, D4, idempotencia SQL, wrappers y `NotImplementedError`).
+
+**Hallazgos y decisiones**:
+1. El diseño original asumía que Markdown no llevaría el kwarg. Se corrigió durante la ráfaga.
+2. Los modos `"error"` y `"majority"` se aceptan en la firma pero lanzan `NotImplementedError` para evitar silent behavior. Se implementarán en 4.0.1.b.
+3. La guarda D4 (`len(branches) == len(child_ids)`) evita un `IndexError` silencioso.
+4. Los 5 TODOs de `exporters.py` han sido eliminados.
+
+**Pendiente para 4.0.1.b**: implementación de `unseen_policy="error"` y `unseen_policy="majority"`.
+
