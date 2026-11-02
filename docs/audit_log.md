@@ -6824,3 +6824,15 @@ Kimi comodín).
 
 **Pendiente para 4.0.1.b**: implementación de `unseen_policy="error"` y `unseen_policy="majority"`.
 
+### 01/11/2026 — Mini-cierre documental: saneamiento final de 4.0.1.a
+
+**Estado**: ✅ Cerrado. Suite **532/532 PASSED**. Cambios exclusivamente documentales; sin commit al momento de escribir esta entrada.
+
+**Artefactos tocados**: `CONVENTIONS.md`; `README.md`; `README.es.md`; `docs/4.0.1_design_categorical_exporters.md`; `docs/4.0_design_exports.md`; `docs/5.0_design_mcp.md`; `docs/estado_proyecto.md`; `docs/philosophy.md`; `docs/philosophy.es.md`; `docs/prompt_para_asistente.md`; `docs/roadmap.md`; `docs/audit_log.md` (esta entrada).
+
+**Hallazgos y correcciones**: se sustituyeron los conteos obsoletos `487/487`, `525/525` y variantes por `532/532` fuera de esta bitácora append-only; se sincronizaron los diagramas Mermaid, árboles de `docs/` y filas de estado de ambos README; se añadió el estado actual a las dos versiones de `philosophy`; y se explicitó OpenCode v2.2.5 + Multi-Proveedor en `CONVENTIONS.md`. La tabla de módulos de `estado_proyecto.md` ahora suma 532 tests (`exporters.py`: 17; `session_exporters`: 8). `AGENTS.md` ya reflejaba la política multi-proveedor y no requirió cambios. Las entradas históricas de este archivo se conservaron intactas.
+
+**Verificación**: `Select-String -Path *.md,docs\*.md -Pattern "525/525|529/529|487/487"` solo devuelve coincidencias históricas en `docs/audit_log.md`; `python -m pytest tests -q` → **532/532 PASSED**. No se tocó código fuente.
+
+**Referencias cruzadas**: `docs/roadmap.md` (Fase 4.0.1.a cerrada y 4.0.1.b pendiente); `docs/estado_proyecto.md` §3 y §7; `README.md` / `README.es.md` (estado actual y estructura del repositorio).
+

@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 4.0 complete<br/>🔧 Focus: Phase 5.0 / MCP layer<br/>📦 v1.0.0rc4 published on PyPI<br/>🧪 525 / 525 tests PASSED<br/>📅 Nov 1, 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 5.0 completas<br/>🔧 Foco: Fase 4.0.1 / Exportadores<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 532 / 532 tests PASSED<br/>📅 01 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -159,6 +159,9 @@ TreeGov/
 │   ├── 3.11_design_interactive_tree.md  # Phase 3.11 design (EN)
 │   ├── 3.11.a_design_colab_theme.md  # Phase 3.11.a as-built (EN)
 │   ├── 3.11_classic_tree_ui_reference.md  # Classic tree-station visual reference, circa 2001 (ES)
+│   ├── 4.0_design_exports.md
+│   ├── 4.0.1_design_categorical_exporters.md
+│   ├── 5.0_design_mcp.md
 │   ├── validation_results_3.6.md  # UCI validation report (EN)
 │   ├── security_audit.md      # Security and privacy audit (EN)
 │   ├── playbook.md          # Governance playbook (EN)
@@ -272,7 +275,7 @@ TreeGov/
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
-| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed, exclude mode) | In progress |
+| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed) | 🟡 En progreso (4.0.1.a ✅ 01/11/2026) |
 | **5** | MCP layer for LLM agents | ✅ Completed (01/11/2026) |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |

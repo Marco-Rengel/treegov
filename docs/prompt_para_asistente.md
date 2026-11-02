@@ -409,7 +409,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 > 3.11.d cerradas, más 3.6.e (modo no-bancario), la Fase 4.0 completa
 > (exportadores SQL/Python/Markdown + GUI) y la Fase 5.0 completa
 > (capa MCP stdio, 24 herramientas, paridad E2E, auditoría de seguridad
-> y diseño as-built). Suite 525/525. Release 1.0.0rc4 publicada en PyPI.
+> y diseño as-built). Suite 532/532. Release 1.0.0rc4 publicada en PyPI.
 > Próximo paso: auditar `docs/4.0.1_design_categorical_exporters.md` antes de decidir entre (A) 1.0.0 estable, (B) Fase 6 o (C) Fase 7. Herramienta activa: OpenCode v2.2.5 + Multi-Proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---

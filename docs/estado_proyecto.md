@@ -554,7 +554,7 @@ deshabilitadas hasta que exista un modelo entrenado, cableadas a
 (testable en headless); `_save_export(kind, ...)` abre el
 `QFileDialog` y escribe UTF-8. Cierra también la deuda silenciosa de
 la Fase 4.0.b: 4 tests nuevos para `export_to_markdown` en
-`tests/test_exporters.py`. Suite 525/525. Diseño:
+`tests/test_exporters.py`. Suite 532/532. Diseño:
 `docs/4.0_design_exports.md`. Decisión: `docs/design_decisions.md`
 §19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
@@ -567,7 +567,7 @@ con el registro plano de 24 `ToolDescriptor` frozen (nombre,
 descripción, `method_name` en `Session`, `min_state` de la máquina
 `FlowState`; Invariante I-4). 11 tests nuevos en
 `tests/test_mcp_tools.py` y el paquete entra en el wheel
-(`pyproject.toml`). Suite 525/525. Diseño: `docs/5.0_design_mcp.md`.
+(`pyproject.toml`). Suite 532/532. Diseño: `docs/5.0_design_mcp.md`.
 Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
 ### Fase 5.0.b — Servidor MCP stdio ✅ Completada (01/11/2026)
@@ -582,7 +582,7 @@ riden as `"DATA_LOADED"` vía `.name`); (2) el default
 datasets pequeños — adaptativo `max(3, min(10, n_test//5))` (D20);
 (3) 5 herramientas DTO devolvían NaN/Inf crudos, ahora envueltas con
 `_jsonable` (I-3). 3 tests E2E en `tests/test_mcp_server.py`
-(SDK 1.30.0 en el .venv, `pip check` limpio). Suite 525/525. Diseño:
+(SDK 1.30.0 en el .venv, `pip check` limpio). Suite 532/532. Diseño:
 `docs/5.0_design_mcp.md`. Cierre: `docs/audit_log.md` entrada del
 01/11/2026.
 
@@ -598,7 +598,7 @@ El fix deriva las condiciones desde `split.branches` mediante
 y envía la rama superior al `ELSE` residual. Tres tests de regresión en
 `tests/test_exporters.py` fijan la paridad de scoring; la verificación
 sobre los árboles reales fue exacta en OOS y en el barrido de bins.
-Suite 525/525. Decisión: `docs/design_decisions.md` §16.4. Cierre:
+Suite 532/532. Decisión: `docs/design_decisions.md` §16.4. Cierre:
 `docs/audit_log.md` entrada del 01/11/2026.
 
 ### Fase 5.0.d — Cierre de la Capa MCP ✅ Completada (01/11/2026)
@@ -608,7 +608,7 @@ Auditoría de seguridad de la capa MCP documentada en
 transporte exclusivamente stdio, invariante I-7 de no escritura salvo logs
 y ausencia de herramientas de exploración de directorios (D11). El diseño
 `docs/5.0_design_mcp.md` queda marcado como implementado (as-built) y los
-READMEs incorporan el quickstart de instalación y arranque. Suite 525/525.
+READMEs incorporan el quickstart de instalación y arranque. Suite 532/532.
 Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
 ### Fase 4.0.1 — Categorical Exporters Unseen Policy
@@ -778,15 +778,15 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| exporters.py | 11 |
-| session_exporters (backend) | 7 |
+| exporters.py | 17 |
+| session_exporters (backend) | 8 |
 | e2e_exporters_gui (frontend) | 4 |
 | mcp_tools (backend) | 12 |
 | mcp_server (backend) | 3 |
 | mcp_parity (backend) | 5 |
-| **Total** | **525** |
+| **Total** | **532** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 525/525 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 532/532 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

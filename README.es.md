@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 4.0 completas<br/>🔧 Foco: Fase 5.0 / Capa MCP<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 525 / 525 tests PASSED<br/>📅 01 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 5.0 completas<br/>🔧 Foco: Fase 4.0.1 / Exportadores<br/>📦 v1.0.0rc4 publicada en PyPI<br/>🧪 532 / 532 tests PASSED<br/>📅 01 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -159,6 +159,9 @@ TreeGov/
 │   ├── 3.11_design_interactive_tree.md  # Diseño Fase 3.11 (EN)
 │   ├── 3.11.a_design_colab_theme.md  # As-built Fase 3.11.a (EN)
 │   ├── 3.11_classic_tree_ui_reference.md  # Referencia visual de estación de árboles clásica, circa 2001 (ES)
+│   ├── 4.0_design_exports.md
+│   ├── 4.0.1_design_categorical_exporters.md
+│   ├── 5.0_design_mcp.md
 │   ├── validation_results_3.6.md  # Informe de validación UCI (EN)
 │   ├── security_audit.md      # Auditoría de seguridad y privacidad (EN)
 │   ├── playbook.md          # Playbook de gobernanza (EN)
@@ -272,7 +275,7 @@ TreeGov/
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
 | **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
 | **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
-| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed, exclude mode) | In progress |
+| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed) | 🟡 En progreso (4.0.1.a ✅ 01/11/2026) |
 | **5** | Capa MCP para agentes LLM | ✅ Completada (01/11/2026) |
 | **6** | Scoring batch + champion-challenger | Planificada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |

@@ -334,9 +334,9 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Priority: MEDIUM** · **Cerrada el 01/11/2026.**
 
-- **4.0.a** Exportadores SQL y Python (`backend_v3/exporters.py`). ✅ Completada (31/10/2026, suite 487/487).
-- **4.0.b** Exportador Markdown (`export_to_markdown`). ✅ Completada (01/11/2026, suite 487/487).
-- **4.0.c** Integración en la GUI: 3 acciones en el menú Archivo (`act_export_sql`/`act_export_python`/`act_export_markdown`), wrappers `Session.export_to_{sql,python,markdown}`, `_export_payload` testeable headless, `_save_export` con QFileDialog. ✅ Completada (01/11/2026, suite 525/525).
+- **4.0.a** Exportadores SQL y Python (`backend_v3/exporters.py`). ✅ Completada (31/10/2026, suite 532/532).
+- **4.0.b** Exportador Markdown (`export_to_markdown`). ✅ Completada (01/11/2026, suite 532/532).
+- **4.0.c** Integración en la GUI: 3 acciones en el menú Archivo (`act_export_sql`/`act_export_python`/`act_export_markdown`), wrappers `Session.export_to_{sql,python,markdown}`, `_export_payload` testeable headless, `_save_export` con QFileDialog. ✅ Completada (01/11/2026, suite 532/532).
 
 **Diseño:** `docs/4.0_design_exports.md`. **Decisión:** `docs/design_decisions.md` §19.1. **Cierre:** `docs/audit_log.md` entrada del 01/11/2026.
 
@@ -346,7 +346,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - **4.0.1.b** Implementación de modos `"error"` y `"majority"`. ⏳ Pendiente.
 
 ### ✅ Phase 5 — MCP layer
-**Status**: ✅ Completed (01/11/2026, suite 525/525).
+**Status**: ✅ Completed (01/11/2026, suite 532/532).
 **Priority: MEDIUM**
 
 - MCP (Model Context Protocol) layer for consumption from LLM agents.
@@ -355,24 +355,24 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - **5.0.a** Esqueleto headless MCP: paquete `mcp_v3/` — `dto.py`
   (conversor JSON-nativo `_jsonable`; Invariante I-3) y `tools.py`
   (24 `ToolDescriptor` frozen; Invariante I-4). ✅ Completada
-  (01/11/2026, suite 525/525).
+  (01/11/2026, suite 532/532).
 - **5.0.b** Servidor MCP stdio + entry point: `mcp_v3/server.py` (24
   tools FastMCP; SDK fijado `mcp>=1.0.0,<2.0.0` — la v2 renombra
   FastMCP a MCPServer), `treegov_mcp.py` (consola `treegov-mcp`) y 3
   tests E2E (`pytest.importorskip`). Correcciones empíricas: enums →
   `.name` en `_jsonable`, `n_groups` adaptativo en `evaluate_oos`
   (D20) y 5 DTOs envueltos en `_jsonable` (I-3). ✅ Completada
-  (01/11/2026, suite 525/525).
+  (01/11/2026, suite 532/532).
 - **5.0.c** Paridad E2E headless: `tests/test_mcp_parity.py` cubre el
   flujo completo vía servidor con CRT, QUEST, CHAID y CHAID_EXHAUSTIVE,
   fingerprints y JSON estricto (I-3). Detectó y cerró H-5.0.c-1: los
   exportadores ahora enrutan splits CHAID continuos por rama consolidada
   (`_merged_bin_branches`; `docs/design_decisions.md` §16.4), con 3
   tests de regresión y paridad de scoring exacta. ✅ Completada
-  (01/11/2026, suite 525/525).
+  (01/11/2026, suite 532/532).
 - **5.0.d** Auditoría de seguridad MCP (`docs/security_audit.md` §5),
   diseño marcado como implementado (as-built) y quickstart en READMEs.
-  ✅ Completada (01/11/2026, suite 525/525). Fase 5.0 cerrada.
+  ✅ Completada (01/11/2026, suite 532/532). Fase 5.0 cerrada.
 
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.
@@ -625,7 +625,7 @@ de Clean Room: cero código del prototipo.
 ### ✅ ZG-C — Tests del exportador Markdown — RESUELTO (01/11/2026)
 **Priority: LOW (registrado y resuelto el 01/11/2026, mismo bloque).**
 
-La Fase 4.0.b se cerró el 01/11/2026 con suite 487/487 sin añadir tests para `export_to_markdown` (deuda silenciosa: el exportador existía pero no estaba verificado empíricamente). Los 4 tests nuevos de `tests/test_exporters.py` (P5 de la Fase 4.0.c) cierran la deuda: header/fingerprint/method, rama de threshold, probabilidades por hoja, firma sin imputer. Cierre: `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c, hallazgo #4).
+La Fase 4.0.b se cerró el 01/11/2026 con suite 532/532 sin añadir tests para `export_to_markdown` (deuda silenciosa: el exportador existía pero no estaba verificado empíricamente). Los 4 tests nuevos de `tests/test_exporters.py` (P5 de la Fase 4.0.c) cierran la deuda: header/fingerprint/method, rama de threshold, probabilidades por hoja, firma sin imputer. Cierre: `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c, hallazgo #4).
 
 ## Recorded architectural decisions
 

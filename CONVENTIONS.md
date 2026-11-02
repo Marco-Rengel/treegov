@@ -22,7 +22,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de **525/525** tests (conteo al 01/11/2026), no se commitea.
+Si la suite baja de **532/532** tests (conteo al 01/11/2026), no se commitea.
 
 **Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
 a los 5 minutos de inactividad. Verificar en PowerShell entre cada
@@ -91,10 +91,10 @@ Reglas operativas derivadas:
 Prohibido importar: sklearn, statsmodels, xgboost, lightgbm, catboost.
 Toda fórmula estadística con cita bibliográfica explícita.
 
-## Proveedor de IA: OpenCode Zen (Gratuito - Actualizado 01/11/2026)
+## Proveedor de IA: OpenCode v2.2.5 + Multi-Proveedor (Actualizado 01/11/2026)
 
-*   **Herramienta activa:** OpenCode v2.2.5.
-*   **Modelos:** `deepseek-v4-flash-free` (principal), `qwen3.6-plus-free` (alternativa de rotación).
+*   **Herramienta activa:** OpenCode v2.2.5 + Multi-Proveedor.
+*   **Modelos:** `deepseek-v4-flash-free` (principal), `qwen3.6-plus-free` (alternativa de rotación); Moonshot Kimi K3.1 Pro queda como comodín de pago.
 *   **Restricción de contexto:** Ventana de 200K tokens. Los prompts deben ser hiper-quirúrgicos (basados en diffs exactos, no lectura de archivos enteros).
 *   **Estrategia de rotación:** Si un modelo falla dos veces seguidas en el mismo prompt o la ventana de contexto supera el 50%, se cierra la sesión y se cambia de modelo con `/models`. No se insiste.
 *   **Reversión:** Si se decide volver a un modelo de pago, editar los campos `model` y `small_model` en `opencode.json` (raíz del repo, versionado) al identificador del modelo elegido —por ejemplo `moonshotai/kimi-k3` si se restaura Moonshot AI directo— y registrar la API key correspondiente vía `opencode auth login`. El procedimiento es idéntico al actual: la elección de proveedor vive en `opencode.json` + la credencial en `~/.local/share/opencode/auth.json`.
