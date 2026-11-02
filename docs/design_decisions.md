@@ -2311,6 +2311,14 @@ The two lines together produce SQL-equivalent behavior for both "absent key" and
 
 **Reference.** `backend_v3/exporters.py::_python_imputation`; `docs/4.0_design_exports.md` §3 (prediction parity); `docs/audit_log.md` entry of 01/11/2026 (this mini-cierre).
 
+### 19.3 Exporters unseen_policy (Phase 4.0.1.a)
+
+**Context.** Los exportadores SQL y Python divergían en el tratamiento de categorías no vistas (SQL devolvía `NULL`, Python caía a la última rama). Esto violaba el invariante de paridad de predicción de la Fase 4.0.
+
+**Decision.** Se introduce `unseen_policy` como keyword-only en los tres exportadores (SQL, Python, MD) y en sus wrappers. El default es `"exclude"`, que mantiene el comportamiento de SQL (`NULL`/`None`). Los modos `"error"` y `"majority"` se aceptan en la firma pero lanzan `NotImplementedError` hasta la sub-fase 4.0.1.b. Se añade la guarda D4 (validación de cardinalidad estricta en `branches`) para fallar rápido ante modelos malformados.
+
+**Reference.** `docs/4.0.1_design_categorical_exporters.md`; `backend_v3/exporters.py`.
+
 ---
 
 ## §20. MCP Layer (Phase 5.0)

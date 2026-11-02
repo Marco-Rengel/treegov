@@ -134,7 +134,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 5.0.d | Auditoría de seguridad MCP + cierre documental as-built | ✅ |
 | **5.0** | **Capa MCP (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 525/525 PASSED
+**Suite de tests:** 532/532 PASSED
 
 ## Entorno de desarrollo
 
@@ -282,11 +282,11 @@ repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 5.0 cerradas. Suite **525/525 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026). HEAD en `main` = cierre de Fase 5.0 (`3116575`).
+**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 5.0 cerradas. Suite **532/532 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026). HEAD en `main` = cierre de Fase 5.0 (`3116575`).
 
 **Fase 5.0 — Capa MCP: ✅ cerrada (01/11/2026).** 24 tools FastMCP stdio (`mcp_v3/server.py`), entry point `treegov-mcp`, paridad E2E 4 motores, auditoría de seguridad §5 de `docs/security_audit.md`, quickstart en READMEs. Diseño as-built: `docs/5.0_design_mcp.md`. Decisión SDK v1: `design_decisions.md` §20.1.
 
-**Próximo paso:** auditar `docs/4.0.1_design_categorical_exporters.md` (fix de paridad SQL/Python en categorías no vistas, hallazgo #1 de la auditoría del 01/11/2026) antes de decidir entre (A) 1.0.0 estable en PyPI, (B) Fase 6 — batch scoring + champion-challenger, o (C) Fase 7 — IFRS 9/ECL.
+**Próximo paso:** Implementar la sub-fase 4.0.1.b en los exportadores (modos `unseen_policy="error"` y `"majority"`).
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

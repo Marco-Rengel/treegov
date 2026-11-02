@@ -70,17 +70,22 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.exporters
 
-- `export_to_sql(model: TreeModel, imputer: ImputationSpec) -> str` —
+- `export_to_sql(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude") -> str` —
   ANSI SQL with nested `CASE WHEN` and `COALESCE` for training-time
   imputation; the fingerprint rides as a leading comment. (Phase
   4.0.a, 31/10/2026.)
-- `export_to_python(model: TreeModel, imputer: ImputationSpec) -> str` —
-  dependency-free Python module (`predict(row: dict) -> float`),
+- `export_to_python(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude") -> str` —
+  dependency-free Python module (`predict(row: dict) -> float | None`),
   same fingerprint header. (Phase 4.0.a, 31/10/2026.)
-- `export_to_markdown(model: TreeModel) -> str` — human-readable
+- `export_to_markdown(model: TreeModel, *, unseen_policy: str = "exclude") -> str` — human-readable
   Markdown report (fingerprint + method + nested decision rules).
   Takes only the model: no imputation is needed because the
   artefact is descriptive, not scoring. (Phase 4.0.b, 01/11/2026.)
+
+Since Phase 4.0.1.a, `unseen_policy="exclude"` leaves unseen categorical
+rows unscored (`NULL` in SQL, `None` in Python). `"error"` and
+`"majority"` are accepted by the signatures but raise
+`NotImplementedError` until Phase 4.0.1.b.
 
 Since Phase 5.0.c, all three exporters route CHAID continuous splits by
 their consolidated `SplitConfig.branches`, not by individual bins: each
@@ -142,16 +147,16 @@ public signature changed.
   (list[tuple[str, float]] of internal-node thresholds). A failing
   predictor degrades to `0.0` metrics with a WARNING in the log.
   Requires a trained model (`ValueError` otherwise).
-- `Session.export_to_sql() -> str | None` — wrapper of
+- `Session.export_to_sql(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_sql` using the trained tree and
   the training-partition imputer. `None` without a trained model;
   `RuntimeError` if the model exists but the imputer cache is empty
   (defensive guard for a broken invariant). (Phase 4.0.c,
   01/11/2026.)
-- `Session.export_to_python() -> str | None` — wrapper of
+- `Session.export_to_python(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_python`. Same contract as
   `export_to_sql`. (Phase 4.0.c, 01/11/2026.)
-- `Session.export_to_markdown() -> str | None` — wrapper of
+- `Session.export_to_markdown(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_markdown`. `None` without a
   trained model; does not require the imputer (the Markdown
   artefact is descriptive, not scoring). (Phase 4.0.c,
@@ -300,6 +305,10 @@ public signature changed.
   all dict/list outputs go through `_jsonable` (Invariant I-3).
   Phase 5.0.c verifies the full four-engine flow and strict JSON output
   end to end (`tests/test_mcp_parity.py`); no public symbol was added.
+  Since Phase 4.0.1.a, the `export_sql`, `export_python` and
+  `export_markdown` tools accept the keyword argument
+  `unseen_policy: str = "exclude"` and forward it to the corresponding
+  `Session` wrapper.
 - `treegov_mcp` — root entry point registered as the `treegov-mcp`
   console script (`treegov_mcp:main`); requires the `[mcp]` extra.
 

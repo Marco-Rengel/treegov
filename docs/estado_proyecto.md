@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 01/11/2026 (Fases 4.0 y 5.0 cerradas; suite 525/525; release 1.0.0rc4 vigente)
+**Fecha de última actualización:** 01/11/2026 (Fases 4.0 y 5.0 cerradas; suite 532/532; release 1.0.0rc4 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -611,6 +611,10 @@ y ausencia de herramientas de exploración de directorios (D11). El diseño
 READMEs incorporan el quickstart de instalación y arranque. Suite 525/525.
 Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
+### Fase 4.0.1 — Categorical Exporters Unseen Policy
+
+**4.0.1.a cerrada (01/11/2026).** Se añadió el parámetro `unseen_policy` a los tres exportadores (SQL, Python, Markdown) y a sus wrappers en `Session` y `mcp_v3`. En esta sub-fase solo se implementó el modo `"exclude"` (categorías no vistas devuelven `NULL`/`None`). Se corrigió el silent mis-scoring de Python en splits categóricos. Suite: 532/532. Pendiente: 4.0.1.b (modos `"error"` y `"majority"`).
+
 ---
 
 ## 4. Arquitectura
@@ -629,7 +633,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (525 tests)
+├── tests/ # Suite de tests (532 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md

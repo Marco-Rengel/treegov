@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 525/525 passing
+**Test suite**: 532/532 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -272,11 +272,12 @@ TreeGov/
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
+| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed, exclude mode) | In progress |
 | **5** | MCP layer for LLM agents | ✅ Completed (01/11/2026) |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
-**Test suite: 525/525 passing.**
+**Test suite: 532/532 passing.**
 
 ---
 
