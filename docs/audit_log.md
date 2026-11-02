@@ -6836,3 +6836,15 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/roadmap.md` (Fase 4.0.1.a cerrada y 4.0.1.b pendiente); `docs/estado_proyecto.md` §3 y §7; `README.md` / `README.es.md` (estado actual y estructura del repositorio).
 
+### 01/11/2026 — Mini-cierre documental: limpieza de fechas en READMEs (4.0.1.a)
+
+**Estado**: ✅ Cerrado. Suite **532/532 PASSED**. Cambios exclusivamente documentales; sin commit al momento de escribir esta entrada.
+
+**Artefactos tocados**: `README.md`; `README.es.md`; `docs/philosophy.md`; `docs/philosophy.es.md`; `docs/audit_log.md` (esta entrada).
+
+**Hallazgos y correcciones**: se eliminaron las fechas de las filas 4.0.1 y 5 de las tablas de estado de ambos README, dejando únicamente `🟡 En progreso` y `✅ Completada`; el resto de las filas ya estaba limpio. Los diagramas Mermaid y los tres archivos de diseño del árbol de `docs/` ya estaban sincronizados. El bloque `Current Status` de ambas versiones de `philosophy` quedó con el texto canónico: Fase 5.0 completa, Fase 4.0.1 en progreso y 532/532 tests. `AGENTS.md` y `CONVENTIONS.md` ya reflejaban OpenCode v2.2.5 + Multi-Proveedor y no requirieron cambios. No había conteos obsoletos fuera de esta bitácora append-only.
+
+**Verificación**: `Select-String -Path *.md,docs\*.md -Pattern "525/525|529/529|487/487"` solo devuelve coincidencias en `docs/audit_log.md`; `python -m pytest tests -q` → **532/532 PASSED**. No se tocó código fuente.
+
+**Referencias cruzadas**: `README.md` / `README.es.md` (Project status / Estado del proyecto); `docs/philosophy.md` y `docs/philosophy.es.md` (Current Status); entrada inmediatamente anterior de saneamiento documental de 4.0.1.a.
+

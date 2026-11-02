@@ -275,8 +275,8 @@ TreeGov/
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
-| **4.0.1** | Exporters: categorical unseen_policy (4.0.1.a closed) | 🟡 En progreso (4.0.1.a ✅ 01/11/2026) |
-| **5** | MCP layer for LLM agents | ✅ Completed (01/11/2026) |
+| **4.0.1** | Exporters: categorical unseen_policy | 🟡 En progreso |
+| **5** | Capa MCP para agentes LLM | ✅ Completada |
 | **6** | Batch scoring + champion-challenger | Planned |
 | **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
 
