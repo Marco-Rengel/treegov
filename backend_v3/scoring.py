@@ -215,6 +215,11 @@ def score_batch_to_csv(
     output_path = Path(output_csv)
     if input_path.resolve() == output_path.resolve():
         raise ValueError("[scoring] input_csv y output_csv deben ser archivos distintos")
+    if os.path.exists(output_csv):
+        raise FileExistsError(
+            f"[scoring] El archivo de salida ya existe: {output_csv}. "
+            "Elimínelo o use otra ruta."
+        )
 
     predictor_columns = tuple(col for col, _ in bundle.predictor_spec)
     imputation_totals = {col: 0 for col in predictor_columns}

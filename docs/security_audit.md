@@ -66,3 +66,31 @@ This warning is shown once per session to avoid friction, but its presence is re
 - Invariante I-7: el servidor no escribe en disco excepto los logs
   locales vía `log_config`.
 - D11: sin herramientas de exploración de directorios (browsing/glob).
+
+## §6. Auditoría de la Fase 6 (Batch Scoring y MCP)
+
+**Excepción acotada a I-7.** La tool `score_batch` permite escritura en disco
+mediante el `output_path` explícito y obligatorio. Esta escritura es una
+excepción limitada a la restricción general de la Fase 5, que solo permitía los
+logs locales: el servidor no habilita browsing, glob ni una capacidad genérica
+de exportación. La operación permanece local sobre stdio, sin red ni telemetría.
+
+**Mitigaciones implementadas.**
+- El destino debe ser proporcionado por el llamador; no se deriva ni se explora
+  ningún directorio.
+- El scoring se ejecuta localmente y publica el CSV mediante un temporal en la
+  carpeta de destino, evitando una salida final parcial si la operación falla.
+- El retorno MCP contiene un resumen acotado, no el contenido completo del CSV.
+
+**Política de overwrite y hallazgo as-built (02/11/2026).** La mitigación
+requerida es **no hay overwrite por defecto**. No obstante, la revisión directa
+de `backend_v3/scoring.py` muestra que la publicación actual usa `os.replace`
+sin comprobar previamente si el destino existe. Por tanto, esa protección **no
+está implementada todavía** y no debe presentarse como control vigente. Hasta
+que se endurezca el backend, el llamador debe elegir una ruta nueva y no apuntar
+a un artefacto que necesite conservar. El path explícito y la operación local sí
+son controles vigentes.
+
+**Champion-Challenger.** `compare_champion_challenger` no escribe archivos: solo
+lee el CSV de evaluación indicado y devuelve el DTO de comparación en memoria.
+No publica modelos, predicciones ni artefactos adicionales en disco.

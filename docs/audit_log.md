@@ -6948,3 +6948,25 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/6.0_design_batch_scoring.md` §2 D1–D6, §4 I-1–I-10; `backend_v3/imputation.py::TrainOnlyImputer.transform`; `backend_v3/validation.py::predict_leaf_assignment` y `predict_pd`; `docs/design_decisions.md` §6.2 y §7.6.
 
+### 02/11/2026 — Hotfix Fase 6: registro de 26 tools y protección anti-overwrite
+
+**Estado**: ✅ Hotfix implementado y verificado. Suite **549/549 PASSED**. Se resuelve la observación anti-overwrite registrada en `docs/security_audit.md` §6 y se actualizan los conteos MCP tras la incorporación de las dos tools de Fase 6.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/scoring.py` — guarda `FileExistsError` cuando `output_csv` ya existe, ejecutada antes de crear el temporal y sin alterar el contenido previo.
+- `tests/test_mcp_tools.py` — test renombrado a `test_tools_registry_has_26_tools` y conteo actualizado de 24 a 26 descriptores.
+- `tests/test_mcp_server.py` — conteo esperado del registro FastMCP actualizado de 24 a 26 tools.
+- `docs/audit_log.md` — esta entrada de hotfix.
+
+**Hallazgos y decisiones**:
+
+1. **I-8 endurecido.** `score_batch_to_csv` rechaza un destino preexistente con el mensaje explícito que solicita eliminarlo o elegir otra ruta. La guarda se ejecuta antes de `NamedTemporaryFile`; por tanto no crea temporales ni expone el archivo anterior a `os.replace`.
+2. **Evidencia anti-overwrite.** El smoke funcional ejecutó dos escrituras sobre la misma ruta: la primera completó el CSV y la segunda lanzó `FileExistsError`; los bytes del archivo quedaron intactos y no quedó ningún `*.tmp`.
+3. **Conteos MCP sincronizados.** Las dos aserciones históricas de 24 herramientas reflejan ahora las 26 tools reales. Los 22 tests de registro, servidor, MCP scoring y backend scoring afectados pasaron de forma aislada antes de la regresión completa.
+4. **Trazabilidad de seguridad.** La observación de `docs/security_audit.md` §6 sobre `os.replace` queda resuelta en código por esta guarda; la sección conserva el registro del hallazgo as-built previo al hotfix.
+
+**Tests**: **549/549 PASSED** (`python -m pytest tests -q`, 21.58 s). Bloque focalizado previo: **22/22 PASSED**. Smoke anti-overwrite correcto, incluida la comparación byte a byte del archivo preexistente.
+
+**Referencias cruzadas**: `docs/security_audit.md` §6; `docs/6.0_design_batch_scoring.md` §4 I-8 y R7/R13; `backend_v3/scoring.py::score_batch_to_csv`; `tests/test_mcp_tools.py::test_tools_registry_has_26_tools`; `tests/test_mcp_server.py::test_server_tools_registered`.
+

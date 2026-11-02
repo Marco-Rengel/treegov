@@ -250,3 +250,43 @@ def export_markdown(unseen_policy: str = "exclude") -> str:
     NotImplementedError).
     """
     return _get_session().export_to_markdown(unseen_policy=unseen_policy)
+
+# --- Grupo G: Scoring y Champion-Challenger (Fase 6) ---
+
+@app.tool()
+def score_batch(
+    csv_path: str,
+    output_path: str,
+    unseen_policy: str = "exclude",
+    chunksize: int = 50000,
+    include_rules: bool = True
+) -> dict:
+    """Score a CSV file in chunks using the trained model."""
+    return _jsonable(_get_session().score_batch(
+        csv_path=csv_path,
+        output_path=output_path,
+        unseen_policy=unseen_policy,
+        chunksize=chunksize,
+        include_rules=include_rules,
+    ))
+
+@app.tool()
+def compare_champion_challenger(
+    evaluation_csv: str,
+    challenger_engine: str | None = None,
+    challenger_params: dict | None = None,
+    target: str | None = None,
+    weight_col: str | None = None,
+    unseen_policy: str = "exclude",
+    n_groups: int = 10
+) -> dict:
+    """Compare champion and challenger models on an evaluation CSV."""
+    return _jsonable(_get_session().compare_champion_challenger(
+        evaluation_csv=evaluation_csv,
+        challenger_engine=challenger_engine,
+        challenger_params=challenger_params,
+        target=target,
+        weight_col=weight_col,
+        unseen_policy=unseen_policy,
+        n_groups=n_groups,
+    ))

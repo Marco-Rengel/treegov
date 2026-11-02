@@ -181,4 +181,18 @@ TOOLS: tuple[ToolDescriptor, ...] = (
         method_name="export_to_markdown",
         min_state=FlowState.TRAINED,
     ),
+
+    # --- Grupo G: Scoring y Champion-Challenger (Fase 6) ---
+    ToolDescriptor(
+        name="score_batch",
+        description="Score a CSV file in chunks using the trained model.",
+        method_name="score_batch",
+        min_state=FlowState.TRAINED,
+    ),
+    ToolDescriptor(
+        name="compare_champion_challenger",
+        description="Compare champion and challenger models on an evaluation CSV.",
+        method_name="compare_champion_challenger",
+        min_state=FlowState.TRAINED,
+    ),
 )
