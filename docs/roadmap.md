@@ -310,55 +310,6 @@ como convención de la industria, no como prescripción de Basilea ni EBA.
 
 ## Upcoming phases
 
-### ⏳ Phase 3 — Advanced analytics + documentation closure
-**Priority: HIGH**
-
-**Objetivo.** Cerrar la "zona gris" de decisiones implícitas acumuladas en
-Fases 0-2, y extender la analítica del motor para cubrir los casos de uso
-reales de crédito (muestras sesgadas, categorías Indet/No Perf, multiclase)
-y no-crédito (biología, ciencias sociales).
-
-**Sub-fases:**
-
-| Sub-fase | Alcance | Prioridad |
-|---|---|---|
-| 3.6.e | Modo no-bancario (terminología + ejemplos + docs) — ✅ cerrada 25/10/2026 | Media |
-
-**Desglose de la Fase 3.2:**
-
-| Sub-fase | Alcance | Estado |
-|---|---|---|
-| 3.2.a | statistics.py ponderado (f_oneway, brown_forsythe) | ✅ Completada |
-| 3.2.b | CHAID con conteos ponderados (χ²/F + merging + Cochran) | ✅ Completada |
-| 3.2.c | C&RT con Gini/varianza ponderada + surrogates | ✅ Completada |
-| 3.2.d | QUEST con Stage 1 + QDA ponderados | ✅ Completada |
-| 3.2.e | TreeBuilder (weights + min_child_weight + fingerprint) | ✅ Completada |
-| 3.2.f | Session (fix_spec + partition + train + reset) | ✅ Completada |
-| 3.2.g | validation y reporting ponderados | ✅ Completada |
-| 3.2.h | stability ponderado + wizard + E2E + cierre | ✅ Completada |
-
-**Cierre de la Fase 3.2.** Las 8 sub-fases (a-h) quedan cerradas el 10/10/2026. La ponderación por muestra es transversal al backend: motores, árbol, sesión, métricas, reportes, monitoreo y wizard. Invariante C1: sin pesos, comportamiento idéntico al pre-3.2. Tres parámetros nuevos en el *fingerprint*: weighted, weight_col, min_child_weight. Tres decisiones diferidas registradas en design_decisions.md §13.7 (KS/AUC/Gini del gains table sin ponderar), §13.8 (HL escala con la masa), §13.9 (nombre del parámetro weight_oot). Suite: 346/346 PASSED.
-
-**Nota histórica.** El roadmap original de Fase 3 agrupaba "reportes
-analíticos + MCP + export SQL/Python". Esa agrupación era demasiado
-amplia: mezclaba analítica avanzada (necesaria para uso real en banca) con
-capa de interoperabilidad (MCP), con export a producción. La redefinición
-del 04/10/2026 separa esas familias:
-
-- **Fase 3 (esta):** analítica avanzada + documentación + validación.
-- **Fase 4:** reportes avanzados + export SQL/Python.
-- **Fase 5:** capa MCP.
-- **Fase 6:** batch scoring + champion-challenger.
-- **Fase 7:** IFRS 9 / ECL.
-
-**Deudas diferidas a fases futuras (documentadas):**
-- Fase 3.x — Screenshot automatizado de la GUI (requiere xvfb o runner
-  gráfico).
-- Fase 2.1.b — CV scheme + guardrail runtime de imports backend.
-- El fixture _make_csv de los tests E2E (target aleatorio respecto a
-  predictores) sigue pendiente de reemplazo por uno con señal real.
-  Sin cambios en 3.5.a.
-
 ### ✅ Phase 3.9 — Interactive and Weighted Pruning
 **Status**: ✅ Completed (20/10/2026).
 

@@ -282,7 +282,7 @@ public signature changed.
 
 - `install_import_guard()`, `is_installed()`
 
-## mcp_v3 (Phase 5.0.a — headless MCP skeleton)
+## mcp_v3 (Phase 5.0 — headless MCP layer, stable since 5.0.b)
 
 - `mcp_v3.tools.TOOLS` — registry of 24 frozen `ToolDescriptor`
   entries (`name`, `description`, `method_name`, `min_state`), each
@@ -303,9 +303,7 @@ public signature changed.
 - `treegov_mcp` — root entry point registered as the `treegov-mcp`
   console script (`treegov_mcp:main`); requires the `[mcp]` extra.
 
-> TODO(zona_gris): declarar el registro como API pública/estable 1.x
-> solo cuando exista el servidor MCP (Fase 5.0.b); hasta entonces es
-> esqueleto interno de la Fase 5.
+> **Stability (Phase 5.0.b, 01/11/2026).** The MCP adapter is a stable 1.x public API. The public surface is: `mcp_v3.tools.TOOLS` (registry of 24 frozen `ToolDescriptor` entries), `mcp_v3.dto._jsonable` (JSON-native converter, Invariant I-3), `mcp_v3.server.app` (FastMCP stdio server) and `treegov_mcp.main` (console script `treegov-mcp`). The SDK dependency is optional (`pip install treegov[mcp]`, pin `mcp>=1.0.0,<2.0.0`). The `_jsonable` name keeps its underscore prefix per the stability rule above (internal helper), but its contract is public and covered by tests.
 
 ---
 

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 25/10/2026 (Fases 3.11.a–d, 3.6.e y Hotfix Visual post-3.6.e cerradas; release 1.0.0rc4)
+**Fecha de última actualización:** 01/11/2026 (Fases 4.0 y 5.0 cerradas; suite 525/525; release 1.0.0rc4 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -21,7 +21,7 @@ y trazabilidad del proyecto, apto para:
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | OpenCode 1.19.0 (cliente activo desde 09/10/2026) + Kimi K3 vía Moonshot AI directo con key propia de Moonshot (NO vía NVIDIA NIM). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Migración de NVIDIA NIM a Moonshot el 03/10/2026 (factura 2846-0745, NOVASCENT/Singapur) por inestabilidad de NIM (504 recurrentes) |
+| Modelo de IA en desarrollo | OpenCode v2.2.5 + OpenCode Zen (gratuito): modelo principal `deepseek-v4-flash-free` (200K), rotación `qwen3.6-plus-free` / `nemotron-3-ultra-free`, comodín de pago `moonshotai/kimi-k3` vía Moonshot AI directo (~$7 reservados). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Histórico: NVIDIA NIM → Moonshot AI directo (03/10/2026) → OpenCode Zen (01/11/2026) |
 
 ---
 

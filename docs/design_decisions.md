@@ -2296,6 +2296,21 @@ especially D1 "new module `backend_v3/exporters.py`" and D5
 (4.0.a), 01/11/2026 (4.0.b) and 01/11/2026 (4.0.c); `docs/api.md`
 (§backend_v3.exporters and the three `Session.export_to_*` entries).
 
+### 19.2 Python imputation parity with SQL COALESCE (resolved 01/11/2026)
+
+**Context.** `exporters._python_imputation` opens with a `TODO(zona_gris)` about the brief specifying a single `row.get(col, default)` line: that line covers an absent key but not a key present with a `None` value, while `COALESCE` in the SQL exporter covers both. A `None` reaching the comparison would raise `TypeError` and break the prediction-parity invariant (§3 of `docs/4.0_design_exports.md`).
+
+**Decision.** The specified `row.get(col, default)` line is emitted unchanged and a two-line guard is appended immediately after it:
+
+- `if {variable} is None:`
+- `    {variable} = {default}`
+
+The two lines together produce SQL-equivalent behavior for both "absent key" and "present with `None`" cases. This is the conservative resolution: it preserves the brief's `row.get` shape (auditable in the generated code) while closing the parity gap against `COALESCE`.
+
+**Consequence.** The two exporters treat missing values identically. The `TODO(zona_gris)` comment that documented the open question will be removed from `backend_v3/exporters.py` in the first code-touching block of the 4.0.1 categorical-exporters fix, together with the corresponding tests. No change to the numerical output of either exporter is implied by this note; it is a formal closure of the question, not a code change.
+
+**Reference.** `backend_v3/exporters.py::_python_imputation`; `docs/4.0_design_exports.md` §3 (prediction parity); `docs/audit_log.md` entry of 01/11/2026 (this mini-cierre).
+
 ---
 
 ## §20. MCP Layer (Phase 5.0)

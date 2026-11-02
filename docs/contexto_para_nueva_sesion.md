@@ -164,25 +164,7 @@ WSL (bash):
 
 - VS Code conectado a WSL (extensión oficial de Microsoft), con terminal integrada.
 - Windows Terminal con Ubuntu por defecto.
-- **OpenCode 1.19.0** — **herramienta activa** desde el 09/10/2026.
-  Cliente de desarrollo con Kimi K3. Instalación global vía `npm`.
-  Autenticación: `opencode auth login` con provider `Moonshot AI`
-  (internacional, endpoint `https://api.moonshot.ai/v1`, key propia
-  de Moonshot; sin la capa intermedia de NVIDIA NIM).
-  Configuración de proyecto: `opencode.json` en la raíz (versionado).
-  Nivel de razonamiento: `high` por defecto (`max` reservado para
-  tareas complejas).
-  **Modelo configurado:** `moonshotai/kimi-k3` (con la "ai" al final)
-  en los campos `model` y `small_model` de `opencode.json`. Antes
-  decía `moonshot/kimi-k3` y eso hacía que OpenCode cayera a un
-  modelo de *fallback* carísimo (causa raíz de la anomalía de consumo,
-  ver `docs/audit_log.md` 10/10/2026).
-  **Plugin de caché:** `@jimmyyen/opencode-context-cache` instalado y
-  activo (estabiliza la *cache key* de Moonshot).
-  **Nota:** Kimi Code CLI 2.1.1 se probó como alternativa, pero su
-  inyección de metadatos dinámicos rompe el *prefix matching* de la
-  caché. OpenCode se mantiene como herramienta principal.
-- **Actualización (01/11/2026):** OpenCode ahora opera con rotación multi-proveedor. El modelo principal para código es **OpenCode Zen (DeepSeek Flash)**, la alternativa para ventanas de contexto masivas es **Google Gemini** (limitado a ~5 RPM), y el comodín de pago es **Moonshot Kimi K3.1 Pro** (reservado para emergencias). Cerrar la pestaña de OpenCode si se supera el 50% de contexto.
+- **OpenCode v2.2.5** — **herramienta activa**. Instalación global vía `npm`. Autenticación vía `opencode auth login`. **Política multi-proveedor (01/11/2026):** modelo principal `deepseek-v4-flash-free` (OpenCode Zen, gratuito, ventana 200K), rotación `qwen3.6-plus-free` / `nemotron-3-ultra-free`, alternativa de contexto masivo Google Gemini (API Key, ~5 RPM), comodín de pago `moonshotai/kimi-k3` vía Moonshot AI directo (~$7 reservados). **Configuración:** `opencode.json` en la raíz (versionado), campos `model` y `small_model`. Cerrar la pestaña al superar el 50% de contexto para preservar cuotas y caché. **Histórico:** NVIDIA NIM → Moonshot AI directo (03/10/2026) → OpenCode Zen (01/11/2026). La combinación previa `OpenCode 1.19.0 + moonshotai/kimi-k3` operó del 09/10/2026 al 01/11/2026; sus referencias en `audit_log.md` y `roadmap.md` se conservan como registro histórico.
 
 - **Aider 0.86.2** — herramienta de respaldo desde el 09/10/2026. Instalación global vía pipx con Python 3.11.9 (C:\Users\maren\.local\bin\aider.exe). NO instalar Aider dentro del .venv del proyecto: eso ya ocurrió el 27/09/2026 y se resolvió el 16/10/2026 (ver audit_log). Configuración local en .aider.conf.yml (no versionado). Modelo moonshot/kimi-k3 vía Moonshot AI directo.
 - **build 1.6.1 / twine 7.0.0** — herramientas de empaquetado PyPI, instaladas globalmente vía pipx con Python 3.14.7. Se usan para las publicaciones de TreeGov en PyPI. NO instalar en el .venv del proyecto (regla del 16/10/2026).
@@ -298,89 +280,13 @@ quemada por un conflicto de inmutabilidad en PyPI: se subió solo con
 los cambios de D13). El README de PyPI está sincronizado con el
 repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
 
-## Próximos pasos (Fase 3.11 — Rediseño Interactivo y Topología Visual)
+## Próximos pasos
 
-> **Estado intermedio (mañana).** Cerrados los tres cosméticos del ReportsPanel diferidos a H4 (suite 411 → 416). Resuelto el pendiente Aider/build/twine instalado en el .venv del proyecto. Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6 (validación con *datasets* públicos: German Credit, UCI).
+**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 5.0 cerradas. Suite **525/525 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026). HEAD en `main` = cierre de Fase 5.0 (`3116575`).
 
-> **Estado intermedio (tarde).** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). El documento `docs/3.6_design_public_datasets.md` (811 líneas) define nueve decisiones D1-D9 aprobadas por el autor. Próximo paso: sub-fase 3.6.b (script de descarga `scripts/fetch_datasets.py` + *fixtures* versionadas `tests/fixtures/uci/`).
+**Fase 5.0 — Capa MCP: ✅ cerrada (01/11/2026).** 24 tools FastMCP stdio (`mcp_v3/server.py`), entry point `treegov-mcp`, paridad E2E 4 motores, auditoría de seguridad §5 de `docs/security_audit.md`, quickstart en READMEs. Diseño as-built: `docs/5.0_design_mcp.md`. Decisión SDK v1: `design_decisions.md` §20.1.
 
-**Fase 3.5 — Reportes adaptados multiclase + ponderados: Cerrada
-15/10/2026.** Las cuatro sub-fases (a-d) cierran el pipeline completo
-de validación, reporte y monitoreo a targets multiclase (K ≥ 2) con
-composición ponderada. Invariante K=2 bit a bit preservado. Suite
-416/416. Commits de la familia: 56748c9, 18bbdf0, 067b33a, 580d5fa,
-9af51c9, ef3de7c, 70460f6, 5658067, más el commit del cierre
-documental.
-
-**Fase 3.7 cerrada (18/10/2026).** Las sub-fases 3.7.a (auditoría de seguridad), 3.7.b (simetrización KS por pares), 3.7.c (min_child_weight expuesto), 3.7.d (tests UCI ampliados) y 3.7.e (correcciones pre-release H1, H2, pd_floor K=2) están cerradas. Suite: 434/434.
-
-**Próximo paso inmediato (20/10/2026):** La Fase 3.9 (Poda Interactiva y Ponderada) está cerrada: backend, `Session.get_prune_sequence()` y GUI `PruneDialog` implementados y testeados. Siguiente paso: recogida de feedback para la `1.0.0` estable.
-
-**Fase 4.0 — Exportadores de producción: ✅ cerrada (01/11/2026,
-suite 525/525).** Tres sub-fases en rápida secuencia: 4.0.a (SQL y
-Python, 31/10/2026), 4.0.b (Markdown, 01/11/2026) y 4.0.c
-(integración GUI, 01/11/2026, este bloque). Diseño:
-`docs/4.0_design_exports.md`. Decisión arquitectónica (wrapper en
-Session, no exposición de `_imputer`): `docs/design_decisions.md`
-§19.1. Cierre: `docs/audit_log.md` entrada del 01/11/2026.
-
-**Fase 5.0 — Capa MCP: ✅ cerrada (01/11/2026, suite 525/525).**
-Cerradas 5.0.a, 5.0.b, 5.0.c y 5.0.d. La auditoría de seguridad vive en
-`docs/security_audit.md` §5; el diseño `docs/5.0_design_mcp.md` está
-marcado como implementado (as-built) y los READMEs incluyen el quickstart.
-**Próximo paso:** Fase 6 — scoring batch y champion-challenger.
-
-**Próximo paso inmediato (24/10/2026):** la **Fase 3.11.b (Tree Map y
-Data Viewer)** en el panel izquierdo. La 3.11.a (Rediseño Base: Tema
-Colab, Layout Excel, Wizard redimensionado, Nodos HTML, HUD acotado) y
-la **3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar
-compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores
-estilo Excel, nodos QPainter "hoja de auditoría", tema oscuro forzado
-vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas)
-quedaron cerradas el 24/10/2026 con suite 449/449**; los mini-cierres
-del 25/10/2026 (resolución de zonas grises C1 con 2 tests nuevos de
-routing por `bin_edges`, blindaje Clean Room + terminología "Nodo
-terminal", y copiado TSV en el `PruneDialog` con 1 test nuevo)
-elevaron la suite a **452/452**. El sistema de
-diseño visual quedó estandarizado en `docs/3.11_gui_design_system.md`
-(normativo as-built; las sub-fases 3.11.b-d se implementan contra él).
-El código de la 3.11.a.1 está commiteado (`d8194dc`); los bloques
-posteriores (cierre documental a.1 `bf02f66`, mini-cierres del 25/10
-`a426842` + `7d05aa2`, corrección del diseño 3.11.b `910edb5` y backend
-b.1 `6e4c4b5`) están commiteados —verificar con `git status` antes de
-editar. Los archivos de diseño de las fases
-recientes quedaron alineados el 24/10/2026:
-`docs/3.10.a_design_ux_ui_redesign.md` (antes `3.10_design_ux_redesign.md`),
-`docs/3.10.b_design_chaid_binning.md` (antes `3.10.b_design_chaid_continuous.md`)
-y `docs/3.11.a_design_colab_theme.md` (nuevo, as-built). Después de
-3.11.b siguen 3.11.c (Árboles Univariados y Matriz de Costos) y 3.11.d
-(Menú Contextual e Interactividad). En paralelo sigue la recogida de
-feedback de `1.0.0rc4` durante 2-4 semanas; si no aparecen bugs
-críticos, publicación de `1.0.0` estable. (La deuda de tags `a1`–`a6`
-quedó RESUELTA el 21/10/2026: los tags existen y apuntan a commits
-válidos —verificado con `git show-ref --tags`; ver la sección "Tags de
-git" de este mismo documento.) Fase 3.6.e (modo no-bancario
-extensivo) va en 1.1.0 o posterior.
-
-**Fase 3.4 — CRT y QUEST multiclase: Cerrada 12/10/2026.** 2 sub-fases
-(a: C&RT; b: QUEST). Ningún motor bloquea ya K > 2 en `Session.train`.
-Etapa 1 QUEST con F-test de K grupos y tie-breaker Brown-Forsythe de K
-grupos; Etapa 2 con QDA para K=2 (paridad) y barrido de Gini para K>2.
-Los bloqueos downstream (validation, reporting, stability) siguen
-activos hasta Fase 3.5. Suite 384/384. Ver `docs/roadmap.md` sección
-"Desglose de la Fase 3.4" y `docs/audit_log.md` entradas del 12/10/2026
-(3.4.a y 3.4.b).
-
-**Fase 3.2 — Ponderación por muestra: Cerrada 10/10/2026.** 8 sub-fases
-(a-h). Invariante C1: sin pesos, comportamiento idéntico al pre-3.2.
-Suite 346/346. Ver `docs/roadmap.md` sección "Desglose de la Fase 3.2"
-y `docs/audit_log.md` entradas del 10/10/2026 (3.2.a a 3.2.h) para el
-detalle del alcance.
-
-**Fase 3.3 — Categorías de población: Cerrada 11/10/2026.** 5 sub-fases
-(a-e). Invariante C1: sin `population_col`, comportamiento idéntico al
-pre-3.3. Suite 384/384. Ver `docs/roadmap.md` sección "Desglose de la
-Fase 3.3" y `docs/audit_log.md` entrada del 11/10/2026 para el detalle.
+**Próximo paso:** auditar `docs/4.0.1_design_categorical_exporters.md` (fix de paridad SQL/Python en categorías no vistas, hallazgo #1 de la auditoría del 01/11/2026) antes de decidir entre (A) 1.0.0 estable en PyPI, (B) Fase 6 — batch scoring + champion-challenger, o (C) Fase 7 — IFRS 9/ECL.
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

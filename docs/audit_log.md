@@ -6761,3 +6761,43 @@ marcado como implementado (as-built). Se documentó la política
 multi-proveedor de IA (OpenCode Zen principal, Gemini alternativa,
 Kimi comodín).
 
+### 01/11/2026 — Mini-cierre documental: cierre de hallazgos #2–#8 de la auditoría del 01/11/2026
+
+**Estado**: ✅ Cerrado. Suite **525/525 PASSED** (sin cambios). Working tree preparado para auditoría humana; sin commit al momento de escribir esta entrada.
+
+**Modelo**: OpenCode v2.2.5 + `deepseek-v4-flash-free` (OpenCode Zen, gratuito).
+
+**Contexto**: la auditoría del 01/11/2026 identificó 8 hallazgos. #1 (divergencia SQL/Python en categorías no vistas) se difiere a la Fase 4.0.1 y requiere diseño previo (Skill 1 de `docs/playbook.md`). #2–#8 se cierran en este bloque, estrictamente documental. Cero cambios de código.
+
+**Hallazgos cerrados**:
+
+1. **#2 — `_python_imputation` (exporters.py:369)**. El TODO se formaliza en `docs/design_decisions.md` §19.2. El código NO se toca en este bloque; la eliminación del comentario se difiere al primer bloque de código de la Fase 4.0.1.
+2. **#3 — `api.md`**: eliminado el TODO(zona_gris) obsoleto sobre declarar `mcp_v3` como API pública; añadida la declaración explícita de estabilidad 1.x desde 5.0.b.
+3. **#4 — `CONVENTIONS.md`**: conteo `487/487` → `525/525`. Instrucción de reversión de herramienta reescrita para apuntar a `opencode.json` como mecanismo real de v2.2.5.
+4. **#5 — `docs/estado_proyecto.md`**: fecha de cabecera 25/10/2026 → 01/11/2026.
+5. **#6 — `docs/contexto_para_nueva_sesion.md`**: eliminado el historial acumulado de las secciones "Próximos pasos"; sustituido por estado actual + próximo paso.
+6. **#7 — `docs/roadmap.md`**: eliminada Phase 3 de "Upcoming phases" (cerrada y consolidada en "Completed").
+7. **#8 — Herramienta OpenCode**: cabeceras actualizadas a v2.2.5 + multi-proveedor en los 4 archivos con cabecera stale (`AGENTS.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `docs/estado_proyecto.md`).
+
+**Observación — TODOs no atribuidos en `backend_v3/exporters.py`**: el grep del 01/11/2026 detectó tres TODOs adicionales en `exporters.py` (líneas 35, 260, 754) no atribuidos a #1 ni a #2. Se conservan intactos en este bloque. Quedan registrados como candidatos a mini-cierre posterior o a absorción en el bloque de la Fase 4.0.1 según decisión humana. El TODO de línea 754 (split categórico con >2 ramas en Markdown) es una variante del #1 y probablemente se absorbe junto con el fix de categorías no vistas.
+
+**README pair verificado**: `Select-String` sobre `README.md` y `README.es.md` con patrones `1.19.0|487/487|480/480|478/478|moonshotai/kimi-k3` devolvió vacío el 01/11/2026. Sin residuos. No se modifican.
+
+**Artefactos tocados (por ruta exacta)**:
+
+- `docs/api.md` (hallazgo #3)
+- `CONVENTIONS.md` (hallazgo #4 + decisión D2)
+- `docs/estado_proyecto.md` (hallazgos #5 y #8)
+- `docs/contexto_para_nueva_sesion.md` (hallazgos #6 y #8)
+- `docs/roadmap.md` (hallazgo #7)
+- `AGENTS.md` (hallazgo #8)
+- `docs/design_decisions.md` (hallazgo #2, §19.2)
+- `docs/prompt_para_asistente.md` (hallazgo #8)
+- `docs/audit_log.md` (esta entrada)
+
+**Declaración explícita**: NO se tocaron `backend_v3/`, `frontend_v3/`, `mcp_v3/`, `README.md`, `README.es.md`, `pyproject.toml` ni ningún archivo `.py`.
+
+**Tests**: 525/525 PASSED (`python -m pytest tests -q`). El conteo no varía: los cambios son documentales.
+
+**Referencias cruzadas**: `docs/roadmap.md` (Upcoming phases sin Phase 3); `docs/design_decisions.md` §19.2; `AGENTS.md` §Herramienta de desarrollo: OpenCode; `CONVENTIONS.md` §Proveedor de IA: OpenCode Zen; `docs/contexto_para_nueva_sesion.md` §Herramientas y §Próximos pasos; `docs/prompt_para_asistente.md` §5 y §6; `docs/api.md` §mcp_v3.
+

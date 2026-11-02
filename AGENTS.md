@@ -146,8 +146,10 @@ Verificación fiable (una de dos):
 
 ## Herramienta de desarrollo: OpenCode
 
-- **Versión:** 1.19.0 (global vía `npm`).
-- **Modelo:** `moonshotai/kimi-k3` (Kimi K3).
+- **Versión:** 2.2.5 (global vía `npm`).
+- **Modelo principal:** `deepseek-v4-flash-free` (OpenCode Zen, gratuito; ventana 200K).
+- **Modelo de rotación:** `qwen3.6-plus-free` / `nemotron-3-ultra-free`.
+- **Comodín de pago:** `moonshotai/kimi-k3` vía Moonshot AI directo (~$7 reservados).
 - **Autenticación:** `opencode auth login` con provider `Moonshot AI`
   (internacional, endpoint `https://api.moonshot.ai/v1`). La key es
   propia de Moonshot, NO se pasa por NVIDIA NIM.
