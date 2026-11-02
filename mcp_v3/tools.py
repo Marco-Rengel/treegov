@@ -195,4 +195,10 @@ TOOLS: tuple[ToolDescriptor, ...] = (
         method_name="compare_champion_challenger",
         min_state=FlowState.TRAINED,
     ),
+    ToolDescriptor(
+        name="calculate_ecl",
+        description="Calculate Expected Credit Loss (ECL) per IFRS 9.",
+        method_name="calculate_ecl",
+        min_state=FlowState.TRAINED,
+    ),
 )

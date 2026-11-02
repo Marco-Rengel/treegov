@@ -26,7 +26,7 @@ def test_server_tools_registered():
     # FastMCP registra las herramientas en app._tool_manager._tools
     assert hasattr(server.app, "_tool_manager")
     tools = server.app._tool_manager._tools
-    assert len(tools) == 26
+    assert len(tools) == 27
 
 
 def test_server_e2e_flow():

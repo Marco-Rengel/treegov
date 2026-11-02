@@ -290,3 +290,18 @@ def compare_champion_challenger(
         unseen_policy=unseen_policy,
         n_groups=n_groups,
     ))
+
+# --- Grupo H: Fase 7 ---
+
+@app.tool()
+def calculate_ecl(
+    csv_path: str,
+    pd_column: str = "pd_current",
+    eir: float | None = None
+) -> dict:
+    """Calculate Expected Credit Loss (ECL) per IFRS 9."""
+    return _jsonable(_get_session().calculate_ecl(
+        csv_path=csv_path,
+        pd_column=pd_column,
+        eir=eir,
+    ))

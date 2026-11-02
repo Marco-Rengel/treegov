@@ -70,8 +70,8 @@ def test_json_dumps_allow_nan_false_never_raises():
 
 # --- Registro de herramientas ---
 
-def test_tools_registry_has_26_tools():
-    assert len(TOOLS) == 26
+def test_tools_registry_has_27_tools():
+    assert len(TOOLS) == 27
 
 
 def test_tools_names_are_unique():
