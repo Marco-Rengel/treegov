@@ -6848,3 +6848,38 @@ Kimi comodín).
 
 **Referencias cruzadas**: `README.md` / `README.es.md` (Project status / Estado del proyecto); `docs/philosophy.md` y `docs/philosophy.es.md` (Current Status); entrada inmediatamente anterior de saneamiento documental de 4.0.1.a.
 
+### 02/11/2026 — Fase 4.0.1.b: modos "error" y "majority" en los exportadores
+
+**Estado**: ✅ Cerrada. Suite **537/537 PASSED**. Working tree preparado para revisión humana; sin commit al momento de escribir esta entrada.
+
+**Modelo**: OpenCode v2.2.5 + modelo free activo (OpenCode Zen).
+
+**Revisor**: Marco Rengel.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/exporters.py` — implementación de los tres modos, `_majority_leaf_pd`, cabeceras, fallbacks y firmas del artefacto Python.
+- `tests/test_exporters.py` — tests positivos de `"error"`/`"majority"`, cabeceras, SQL, Python y Markdown.
+- `tests/test_session_exporters.py` — forwarding de los tres modos en los wrappers.
+- `docs/4.0.1_design_categorical_exporters.md` — cierre as-built y resoluciones A1–A6 (§5).
+- `docs/roadmap.md` — Fase 4.0.1 completada y decisión PyPI diferida.
+- `docs/estado_proyecto.md` — narrativa de cierre y conteos reales de suite.
+- `docs/contexto_para_nueva_sesion.md` — estado, próximo paso y nota de release.
+- `docs/prompt_para_asistente.md` — estado y próximo paso.
+- `README.md` y `README.es.md` — suite, Mermaid y fase 4.0.1 completada; versión `1.0.0rc4` conservada.
+- `docs/api.md` — contrato público de `unseen_policy` y portabilidad SQL.
+- `docs/design_decisions.md` — nueva §19.4.
+- `docs/audit_log.md` — esta entrada.
+
+**Hallazgos y decisiones**:
+
+1. **A1–A6 resueltas.** Quedan implementados el vocabulario completo sin gate, el default `"exclude"` byte-idéntico, los fallbacks SQL/Python, las cabeceras y bullets Markdown, las firmas por modo y el forwarding de wrappers. El detalle normativo vive en `docs/4.0.1_design_categorical_exporters.md` §5 y `docs/design_decisions.md` §19.4.
+2. **Mayoría con paridad backend.** `"majority"` usa `n` FÍSICO (no ponderado) y desempate por `node_id` mínimo, replicando `validation.predict_leaf_assignment`; el fallback devuelve `pd_final[0]` de esa hoja.
+3. **Error explícito y portable.** SQL emite `ELSE 1/0` con warning de cabecera y por rama: aborta en PostgreSQL/SQL Server/Oracle y devuelve `NULL` con warning en MySQL/SQLite. Python lanza `ValueError` identificando predictor y valor.
+4. **GUI sin cambios.** `tests/test_e2e_exporters_gui.py` permanece intacto: la fase modifica el contenido de los artefactos, no las acciones de menú, estados habilitados ni diálogos. Tampoco se modificaron `docs/3.11_gui_design_system.md` ni `docs/security_audit.md`.
+5. **Decisión PyPI.** 4.0.1.b es un cambio material: publicar `1.0.0rc5` si el revisor lo aprueba. La decisión queda diferida al cierre de esta entrada pendiente de aprobación explícita; por tanto no se modificaron `pyproject.toml` ni `frontend_v3/__init__.py`, y `1.0.0rc4` sigue vigente. La desincronización READMEs/PyPI queda registrada en `docs/roadmap.md` §Deferred.
+
+**Tests**: **537/537 PASSED** (`python -m pytest tests -q`, 34.34 s). `python -m pytest tests --collect-only -q` recogió **537 tests**; `tests/test_exporters.py` contiene 22 y `tests/test_session_exporters.py` 8. La tabla de `docs/estado_proyecto.md` §7 se sincronizó con esos conteos reales.
+
+**Referencias cruzadas**: `docs/4.0.1_design_categorical_exporters.md` §3 y §5; `docs/design_decisions.md` §19.4; `docs/api.md` §`backend_v3.exporters`; `docs/roadmap.md` §4.0.1 y §Deferred/PyPI synchronization; `docs/estado_proyecto.md` §3 y §7; `README.md` / `README.es.md` (Project status / Estado del proyecto); `backend_v3/validation.py::predict_leaf_assignment`.
+

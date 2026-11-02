@@ -83,9 +83,7 @@ underscore) are internal and may change without notice.
   artefact is descriptive, not scoring. (Phase 4.0.b, 01/11/2026.)
 
 Since Phase 4.0.1.a, `unseen_policy="exclude"` leaves unseen categorical
-rows unscored (`NULL` in SQL, `None` in Python). `"error"` and
-`"majority"` are accepted by the signatures but raise
-`NotImplementedError` until Phase 4.0.1.b.
+rows unscored (`NULL` in SQL, `None` in Python).
 
 Since Phase 5.0.c, all three exporters route CHAID continuous splits by
 their consolidated `SplitConfig.branches`, not by individual bins: each
@@ -93,6 +91,17 @@ branch yields a condition from its real merged-bin interval and the top
 branch is the residual `ELSE`. This preserves scoring parity after CHAID
 adjacent-bin merges (H-5.0.c-1; `docs/design_decisions.md` §16.4). No
 public signature changed.
+
+Since Phase 4.0.1.b, `unseen_policy` accepts `"error"`, `"exclude"`
+(default), and `"majority"`. In `"error"` mode, SQL emits `ELSE 1/0`:
+fatal on PostgreSQL/SQL Server/Oracle, but `NULL` with a warning on
+MySQL/SQLite, where the receiver must filter the row. Python raises
+`ValueError` identifying the predictor and the unseen value. In
+`"majority"` mode, the fallback is the majority leaf's `pd_final[0]`,
+selected by physical `n` (not weighted `n`) with a `node_id` minimum
+tie-break, replicating `validation.predict_leaf_assignment`. The generated
+Python functions are annotated `float` in `"error"` and `"majority"` modes;
+they remain `float | None` in `"exclude"` mode.
 
 ## backend_v3.session_state
 

@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 01/11/2026
+**Fecha de última actualización:** 02/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -128,13 +128,14 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 4.0.b | Exportador Markdown (`export_to_markdown`) | ✅ |
 | 4.0.c | Integración GUI de exportadores (menú Archivo + `QFileDialog`) | ✅ |
 | **4.0** | **Export to production (fase completa)** | **✅ Cerrada** |
+| **4.0.1** | **Exportadores categóricos: `unseen_policy` (4.0.1.a y 4.0.1.b)** | **✅ Cerrada** |
 | 5.0.a | Esqueleto headless MCP (`mcp_v3`: `_jsonable` + 24 ToolDescriptor) | ✅ |
 | 5.0.b | Servidor MCP stdio + entry point (`treegov-mcp`) | ✅ |
 | 5.0.c | Paridad E2E MCP + exportadores CHAID con bins fusionados (§16.4) | ✅ |
 | 5.0.d | Auditoría de seguridad MCP + cierre documental as-built | ✅ |
 | **5.0** | **Capa MCP (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 532/532 PASSED
+**Suite de tests:** 537/537 PASSED
 
 ## Entorno de desarrollo
 
@@ -282,11 +283,13 @@ repo, reflejando 438/438 tests. Ver docs/roadmap.md, protocolo PyPI.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 5.0 cerradas. Suite **532/532 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026). HEAD en `main` = cierre de Fase 5.0 (`3116575`).
+**Estado actual:** Fases 0–3.11, 3.6.e, 4.0 y 4.0.1 cerradas; la Fase 5.0 también permanece cerrada. Suite **537/537 PASSED**. Release `1.0.0rc4` publicada en PyPI (20/10/2026).
 
-**Fase 5.0 — Capa MCP: ✅ cerrada (01/11/2026).** 24 tools FastMCP stdio (`mcp_v3/server.py`), entry point `treegov-mcp`, paridad E2E 4 motores, auditoría de seguridad §5 de `docs/security_audit.md`, quickstart en READMEs. Diseño as-built: `docs/5.0_design_mcp.md`. Decisión SDK v1: `design_decisions.md` §20.1.
+**Fase 4.0.1 — Exportadores categóricos: ✅ cerrada (02/11/2026).** Los modos `"error"`, `"exclude"` y `"majority"` están implementados en SQL, Python y Markdown, con tests de wrappers y artefactos. Diseño as-built y A1–A6: `docs/4.0.1_design_categorical_exporters.md`; decisión: `docs/design_decisions.md` §19.4.
 
-**Próximo paso:** Implementar la sub-fase 4.0.1.b en los exportadores (modos `unseen_policy="error"` y `"majority"`).
+**Próximo paso:** Decisión entre **(A)** preparar `1.0.0` estable, **(B)** iniciar la Fase 6 (batch scoring y champion-challenger) o **(C)** iniciar la Fase 7 (IFRS 9 / ECL).
+
+**Nota de release:** `1.0.0rc4` sigue publicada en PyPI. La decisión de publicar `1.0.0rc5` tras el cambio material de 4.0.1.b queda pendiente de aprobación explícita del revisor; no se ha hecho bump de versión.
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

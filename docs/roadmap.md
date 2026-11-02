@@ -340,10 +340,18 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Diseño:** `docs/4.0_design_exports.md`. **Decisión:** `docs/design_decisions.md` §19.1. **Cierre:** `docs/audit_log.md` entrada del 01/11/2026.
 
-### 🟡 Phase 4.0.1 — Categorical Exporters Unseen Policy
-**Priority: HIGH** · **Status: In progress**
+### ✅ Phase 4.0.1 — Categorical Exporters Unseen Policy
+**Priority: HIGH** · **Status: ✅ Completed (02/11/2026, suite 537/537)**
 - **4.0.1.a** Paridad SQL/Python en categorías no vistas (modo `"exclude"`). ✅ Cerrada (01/11/2026).
-- **4.0.1.b** Implementación de modos `"error"` y `"majority"`. ⏳ Pendiente.
+- **4.0.1.b** Implementación de modos `"error"` y `"majority"`. ✅ Completada (02/11/2026, suite 537/537).
+
+**Cierre as-built (02/11/2026).** Los tres exportadores aceptan e implementan
+`"error"`, `"exclude"` (default) y `"majority"`. SQL declara la portabilidad
+de `ELSE 1/0`; Python aborta con `ValueError` o congela la PD mayoritaria;
+Markdown documenta el fallback activo. `_majority_leaf_pd` replica el criterio
+de `validation.predict_leaf_assignment` con `n` físico. Diseño y resoluciones
+A1–A6: `docs/4.0.1_design_categorical_exporters.md` §5. Decisión:
+`docs/design_decisions.md` §19.4. Cierre: `docs/audit_log.md`, 02/11/2026.
 
 ### ✅ Phase 5 — MCP layer
 **Status**: ✅ Completed (01/11/2026, suite 532/532).
@@ -398,6 +406,8 @@ entrada del 01/11/2026.
 La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actualizó la página de PyPI con el README ya sincronizado (Fases 0 → 3.9, 438/438 tests). El aplazamiento de los cambios cosméticos posteriores a `1.0.0rc2` quedó cerrado con esa release.
 
 **Desincronización vigente (01/11/2026):** tras el cierre de la Fase 4.0 y las sub-fases 5.0.a–5.0.c, los READMEs del repo reflejan "Phases 0 → 4.0 complete" (foco Fase 5, capa MCP) y 532/532 tests con fecha 01 nov 2026; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Cambio cosmético (diagrama Mermaid, fecha, conteo de tests): NO se publica nueva versión (regla del 20/10/2026); se sincronizará con la próxima release material — la primera candidata es el cierre de la Fase 5.0, que incorpora el paquete `mcp_v3` al wheel (siguiendo el protocolo PyPI, cambio material).
+
+**Desincronización vigente (02/11/2026): READMEs y PyPI.** Tras 4.0.1.b (cambio material), decisión de publicar `1.0.0rc5` en este mismo bloque o diferir a la próxima release material — pendiente de aprobación explícita del revisor. Mientras tanto, la versión publicada y la declarada en los READMEs permanece en `1.0.0rc4`.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**

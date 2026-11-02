@@ -426,24 +426,6 @@ def _categorical_case_two_branches() -> ExportCase:
     return ExportCase(model=model, imputer=imputer)
 
 
-def test_export_unseen_policy_not_implemented() -> None:
-    """``"error"``/``"majority"`` are valid vocabulary but gated in .a.
-
-    Both are accepted by the keyword (they are part of the governed
-    vocabulary of `docs/design_decisions.md` §7.6) and must raise
-    ``NotImplementedError`` pointing to sub-phase 4.0.1.b from all
-    three exporters: no silent aliasing of the default behaviour.
-    """
-    case = _categorical_case_two_branches()
-    for policy in ("error", "majority"):
-        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
-            export_to_sql(case.model, case.imputer, unseen_policy=policy)
-        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
-            export_to_python(case.model, case.imputer, unseen_policy=policy)
-        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
-            export_to_markdown(case.model, unseen_policy=policy)
-
-
 def test_export_unseen_policy_invalid_value() -> None:
     """A value outside the vocabulary raises ``ValueError`` naming all
     three admissible values; matching is case-sensitive.
@@ -491,12 +473,11 @@ def test_export_python_exclude_categorical_routing() -> None:
 
 
 def test_export_artifact_headers_declare_policy() -> None:
-    """The SQL, Python and Markdown artefacts all declare
-    ``unseen_policy: exclude`` next to the fingerprint (as-built D6).
-    """
+    """Every artefact declares the active policy next to the fingerprint."""
     case = _categorical_case_two_branches()
     fp = case.model.params_fingerprint
 
+    # Mode "exclude": the original header contract remains unchanged.
     sql = export_to_sql(case.model, case.imputer)
     assert sql.splitlines()[0] == f"-- TreeGov Model Fingerprint: {fp}"
     assert sql.splitlines()[1] == (
@@ -513,6 +494,50 @@ def test_export_artifact_headers_declare_policy() -> None:
     assert (
         "**Unseen policy:** exclude (unseen categories are not scored;"
         " caller must filter NULL/None)."
+    ) in md
+
+    # Mode "error": SQL adds its portability warning to the policy line.
+    sql = export_to_sql(case.model, case.imputer, unseen_policy="error")
+    assert sql.splitlines()[0] == f"-- TreeGov Model Fingerprint: {fp}"
+    assert sql.splitlines()[1] == (
+        "-- Unseen policy: error (unseen categories abort the scoring)"
+    )
+    assert sql.splitlines()[2].startswith(
+        "-- WARNING: one or more predictors below use ELSE 1/0"
+    )
+
+    source = export_to_python(case.model, case.imputer, unseen_policy="error")
+    assert source.splitlines()[0] == f"# TreeGov Model Fingerprint: {fp}"
+    assert source.splitlines()[1] == (
+        "# Unseen policy: error (unseen categories raise ValueError; "
+        "caller sees the exception)"
+    )
+
+    md = export_to_markdown(case.model, unseen_policy="error")
+    assert (
+        "**Unseen policy:** error (unseen categories abort the scoring; "
+        "caller sees the exception)."
+    ) in md
+
+    # Mode "majority": all three headers expose the frozen majority-leaf PD.
+    sql = export_to_sql(case.model, case.imputer, unseen_policy="majority")
+    assert sql.splitlines()[0] == f"-- TreeGov Model Fingerprint: {fp}"
+    assert sql.splitlines()[1] == (
+        "-- Unseen policy: majority (unseen categories route to the majority "
+        "leaf, pd=0.8000)"
+    )
+
+    source = export_to_python(case.model, case.imputer, unseen_policy="majority")
+    assert source.splitlines()[0] == f"# TreeGov Model Fingerprint: {fp}"
+    assert source.splitlines()[1] == (
+        "# Unseen policy: majority (unseen categories route to the majority "
+        "leaf, pd=0.8000)"
+    )
+
+    md = export_to_markdown(case.model, unseen_policy="majority")
+    assert (
+        "**Unseen policy:** majority (unseen categories route to the majority "
+        "leaf, pd=0.8000)."
     ) in md
 
 
@@ -551,3 +576,98 @@ def test_export_categorical_d4_cardinality_mismatch() -> None:
         export_to_python(model, case.imputer)
     with pytest.raises(ValueError, match="needs exactly one branch value set per child"):
         export_to_markdown(model)
+
+
+def test_export_unseen_policy_error_sql() -> None:
+    """Mode ``error`` emits warnings and a division-by-zero fallback."""
+    case = _categorical_case_two_branches()
+    sql = export_to_sql(case.model, case.imputer, unseen_policy="error")
+
+    assert "-- Unseen policy: error (unseen categories abort the scoring)" in sql
+    assert "-- WARNING: one or more predictors below use ELSE 1/0" in sql
+    assert "-- WARNING: unseen category in predictor 'seg' -> division by zero" in sql
+    assert "ELSE 1/0" in sql
+    assert "ELSE NULL" not in sql
+    assert case.model.params_fingerprint in sql
+
+
+def test_export_unseen_policy_error_python() -> None:
+    """Mode ``error`` aborts only rows carrying an unseen category."""
+    case = _categorical_case_two_branches()
+    source = export_to_python(case.model, case.imputer, unseen_policy="error")
+
+    assert "# Unseen policy: error (unseen categories raise ValueError" in source
+    assert "def predict(row: dict) -> float:" in source
+    assert "raise ValueError(" in source
+    assert "Unseen category in predictor 'seg'" in source
+    assert "return None" not in source
+
+    namespace = _load_python_export(source)
+    predict = namespace["predict"]
+    assert predict({"seg": "A"}) == 0.1
+    assert predict({"seg": "C"}) == 0.8
+    with pytest.raises(ValueError, match="Unseen category in predictor"):
+        predict({"seg": "Z"})
+
+
+def test_export_unseen_policy_error_markdown() -> None:
+    """Mode ``error`` labels the residual Markdown bullet explicitly."""
+    case = _categorical_case_two_branches()
+    md = export_to_markdown(case.model, unseen_policy="error")
+
+    assert (
+        "**Unseen policy:** error (unseen categories abort the scoring; "
+        "caller sees the exception)."
+    ) in md
+    assert "- Else (unseen category → ValueError raised; policy = error):" in md
+
+
+def test_export_unseen_policy_majority_sql() -> None:
+    """Mode ``majority`` freezes the selected leaf PD in the SQL fallback."""
+    case = _categorical_case_two_branches()
+    sql = export_to_sql(case.model, case.imputer, unseen_policy="majority")
+
+    # Empirical backend parity check: predict_leaf_assignment selects node 2,
+    # whose pd_final[0] is 0.8 for this equal-n fixture.
+    assert (
+        "-- Unseen policy: majority (unseen categories route to the majority "
+        "leaf, pd=0.8000)"
+    ) in sql
+    assert "ELSE 0.8" in sql
+    assert "ELSE 1/0" not in sql
+    assert "ELSE NULL" not in sql
+
+
+def test_export_unseen_policy_majority_python() -> None:
+    """Mode ``majority`` scores unseen rows with the selected leaf PD."""
+    case = _categorical_case_two_branches()
+    source = export_to_python(case.model, case.imputer, unseen_policy="majority")
+
+    assert (
+        "# Unseen policy: majority (unseen categories route to the majority "
+        "leaf, pd="
+    ) in source
+    assert "def predict(row: dict) -> float:" in source
+    assert "return None" not in source
+
+    namespace = _load_python_export(source)
+    predict = namespace["predict"]
+    majority_prediction = predict({"seg": "Z"})
+    assert isinstance(majority_prediction, float)
+    assert majority_prediction == 0.8
+    assert predict({"seg": "A"}) == 0.1
+    assert predict({"seg": "C"}) == 0.8
+
+
+def test_export_unseen_policy_majority_markdown() -> None:
+    """Mode ``majority`` reports the frozen PD in header and bullet."""
+    case = _categorical_case_two_branches()
+    md = export_to_markdown(case.model, unseen_policy="majority")
+
+    assert (
+        "**Unseen policy:** majority (unseen categories route to the majority "
+        "leaf, pd="
+    ) in md
+    assert "- Else (unseen category → routed to majority leaf pd=" in md
+    assert "; policy = majority):" in md
+    assert "pd=0.8000" in md

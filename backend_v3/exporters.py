@@ -36,26 +36,19 @@ __all__ = ["export_to_markdown", "export_to_python", "export_to_sql"]
 
 
 def _ensure_unseen_policy(unseen_policy: str) -> None:
-    """Validate ``unseen_policy`` and gate not-yet-implemented policies.
+    """Validate the governed ``unseen_policy`` vocabulary.
 
     The vocabulary mirrors the backend parameter of the same name in
     ``backend_v3.validation._assign_leaves`` (design_decisions.md §7.6):
     ``"error"``, ``"exclude"`` and ``"majority"``. Anything else raises
-    ``ValueError`` naming the three admissible values. Only ``"exclude"`` is
-    implemented in sub-phase 4.0.1.a of
-    ``docs/4.0.1_design_categorical_exporters.md``; the other two are accepted
-    by the vocabulary but raise ``NotImplementedError`` so they never silently
-    alias the default behaviour (implementation lands in sub-phase 4.0.1.b).
+    ``ValueError`` naming the three admissible values. All three policies are
+    implemented in sub-phase 4.0.1.b of
+    ``docs/4.0.1_design_categorical_exporters.md``.
     """
     if unseen_policy not in ("error", "exclude", "majority"):
         raise ValueError(
             f"[exporters] unseen_policy invalida: {unseen_policy!r} "
             "(valores admitidos: 'error', 'exclude', 'majority')"
-        )
-    if unseen_policy != "exclude":
-        raise NotImplementedError(
-            f"[exporters] unseen_policy='{unseen_policy}' se implementa "
-            "en la sub-fase 4.0.1.b"
         )
 
 
@@ -148,6 +141,18 @@ def _merged_bin_branches(split: object) -> list[tuple[int, int]] | None:
     return bounds
 
 
+def _majority_leaf_pd(model: "TreeModel") -> float:
+    """Return the majority-leaf PD for ``unseen_policy="majority"``.
+
+    Exact replica of ``validation.predict_leaf_assignment``: select the leaf
+    with maximum PHYSICAL ``n`` (not weighted), break ties by minimum
+    ``node_id``, and return ``pd_final[0]`` (class of interest, index 0).
+    """
+    hojas = [nd for nd in model.nodes if nd.is_leaf]
+    destino = max(hojas, key=lambda h: (-h.n, h.node_id))
+    return float(destino.pd_final[0])
+
+
 def _sql_condition(split: object, index: int, imputer: object) -> str:
     """Build the ``WHEN`` predicate for the branch ``index`` of a split.
 
@@ -229,11 +234,14 @@ def export_to_sql(
 
     The first line of the output is a comment carrying
     ``model.params_fingerprint``, so the artefact can be traced back to the
-    exact model that generated it (MRM requirement). The second line declares
-    the ``unseen_policy`` in force: with the current ``"exclude"`` policy a
-    categorical value unseen at training time matches no branch, so the
-    exported statement returns ``NULL`` for that row and the caller must
-    filter or escalate it.
+    exact model that generated it (MRM requirement). The following lines
+    declare the ``unseen_policy`` in force and, for ``"error"``, its database
+    portability warning. Under ``"exclude"``, an unseen category returns
+    ``NULL``; under ``"majority"``, it receives the majority leaf's PD.
+
+    In SQL mode ``"error"``, ``ELSE 1/0`` makes PostgreSQL, SQL Server and
+    Oracle abort the query. MySQL and SQLite instead return ``NULL`` with a
+    warning, so the receiver must filter those rows explicitly.
 
     Node traversal reads ``node.child_ids`` directly instead of iterating over
     a pre-declared attribute list: a node missing that attribute raises
@@ -248,11 +256,11 @@ def export_to_sql(
             ``means`` is used for numeric predictors and ``modes`` for
             categorical ones.
         unseen_policy: Behavior for rows carrying unseen categorical values.
-            ``"exclude"`` (default, the only implemented policy): the row
-            falls through to ``ELSE NULL`` and is not scored. ``"error"`` and
-            ``"majority"`` are part of the governed vocabulary but not
-            implemented yet; they raise ``NotImplementedError``
-            (sub-phase 4.0.1.b).
+            ``"exclude"`` (default) falls through to ``ELSE NULL`` and leaves
+            the row unscored. ``"error"`` uses ``ELSE 1/0`` to abort scoring
+            on strict databases, subject to the portability caveat above.
+            ``"majority"`` returns the PD of the leaf with maximum physical
+            ``n``, breaking ties by minimum ``node_id``.
 
     Returns:
         A ready-to-paste SQL statement terminated with a semicolon.
@@ -261,10 +269,9 @@ def export_to_sql(
         ValueError: if a split cannot be expressed in ANSI SQL or the tree is
             structurally inconsistent.
         KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
-        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
-            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
     _ensure_unseen_policy(unseen_policy)
+    majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
     raw_nodes = model.nodes
     if isinstance(raw_nodes, dict):
         nodes_by_id = dict(raw_nodes)
@@ -276,9 +283,9 @@ def export_to_sql(
 
         Leaves render as the class-of-interest probability (index 0 of
         ``pd_final``). Internal nodes render as a self-contained ``CASE`` block
-        whose branches recurse into the children; unmatched rows fall through to
-        ``ELSE NULL`` rather than to an arbitrary branch, so an unexpected input
-        is visibly missing instead of silently mis-scored.
+        whose branches recurse into the children. The residual branch returns
+        ``NULL``, raises via division by zero, or returns the majority-leaf PD
+        according to ``unseen_policy``; it never routes to an arbitrary child.
         """
         try:
             node = nodes_by_id[node_id]
@@ -332,14 +339,39 @@ def export_to_sql(
             lines.append(f"{pad}WHEN {condition} THEN")
             lines.append(f"{pad} {child_sql}")
         if not has_else:
-            lines.append(f"{pad}ELSE NULL")
+            if unseen_policy == "error":
+                lines.append(
+                    f"{pad}-- WARNING: unseen category in predictor "
+                    f"{split.predictor!r} -> division by zero"
+                )
+                lines.append(f"{pad}ELSE 1/0")
+            elif unseen_policy == "majority":
+                lines.append(f"{pad}ELSE {_sql_literal(majority_pd)}")
+            else:
+                lines.append(f"{pad}ELSE NULL")
         lines.append(f"{pad}END")
         return "\n".join(lines)
 
     body = _sql_node(model.root_id, 0)
+    if unseen_policy == "error":
+        policy_header = (
+            "-- Unseen policy: error (unseen categories abort the scoring)\n"
+            "-- WARNING: one or more predictors below use ELSE 1/0; query MUST "
+            "fail on strict DBs (PostgreSQL/Oracle/SQL Server) and returns NULL "
+            "with warning on permissive DBs (MySQL/SQLite)"
+        )
+    elif unseen_policy == "majority":
+        policy_header = (
+            "-- Unseen policy: majority (unseen categories route to the majority "
+            f"leaf, pd={majority_pd:.4f})"
+        )
+    else:
+        policy_header = (
+            "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)"
+        )
     return (
         f"-- TreeGov Model Fingerprint: {model.params_fingerprint}\n"
-        "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)\n"
+        f"{policy_header}\n"
         f"SELECT {body} AS prediction_score;"
     )
 
@@ -477,15 +509,16 @@ def _python_predictors(root_id: int, nodes_by_id: dict) -> list:
     return ordered
 
 
-def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
+def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: str, majority_pd: float | None) -> list:
     """Render one node as a list of Python source lines indented by ``depth``.
 
     ``depth`` counts indentation levels of four spaces, so the generated script
     always keeps strict Python indentation. Leaves emit ``return`` with the
     class-of-interest probability (index 0 of ``pd_final``); internal nodes emit
-    an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children,
-    except that under the ``"exclude"`` unseen policy a categorical split ends
-    with ``else: return None`` (an unseen category is not routed anywhere).
+    an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children.
+    A categorical split's residual branch returns ``None``, raises
+    ``ValueError``, or returns the majority-leaf PD according to
+    ``unseen_policy``.
     """
     pad = "    " * depth
 
@@ -521,9 +554,25 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
                 f"got {len(child_ids)} children."
             )
         lines = [f"{pad}if {variable} <= {_python_number(split.threshold)}:"]
-        lines.extend(_python_node(child_ids[0], depth + 1, nodes_by_id))
+        lines.extend(
+            _python_node(
+                child_ids[0],
+                depth + 1,
+                nodes_by_id,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+            )
+        )
         lines.append(f"{pad}else:")
-        lines.extend(_python_node(child_ids[1], depth + 1, nodes_by_id))
+        lines.extend(
+            _python_node(
+                child_ids[1],
+                depth + 1,
+                nodes_by_id,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+            )
+        )
         return lines
 
     if split.bin_edges:
@@ -548,7 +597,15 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
                     lines.append(
                         f"{pad}{keyword} {variable} <= {_python_number(edges[hi])}:"
                     )
-                lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
+                lines.extend(
+                    _python_node(
+                        child_ids[index],
+                        depth + 1,
+                        nodes_by_id,
+                        unseen_policy=unseen_policy,
+                        majority_pd=majority_pd,
+                    )
+                )
             return lines
         if len(child_ids) != len(edges) + 1:
             raise ValueError(
@@ -559,9 +616,25 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
         for index, edge in enumerate(edges):
             keyword = "if" if index == 0 else "elif"
             lines.append(f"{pad}{keyword} {variable} <= {_python_number(edge)}:")
-            lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
+            lines.extend(
+                _python_node(
+                    child_ids[index],
+                    depth + 1,
+                    nodes_by_id,
+                    unseen_policy=unseen_policy,
+                    majority_pd=majority_pd,
+                )
+            )
         lines.append(f"{pad}else:")
-        lines.extend(_python_node(child_ids[-1], depth + 1, nodes_by_id))
+        lines.extend(
+            _python_node(
+                child_ids[-1],
+                depth + 1,
+                nodes_by_id,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+            )
+        )
         return lines
 
     if split.branches is not None:
@@ -577,12 +650,32 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
             keyword = "if" if index == 0 else "elif"
             values = _python_tuple(branch_values[index])
             lines.append(f"{pad}{keyword} {variable} in {values}:")
-            lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
-        # unseen_policy="exclude": an unseen categorical value matches no
-        # branch set. The backend leaves those rows unrouted (validation.py)
-        # and SQL falls through to ELSE NULL, so the artefact returns None.
-        lines.append(f"{pad}else:")
-        lines.append(f"{pad}    return None")
+            lines.extend(
+                _python_node(
+                    child_ids[index],
+                    depth + 1,
+                    nodes_by_id,
+                    unseen_policy=unseen_policy,
+                    majority_pd=majority_pd,
+                )
+            )
+        # An unseen categorical value matches no branch set; apply the same
+        # residual policy as the backend and the other scoring exporters.
+        if unseen_policy == "error":
+            name_lit = repr(str(split.predictor))
+            var = _python_variable(split.predictor)
+            lines.append(f"{pad}else:")
+            lines.append(
+                f'{pad}    raise ValueError(f"Unseen category in predictor '
+                f'{name_lit}: {{{var}}}")'
+            )
+        elif unseen_policy == "majority":
+            assert majority_pd is not None
+            lines.append(f"{pad}else:")
+            lines.append(f"{pad}    return {_python_number(majority_pd)}")
+        else:
+            lines.append(f"{pad}else:")
+            lines.append(f"{pad}    return None")
         return lines
 
     raise ValueError(
@@ -614,33 +707,31 @@ def export_to_python(
 
     The first line is a comment carrying ``model.params_fingerprint`` so the
     artefact can be traced back to the model that generated it (MRM). The
-    second line declares the ``unseen_policy`` in force: with the current
-    ``"exclude"`` policy a categorical value unseen at training time matches
-    no branch, so ``predict`` returns ``None`` for that row and the caller
-    must filter or escalate it.
+    second line declares the ``unseen_policy`` in force. Under ``"exclude"``,
+    an unseen category returns ``None``; under ``"majority"``, it receives the
+    majority leaf's PD. Under ``"error"``, the row aborts with ``ValueError``
+    identifying both the predictor and the unseen value, and the generated
+    functions return ``float`` rather than ``float | None``.
 
     Args:
         model: Trained decision tree. ``root_id``, ``nodes`` and
             ``params_fingerprint`` are read; the model is never mutated.
         imputer: Imputation specification fitted on the training partition.
         unseen_policy: Behavior for rows carrying unseen categorical values.
-            ``"exclude"`` (default, the only implemented policy): the final
-            categorical fallback returns ``None``. ``"error"`` and
-            ``"majority"`` are part of the governed vocabulary but not
-            implemented yet; they raise ``NotImplementedError``
-            (sub-phase 4.0.1.b).
+            ``"exclude"`` (default) returns ``None`` from the categorical
+            fallback. ``"error"`` aborts the row with ``ValueError`` naming
+            the predictor and value. ``"majority"`` returns the PD of the leaf
+            with maximum physical ``n``, breaking ties by minimum ``node_id``.
 
     Returns:
         The source of a Python module, terminated by a newline. Under
         ``"exclude"``, ``predict``/``_eval_tree`` are declared as
-        ``float | None``.
+        ``float | None``; under ``"error"`` and ``"majority"``, as ``float``.
 
     Raises:
         ValueError: if a split cannot be expressed as an ``if`` chain, or the
             tree is structurally inconsistent.
         KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
-        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
-            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
     _ensure_unseen_policy(unseen_policy)
     nodes_by_id = _index_nodes(model)
@@ -657,22 +748,46 @@ def export_to_python(
                 )
         variables[predictor] = variable
 
+    majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
+    if unseen_policy == "error":
+        policy_header = (
+            "# Unseen policy: error (unseen categories raise ValueError; caller sees the exception)"
+        )
+    elif unseen_policy == "majority":
+        policy_header = (
+            "# Unseen policy: majority (unseen categories route to the majority "
+            f"leaf, pd={majority_pd:.4f})"
+        )
+    else:
+        policy_header = (
+            "# Unseen policy: exclude (unseen categories return None; caller must filter)"
+        )
+    return_type = "float | None" if unseen_policy == "exclude" else "float"
+
     lines = [
         f"# TreeGov Model Fingerprint: {model.params_fingerprint}",
-        "# Unseen policy: exclude (unseen categories return None; caller must filter)",
+        policy_header,
         "",
-        "def predict(row: dict) -> float | None:",
+        f"def predict(row: dict) -> {return_type}:",
         "    return _eval_tree(row)",
         "",
         "",
-        "def _eval_tree(row: dict) -> float | None:",
+        f"def _eval_tree(row: dict) -> {return_type}:",
     ]
 
     for predictor in predictors:
         for line in _python_imputation(predictor, variables[predictor], imputer):
             lines.append("    " + line)
 
-    lines.extend(_python_node(model.root_id, 1, nodes_by_id))
+    lines.extend(
+        _python_node(
+            model.root_id,
+            1,
+            nodes_by_id,
+            unseen_policy=unseen_policy,
+            majority_pd=majority_pd,
+        )
+    )
 
     return "\n".join(lines) + "\n"
 
@@ -701,9 +816,8 @@ def export_to_markdown(
     ``unseen_policy`` in force, so a reviewer can trace the report back to the
     exact artefact that produced it (MRM requirement). Categorical splits list
     one sub-bullet per branch value set and close with a residual ``Else``
-    bullet that marks rows carrying unseen categories: they are not scored,
-    mirroring the ``NULL`` (SQL) / ``None`` (Python) routing of the scoring
-    exporters under the same policy.
+    bullet that changes by mode: exclusion, a raised ``ValueError``, or routing
+    to the majority leaf with its PD.
 
     The module performs no I/O: the return value is a plain ``str`` the caller
     is free to write to disk or embed elsewhere.
@@ -712,11 +826,10 @@ def export_to_markdown(
         model: Trained decision tree. ``root_id``, ``method``, ``nodes`` and
             ``params_fingerprint`` are read; the model is never mutated.
         unseen_policy: Governs how the report labels rows carrying unseen
-            categorical values. ``"exclude"`` (default, the only implemented
-            policy) renders the residual bullet as "not scored".
-            ``"error"`` and ``"majority"`` are part of the governed vocabulary
-            but not implemented yet; they raise ``NotImplementedError``
-            (sub-phase 4.0.1.b).
+            categorical values. ``"exclude"`` (default) renders the residual
+            bullet as "not scored"; ``"error"`` labels the raised
+            ``ValueError``; ``"majority"`` labels routing to the majority leaf
+            and includes its PD with four decimals.
 
     Returns:
         A Markdown document terminated by a newline.
@@ -727,10 +840,9 @@ def export_to_markdown(
             that does not match the split encoding).
         KeyError: if a child references a ``node_id`` absent from
             ``model.nodes``.
-        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
-            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
     _ensure_unseen_policy(unseen_policy)
+    majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
     nodes_by_id = _index_nodes(model)
 
     def _md_node(node_id: int, depth: int) -> str:
@@ -838,17 +950,27 @@ def export_to_markdown(
                     f"children), got {len(branch_values)} value sets."
                 )
             # One rule per branch value set (CHAID emits exactly one set per
-            # child), followed by a residual bullet for rows carrying values
-            # unseen at training time (not scored; policy = exclude).
+            # child), followed by a residual bullet describing the active
+            # policy for values unseen at training time.
             for index in range(len(child_ids)):
                 keyword = "If" if index == 0 else "Elif"
                 lines.append(
                     f"{indent}  - {keyword} in {branch_values[index]}:\n"
                     + _md_node(child_ids[index], depth + 1)
                 )
-            lines.append(
-                f"{indent}  - Else (unseen category → not scored; policy = exclude):\n"
-            )
+            if unseen_policy == "error":
+                lines.append(
+                    f"{indent}  - Else (unseen category → ValueError raised; policy = error):\n"
+                )
+            elif unseen_policy == "majority":
+                lines.append(
+                    f"{indent}  - Else (unseen category → routed to majority leaf "
+                    f"pd={majority_pd:.4f}; policy = majority):\n"
+                )
+            else:
+                lines.append(
+                    f"{indent}  - Else (unseen category → not scored; policy = exclude):\n"
+                )
             return "".join(lines)
 
         raise ValueError(
@@ -856,11 +978,26 @@ def export_to_markdown(
             f"branches; it cannot be exported to Markdown."
         )
 
+    if unseen_policy == "error":
+        policy_header = (
+            "**Unseen policy:** error (unseen categories abort the scoring; "
+            "caller sees the exception)."
+        )
+    elif unseen_policy == "majority":
+        policy_header = (
+            "**Unseen policy:** majority (unseen categories route to the "
+            f"majority leaf, pd={majority_pd:.4f})."
+        )
+    else:
+        policy_header = (
+            "**Unseen policy:** exclude (unseen categories are not scored; "
+            "caller must filter NULL/None)."
+        )
     header = (
         "# TreeGov Decision Tree\n\n"
         f"**Fingerprint:** {model.params_fingerprint}\n"
         f"**Method:** {model.method}\n"
-        "**Unseen policy:** exclude (unseen categories are not scored; caller must filter NULL/None).\n\n"
+        f"{policy_header}\n\n"
         "## Decision Rules\n\n"
     )
     return header + _md_node(model.root_id, 0)

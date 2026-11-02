@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 01/11/2026
+**Última actualización:** 02/11/2026
 
 ---
 
@@ -110,10 +110,11 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** **532/532 PASSED** (01/11/2026: Fases 4.0 y 5.0
-  cerradas; 5.0.a = esqueleto MCP; 5.0.b = servidor MCP stdio + entry
-  point; 5.0.c = paridad E2E con los 4 motores + exportadores CHAID
-  fusionados, §16.4; 5.0.d = auditoría de seguridad y cierre as-built).
+- **Suite de tests:** **537/537 PASSED** (02/11/2026). Fases 4.0, 4.0.1 y
+  5.0 cerradas. La sub-fase 4.0.1.b implementa `"error"` y `"majority"` en
+  los tres exportadores; `"exclude"` sigue siendo el default. Resoluciones
+  A1–A6 y estado as-built: `docs/4.0.1_design_categorical_exporters.md` §5;
+  contrato: `docs/design_decisions.md` §19.4.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -175,7 +176,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
 - **Estado al 25/10/2026:** Fases 0 a 3.11.c cerradas. **La Fase 3.11.c (Árboles Univariados y Matriz de Costos) quedó cerrada el 25/10/2026 con suite 470/470** (cierre en ráfaga, bloque documental único): c.1 (`Session.get_univariate_trees(max_depth=3)` — un árbol por predictor, DTO `predictor`/`gini`/`ks`/`cut_points`), c.2 (`UnivariateDialog` en el menú Análisis, tabla Predictor | Gini | KS | Cortes, TSV/CSV) y c.3 (`SessionState.cost_matrix` inmutable + pestaña "Costs" del wizard; NO entra en `params_fingerprint` — `design_decisions.md` §18.8). Diseño: `docs/3.11.c_design_univariate_cost_matrix.md`. **La Fase 3.11.d (Menú Contextual e Interactividad y Manual Override Log) quedó cerrada el 25/10/2026 con suite 477/477** (cierre en ráfaga, bloque documental único): d.1 (`Session.intervene_node` con `prune_branch` + re-indexado BFS `_reindex_tree` + `SessionState.manual_overrides` inmutable + fingerprint `-pN`), d.2 (menú contextual del canvas —señal `node_context_menu`, QMenu Grow/Prune, confirmación BANKING vía `QMessageBox`—) y d.3 (`ManualOverrideDialog` + botón "Ver Auditoría" del HUD habilitado tras entrenar). Diseño: `docs/3.11.d_design_context_menu_interactivity.md`; decisión: `design_decisions.md` §18.9. Con esto la **Fase 3.11 queda cerrada por completo**. Tras el cierre, el **bloque de saneamiento post-auditoría externa (25/10/2026)** dejó el código saneado (ZG-1: fingerprint `-iN`; ZG-2: matriz de costos N×N dinámica; ZG-3: parámetros de `train()` propagados a univariados; ZG-5: `np.digitize(right=True)`; fugas frontend: `html.escape` y `closeEvent` en DataViewer; suite 475/475). **La Fase 3.6.e (Modo No-Bancario y Terminología Neutral) quedó cerrada el 25/10/2026 con suite 477/477** (ráfaga e.1+e.2+e.3: resolvedor `tr_term(concepto, mode)` con 24 claves `term_banking_*`/`term_research_*`, paneles Reports/Metrics/Tree con `set_governance_mode` atados al `GovernanceMode` congelado en el fingerprint, E2E no-bancario en `tests/test_e2e_non_banking.py`; diseño aprobado: `docs/3.6.e_design_non_banking.md`; decisión: `design_decisions.md` §18.10). Próximo paso: recogida de feedback para la `1.0.0` estable o inicio de la **Fase 4.0**. La 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página completa, Wizard redimensionado con banner de título, Nodos HTML estación clásica, HUD acotado y colapsable) y la 3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel, nodos QPainter "hoja de auditoría" sin espacio vacío, tema oscuro forzado vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas) cerraron el 24/10/2026; la 3.11.b (Tree Map, Data Viewer, Project Explorer y `pct_global` en la fila Total) cerró el 25/10/2026 con suite 465/465. El 25/10/2026 se cerraron dos mini-cierres: resolución de zonas grises (tests de routing por `bin_edges`, terminología "Nodo/Nodo terminal" en GUI) y blindaje de gobernanza Clean Room (`design_decisions.md` §0.5). El código de la 3.11.a.1 está commiteado (`d8194dc`); el cierre documental de la 3.11.a.1 (`bf02f66`), los mini-cierres del 25/10 (`a426842`, `7d05aa2`), la corrección del diseño 3.11.b (`910edb5`), el backend de la b.1 (`6e4c4b5`) y el frontend de la b.2 (`a856c2c`) están commiteados — verificar con `git status` antes de editar. Archivos de diseño canónicos de las fases recientes: `docs/3.10.a_design_ux_ui_redesign.md`, `docs/3.10.b_design_chaid_binning.md`, `docs/3.11.a_design_colab_theme.md` (as-built), `docs/3.11_gui_design_system.md` (sistema de diseño normativo), `docs/3.11_design_interactive_tree.md`, `docs/3.11_classic_tree_ui_reference.md` y `docs/3.11.c_design_univariate_cost_matrix.md`. En paralelo, recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. Ver `docs/roadmap.md` sección 3.11 y `docs/audit_log.md` entradas del 24-25/10/2026.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
-**Próximo paso inmediato:** Implementar 4.0.1.b (modos error y majority en los exportadores).
+**Próximo paso inmediato:** Decisión entre **(A)** preparar `1.0.0` estable, **(B)** iniciar la Fase 6 (batch scoring y champion-challenger) o **(C)** iniciar la Fase 7 (IFRS 9 / ECL). `1.0.0rc4` permanece en PyPI; publicar `1.0.0rc5` tras 4.0.1.b requiere aprobación explícita del revisor.
 
 ---
 
@@ -405,12 +406,12 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 01/11/2026: Fases 0 a
-> 3.11.d cerradas, más 3.6.e (modo no-bancario), la Fase 4.0 completa
-> (exportadores SQL/Python/Markdown + GUI) y la Fase 5.0 completa
-> (capa MCP stdio, 24 herramientas, paridad E2E, auditoría de seguridad
-> y diseño as-built). Suite 532/532. Release 1.0.0rc4 publicada en PyPI.
-> Próximo paso: auditar `docs/4.0.1_design_categorical_exporters.md` antes de decidir entre (A) 1.0.0 estable, (B) Fase 6 o (C) Fase 7. Herramienta activa: OpenCode v2.2.5 + Multi-Proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
+> "Retomamos TreeGov. Soy Marco. Estado al 02/11/2026: Fases 0 a
+> 3.11.d cerradas, más 3.6.e (modo no-bancario), la Fase 4.0 completa,
+> la Fase 4.0.1 completa (modos error/exclude/majority en exportadores)
+> y la Fase 5.0 completa. Suite 537/537. Release 1.0.0rc4 publicada en PyPI;
+> publicar 1.0.0rc5 tras 4.0.1.b queda pendiente del revisor.
+> Próximo paso: decidir entre (A) 1.0.0 estable, (B) Fase 6 o (C) Fase 7. Herramienta activa: OpenCode v2.2.5 + Multi-Proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

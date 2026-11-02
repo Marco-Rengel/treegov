@@ -154,12 +154,35 @@ def test_export_kinds_are_consistent_after_train():
 
 
 def test_wrappers_forward_unseen_policy():
-    """Session wrappers forward both the default and gated policies."""
+    """Session wrappers forward the default and all implemented policies."""
     with tempfile.TemporaryDirectory() as td:
         csv = _make_csv(Path(td) / "mini.csv")
         s = _trained_session(csv)
 
-        for export in (s.export_to_sql, s.export_to_python, s.export_to_markdown):
+        for export, error_marker, majority_marker in (
+            (
+                s.export_to_sql,
+                "-- Unseen policy: error",
+                "-- Unseen policy: majority",
+            ),
+            (
+                s.export_to_python,
+                "# Unseen policy: error",
+                "# Unseen policy: majority",
+            ),
+            (
+                s.export_to_markdown,
+                "**Unseen policy:** error",
+                "**Unseen policy:** majority",
+            ),
+        ):
             assert export(unseen_policy="exclude") == export()
-            with pytest.raises(NotImplementedError):
-                export(unseen_policy="error")
+            assert export(unseen_policy="error") != export()
+            assert export(unseen_policy="majority") != export()
+
+            error_output = export(unseen_policy="error")
+            assert error_output
+            assert error_marker in error_output
+            majority_output = export(unseen_policy="majority")
+            assert majority_output
+            assert majority_marker in majority_output

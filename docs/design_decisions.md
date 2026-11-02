@@ -2319,6 +2319,56 @@ The two lines together produce SQL-equivalent behavior for both "absent key" and
 
 **Reference.** `docs/4.0.1_design_categorical_exporters.md`; `backend_v3/exporters.py`.
 
+### 19.4 Unseen policy in exporters: `"error"` and `"majority"` (Phase 4.0.1.b)
+
+**Context.** Phase 4.0.1.a established the three-value vocabulary but gated
+`"error"` and `"majority"` with `NotImplementedError`. Production consumers
+needed an opt-in strict failure mode and parity with the backend's majority
+routing, while the default `"exclude"` artefacts had to remain byte-identical.
+
+**Alternatives considered.**
+
+- Keep the gate: rejected because the public vocabulary would advertise
+  behavior that no exporter could produce.
+- Alias both modes to `"exclude"`: rejected because it would silently hide
+  unseen-category drift and would not replicate backend routing.
+- Route SQL errors to an arbitrary child or use weighted counts for majority:
+  rejected because both break prediction parity and auditability.
+
+**Decision.** `_ensure_unseen_policy` now validates the complete vocabulary
+without gating any admitted mode. In SQL, the categorical catch-all uses
+`ELSE 1/0` in `"error"` mode; `threshold` and non-merged `bin_edges` keep
+their defensive fallback, and a merged CHAID top branch keeps its real
+`ELSE <child>`. Every emitted division-by-zero fallback carries an adjacent
+warning, and the header records the strict-versus-permissive database
+portability contract. This per-branch warning is the auditable evidence that
+the limitation was exported with the rule, not left implicit.
+
+Python raises `ValueError` with predictor and value in `"error"` mode. The
+new `_majority_leaf_pd(model)` helper replicates
+`validation.predict_leaf_assignment`: maximum physical `n` (not weighted
+`n`), minimum `node_id` as tie-break, and `pd_final[0]` as the class-of-interest
+PD. SQL and Python freeze that value in their majority fallback. Markdown
+changes its header and residual bullet by mode without altering numeric
+bullets. Generated Python signatures are `float | None` only for `"exclude"`;
+they are `float` for `"error"` and `"majority"`.
+
+**Consequences.**
+
+- All three wrappers forward all three policies; `"exclude"` remains the
+  default and preserves the Phase 4.0.1.a artefacts byte for byte.
+- PostgreSQL, SQL Server and Oracle abort on `ELSE 1/0`; MySQL and SQLite
+  return `NULL` with a warning, so permissive-database consumers must filter.
+- Tests cover SQL warnings and fallbacks, Python exceptions and majority
+  routing, Markdown bullets, headers, and wrapper forwarding. The existing
+  GUI E2E exporter tests require no change.
+- This is a material API/artefact change. Publishing `1.0.0rc5` requires
+  explicit reviewer approval; until then `1.0.0rc4` remains the PyPI release.
+
+**Cross-reference.** `docs/4.0.1_design_categorical_exporters.md` §5 (A1–A6);
+`docs/api.md` §`backend_v3.exporters`; `docs/audit_log.md`, 02/11/2026;
+`backend_v3/exporters.py`; `backend_v3/validation.py::predict_leaf_assignment`.
+
 ---
 
 ## §20. MCP Layer (Phase 5.0)

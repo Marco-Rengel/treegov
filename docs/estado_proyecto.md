@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 01/11/2026 (Fases 4.0 y 5.0 cerradas; suite 532/532; release 1.0.0rc4 vigente)
+**Fecha de última actualización:** 02/11/2026 (Fases 4.0, 4.0.1 y 5.0 cerradas; suite 537/537; release 1.0.0rc4 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -611,9 +611,14 @@ y ausencia de herramientas de exploración de directorios (D11). El diseño
 READMEs incorporan el quickstart de instalación y arranque. Suite 532/532.
 Cierre: `docs/audit_log.md` entrada del 01/11/2026.
 
-### Fase 4.0.1 — Categorical Exporters Unseen Policy
+### Fase 4.0.1 — Categorical Exporters Unseen Policy ✅ Completada (02/11/2026)
 
-**4.0.1.a cerrada (01/11/2026).** Se añadió el parámetro `unseen_policy` a los tres exportadores (SQL, Python, Markdown) y a sus wrappers en `Session` y `mcp_v3`. En esta sub-fase solo se implementó el modo `"exclude"` (categorías no vistas devuelven `NULL`/`None`). Se corrigió el silent mis-scoring de Python en splits categóricos. Suite: 532/532. Pendiente: 4.0.1.b (modos `"error"` y `"majority"`).
+**4.0.1.a y 4.0.1.b cerradas.** En 4.0.1.a se añadió `unseen_policy` a los tres exportadores y a sus wrappers, y se corrigió el silent mis-scoring categórico de Python.
+
+**Fase 4.0.1.b (02/11/2026).** Los modos `"error"` y `"majority"` quedan implementados en SQL, Python y Markdown, con cabeceras y fallbacks específicos.
+SQL emite `ELSE 1/0` con warnings de portabilidad; Python lanza `ValueError` o devuelve la PD mayoritaria y ajusta su firma por modo.
+`_majority_leaf_pd` replica el criterio del backend con `n` físico; el default `"exclude"` conserva sus artefactos byte a byte.
+Suite: 537/537. Diseño as-built y A1–A6: `docs/4.0.1_design_categorical_exporters.md`; decisión: `docs/design_decisions.md` §19.4.
 
 ---
 
@@ -633,7 +638,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (532 tests)
+├── tests/ # Suite de tests (537 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -772,21 +777,21 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | reports_panel (frontend) | 13 |
 | prune_dialog (frontend) | 1 |
 | data_viewer (frontend) | 4 |
-| tree_map (frontend) | 3 |
+| tree_map (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
 | e2e_non_banking (frontend) | 1 |
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| exporters.py | 17 |
+| exporters.py | 22 |
 | session_exporters (backend) | 8 |
 | e2e_exporters_gui (frontend) | 4 |
 | mcp_tools (backend) | 12 |
 | mcp_server (backend) | 3 |
 | mcp_parity (backend) | 5 |
-| **Total** | **532** |
+| **Total** | **537** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 532/532 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 537/537 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
