@@ -340,3 +340,214 @@ def test_export_markdown_merged_chaid_branches() -> None:
     assert "Probability = 0.5000" in md
     assert "Probability = 0.9000" in md
     assert case.model.params_fingerprint in md
+
+
+# ------------------------------------------------------------------
+# Fase 4.0.1.a — unseen_policy en los exportadores (bloque aditivo;
+# referente: docs/4.0.1_design_categorical_exporters.md D1-D7).
+# ------------------------------------------------------------------
+
+
+def _categorical_case_two_branches() -> ExportCase:
+    """CHAID categorical split on ``seg`` with two branch value sets.
+
+    Branch 0 = ``("A", "B")`` -> leaf ``pd_final[0] = 0.1``; branch 1 =
+    ``("C",)`` -> leaf ``pd_final[0] = 0.8``. The imputation mode of
+    ``seg`` is ``"A"``, so a row with a missing value routes to
+    branch 0. Geometry mirrors ``_merged_chaid_case`` but with a
+    ``branches`` tuple (one value set per child, contract D4).
+    """
+    split = SplitConfig(
+        predictor="seg",
+        method="CHAID",
+        statistic=9.0,
+        statistic_name="chi2",
+        df=(1,),
+        parent_n=100,
+        child_ns=(50, 50),
+        p_value=0.0001,
+        p_value_adjusted=0.0005,
+        bonferroni_multiplier=5,
+        n_merges=1,
+        branches=(("A", "B"), ("C",)),
+    )
+    root = TreeNode(
+        node_id=0,
+        depth=0,
+        parent_id=None,
+        n=100,
+        n_events=(38, 62),
+        pd_jeffreys=(0.38, 0.62),
+        pd_final=(0.38, 0.62),
+        class_labels=CLASS_LABELS,
+        is_leaf=False,
+        split=split,
+        child_ids=(1, 2),
+        leaf_reason=None,
+    )
+    leaf_0 = TreeNode(
+        node_id=1,
+        depth=1,
+        parent_id=0,
+        n=50,
+        n_events=(5, 45),
+        pd_jeffreys=(0.1, 0.9),
+        pd_final=(0.1, 0.9),
+        class_labels=CLASS_LABELS,
+        is_leaf=True,
+        split=None,
+        child_ids=(),
+        leaf_reason="max_depth",
+    )
+    leaf_1 = TreeNode(
+        node_id=2,
+        depth=1,
+        parent_id=0,
+        n=50,
+        n_events=(40, 10),
+        pd_jeffreys=(0.8, 0.2),
+        pd_final=(0.8, 0.2),
+        class_labels=CLASS_LABELS,
+        is_leaf=True,
+        split=None,
+        child_ids=(),
+        leaf_reason="max_depth",
+    )
+    model = TreeModel(
+        root_id=0,
+        nodes=(root, leaf_0, leaf_1),
+        method="CHAID",
+        params_fingerprint="fp-categorical-two",
+        class_labels=CLASS_LABELS,
+        target_class=1,
+        target_class_index=0,
+    )
+    imputer = ImputationSpec(means={}, modes={"seg": "A"}, fitted_n=100)
+    return ExportCase(model=model, imputer=imputer)
+
+
+def test_export_unseen_policy_not_implemented() -> None:
+    """``"error"``/``"majority"`` are valid vocabulary but gated in .a.
+
+    Both are accepted by the keyword (they are part of the governed
+    vocabulary of `docs/design_decisions.md` §7.6) and must raise
+    ``NotImplementedError`` pointing to sub-phase 4.0.1.b from all
+    three exporters: no silent aliasing of the default behaviour.
+    """
+    case = _categorical_case_two_branches()
+    for policy in ("error", "majority"):
+        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
+            export_to_sql(case.model, case.imputer, unseen_policy=policy)
+        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
+            export_to_python(case.model, case.imputer, unseen_policy=policy)
+        with pytest.raises(NotImplementedError, match=r"4\.0\.1\.b"):
+            export_to_markdown(case.model, unseen_policy=policy)
+
+
+def test_export_unseen_policy_invalid_value() -> None:
+    """A value outside the vocabulary raises ``ValueError`` naming all
+    three admissible values; matching is case-sensitive.
+    """
+    case = _categorical_case_two_branches()
+    for bad in ("invalid", "EXCLUDE"):
+        with pytest.raises(
+            ValueError, match=r"valores admitidos: 'error', 'exclude', 'majority'"
+        ):
+            export_to_sql(case.model, case.imputer, unseen_policy=bad)
+        with pytest.raises(
+            ValueError, match=r"valores admitidos: 'error', 'exclude', 'majority'"
+        ):
+            export_to_python(case.model, case.imputer, unseen_policy=bad)
+        with pytest.raises(
+            ValueError, match=r"valores admitidos: 'error', 'exclude', 'majority'"
+        ):
+            export_to_markdown(case.model, unseen_policy=bad)
+
+
+def test_export_python_exclude_categorical_routing() -> None:
+    """Mode ``"exclude"``: unseen category -> ``None``, last-set member
+    -> the last branch's own leaf (the divergent routing fixed here).
+    """
+    case = _categorical_case_two_branches()
+    namespace = _load_python_export(export_to_python(case.model, case.imputer))
+    predict = namespace["predict"]
+
+    assert predict({"seg": "A"}) == 0.1
+    assert predict({"seg": "B"}) == 0.1
+    # The final branch renders from its own value set (parity back-end).
+    assert predict({"seg": "C"}) == 0.8
+    # Unseen category: not scored — SQL returns NULL, Python None, backend
+    # excludes the row (invariant I-2 of the 4.0.1 design note).
+    assert predict({"seg": "Z"}) is None
+    # Missing value imputes mode "A" and keeps routing to branch 0.
+    assert predict({}) == 0.1
+
+    # Artifact shape: one explicit set per branch plus residual fallback.
+    source = export_to_python(case.model, case.imputer)
+    assert "if val_seg in ('A', 'B'):" in source
+    assert "elif val_seg in ('C',):" in source
+    assert "else:\n        return None" in source
+    assert "def predict(row: dict) -> float | None:" in source
+
+
+def test_export_artifact_headers_declare_policy() -> None:
+    """The SQL, Python and Markdown artefacts all declare
+    ``unseen_policy: exclude`` next to the fingerprint (as-built D6).
+    """
+    case = _categorical_case_two_branches()
+    fp = case.model.params_fingerprint
+
+    sql = export_to_sql(case.model, case.imputer)
+    assert sql.splitlines()[0] == f"-- TreeGov Model Fingerprint: {fp}"
+    assert sql.splitlines()[1] == (
+        "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)"
+    )
+
+    source = export_to_python(case.model, case.imputer)
+    assert source.splitlines()[0] == f"# TreeGov Model Fingerprint: {fp}"
+    assert source.splitlines()[1] == (
+        "# Unseen policy: exclude (unseen categories return None; caller must filter)"
+    )
+
+    md = export_to_markdown(case.model)
+    assert (
+        "**Unseen policy:** exclude (unseen categories are not scored;"
+        " caller must filter NULL/None)."
+    ) in md
+
+
+def test_sql_body_idempotent_in_exclude(export_case: ExportCase) -> None:
+    """Explicit ``exclude`` reproduces the default SQL byte for byte."""
+    default_sql = export_to_sql(export_case.model, export_case.imputer)
+    exclude_sql = export_to_sql(
+        export_case.model, export_case.imputer, unseen_policy="exclude"
+    )
+
+    assert exclude_sql == default_sql
+    lines = default_sql.splitlines()
+    assert lines[0] == (
+        f"-- TreeGov Model Fingerprint: {export_case.model.params_fingerprint}"
+    )
+    assert lines[1] == (
+        "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)"
+    )
+    assert lines[2].startswith("SELECT CASE")
+
+
+def test_export_categorical_d4_cardinality_mismatch() -> None:
+    """Every exporter rejects a categorical branch/child count mismatch."""
+    from dataclasses import replace
+
+    case = _categorical_case_two_branches()
+    root = replace(case.model.nodes[0], child_ids=(1, 2, 3))
+    extra_leaf = replace(case.model.nodes[2], node_id=3)
+    model = replace(
+        case.model, nodes=(root, *case.model.nodes[1:], extra_leaf)
+    )
+
+    with pytest.raises(ValueError, match="needs exactly one branch value set per child"):
+        export_to_sql(model, case.imputer)
+    with pytest.raises(ValueError, match="needs exactly one branch value set per child"):
+        export_to_python(model, case.imputer)
+    with pytest.raises(ValueError, match="needs exactly one branch value set per child"):
+        export_to_markdown(model)

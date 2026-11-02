@@ -1187,14 +1187,23 @@ class Session:
                 })
         return results
 
-    def export_to_sql(self) -> str | None:
+    def export_to_sql(
+        self,
+        *,
+        unseen_policy: str = "exclude",
+    ) -> str | None:
         """Export the trained model as ANSI SQL (Phase 4.0.c).
+
+        Keyword-only ``unseen_policy`` (default ``"exclude"``):
+        comportamiento ante categorías no vistas. Ver
+        ``docs/4.0.1_design_categorical_exporters.md``.
 
         Returns None when no model is trained (paridad con
         get_gains_table / get_classification_matrix). RuntimeError if
         the model exists but the imputer cache is missing: partition()
         always populates _imputer when a tree is produced, so this is
-        a defensive guard for a broken invariant.
+        a defensive guard for a broken invariant. The value itself is
+        validated by the exporter (`_ensure_unseen_policy`).
         """
         if self._state.tree is None:
             return None
@@ -1203,12 +1212,25 @@ class Session:
                 "[session] export_to_sql sin imputer en cache "
                 "(partition() no ejecutado)"
             )
-        return export_to_sql(self._state.tree, self._imputer.spec)
+        return export_to_sql(
+            self._state.tree, self._imputer.spec, unseen_policy=unseen_policy
+        )
 
-    def export_to_python(self) -> str | None:
+    def export_to_python(
+        self,
+        *,
+        unseen_policy: str = "exclude",
+    ) -> str | None:
         """Export the trained model as a dependency-free Python module
-        (Phase 4.0.c). None when no model is trained. RuntimeError on
-        a broken imputer invariant (see export_to_sql).
+        (Phase 4.0.c).
+
+        Keyword-only ``unseen_policy`` (default ``"exclude"``):
+        comportamiento ante categorías no vistas. Ver
+        ``docs/4.0.1_design_categorical_exporters.md``.
+
+        None when no model is trained. RuntimeError on
+        a broken imputer invariant (see export_to_sql). The value
+        itself is validated by the exporter (`_ensure_unseen_policy`).
         """
         if self._state.tree is None:
             return None
@@ -1217,16 +1239,32 @@ class Session:
                 "[session] export_to_python sin imputer en cache "
                 "(partition() no ejecutado)"
             )
-        return export_to_python(self._state.tree, self._imputer.spec)
+        return export_to_python(
+            self._state.tree, self._imputer.spec, unseen_policy=unseen_policy
+        )
 
-    def export_to_markdown(self) -> str | None:
+    def export_to_markdown(
+        self,
+        *,
+        unseen_policy: str = "exclude",
+    ) -> str | None:
         """Export the trained model as a human-readable Markdown report
-        (Phase 4.0.c). None when no model is trained. Does not require
-        the imputer (the markdown exporter is descriptive only).
+        (Phase 4.0.c).
+
+        Keyword-only ``unseen_policy`` (default ``"exclude"``):
+        comportamiento ante categorías no vistas. Ver
+        ``docs/4.0.1_design_categorical_exporters.md``.
+
+        None when no model is trained. Does not require
+        the imputer (the markdown exporter is descriptive only). The
+        value itself is validated by the exporter
+        (`_ensure_unseen_policy`).
         """
         if self._state.tree is None:
             return None
-        return export_to_markdown(self._state.tree)
+        return export_to_markdown(
+            self._state.tree, unseen_policy=unseen_policy
+        )
 
     def load_oot(self, csv_path: str, *, time_col: str | None = None) -> SessionState:
         """TRAINED -> OOT_LOADED: ingesta de la cohorte temporal posterior.

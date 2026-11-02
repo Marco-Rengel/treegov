@@ -219,16 +219,34 @@ def evaluate_oot(n_groups: int = 10, weight_oot: bool = True) -> dict:
 # --- Grupo F: Exportadores ---
 
 @app.tool()
-def export_sql() -> str:
-    """Export as ANSI SQL."""
-    return _get_session().export_to_sql()
+def export_sql(unseen_policy: str = "exclude") -> str:
+    """Export as ANSI SQL.
+
+    unseen_policy (default "exclude"): comportamiento ante categorías
+    no vistas; ver docs/4.0.1_design_categorical_exporters.md. La
+    validación del valor la hace el exportador (ValueError /
+    NotImplementedError).
+    """
+    return _get_session().export_to_sql(unseen_policy=unseen_policy)
 
 @app.tool()
-def export_python() -> str:
-    """Export as Python module."""
-    return _get_session().export_to_python()
+def export_python(unseen_policy: str = "exclude") -> str:
+    """Export as Python module.
+
+    unseen_policy (default "exclude"): comportamiento ante categorías
+    no vistas; ver docs/4.0.1_design_categorical_exporters.md. La
+    validación del valor la hace el exportador (ValueError /
+    NotImplementedError).
+    """
+    return _get_session().export_to_python(unseen_policy=unseen_policy)
 
 @app.tool()
-def export_markdown() -> str:
-    """Export as Markdown."""
-    return _get_session().export_to_markdown()
+def export_markdown(unseen_policy: str = "exclude") -> str:
+    """Export as Markdown.
+
+    unseen_policy (default "exclude"): comportamiento ante categorías
+    no vistas; ver docs/4.0.1_design_categorical_exporters.md. La
+    validación del valor la hace el exportador (ValueError /
+    NotImplementedError).
+    """
+    return _get_session().export_to_markdown(unseen_policy=unseen_policy)

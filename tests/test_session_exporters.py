@@ -151,3 +151,15 @@ def test_export_kinds_are_consistent_after_train():
         assert fp in sql
         assert fp in py
         assert fp in md
+
+
+def test_wrappers_forward_unseen_policy():
+    """Session wrappers forward both the default and gated policies."""
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv(Path(td) / "mini.csv")
+        s = _trained_session(csv)
+
+        for export in (s.export_to_sql, s.export_to_python, s.export_to_markdown):
+            assert export(unseen_policy="exclude") == export()
+            with pytest.raises(NotImplementedError):
+                export(unseen_policy="error")

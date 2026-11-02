@@ -29,17 +29,34 @@ Invariants (see ``docs/4.0_design_exports.md`` §3):
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: no cover - import only for static type checking
-    # TODO(zona_gris): the exact module paths of TreeModel/ImputationSpec were
-    # not provided in the brief. The imports are guarded by TYPE_CHECKING so the
-    # runtime behaviour of this module never depends on them; if a type checker
-    # reports them as unresolved, point them at the canonical modules.
-    from backend_v3.imputation import ImputationSpec
-    from backend_v3.session_state import TreeModel
+from backend_v3.imputation import ImputationSpec
+from backend_v3.tree_builder import TreeModel
 
 __all__ = ["export_to_markdown", "export_to_python", "export_to_sql"]
+
+
+def _ensure_unseen_policy(unseen_policy: str) -> None:
+    """Validate ``unseen_policy`` and gate not-yet-implemented policies.
+
+    The vocabulary mirrors the backend parameter of the same name in
+    ``backend_v3.validation._assign_leaves`` (design_decisions.md §7.6):
+    ``"error"``, ``"exclude"`` and ``"majority"``. Anything else raises
+    ``ValueError`` naming the three admissible values. Only ``"exclude"`` is
+    implemented in sub-phase 4.0.1.a of
+    ``docs/4.0.1_design_categorical_exporters.md``; the other two are accepted
+    by the vocabulary but raise ``NotImplementedError`` so they never silently
+    alias the default behaviour (implementation lands in sub-phase 4.0.1.b).
+    """
+    if unseen_policy not in ("error", "exclude", "majority"):
+        raise ValueError(
+            f"[exporters] unseen_policy invalida: {unseen_policy!r} "
+            "(valores admitidos: 'error', 'exclude', 'majority')"
+        )
+    if unseen_policy != "exclude":
+        raise NotImplementedError(
+            f"[exporters] unseen_policy='{unseen_policy}' se implementa "
+            "en la sub-fase 4.0.1.b"
+        )
 
 
 def _sql_literal(value: object) -> str:
@@ -195,7 +212,12 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
     )
 
 
-def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
+def export_to_sql(
+    model: TreeModel,
+    imputer: ImputationSpec,
+    *,
+    unseen_policy: str = "exclude",
+) -> str:
     """Export ``model`` as an ANSI SQL expression against ``imputer``.
 
     The returned statement is a single ``SELECT`` whose projection is a nested
@@ -207,7 +229,17 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
 
     The first line of the output is a comment carrying
     ``model.params_fingerprint``, so the artefact can be traced back to the
-    exact model that generated it (MRM requirement).
+    exact model that generated it (MRM requirement). The second line declares
+    the ``unseen_policy`` in force: with the current ``"exclude"`` policy a
+    categorical value unseen at training time matches no branch, so the
+    exported statement returns ``NULL`` for that row and the caller must
+    filter or escalate it.
+
+    Node traversal reads ``node.child_ids`` directly instead of iterating over
+    a pre-declared attribute list: a node missing that attribute raises
+    ``AttributeError`` at export time. This is deliberate (fail-loud): an
+    incomplete node must abort the export rather than silently emitting an
+    empty ``CASE`` block that would mis-score rows at scoring time.
 
     Args:
         model: Trained decision tree. Only ``root_id``, ``nodes`` and
@@ -215,6 +247,12 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
         imputer: Imputation specification fitted on the training partition.
             ``means`` is used for numeric predictors and ``modes`` for
             categorical ones.
+        unseen_policy: Behavior for rows carrying unseen categorical values.
+            ``"exclude"`` (default, the only implemented policy): the row
+            falls through to ``ELSE NULL`` and is not scored. ``"error"`` and
+            ``"majority"`` are part of the governed vocabulary but not
+            implemented yet; they raise ``NotImplementedError``
+            (sub-phase 4.0.1.b).
 
     Returns:
         A ready-to-paste SQL statement terminated with a semicolon.
@@ -223,7 +261,10 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
         ValueError: if a split cannot be expressed in ANSI SQL or the tree is
             structurally inconsistent.
         KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
+        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
+            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
+    _ensure_unseen_policy(unseen_policy)
     raw_nodes = model.nodes
     if isinstance(raw_nodes, dict):
         nodes_by_id = dict(raw_nodes)
@@ -257,11 +298,17 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
                 f"Internal node {node_id} has no SplitConfig; it cannot be exported."
             )
 
-        # TODO(zona_gris): the brief lists node_id/is_leaf/pd_final/split as the
-        # TreeNode attributes and then iterates over `child_ids`. Direct access
-        # is kept on purpose: a missing attribute must fail loudly instead of
-        # silently emitting an empty CASE block.
         child_ids = tuple(node.child_ids)
+        # Design D4 (docs/4.0.1_design_categorical_exporters.md): one branch
+        # value set per child. A split-tuple geometry mismatch must abort the
+        # export with a clear ValueError here rather than surface later as an
+        # uninformative IndexError inside _sql_condition.
+        if split.branches is not None and len(split.branches) != len(child_ids):
+            raise ValueError(
+                f"Categorical split on {split.predictor!r} needs exactly one "
+                f"branch value set per child ({len(child_ids)} children), got "
+                f"{len(split.branches)} value sets."
+            )
 
         merged = _merged_bin_branches(split)
         if merged is not None and len(child_ids) != len(merged):
@@ -292,6 +339,7 @@ def export_to_sql(model: "TreeModel", imputer: "ImputationSpec") -> str:
     body = _sql_node(model.root_id, 0)
     return (
         f"-- TreeGov Model Fingerprint: {model.params_fingerprint}\n"
+        "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)\n"
         f"SELECT {body} AS prediction_score;"
     )
 
@@ -366,13 +414,12 @@ def _python_imputation(predictor: str, variable: str, imputer: object) -> list:
     The returned lines are relative to the body of ``_eval_tree``; the caller
     adds the base indentation.
 
-    TODO(zona_gris): the brief specifies a single ``row.get(col, default)``
-    line. That covers an absent key but not a key that is present with a
-    ``None`` value, while ``COALESCE`` in the SQL exporter covers both. A
-    ``None`` would reach the comparison and raise ``TypeError``, breaking the
-    prediction-parity invariant (§3 of the design note). The specified line is
-    emitted unchanged and a two-line guard is appended after it so both
-    exporters treat missing values identically.
+    The specified ``row.get(col, default)`` line covers an absent key but not
+    a key that is present with a ``None`` value, while ``COALESCE`` in the SQL
+    exporter covers both: a ``None`` reaching the comparison would raise
+    ``TypeError``. The line is therefore emitted unchanged and a two-line
+    guard is appended after it so both exporters treat missing values
+    identically (resolved in design_decisions.md §19.2, 01/11/2026).
     """
     means = getattr(imputer, "means", None) or {}
     modes = getattr(imputer, "modes", None) or {}
@@ -436,7 +483,9 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
     ``depth`` counts indentation levels of four spaces, so the generated script
     always keeps strict Python indentation. Leaves emit ``return`` with the
     class-of-interest probability (index 0 of ``pd_final``); internal nodes emit
-    an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children.
+    an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children,
+    except that under the ``"exclude"`` unseen policy a categorical split ends
+    with ``else: return None`` (an unseen category is not routed anywhere).
     """
     pad = "    " * depth
 
@@ -517,24 +566,23 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
 
     if split.branches is not None:
         branch_values = tuple(split.branches)
-        if len(branch_values) < len(child_ids) - 1:
+        if len(branch_values) != len(child_ids):
             raise ValueError(
-                f"Categorical split on {split.predictor!r} needs at least "
-                f"{len(child_ids) - 1} branch value sets, got {len(branch_values)}."
+                f"Categorical split on {split.predictor!r} needs exactly one "
+                f"branch value set per child ({len(child_ids)} children), got "
+                f"{len(branch_values)} value sets."
             )
         lines = []
-        for index in range(len(child_ids) - 1):
+        for index in range(len(child_ids)):
             keyword = "if" if index == 0 else "elif"
             values = _python_tuple(branch_values[index])
             lines.append(f"{pad}{keyword} {variable} in {values}:")
             lines.extend(_python_node(child_ids[index], depth + 1, nodes_by_id))
-        # TODO(zona_gris): the brief asks for `else:` on the last categorical
-        # branch, while export_to_sql emits `ELSE NULL`. For a category unseen
-        # at scoring time the two exporters therefore disagree: SQL returns
-        # NULL, Python falls into the last branch. Followed the brief here;
-        # reconcile both backends in a later turn.
+        # unseen_policy="exclude": an unseen categorical value matches no
+        # branch set. The backend leaves those rows unrouted (validation.py)
+        # and SQL falls through to ELSE NULL, so the artefact returns None.
         lines.append(f"{pad}else:")
-        lines.extend(_python_node(child_ids[-1], depth + 1, nodes_by_id))
+        lines.append(f"{pad}    return None")
         return lines
 
     raise ValueError(
@@ -543,7 +591,12 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict) -> list:
     )
 
 
-def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
+def export_to_python(
+    model: TreeModel,
+    imputer: ImputationSpec,
+    *,
+    unseen_policy: str = "exclude",
+) -> str:
     """Export ``model`` as a self-contained, dependency-free Python script.
 
     The generated module contains exactly two functions: ``predict(row)``, the
@@ -560,21 +613,36 @@ def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
     preserves the anti-leakage guarantee.
 
     The first line is a comment carrying ``model.params_fingerprint`` so the
-    artefact can be traced back to the model that generated it (MRM).
+    artefact can be traced back to the model that generated it (MRM). The
+    second line declares the ``unseen_policy`` in force: with the current
+    ``"exclude"`` policy a categorical value unseen at training time matches
+    no branch, so ``predict`` returns ``None`` for that row and the caller
+    must filter or escalate it.
 
     Args:
         model: Trained decision tree. ``root_id``, ``nodes`` and
             ``params_fingerprint`` are read; the model is never mutated.
         imputer: Imputation specification fitted on the training partition.
+        unseen_policy: Behavior for rows carrying unseen categorical values.
+            ``"exclude"`` (default, the only implemented policy): the final
+            categorical fallback returns ``None``. ``"error"`` and
+            ``"majority"`` are part of the governed vocabulary but not
+            implemented yet; they raise ``NotImplementedError``
+            (sub-phase 4.0.1.b).
 
     Returns:
-        The source of a Python module, terminated by a newline.
+        The source of a Python module, terminated by a newline. Under
+        ``"exclude"``, ``predict``/``_eval_tree`` are declared as
+        ``float | None``.
 
     Raises:
         ValueError: if a split cannot be expressed as an ``if`` chain, or the
             tree is structurally inconsistent.
         KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
+        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
+            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
+    _ensure_unseen_policy(unseen_policy)
     nodes_by_id = _index_nodes(model)
     predictors = _python_predictors(model.root_id, nodes_by_id)
 
@@ -591,12 +659,13 @@ def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
 
     lines = [
         f"# TreeGov Model Fingerprint: {model.params_fingerprint}",
+        "# Unseen policy: exclude (unseen categories return None; caller must filter)",
         "",
-        "def predict(row: dict) -> float:",
+        "def predict(row: dict) -> float | None:",
         "    return _eval_tree(row)",
         "",
         "",
-        "def _eval_tree(row: dict) -> float:",
+        "def _eval_tree(row: dict) -> float | None:",
     ]
 
     for predictor in predictors:
@@ -613,7 +682,11 @@ def export_to_python(model: "TreeModel", imputer: "ImputationSpec") -> str:
 # --------------------------------------------------------------------------- #
 
 
-def export_to_markdown(model: "TreeModel") -> str:
+def export_to_markdown(
+    model: TreeModel,
+    *,
+    unseen_policy: str = "exclude",
+) -> str:
     """Export ``model`` as a human-readable Markdown report.
 
     The report reproduces the tree structure as nested bullet points: every
@@ -624,16 +697,26 @@ def export_to_markdown(model: "TreeModel") -> str:
     :func:`export_to_python`, while this exporter only renders what is already
     stored in the model.
 
-    The header carries ``model.params_fingerprint`` and ``model.method`` so a
-    reviewer can trace the report back to the exact artefact that produced it
-    (MRM requirement).
+    The header carries ``model.params_fingerprint``, ``model.method`` and the
+    ``unseen_policy`` in force, so a reviewer can trace the report back to the
+    exact artefact that produced it (MRM requirement). Categorical splits list
+    one sub-bullet per branch value set and close with a residual ``Else``
+    bullet that marks rows carrying unseen categories: they are not scored,
+    mirroring the ``NULL`` (SQL) / ``None`` (Python) routing of the scoring
+    exporters under the same policy.
 
-    The module performs no I/O and imports nothing at runtime: the return value
-    is a plain ``str`` the caller is free to write to disk or embed elsewhere.
+    The module performs no I/O: the return value is a plain ``str`` the caller
+    is free to write to disk or embed elsewhere.
 
     Args:
         model: Trained decision tree. ``root_id``, ``method``, ``nodes`` and
             ``params_fingerprint`` are read; the model is never mutated.
+        unseen_policy: Governs how the report labels rows carrying unseen
+            categorical values. ``"exclude"`` (default, the only implemented
+            policy) renders the residual bullet as "not scored".
+            ``"error"`` and ``"majority"`` are part of the governed vocabulary
+            but not implemented yet; they raise ``NotImplementedError``
+            (sub-phase 4.0.1.b).
 
     Returns:
         A Markdown document terminated by a newline.
@@ -644,7 +727,10 @@ def export_to_markdown(model: "TreeModel") -> str:
             that does not match the split encoding).
         KeyError: if a child references a ``node_id`` absent from
             ``model.nodes``.
+        NotImplementedError: if ``unseen_policy`` is not ``"exclude"``
+            (``"error"`` and ``"majority"`` land in sub-phase 4.0.1.b).
     """
+    _ensure_unseen_policy(unseen_policy)
     nodes_by_id = _index_nodes(model)
 
     def _md_node(node_id: int, depth: int) -> str:
@@ -745,27 +831,23 @@ def export_to_markdown(model: "TreeModel") -> str:
 
         if split.branches:
             branch_values = tuple(split.branches)
-            if len(branch_values) < len(child_ids) - 1:
+            if len(branch_values) != len(child_ids):
                 raise ValueError(
-                    f"Categorical split on {split.predictor!r} needs at least "
-                    f"{len(child_ids) - 1} branch value sets, got "
-                    f"{len(branch_values)}."
+                    f"Categorical split on {split.predictor!r} needs exactly "
+                    f"one branch value set per child ({len(child_ids)} "
+                    f"children), got {len(branch_values)} value sets."
                 )
-            # TODO(zona_gris): the brief renders categorical splits with exactly
-            # two branches ("If in {branches[0]}" / "Else"). If a categorical
-            # split ever carries more than two children, emitting only two of
-            # them would silently drop whole subtrees from the report, so any
-            # intermediate child is rendered as "Elif in {branches[i]}".
-            # In the binary case (one branch value set plus one Else) the
-            # output is exactly the one specified by the brief.
-            for index in range(len(child_ids) - 1):
+            # One rule per branch value set (CHAID emits exactly one set per
+            # child), followed by a residual bullet for rows carrying values
+            # unseen at training time (not scored; policy = exclude).
+            for index in range(len(child_ids)):
                 keyword = "If" if index == 0 else "Elif"
                 lines.append(
                     f"{indent}  - {keyword} in {branch_values[index]}:\n"
                     + _md_node(child_ids[index], depth + 1)
                 )
             lines.append(
-                f"{indent}  - Else:\n" + _md_node(child_ids[-1], depth + 1)
+                f"{indent}  - Else (unseen category → not scored; policy = exclude):\n"
             )
             return "".join(lines)
 
@@ -777,7 +859,8 @@ def export_to_markdown(model: "TreeModel") -> str:
     header = (
         "# TreeGov Decision Tree\n\n"
         f"**Fingerprint:** {model.params_fingerprint}\n"
-        f"**Method:** {model.method}\n\n"
+        f"**Method:** {model.method}\n"
+        "**Unseen policy:** exclude (unseen categories are not scored; caller must filter NULL/None).\n\n"
         "## Decision Rules\n\n"
     )
     return header + _md_node(model.root_id, 0)
