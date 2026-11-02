@@ -23,12 +23,15 @@ import pandas as pd
 from .imputation import ImputationSpec
 from .tree_builder import TreeModel
 from .types import PredictorType
-from .validation import predict_leaf_assignment, predict_pd
+from .validation import compute_oos_metrics, predict_leaf_assignment, predict_pd
 
 __all__ = [
     "ScoringBundle",
     "BatchScoreSummary",
+    "ChampionChallengerRequest",
+    "ChampionChallengerResult",
     "score_batch_to_csv",
+    "compare_champion_challenger",
 ]
 
 
@@ -57,6 +60,32 @@ class BatchScoreSummary:
     excluded_rows: int
     majority_fallback_rows: int
     imputation_counts: tuple[tuple[str, int], ...]
+
+
+@dataclass(frozen=True)
+class ChampionChallengerRequest:
+    """Peticion inmutable de comparacion sobre un dataset etiquetado."""
+
+    champion: ScoringBundle
+    challenger: ScoringBundle
+    dataset: pd.DataFrame
+    target: str
+    weight_col: str | None = None
+    unseen_policy: str = "exclude"
+    n_groups: int = 10
+
+
+@dataclass(frozen=True)
+class ChampionChallengerResult:
+    """Metricas comparadas sobre la interseccion enrutable por ambos modelos."""
+
+    champion_fingerprint: str
+    challenger_fingerprint: str
+    n_total: int
+    n_common_routed: int
+    champion_coverage: float
+    challenger_coverage: float
+    metrics: tuple[tuple[str, float | None, float | None, float | None], ...]
 
 
 def _format_category(value: object) -> str:
@@ -336,4 +365,124 @@ def score_batch_to_csv(
         imputation_counts=tuple(
             (col, imputation_totals[col]) for col in predictor_columns
         ),
+    )
+
+
+def compare_champion_challenger(
+    req: ChampionChallengerRequest,
+) -> ChampionChallengerResult:
+    """Compara campeon y retador sobre exactamente las mismas filas.
+
+    Cada modelo aplica su propia imputacion congelada. Las coberturas se miden
+    sobre toda la cohorte; las metricas, solo sobre la interseccion enrutable.
+    """
+    if req.target not in req.dataset.columns:
+        raise ValueError(f"[scoring] target ausente en dataset: {req.target!r}")
+
+    champ = req.champion
+    chall = req.challenger
+    y_original = req.dataset[req.target]
+    if y_original.isna().any():
+        raise ValueError("[scoring] target con NaN en Champion-Challenger")
+
+    observed_classes = set(pd.unique(y_original))
+    for role, bundle in (("champion", champ), ("challenger", chall)):
+        if observed_classes != set(bundle.target_classes):
+            raise ValueError(
+                f"[scoring] clases del target no coinciden con {role}: "
+                f"{sorted(observed_classes)!r} vs "
+                f"{sorted(bundle.target_classes)!r}"
+            )
+    if champ.target_class != chall.target_class:
+        raise ValueError(
+            "[scoring] champion y challenger tienen clases de interes distintas"
+        )
+    if champ.target_class not in champ.target_classes:
+        raise ValueError("[scoring] target_class fuera de target_classes")
+
+    X = req.dataset.drop(columns=[req.target])
+    if req.weight_col is not None:
+        if req.weight_col not in req.dataset.columns:
+            raise ValueError(
+                f"[scoring] weight_col ausente en dataset: {req.weight_col!r}"
+            )
+        w = req.dataset[req.weight_col].to_numpy(dtype=float)
+    else:
+        w = None
+
+    canonical_classes = (champ.target_class,) + tuple(
+        sorted(c for c in champ.target_classes if c != champ.target_class)
+    )
+    class_to_internal = {value: idx for idx, value in enumerate(canonical_classes)}
+    y_internal = np.array(
+        [class_to_internal[value] for value in y_original], dtype=int
+    )
+
+    X_champ = _apply_imputation(champ.imputation, X.copy())
+    X_chall = _apply_imputation(chall.imputation, X.copy())
+    asign_champ = predict_leaf_assignment(
+        champ.model, X_champ, unseen_policy=req.unseen_policy
+    )
+    asign_chall = predict_leaf_assignment(
+        chall.model, X_chall, unseen_policy=req.unseen_policy
+    )
+    valid_mask = (asign_champ >= 0) & (asign_chall >= 0)
+    n_common = int(valid_mask.sum())
+    if n_common == 0:
+        raise ValueError(
+            "[scoring] no hay filas enrutables por champion y challenger"
+        )
+
+    X_champ_valid = X_champ.loc[valid_mask]
+    X_chall_valid = X_chall.loc[valid_mask]
+    y_valid = y_internal[valid_mask]
+    w_valid = w[valid_mask] if w is not None else None
+
+    pd_champ = predict_pd(champ.model, X_champ_valid)
+    pd_chall = predict_pd(chall.model, X_chall_valid)
+    n_classes = len(canonical_classes)
+    if n_classes == 2:
+        pd_champ_use = pd_champ[:, 0]
+        pd_chall_use = pd_chall[:, 0]
+        # La API binaria de compute_oos_metrics espera 1 para la clase de
+        # interes; el orden canonico la ubica en el indice 0.
+        y_eval = (y_valid == 0).astype(int)
+    else:
+        pd_champ_use = pd_champ
+        pd_chall_use = pd_chall
+        y_eval = y_valid
+
+    m_champ = compute_oos_metrics(
+        pd_champ_use, y_eval, n_groups=req.n_groups, weights=w_valid
+    )
+    m_chall = compute_oos_metrics(
+        pd_chall_use, y_eval, n_groups=req.n_groups, weights=w_valid
+    )
+
+    def metric_row(
+        name: str, champion_value: float | None, challenger_value: float | None
+    ) -> tuple[str, float | None, float | None, float | None]:
+        delta = (
+            challenger_value - champion_value
+            if champion_value is not None and challenger_value is not None
+            else None
+        )
+        return name, champion_value, challenger_value, delta
+
+    metrics = (
+        metric_row("AUC", m_champ.auc, m_chall.auc),
+        metric_row("Gini", m_champ.gini, m_chall.gini),
+        metric_row("KS", m_champ.ks, m_chall.ks),
+        metric_row("PR-AUC", m_champ.pr_auc, m_chall.pr_auc),
+        metric_row("Brier", m_champ.brier, m_chall.brier),
+        metric_row("Brier Skill", m_champ.brier_skill, m_chall.brier_skill),
+    )
+    return ChampionChallengerResult(
+        champion_fingerprint=champ.model.params_fingerprint,
+        challenger_fingerprint=chall.model.params_fingerprint,
+        n_total=int(len(req.dataset)),
+        n_common_routed=n_common,
+        champion_coverage=float((asign_champ >= 0).mean()),
+        challenger_coverage=float((asign_chall >= 0).mean()),
+        metrics=metrics,
     )

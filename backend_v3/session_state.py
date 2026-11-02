@@ -49,7 +49,14 @@ from .reporting import (
     build_gains_table,
     build_oos_oot_report,
 )
-from .scoring import BatchScoreSummary, ScoringBundle, score_batch_to_csv
+from .scoring import (
+    BatchScoreSummary,
+    ChampionChallengerRequest,
+    ChampionChallengerResult,
+    ScoringBundle,
+    compare_champion_challenger as compare_models,
+    score_batch_to_csv,
+)
 from .splitting import stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
@@ -1227,6 +1234,101 @@ class Session:
             f"|scored={result['scored_rows']}"
             f"|excluded={result['excluded_rows']}"
             f"|majority={result['majority_fallback_rows']}",
+        )
+        return result
+
+    def compare_champion_challenger(
+        self,
+        evaluation_csv: str,
+        *,
+        challenger_engine: str | None = None,
+        challenger_params: dict | None = None,
+        target: str | None = None,
+        weight_col: str | None = None,
+        unseen_policy: str = "exclude",
+        n_groups: int = 10,
+    ) -> dict[str, Any]:
+        """Compara el modelo activo con un retador entrenado de forma aislada."""
+        st = self._state
+        if st.tree is None:
+            raise ValueError(
+                "[session] compare_champion_challenger requiere un modelo entrenado"
+            )
+        if self._imputer is None:
+            raise RuntimeError(
+                "[session] compare_champion_challenger sin imputer en cache"
+            )
+        if self._X_train is None or self._y_train is None:
+            raise RuntimeError(
+                "[session] compare_champion_challenger sin train en cache"
+            )
+        assert st.spec is not None
+
+        champion = ScoringBundle(
+            model=st.tree,
+            imputation=self._imputer.spec,
+            predictor_spec=st.spec,
+            target_classes=st.target_classes,
+            target_class=st.target_class,
+        )
+
+        params = dict(self._last_train_params or {})
+        if challenger_params:
+            params.update(challenger_params)
+        engine_name = challenger_engine or st.tree.method
+        try:
+            engine = _ENGINE_FACTORIES[engine_name]()
+        except KeyError:
+            raise ValueError(
+                f"[session] motor desconocido: {engine_name!r} "
+                f"(validos: {sorted(_ENGINE_FACTORIES)})"
+            ) from None
+
+        builder = TreeBuilder(
+            engine,
+            target_type=params.get("target_type", TargetType.BINARY),
+            target_class=st.target_class,
+            class_labels=st.tree.class_labels,
+            max_depth=params.get("max_depth", 4),
+            min_child_size=params.get("min_child_size", 50),
+            min_child_weight=params.get("min_child_weight"),
+            pd_floor=params.get("pd_floor", 0.0005),
+            apply_jeffreys=params.get("apply_jeffreys", True),
+            weights=self._w_train,
+            weight_col=self._w_col,
+            seed=st.seed,
+            logger=get_logger("builder"),
+        )
+        challenger_model = builder.build(
+            self._X_train, self._y_train, dict(st.spec)
+        )
+        challenger = ScoringBundle(
+            model=challenger_model,
+            imputation=self._imputer.spec,
+            predictor_spec=st.spec,
+            target_classes=st.target_classes,
+            target_class=st.target_class,
+        )
+
+        df_eval = pd.read_csv(evaluation_csv)
+        if target is None:
+            target = st.target
+        request = ChampionChallengerRequest(
+            champion=champion,
+            challenger=challenger,
+            dataset=df_eval,
+            target=target,
+            weight_col=weight_col,
+            unseen_policy=unseen_policy,
+            n_groups=n_groups,
+        )
+        comparison: ChampionChallengerResult = compare_models(request)
+        result = asdict(comparison)
+        self._log.info(
+            "[session] compare_champion_challenger completado: %s",
+            f"champion={comparison.champion_fingerprint}"
+            f"|challenger={comparison.challenger_fingerprint}"
+            f"|n_common={comparison.n_common_routed}",
         )
         return result
 
