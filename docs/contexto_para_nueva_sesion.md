@@ -139,8 +139,12 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 6.0.c | Diálogos GUI + workers + acciones Analysis + i18n | ✅ |
 | 6.0.d | Tools MCP de scoring + hardening (26 tools totales) | ✅ |
 | **6.0** | **Batch scoring y Champion-Challenger (fase completa)** | **✅ Cerrada** |
+| 7.0.a | Backend IFRS 9 / ECL + `Session.calculate_ecl` | ✅ |
+| 7.0.b | Diálogo GUI ECL + worker + acción Analysis + i18n | ✅ |
+| 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
+| **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 553/553 PASSED
+**Suite de tests:** 561/561 PASSED
 
 ## Entorno de desarrollo
 
@@ -289,11 +293,13 @@ release; este bloque es exclusivamente documental y no cambia la versión public
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0–6.0 cerradas, incluidas 3.6.e y 4.0.1. Suite **553/553 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
+**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **561/561 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
 
 **Fase 6.0 — Batch scoring y Champion-Challenger: ✅ cerrada (02/11/2026).** Backend por chunks con escritura atómica anti-overwrite, comparación sobre población común, dos diálogos GUI y dos nuevas tools MCP (26 en total). Diseño as-built: `docs/6.0_design_batch_scoring.md` §6; decisión: `docs/design_decisions.md` §21.
 
-**Próximo paso:** Iniciar la Fase 7 (IFRS 9 / ECL), comenzando por su diseño formal antes de cualquier implementación.
+**Fase 7.0 — IFRS 9 / ECL: ✅ cerrada (02/11/2026).** Backend de staging y ECL, fachada `Session.calculate_ecl`, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total). Diseño as-built: `docs/7.0_design_ifrs9.md` §6.
+
+**Próximo paso:** Revisión visual de la GUI, feedback de usuario y planificación de la versión 1.0.0 estable.
 
 **Nota de release:** `1.0.0rc5` está publicada en PyPI tras el cambio material de 4.0.1.b. La publicación quedó registrada en el commit `ab8849a` y el tag `v1.0.0rc5`.
 

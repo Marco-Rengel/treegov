@@ -330,6 +330,27 @@ son adaptadores de `Session`; no contienen lógica analítica.
 `docs/design_decisions.md` §21. **Cierre:** `docs/audit_log.md`, entrada de
 cierre de la Fase 6.0 del 02/11/2026.
 
+### Phase 7 — IFRS 9 / ECL
+
+**Status**: Completed (02/11/2026, suite 561/561).
+**Priority: LOW (depends on integration with banking systems)**
+
+| Fase | Estado | Alcance as-built |
+|---|---|---|
+| 7 | Completada | Cálculo ECL y staging en backend, diálogo GUI y tool MCP `calculate_ecl`. |
+| 7.0.a | Completada | `backend_v3/ecl.py` y `Session.calculate_ecl`: contrato por exposición, Etapas 1/2/3, ECL a 12 meses y de vida, descuento opcional y validación fail-fast. |
+| 7.0.b | Completada | `frontend_v3/ecl_dialog.py`, worker, acción en `MainWindow`, i18n EN/ES y resumen con Ctrl+C → TSV. |
+| 7.0.c | Completada | Tool MCP `calculate_ecl`, JSON estricto, pruebas E2E y cierre con suite 561/561. |
+
+**Cierre as-built.** La implementación calcula ECL mediante PD × LGD × EAD y
+asigna etapas con reglas deterministas y trazables. Backend concentra toda la
+analítica; GUI y MCP son adaptadores de `Session`. La PD contable se recibe por
+una columna explícita y no hereda silenciosamente el piso regulatorio de
+Basilea. El alcance sigue siendo simplificado y no certifica cumplimiento IFRS 9.
+
+**Diseño:** `docs/7.0_design_ifrs9.md` §6. **Cierre:** `docs/audit_log.md`,
+entrada de cierre de la Fase 7.0 del 02/11/2026.
+
 ## Upcoming phases
 
 ### ✅ Phase 3.9 — Interactive and Weighted Pruning
@@ -407,14 +428,6 @@ A1–A6: `docs/4.0.1_design_categorical_exporters.md` §5. Decisión:
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.
 
-### ⏳ Phase 7 — IFRS 9 / ECL
-**Priority: LOW (depends on integration with banking systems)**
-
-- PD per segment (tree leaf).
-- Staging (Stage 1/2/3).
-- ECL computation: PD × LGD × EAD.
-- **Nota (saneamiento 25/10/2026):** separar la PD regulatoria (Basilea, con floor BCBS CRE 32.4) de la PD contable (IFRS 9, mejor estimador sin floor): dos vistas del mismo árbol, no un único valor. La Fase 7 debe modelar ambas explícitamente.
-
 ## Deferred (no blocking current work)
 
 ### ✅ PyPI synchronization (Resolved: 1.0.0rc5, 02/11/2026)
@@ -424,6 +437,8 @@ La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actua
 **Desincronización registrada (01/11/2026):** tras el cierre de la Fase 4.0 y las sub-fases 5.0.a–5.0.c, los READMEs del repo reflejaban "Phases 0 → 4.0 complete" (foco Fase 5, capa MCP) y 532/532 tests con fecha 01 nov 2026; la página de PyPI quedó congelada con el README de la subida de `1.0.0rc4`. Los cambios cosméticos (diagrama Mermaid, fecha, conteo de tests) quedaron diferidos a la siguiente release material conforme a la regla del 20/10/2026.
 
 **Resolución (02/11/2026): READMEs y PyPI.** La desincronización quedó resuelta con la publicación de `1.0.0rc5`, que incluye los cambios materiales de la Fase 4.0.1 y sincroniza los READMEs publicados con el estado del repositorio.
+
+**Desincronización posterior a la Fase 7 (02/11/2026):** los READMEs del repositorio reflejan ahora las Fases 0–7 y 561/561 tests; la página de PyPI permanece congelada en el README de `1.0.0rc5` (537/537). Este cierre documental no publica una nueva versión: la sincronización se difiere a la próxima decisión de release conforme al protocolo PyPI.
 
 ### ⏳ Phase 2.1.b — Hardening extras
 **Priority: LOW (deferred)**

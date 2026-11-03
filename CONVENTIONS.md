@@ -22,7 +22,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de **553/553** tests (conteo al 02/11/2026), no se commitea.
+Si la suite baja de **561/561** tests (conteo al 02/11/2026), no se commitea.
 
 **Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
 a los 5 minutos de inactividad. Verificar en PowerShell entre cada

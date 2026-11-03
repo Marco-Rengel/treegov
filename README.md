@@ -5,7 +5,7 @@
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 553/553 passing
+**Test suite**: 561/561 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 6.0 complete<br/>🔀 Next: Phase 7 (IFRS 9 / ECL)<br/>📦 v1.0.0rc5 published on PyPI<br/>🧪 553 / 553 tests PASSED<br/>📅 02 nov 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 complete<br/>📦 v1.0.0rc5 published on PyPI<br/>🧪 561 / 561 tests PASSED<br/>📅 Nov 02, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -278,9 +278,9 @@ TreeGov/
 | **4.0.1** | Exporters: categorical unseen_policy | Completed |
 | **5** | Capa MCP para agentes LLM | Completed |
 | **6** | Batch scoring + champion-challenger | Completed |
-| **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Planned |
+| **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Completed |
 
-**Test suite: 553/553 passing.**
+**Test suite: 561/561 passing.**
 
 ---
 
@@ -312,7 +312,7 @@ TreeGov/
 - **Basel (BCBS CRE 32.4)**: regulatory PD floors (0.05% for
   corporate, bank and retail; 0.03% or exempt for sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: the mathematical framework for staging, ECL and asymmetric threshold optimization is documented in `docs/methodology.md` §8.6, but the executable implementation of ECL = PD × LGD × EAD, staging, and asymmetric threshold optimization is planned for Phase 7 and is **not implemented** in 1.0.0rc5.
+- **IFRS 9**: Phase 7 implements a simplified, single-scenario ECL calculation (PD × LGD × EAD), deterministic staging and optional EIR discount across backend, GUI and MCP (`docs/7.0_design_ifrs9.md` §5–§6). It does not certify full IFRS 9 compliance; multi-period curves, macroeconomic scenarios and asymmetric threshold optimization remain outside its scope.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---

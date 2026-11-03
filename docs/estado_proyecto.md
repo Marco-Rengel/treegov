@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 02/11/2026 (Fase 6.0 cerrada; suite 553/553; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 02/11/2026 (Fase 7.0 cerrada; suite 561/561; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -537,7 +537,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
 - **Fase 5** — Capa MCP. Completada (01/11/2026).
 - **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
-- **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD)
+- **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD). Completada (02/11/2026).
 
 ### Verificación manual de la GUI (13/10/2026)
 
@@ -647,6 +647,12 @@ comparación no escribe archivos. `docs/security_audit.md` §6 y el hotfix de
 anti-overwrite. Diseño as-built: `docs/6.0_design_batch_scoring.md` §6;
 decisión: `docs/design_decisions.md` §21. Suite: **553/553 PASSED**.
 
+### Fase 7.0 — IFRS 9 / ECL Completada (02/11/2026)
+
+**7.0.a — Backend.** `backend_v3/ecl.py` y `Session.calculate_ecl` implementan staging determinista, validación por exposición y ECL simplificada PD × LGD × EAD, con horizontes a 12 meses/vida y descuento EIR opcional.
+**7.0.b — GUI.** `frontend_v3/ecl_dialog.py` incorpora `ECLDialog` y worker, integrados en `MainWindow` con i18n EN/ES, gating por modelo entrenado y tabla de resumen con Ctrl+C → TSV.
+**7.0.c — MCP.** La tool `calculate_ecl` expone el mismo resumen mediante JSON estricto; los tests unitarios, GUI headless y E2E MCP cierran la fase con suite **561/561 PASSED**.
+
 ---
 
 ## 4. Arquitectura
@@ -665,7 +671,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (553 tests)
+├── tests/ # Suite de tests (561 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -820,9 +826,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | champion_challenger.py (backend) | 5 |
 | scoring_dialogs.py (frontend) | 4 |
 | mcp_scoring.py (backend/MCP) | 2 |
-| **Total** | **553** |
+| ecl.py (backend) | 4 |
+| ecl_dialog.py (frontend) | 3 |
+| mcp_ecl.py (backend/MCP) | 1 |
+| **Total** | **561** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 553/553 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 561/561 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

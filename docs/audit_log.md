@@ -7147,3 +7147,79 @@ Kimi comodín).
 
 **Referencias cruzadas**: `tests/test_ecl_dialog.py`; `frontend_v3/ecl_dialog.py`; `frontend_v3/main_window.py::_refresh_session_indicator`; `tests/test_quest_engine.py::test_humo_n200k`; `docs/7.0_design_ifrs9.md` §3.
 
+### 02/11/2026 — Cierre completo de la Fase 7.0 (IFRS 9 / ECL)
+
+**Estado**: ✅ Fase 7.0 completada. Sub-fases 7.0.a–7.0.c implementadas; backend, diálogo GUI y tool MCP cerrados. Suite **561/561 PASSED**. Cierre documental central de la Tanda A sincronizado; sin commit realizado por el agente.
+
+**Artefactos de implementación cerrados**:
+
+- `backend_v3/ecl.py` y `backend_v3/session_state.py::Session.calculate_ecl` — núcleo IFRS 9 / ECL simplificado, DTOs inmutables, staging, validación, totales y fachada transaccional sin cambio de estado.
+- `frontend_v3/ecl_dialog.py`, `frontend_v3/main_window.py` y `frontend_v3/i18n.py` — `ECLDialog`, worker, acción Analysis gated por modelo entrenado y recursos bilingües.
+- `mcp_v3/tools.py` y `mcp_v3/server.py` — tool `calculate_ecl` como adaptador de `Session`; **27 tools MCP** en total y salida JSON nativa.
+- `tests/test_ecl.py` (4), `tests/test_ecl_dialog.py` (3) y `tests/test_mcp_ecl.py` (1) — ocho tests nuevos sobre la base de 553; conteos MCP actualizados en `tests/test_mcp_tools.py` y `tests/test_mcp_server.py`.
+
+**Artefactos del cierre documental central (Tanda A)**:
+
+- `docs/7.0_design_ifrs9.md` — estado completado, sub-fases implementadas y §6 as-built.
+- `docs/roadmap.md` — Fase 7 movida a Completed; fila 7 y sub-fases marcadas Completada, sin emojis ni fechas en las celdas de estado; ninguna pendiente de Fase 7 permanece en Deferred.
+- `docs/estado_proyecto.md` — narrativa de Fase 7, estructura y §7 actualizados a 561 tests con filas ECL backend, GUI y MCP.
+- `docs/contexto_para_nueva_sesion.md` — Fases 0 a 7 cerradas, suite 561/561 y próximo paso orientado a revisión visual, feedback y planificación de 1.0.0 estable.
+- `docs/audit_log.md` — esta entrada final.
+
+**Hallazgos y decisiones de cierre**:
+
+1. **Backend IFRS 9 delimitado.** El cálculo aplica PD × LGD × EAD, asigna Etapas 1/2/3 con precedencia determinista y admite PD de vida y descuento EIR simplificado. Las entradas se validan fail-fast; el DataFrame, el árbol y el estado de sesión no se mutan. La referencia es IFRS 9, Sección 5.5, sin declarar certificación ni cobertura contable completa.
+2. **Diálogo GUI integrado.** `ECLDialog` delega el cálculo en `Session` mediante un worker y presenta únicamente el resumen acotado. La acción se habilita con árbol entrenado, la tabla cumple Ctrl+C → TSV y las pruebas headless verifican creación, resultados y gating.
+3. **Tool MCP en paridad.** `calculate_ecl` exige `FlowState.TRAINED`, usa los defaults `pd_column="pd_current"` y `eir=None`, y devuelve `total_ecl_12m`, `total_ecl_lifetime` y `stage_counts`. El E2E ejecuta carga, configuración, partición y entrenamiento antes del cálculo, y verifica JSON estricto con `allow_nan=False`.
+4. **Trazabilidad de suite.** Los cuatro tests backend y tres tests GUI elevaron la suite de 553 a 560; el E2E MCP la llevó a 561. Las dos aserciones históricas de 26 tools se actualizaron a 27 sin modificar las tools preexistentes.
+
+**Tests**: **561/561 PASSED** (`python -m pytest tests -q`). Cobertura de cierre: aritmética y staging ECL, validación de entradas, diálogo GUI headless, flujo E2E MCP y serialización JSON estricta.
+
+**Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §5–§6; `backend_v3/ecl.py`; `backend_v3/session_state.py::Session.calculate_ecl`; `frontend_v3/ecl_dialog.py::ECLDialog`; `mcp_v3/server.py::calculate_ecl`; `tests/test_ecl.py`; `tests/test_ecl_dialog.py`; `tests/test_mcp_ecl.py`; `docs/roadmap.md` §Phase 7; `docs/estado_proyecto.md` §3 y §7.
+
+### 02/11/2026 — Mini-cierre documental: Fase 7, Tanda B
+
+**Estado**: ✅ Documentos de filosofía, convenciones operativas y playbook sincronizados con la Fase 7 cerrada. Suite **561/561 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `docs/philosophy.md` — Current Status actualizado a Fases 0–7 completas y 561 tests.
+- `docs/philosophy.es.md` — Estado actual actualizado a Fases 0 a 7 completadas y 561 tests.
+- `CONVENTIONS.md` — umbral de Verificación obligatoria actualizado de 553/553 a **561/561**.
+- `docs/playbook.md` — Skill 4 registra `docs/7.0_design_ifrs9.md` como diseño canónico de la Fase 7 con estado `Completed`.
+- `docs/audit_log.md` — esta entrada de mini-cierre documental.
+
+**Hallazgos**:
+
+1. **Estado bilingüe coherente.** Ambos documentos de filosofía eliminan la referencia a Fase 7 planificada y reflejan el cierre de las Fases 0 a 7 con el mismo conteo de suite.
+2. **Umbral operativo vigente.** La regla de no commit por debajo del conteo verificado usa ahora 561/561, sin alterar el resto de las convenciones.
+3. **Diseño canónico registrado.** La tabla del Skill 4 incorpora la Fase 7 al final, usando texto `Completed` sin emoji, y enlaza el diseño que ya contiene el as-built en §6.
+
+**Tests**: **561/561 PASSED** (`python -m pytest tests -q`). Cambio exclusivamente documental; no se modificó código ni tests.
+
+**Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §6; `docs/philosophy.md` §Current Status; `docs/philosophy.es.md` §Estado actual; `CONVENTIONS.md` §Verificación obligatoria; `docs/playbook.md` Skill 4; cierre central de Fase 7 en la entrada anterior de `docs/audit_log.md`.
+
+### 02/11/2026 — Mini-cierre documental: Fase 7, Tanda C
+
+**Estado**: ✅ READMEs, API pública, decisiones de diseño y entorno de agentes sincronizados con la Fase 7 cerrada. Suite **561/561 PASSED**.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `README.md` y `README.es.md` — cabecera, Mermaid, tabla de fases y cierre actualizados a 561 tests y Fases 0–7; Fase 7 marcada Completed/Completada y aviso regulatorio ECL actualizado al alcance as-built.
+- `docs/api.md` — nuevo módulo `backend_v3.ecl` con `ECLConfig` y `calculate_ecl`; firma pública `Session.calculate_ecl(csv_path, *, pd_column="pd_current", eir=None)` documentada.
+- `docs/design_decisions.md` — nueva §22 IFRS 9 / ECL: escenario único, separación PD contable/regulatoria y staging con mora y ratio de PD.
+- `AGENTS.md` — entorno Python 3.11.9 verificado al 02/11/2026 con **561/561 tests**.
+- `docs/roadmap.md` — Deferred registra la desincronización PyPI posterior a la Fase 7 y su aplazamiento a la próxima decisión de release.
+- `docs/audit_log.md` — esta entrada de mini-cierre documental.
+
+**Hallazgos**:
+
+1. **Estado público coherente.** Los READMEs ya no presentan la Fase 7 como planificada ni el cálculo ECL como no implementado. El Mermaid usa las fechas solicitadas y 561/561; la nota IFRS 9 conserva las exclusiones de escenarios múltiples, curvas multi periodo y optimización asimétrica.
+2. **Columna de estado normalizada.** Toda la tabla de fases usa exclusivamente `Completed` en inglés y `Completada` en español, sin emojis ni fechas en las celdas de estado.
+3. **API y decisiones trazables.** La documentación reproduce las firmas reales, el carácter frozen de `ECLConfig`, el resumen acotado de `Session` y las reglas estrictas de staging. §22 distingue las convenciones TreeGov de una certificación IFRS 9 completa.
+4. **PyPI sin publicación automática.** `1.0.0rc5` sigue siendo la release vigente y su README público conserva 537/537. La desincronización con los READMEs del repositorio (Fases 0–7, 561/561) queda registrada en Deferred y se pospone a la próxima decisión de release; el agente no publicó paquetes.
+
+**Tests**: **561/561 PASSED** (`python -m pytest tests -q`). Cambio exclusivamente documental; no se modificó código ni tests.
+
+**Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §5–§6; `docs/api.md` §`backend_v3.ecl` y §`backend_v3.session_state`; `docs/design_decisions.md` §22; `backend_v3/ecl.py`; `backend_v3/session_state.py::Session.calculate_ecl`; cierres de Fase 7, Tandas A y B, en las entradas anteriores de `docs/audit_log.md`.
+

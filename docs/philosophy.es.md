@@ -97,7 +97,7 @@ concretas y auditables en el código.
   riesgo de crédito, TreeGov puede utilizarse en cualquier dominio donde
   la trazabilidad, la explicabilidad y la gobernanza sean importantes.
 
-**Estado actual:** Fase 6.0 completada; Fase 7 planificada. 553/553 tests PASSED.
+**Estado actual:** Fases 0 a 7 completadas. 561/561 tests PASSED.
 
 ---
 *[Read in English](philosophy.md)*

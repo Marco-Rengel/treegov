@@ -2453,6 +2453,66 @@ con Ctrl+C → TSV y MCP expone las dos tools (26 en total) con JSON estricto.
 
 ---
 
+## §22. IFRS 9 / ECL (Phase 7)
+
+### 22.1 Escenario único y horizonte simplificado
+
+**Contexto.** Una medición IFRS 9 completa puede requerir escenarios
+prospectivos ponderados, perfiles temporales y descuento multi periodo. La
+primera entrega necesitaba un contrato reproducible sin presentar esas
+capacidades ausentes como implementadas.
+
+**Decisión.** `backend_v3/ecl.py` trabaja con **un único escenario**, sin
+ponderaciones macroeconómicas. Calcula ECL a 12 meses y de vida mediante
+PD × LGD × EAD. La columna `pd_lifetime` es opcional; si falta, reutiliza la PD
+a 12 meses y emite un `UserWarning` explícito. El EIR opcional aplica la
+simplificación de un periodo `1 / (1 + eir)`; sin EIR no hay descuento.
+
+**Consecuencias.** El resultado es determinista y acotado, pero no incorpora
+curvas multi periodo ni escenarios prospectivos. No se declara certificación de
+cumplimiento IFRS 9; la referencia conceptual es IFRS 9, Sección 5.5.
+
+### 22.2 Separación entre PD contable y PD regulatoria
+
+**Contexto.** El árbol puede aplicar un piso regulatorio de Basilea, mientras
+que la PD contable usada para ECL debe ser una estimación explícita y no heredar
+ese piso silenciosamente.
+
+**Decisión.** La PD contable se recibe mediante la columna indicada por
+`pd_column` y el módulo ECL no le aplica ningún piso adicional. Los campos y el
+comportamiento regulatorio del árbol permanecen intactos. La calibración
+externa, la definición de default y la adecuación *point-in-time* de esa PD son
+responsabilidad del usuario.
+
+**Consecuencias.** La PD regulatoria y la contable pueden coexistir como vistas
+separadas sin contaminación implícita. Eliminar el piso no equivale a certificar
+que la PD esté calibrada para IFRS 9.
+
+### 22.3 Staging determinista con mora y ratio de PD
+
+**Contexto.** La asignación de etapas debía ser explicable, incluir evidencia de
+deterioro y evaluar SICR respecto al reconocimiento inicial, sin ocultar reglas
+en GUI o MCP.
+
+**Decisión.** La precedencia es: **Etapa 3** si `days_past_due > 90` o
+`is_default` es verdadero; en caso contrario, **Etapa 2** si
+`days_past_due > 30` o `pd_current > 2 * pd_initial`; en cualquier otro caso,
+**Etapa 1**. Los operadores son estrictamente `>`. Si `is_default` no existe, se
+considera falso. Toda la lógica reside en backend y las superficies consumen el
+mismo resumen.
+
+**Consecuencias.** El staging combina backstops de mora con un ratio de PD
+corriente/inicial, es reproducible y conserva conteos por etapa. Estos umbrales
+son convenciones operativas de TreeGov, no valores universales prescritos por
+IFRS 9.
+
+**Cross-reference.** `docs/7.0_design_ifrs9.md` §5 Q2–Q5 y §6;
+`backend_v3/ecl.py`; `backend_v3/session_state.py::Session.calculate_ecl`;
+`docs/api.md` §`backend_v3.ecl`; `docs/audit_log.md`, cierre de Fase 7 del
+02/11/2026.
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

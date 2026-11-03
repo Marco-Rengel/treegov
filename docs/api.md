@@ -127,6 +127,22 @@ Phase 6.0 public scoring contracts:
   Brier Skill on the intersection routed by both models. Missing metric values
   and their deltas remain `None`; no champion promotion is performed.
 
+## backend_v3.ecl
+
+Phase 7.0 public IFRS 9 / ECL contracts:
+
+- `ECLConfig(eir: float | None = None)` (frozen dataclass) — immutable
+  configuration for the simplified ECL calculation. `eir=None` disables
+  discounting; otherwise the value must be finite and strictly greater than
+  `-1`, and defines the one-period factor `1 / (1 + eir)`.
+- `calculate_ecl(df, pd_column, config) -> tuple[ECLSummary, list[ECLRow]]` —
+  validates exposure-level inputs, assigns Stages 1/2/3 with deterministic
+  rules and computes PD × LGD × EAD for 12-month and lifetime horizons.
+  `pd_lifetime` is optional; when absent, the 12-month PD is reused with an
+  explicit `UserWarning`. The input DataFrame is not mutated. This is a
+  single-scenario simplification anchored to IFRS 9, Section 5.5, not a full
+  accounting-compliance engine.
+
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
@@ -195,6 +211,12 @@ Phase 6.0 public scoring contracts:
   routed population. Returns `ChampionChallengerResult` as a plain dict with
   both fingerprints, coverage and metric deltas. The champion, its fingerprint,
   training caches and session state remain unchanged; no promotion is applied.
+- `Session.calculate_ecl(csv_path, *, pd_column="pd_current", eir=None) -> dict[str, Any]` —
+  Phase 7 facade over `backend_v3.ecl.calculate_ecl`. Requires a trained model,
+  reads the exposure CSV and returns only the bounded summary with
+  `total_ecl_12m`, `total_ecl_lifetime` and `stage_counts`. The per-exposure
+  detail is discarded; `FlowState`, the tree and the session event log remain
+  unchanged.
 - `Session.export_to_sql(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_sql` using the trained tree and
   the training-partition imputer. `None` without a trained model;

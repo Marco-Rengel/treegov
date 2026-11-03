@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 553/553 passing
+**Suite de tests**: 561/561 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 6.0 completas<br/>🔀 Próximo: Fase 7 (IFRS 9 / ECL)<br/>📦 v1.0.0rc5 publicada en PyPI<br/>🧪 553 / 553 tests PASSED<br/>📅 02 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 completas<br/>📦 v1.0.0rc5 publicada en PyPI<br/>🧪 561 / 561 tests PASSED<br/>📅 02 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -278,9 +278,9 @@ TreeGov/
 | **4.0.1** | Exporters: categorical unseen_policy | Completada |
 | **5** | Capa MCP para agentes LLM | Completada |
 | **6** | Batch scoring + champion-challenger | Completada |
-| **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Planificada |
+| **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completada |
 
-**Suite de tests: 553/553 passing.**
+**Suite de tests: 561/561 passing.**
 
 ---
 
@@ -312,7 +312,7 @@ TreeGov/
 - **Basilea (BCBS CRE 32.4)**: suelos regulatorios de PD (0.05% para
   corporativos, bancos y retail; 0.03% o exención para soberanos).
 - **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
-- **IFRS 9 / NIIF 9**: el marco matemático para staging, ECL y optimización de umbrales asimétricos está documentado en `docs/methodology.md` §8.6, pero la implementación ejecutable de ECL = PD × LGD × EAD, staging, y optimización de umbrales asimétricos está planificada para la Fase 7 y **no está implementada** en 1.0.0rc5.
+- **IFRS 9 / NIIF 9**: la Fase 7 implementa un cálculo ECL simplificado y de escenario único (PD × LGD × EAD), staging determinista y descuento EIR opcional en backend, GUI y MCP (`docs/7.0_design_ifrs9.md` §5–§6). No certifica cumplimiento IFRS 9 completo; las curvas multi periodo, los escenarios macroeconómicos y la optimización asimétrica de umbrales quedan fuera de su alcance.
 - **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).
 
 ---
