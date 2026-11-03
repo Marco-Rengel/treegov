@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 02/11/2026
+**Fecha de última actualización:** 03/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -287,8 +287,8 @@ La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
 releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
 cierre de la Fase 4.0.1, la versión publicada sigue siendo `1.0.0rc5`; su README
-de PyPI refleja 537/537 tests, mientras el repositorio cerró la Fase 7 con
-575/575. La sincronización de la página queda pendiente de una decisión de
+de PyPI refleja 537/537 tests, mientras el repositorio tiene actualmente
+577/577. La sincronización de la página queda pendiente de una decisión de
 release; este bloque es exclusivamente documental y no cambia la versión publicada.
 
 ## Próximos pasos
@@ -299,7 +299,10 @@ release; este bloque es exclusivamente documental y no cambia la versión public
 
 **Fase 7.0 — IFRS 9 / ECL: ✅ cerrada (02/11/2026).** Backend de staging y ECL, fachada `Session.calculate_ecl`, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total). Diseño as-built: `docs/7.0_design_ifrs9.md` §6.
 
-**Próximo paso:** Revisión visual de la GUI, feedback de usuario y planificación de la versión 1.0.0 estable.
+**Backlog post-Fase 7 cerrado (03/11/2026).** Suite 577/577
+PASSED. Próxima decisión: publicar 1.0.0 estable en PyPI o iniciar
+la Fase 8. La release 1.0.0rc5 sigue vigente en PyPI hasta la
+próxima decisión de release.
 
 **Nota de release:** `1.0.0rc5` está publicada en PyPI tras el cambio material de 4.0.1.b. La publicación quedó registrada en el commit `ab8849a` y el tag `v1.0.0rc5`.
 

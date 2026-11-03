@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 03/11/2026 (N4 resuelto; suite 577/577; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado; suite 577/577; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -651,7 +651,7 @@ decisión: `docs/design_decisions.md` §21. Suite: **553/553 PASSED**.
 
 **7.0.a — Backend.** `backend_v3/ecl.py` y `Session.calculate_ecl` implementan staging determinista, validación por exposición y ECL simplificada PD × LGD × EAD, con horizontes a 12 meses/vida y descuento EIR opcional.
 **7.0.b — GUI.** `frontend_v3/ecl_dialog.py` incorpora `ECLDialog` y worker, integrados en `MainWindow` con i18n EN/ES, gating por modelo entrenado y tabla de resumen con Ctrl+C → TSV.
-**7.0.c — MCP.** La tool `calculate_ecl` expone el mismo resumen mediante JSON estricto; los tests unitarios, GUI headless y E2E MCP cierran la fase con suite **561/561 PASSED**.
+**7.0.c — MCP.** La tool `calculate_ecl` expone el mismo resumen mediante JSON estricto; los tests unitarios, GUI headless y E2E MCP cierran la fase con suite verde.
 
 ---
 
@@ -863,6 +863,12 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ---
 
 ## 10. Pendientes y decisiones abiertas
+
+**Backlog post-Fase 7 cerrado (03/11/2026).** Las 52 deudas
+documentadas en docs/roadmap.md (grupos T, F, U, V, P, N) están
+resueltas. Suite 577/577 PASSED. El repositorio está sincronizado con
+origin/main (commit 2021212). Próxima decisión: publicar 1.0.0
+estable en PyPI o iniciar la Fase 8.
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
