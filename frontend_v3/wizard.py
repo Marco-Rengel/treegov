@@ -43,7 +43,6 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSlider,
     QSpinBox,
-    QStyle,
     QStyleFactory,
     QTabWidget,
     QTableWidget,
@@ -54,16 +53,8 @@ from PySide6.QtWidgets import (
     QWizardPage,
 )
 
+from frontend_v3.icons import load_icon
 from frontend_v3.i18n import language_bus, tr
-
-# Data-type icons for the predictor lists (Phase 3.11.a.1 UX polish):
-# the visible item text is the bare column name; the type is carried by
-# the icon and the tooltip.
-_TYPE_ICONS = {
-    "NOMINAL": QStyle.StandardPixmap.SP_DialogYesButton,
-    "ORDINAL": QStyle.StandardPixmap.SP_ArrowUp,
-    "CONTINUOUS": QStyle.StandardPixmap.SP_FileDialogInfoView,
-}
 
 _ENGINES: tuple[tuple[str, str], ...] = (
     ("CRT", "step1_desc_crt"),
@@ -78,16 +69,6 @@ ENGINE_LABELS = {
     "QUEST": "QUEST",
 }
 _ENGINE_LABELS = ENGINE_LABELS
-# TODO(zona_gris): el brief pedia iconos SP_* en los radios de motor sin
-# fijar cuáles; mapeo semántico conservador (C&RT = split binario,
-# CHAID = rejilla multivía, Exhaustive = recorrido iterativo, QUEST =
-# interrogante). El estratega puede cambiar los pixmaps.
-_ENGINE_ICONS = {
-    "CRT": QStyle.StandardPixmap.SP_ArrowForward,
-    "CHAID": QStyle.StandardPixmap.SP_FileDialogDetailedView,
-    "CHAID_EXHAUSTIVE": QStyle.StandardPixmap.SP_BrowserReload,
-    "QUEST": QStyle.StandardPixmap.SP_MessageBoxQuestion,
-}
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +95,8 @@ class EnginePage(QWizardPage):
         layout.addWidget(self._lbl_wizard_title)
         for engine, desc_key in _ENGINES:
             radio = QRadioButton(_ENGINE_LABELS[engine])  # proper noun, fixed
-            radio.setIcon(self.style().standardIcon(_ENGINE_ICONS[engine]))
+            icon_name = f"engine-{engine.lower().replace('_', '-')}"
+            radio.setIcon(load_icon(icon_name, theme="light"))
             desc = QLabel()
             desc.setIndent(24)
             desc.setEnabled(False)  # descriptive text, visually muted
@@ -274,9 +256,13 @@ class PredictorsPage(QWizardPage):
         # Hotfix 3.11.a.1: tooltips via tr() (live retranslation in
         # retranslate_ui); initial text set there like every other string.
         self._btn_add = QPushButton("→")
+        self._btn_add.setIcon(load_icon("move-one-right", theme="light"))
         self._btn_remove = QPushButton("←")
+        self._btn_remove.setIcon(load_icon("move-one-left", theme="light"))
         self._btn_add_all = QPushButton("⇒")
+        self._btn_add_all.setIcon(load_icon("move-all-right", theme="light"))
         self._btn_remove_all = QPushButton("⇐")
+        self._btn_remove_all.setIcon(load_icon("move-all-left", theme="light"))
         for b in (self._btn_add, self._btn_remove,
                   self._btn_add_all, self._btn_remove_all):
             btns.addWidget(b)
@@ -403,7 +389,7 @@ class PredictorsPage(QWizardPage):
     def _make_item(self, col: str, enabled: bool = True) -> QListWidgetItem:
         ptype = self._types[col]
         item = QListWidgetItem(col)  # bare name; the type rides on the icon
-        item.setIcon(self.style().standardIcon(_TYPE_ICONS[ptype]))
+        item.setIcon(load_icon(f"type-{ptype.lower()}", theme="light"))
         # TODO(zona_gris): tooltip = backend PredictorType name (fixed
         # domain proper noun, like the engine names in _ENGINE_LABELS).
         # i18n keys ("Variable Continua" / "Continuous variable") were out
@@ -1137,15 +1123,9 @@ class GovernancePage(QWizardPage):
         btn_group.setExclusive(True)
         btn_group.addButton(self._rb_banking)
         btn_group.addButton(self._rb_research)
-        # Mode icons (standard pixmaps): Banking = computer (regulated
-        # production), Research = contents view (exploratory work).
-        style = self.style()
-        self._rb_banking.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)
-        )
-        self._rb_research.setIcon(
-            style.standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView)
-        )
+        # Iconos SVG semánticos para producción regulada e investigación.
+        self._rb_banking.setIcon(load_icon("gov-banking", theme="light"))
+        self._rb_research.setIcon(load_icon("gov-research", theme="light"))
         mode_box.addWidget(self._rb_banking)
         mode_box.addWidget(self._lbl_banking_desc)
         mode_box.addWidget(self._rb_research)

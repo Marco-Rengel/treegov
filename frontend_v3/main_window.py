@@ -37,7 +37,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSplitter,
-    QStyle,
     QTabWidget,
     QToolBar,
     QVBoxLayout,
@@ -46,6 +45,7 @@ from PySide6.QtWidgets import (
 
 from backend_v3.session_state import FlowState, Session
 from frontend_v3 import __version__
+from frontend_v3.icons import load_icon
 from frontend_v3.i18n import (
     SUPPORTED,
     detect_system_language,
@@ -488,14 +488,6 @@ class MainWindow(QMainWindow):
         self._toolbar.setObjectName("mainToolbar")
         self.addToolBar(self._toolbar)
 
-        style = self.style()
-        self._act_open.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
-        self._act_new_wizard.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogNewFolder))
-        self._act_train.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self._act_evaluate_oos.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-        self._act_load_oot.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_DirOpenIcon))
-        self._act_prune.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_TrashIcon))
-
         self._toolbar.addAction(self._act_open)
         self._toolbar.addAction(self._act_new_wizard)
         self._toolbar.addAction(self._act_train)
@@ -511,13 +503,10 @@ class MainWindow(QMainWindow):
         self._act_zoom_fit = self._new_action("act_zoom_fit")
         self._act_zoom_fit.triggered.connect(self._tree_panel.zoom_fit)
 
-        self._act_zoom_in.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
-        self._act_zoom_out.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
-        self._act_zoom_fit.setIcon(style.standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
-
         self._toolbar.addAction(self._act_zoom_in)
         self._toolbar.addAction(self._act_zoom_out)
         self._toolbar.addAction(self._act_zoom_fit)
+        self._reapply_toolbar_icons(self._theme_name)
 
         # Phase 3.11.a.1: classic compact toolbar (icon only). Applied
         # AFTER all actions are added so every button honors the style.
@@ -527,6 +516,21 @@ class MainWindow(QMainWindow):
         self._toolbar.setToolButtonStyle(
             Qt.ToolButtonStyle.ToolButtonIconOnly
         )
+
+    def _reapply_toolbar_icons(self, theme: str) -> None:
+        """Recolorea los nueve iconos SVG con el token FG del tema."""
+        for action, name in (
+            (self._act_open, "open-dataset"),
+            (self._act_new_wizard, "new-model"),
+            (self._act_train, "train"),
+            (self._act_evaluate_oos, "evaluate-oos"),
+            (self._act_load_oot, "load-oot"),
+            (self._act_prune, "prune"),
+            (self._act_zoom_in, "zoom-in"),
+            (self._act_zoom_out, "zoom-out"),
+            (self._act_zoom_fit, "zoom-fit"),
+        ):
+            action.setIcon(load_icon(name, theme))
 
     def _build_central(self) -> QSplitter:
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
@@ -780,6 +784,7 @@ class MainWindow(QMainWindow):
         # Phase 3.11.a.1: re-pin the QPalette too, so native-rendered
         # chrome (wizard/dialogs) follows the new theme, not Windows'.
         apply_palette(name, QApplication.instance())
+        self._reapply_toolbar_icons(name)
         self._theme_name = name
         self._lbl_theme.setText(
             f"{tr('status_theme')}: {tr(f'menu_view_theme_{name}')}"

@@ -67,6 +67,10 @@ underscore) are internal and may change without notice.
 ## backend_v3.tree_builder
 
 - `TreeBuilder`, `TreeModel`, `TreeNode`
+- `TreeBuilder(..., validation_scheme="holdout", cv_k=None)` — kwargs
+  keyword-only nuevos (Fase 2.1.b). `validation_scheme` y `cv_k`
+  entran en `params_fingerprint` SOLO si difieren del default
+  ("holdout" / None). Los fingerprints holdout existentes no cambian.
 
 ## backend_v3.exporters
 
@@ -146,6 +150,10 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
+- Nuevos campos de `SessionState` (Fase 2.1.b):
+  - `validation_scheme: str = "holdout"`
+  - `cv_k: int | None = None`
+  - `cv_folds: tuple[tuple[tuple[int, ...], tuple[int, ...]], ...] = ()`
 - `Session.describe_dataset() -> (columns, types)` — read-only profile of
   the loaded dataset (types as `PredictorType.name` strings; Phase 2.1).
 - `Session.get_data_preview(n_rows=50) -> dict` — read-only raw preview
@@ -186,6 +194,16 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   Phase 3.5.c (see the extended entry below).
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
+- `Session.partition(train_frac=0.7, seed=42, *, scheme="holdout", k=5)`
+  — partición del dataset (Fase 2.1.b). `scheme="holdout"` (default)
+  es el comportamiento histórico. `scheme="cv"` aplica k-fold
+  estratificado: `_X_train` = 100% de los datos, `_X_test` = None,
+  `cv_folds` se pobla en SessionState. En CV, el modelo final se
+  entrena con el 100%.
+- `Session.get_cv_report() -> dict | None` — DTO de solo lectura del
+  último informe de CV calculado. None si no hay CV. Estructura:
+  `{"scheme": "cv", "k": int, "metrics_mean": dict, "metrics_std":
+  dict, "metrics_per_fold": list[dict]}`.
 - `Session.get_prune_sequence() -> list[dict[str, Any]]` — Read-only method that returns the cost-complexity pruning sequence for the trained model. Each dictionary contains `alpha` (float), `n_leaves` (int), and `r_subtree` (float). Returns an empty list if the model has no internal nodes. (Phase 3.9).
 - `Session.get_univariate_trees(max_depth=3) -> list[dict]` — read-only
   batch univariate trees (Phase 3.11.c.1): trains one depth-`max_depth`
@@ -254,10 +272,12 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   tuple `()` means "no costs" (default). It is NOT part of
   `params_fingerprint` in this phase — the growth engine does not use
   it (see `docs/design_decisions.md` §18.8).
-- `Session.evaluate_oos(*, n_groups=10)` — supports K > 2 since
-  Phase 3.5.c. Internally translates `y` to the internal canonical
-  order via `_translate_y_to_internal` and calls
-  `compute_oos_metrics` with the full 2D probability matrix.
+- `Session.evaluate_oos(*, n_groups=10)` — evalúa el modelo sobre la
+  partición de test. Soporta K > 2 desde 3.5.c. En modo `scheme="cv"`
+  (Fase 2.1.b), calcula métricas sobre los k folds de `cv_folds`
+  (entrenando un modelo temporal por fold) y devuelve un dict con
+  `scheme`, `k`, `metrics_mean`, `metrics_std`, `metrics_per_fold`.
+  `SessionState.oos_metrics` queda None en modo CV.
 - `Session.evaluate_oot(*, n_groups=10, weight_oot=True)` — supports
   K > 2 since Phase 3.5.c. Same label translation. The Gini Drop
   formula is unchanged; it now feeds from the multiclass Gini.
@@ -342,7 +362,12 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 
 ## backend_v3.splitting
 
-- `stratified_split(y, train_frac, seed, log=None)`
+- `stratified_split(y, train_frac, seed, log=None, *, weights=None)` —
+  holdout estratificado Hamilton-Hare (sin cambios desde 3.2).
+- `stratified_kfold(y, k, seed, log=None) -> list[tuple[np.ndarray, np.ndarray]]`
+  — k-fold estratificado (Fase 2.1.b). Devuelve k pares
+  (train_idx, val_idx) disjuntos y deterministas. Misma proporción
+  de clase por fold.
 
 ## backend_v3.profiling
 
@@ -385,6 +410,19 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 > **Stability (Phase 5.0.b, 01/11/2026).** The MCP adapter is a stable 1.x public API. The public surface is: `mcp_v3.tools.TOOLS` (registry of 24 frozen `ToolDescriptor` entries), `mcp_v3.dto._jsonable` (JSON-native converter, Invariant I-3), `mcp_v3.server.app` (FastMCP stdio server) and `treegov_mcp.main` (console script `treegov-mcp`). The SDK dependency is optional (`pip install treegov[mcp]`, pin `mcp>=1.0.0,<2.0.0`). The `_jsonable` name keeps its underscore prefix per the stability rule above (internal helper), but its contract is public and covered by tests.
 
 ---
+
+Nota (Fase 2.1.b, 03/11/2026): dos cambios en la capa de
+presentación, sin alterar la API pública del backend. (a) El paquete
+`frontend_v3` instala el guardrail de imports de
+`backend_v3.import_guard` en su `__init__` (idempotente; bloquea
+sklearn/statsmodels/xgboost/lightgbm/catboost también en procesos
+GUI). (b) Nuevo helper interno
+`frontend_v3.icons.load_icon(name: str, theme: str = "light") -> QIcon`
+que carga SVG de Bootstrap Icons v1.11.3 (MIT) desde
+`frontend_v3/resources/icons/`. Sustituye los iconos
+`QStyle.StandardPixmap` en toolbar y wizard. Ninguno de los dos es
+parte de la API pública del backend; se documentan aquí por
+completitud de la capa de presentación.
 
 ## Cross-reference — design decisions
 

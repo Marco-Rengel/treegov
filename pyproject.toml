@@ -46,4 +46,4 @@ treegov-mcp = "treegov_mcp:main"
 packages = ["backend_v3", "frontend_v3", "frontend_v3.resources", "mcp_v3"]
 
 [tool.setuptools.package-data]
-frontend_v3 = ["resources/*.qss"]
+frontend_v3 = ["resources/*.qss", "resources/icons/*.svg"]

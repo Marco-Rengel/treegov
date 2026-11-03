@@ -7512,3 +7512,103 @@ tree, no commiteados hasta hoy):
 **Referencias**: prompts del bloque 6 (Kimi, 02/11/2026); entrada
 "03/11/2026 — N4 resuelto" (esta bitácora); `docs/roadmap.md` (filas
 T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).
+
+### 03/11/2026 — A1: término neutro `capture_rate` en RESEARCH
+
+**Commit**: `cdf6de4`.
+
+**Cambios**: nueva clave i18n `term_research_capture_rate` EN/ES; el export HTML de `ReportsPanel` usa "Capture rate" / "Tasa de captura" en RESEARCH y conserva "Bad capture rate" en BANKING. Eliminado el TODO(zona_gris) asociado.
+
+**Tests**: suite **579/579 PASSED**; `tests/test_reports_panel.py` **15/15 PASSED**, incluidas las pruebas de terminología RESEARCH y paridad BANKING.
+
+### 03/11/2026 — B2b: guardrail de imports en la capa GUI
+
+**Commit**: `f9e1c73`.
+
+**Cambios**: `frontend_v3/__init__.py` y `treegov_gui.py` instalan `import_guard` antes de cargar la GUI, de forma idempotente y alineada con `treegov.py`. Añadidas pruebas de instalación y bloqueo de `sklearn` en procesos GUI.
+
+**Tests**: suite **581/581 PASSED**; `tests/test_gui_smoke.py` **17/17 PASSED**.
+
+### 03/11/2026 — B2a: validación cruzada k-fold estratificada
+
+**Commit**: `f74d83a` (este commit).
+
+**Cambios**: nueva `stratified_kfold`; modo CV en `Session` con folds inmutables, imputación por fold, métricas media/std por fold y modelo final entrenado con el 100% de los datos; fingerprints holdout sin cambios. Wizard con selector k y GUI con informe CV legible.
+
+**Tests**: suite **595/595 PASSED**; 10 nuevas pruebas backend CV/k-fold, `tests/test_wizard.py` **32/32 PASSED** y `tests/test_e2e_mainwindow.py` **12/12 PASSED**.
+
+### 03/11/2026 — Infraestructura de iconos SVG temáticos
+
+**Estado**: Implementado; todavía sin sustituir los usos de `QStyle.StandardPixmap` ni los botones Unicode.
+
+**Artefactos tocados (rutas exactas)**: `scripts/fetch_icons.py`, `frontend_v3/icons.py`, `frontend_v3/resources/icons/*.svg` (22 archivos), `tests/test_icons.py`, `pyproject.toml`, `docs/audit_log.md`.
+
+**Hallazgos**: se descargaron 22 SVG de Bootstrap Icons v1.11.3, todos con `currentColor`; el script verificó su idempotencia al omitir los archivos existentes en la segunda ejecución. `mode-research` usa `search.svg`, porque `flask.svg` no existe en la etiqueta v1.11.3 (HTTP 404 verificado). `load_icon` sustituye `currentColor` por el token `FG` del tema solicitado y devuelve un icono nulo para nombres inexistentes. Los SVG quedaron incluidos en `package-data`; no se modificó ningún consumidor ni `backend_v3/`.
+
+**Tests**: `tests/test_icons.py` **5/5 PASSED**; suite completa **600/600 PASSED**. `git diff --stat backend_v3/` vacío.
+
+**Referencias cruzadas**: `docs/3.11_design_interactive_tree.md` §1 (iconografía SVG); `docs/3.11_gui_design_system.md` §2.1 (token `FG`) y §3.2 (toolbar).
+
+### 03/11/2026 — Sustitución de iconos nativos por SVG en toolbar y wizard
+
+**Estado**: Implementado. No quedan referencias `QStyle.StandardPixmap` en `frontend_v3/`.
+
+**Artefactos tocados (rutas exactas)**: `frontend_v3/main_window.py`, `frontend_v3/wizard.py`, `frontend_v3/resources/icons/*.svg` (8 renombrados; total invariable de 22), `scripts/fetch_icons.py`, `tests/test_gui_smoke.py`, `tests/test_icons.py`, `docs/audit_log.md`.
+
+**Hallazgos**: las nueve acciones de toolbar usan `load_icon`; `_reapply_toolbar_icons(theme)` centraliza su asignación y se ejecuta al construir la ventana y tras cada cambio de tema. Motores, tipos de predictor, botones de movimiento y modos de gobernanza del wizard usan SVG; el wizard fija `theme="light"` como limitación aceptada. Los nombres semánticos se normalizaron a `open-dataset`, `new-model`, `gov-*` y `move-*`; el descargador se sincronizó con esos nombres para conservar la idempotencia sin crear duplicados. Los textos Unicode y tooltips existentes se conservaron.
+
+**Tests**: `tests/test_gui_smoke.py` + `tests/test_icons.py` **25/25 PASSED** (20 + 5); suite completa **603/603 PASSED**. La reejecución del descargador omitió los 22 archivos existentes. `git diff --stat backend_v3/` vacío.
+
+**Referencias cruzadas**: `docs/3.11_design_interactive_tree.md` §1; `docs/3.11_gui_design_system.md` §2.1 y §3.2.
+
+### 03/11/2026 — B1: iconos SVG propios en toolbar y wizard
+
+**Estado**: ✅ Resuelto. Suite 603/603 PASSED.
+
+**Modelo**: OpenCode + Kimi K3.1 Pro.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Sustituidos los usos de QStyle.StandardPixmap por 22 SVG de Bootstrap Icons v1.11.3 (MIT) en frontend_v3/resources/icons/. El helper load_icon(name, theme) sustituye currentColor por $FG de la paleta activa. Script reproducible en scripts/fetch_icons.py.
+
+**Artefactos**: frontend_v3/icons.py (nuevo), 22 SVG en frontend_v3/resources/icons/, scripts/fetch_icons.py (nuevo), main_window.py, wizard.py, tests/test_icons.py (nuevo), tests/test_gui_smoke.py, pyproject.toml.
+
+**Tests**: 603/603 PASSED.
+
+**Referencias cruzadas**: docs/design_decisions.md §17.1 (paleta Colab), docs/3.11_design_interactive_tree.md §1 (iconografía SVG).
+
+### 03/11/2026 — Mini-cierre: sincronización de API y decisiones A1/B2b/B2a/B1
+
+**Estado**: Documentación sincronizada. Suite 603/603 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `docs/api.md`, `docs/design_decisions.md`, `docs/audit_log.md`.
+
+**Hallazgos**: `api.md` documenta `stratified_kfold`, los kwargs de fingerprint condicional, los campos y métodos CV de `Session`/`SessionState`, el comportamiento de `evaluate_oos` en CV y la nota de presentación B2b/B1. `design_decisions.md` incorpora §23 (cinco decisiones CV) y §24 (infraestructura SVG). No se modificó código. El diff de `backend_v3/` está vacío; el de `frontend_v3/` conserva los cambios B1 previos a este bloque documental.
+
+**Tests**: 603/603 PASSED.
+
+**Referencias cruzadas**: entradas del 03/11/2026 para A1, B2b, B2a y B1 en esta bitácora; `docs/design_decisions.md` §23 y §24.
+
+### 03/11/2026 — Mini-cierre: estado y contexto A1/B2b/B2a/B1
+
+**Estado**: Documentos de estado y contexto sincronizados. Suite 603/603 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `docs/estado_proyecto.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `docs/audit_log.md`.
+
+**Hallazgos**: los tres documentos reflejan el cierre del backlog salvo distribución, la suite 603/603, CV k-fold, guardrail GUI e iconos SVG. Se eliminaron las referencias operativas obsoletas a 577 tests; la próxima decisión registrada es el método de distribución (C1) antes de publicar 1.0.0 estable. No se modificó código. El diff de `backend_v3/` está vacío; el de `frontend_v3/` conserva los cambios B1 previos.
+
+**Tests**: 603/603 PASSED.
+
+**Referencias cruzadas**: entradas del 03/11/2026 para A1, B2b, B2a y B1 en esta bitácora; mini-cierre inmediatamente anterior de `docs/api.md` y `docs/design_decisions.md`.
+
+### 03/11/2026 — Mini-cierre: conteo de suite en READMEs
+
+**Estado**: Documentación cosmética sincronizada. Suite 603/603 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `README.md`, `README.es.md`, `docs/audit_log.md`.
+
+**Hallazgos**: las cabeceras, diagramas Mermaid y líneas de cierre de la tabla de fases muestran 603/603; las fechas verificadas son Nov 3, 2026 y 3 nov 2026. No se añadieron filas de backlog a la tabla de fases ni se modificó código. Conforme al protocolo PyPI, este cambio cosmético no publica una nueva versión.
+
+**Tests**: 603/603 PASSED.
+
+**Referencias cruzadas**: mini-cierres inmediatamente anteriores de API/decisiones y estado/contexto; `AGENTS.md`, protocolo PyPI.

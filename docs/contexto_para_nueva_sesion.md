@@ -144,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 577/577 PASSED
+**Suite de tests:** 603/603 PASSED
 
 ## Entorno de desarrollo
 
@@ -288,23 +288,16 @@ releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
 cierre de la Fase 4.0.1, la versión publicada sigue siendo `1.0.0rc5`; su README
 de PyPI refleja 537/537 tests, mientras el repositorio tiene actualmente
-577/577. La sincronización de la página queda pendiente de una decisión de
+603/603. La sincronización de la página queda pendiente de una decisión de
 release; este bloque es exclusivamente documental y no cambia la versión publicada.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **577/577 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
-
-**Fase 6.0 — Batch scoring y Champion-Challenger: ✅ cerrada (02/11/2026).** Backend por chunks con escritura atómica anti-overwrite, comparación sobre población común, dos diálogos GUI y dos nuevas tools MCP (26 en total). Diseño as-built: `docs/6.0_design_batch_scoring.md` §6; decisión: `docs/design_decisions.md` §21.
-
-**Fase 7.0 — IFRS 9 / ECL: ✅ cerrada (02/11/2026).** Backend de staging y ECL, fachada `Session.calculate_ecl`, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total). Diseño as-built: `docs/7.0_design_ifrs9.md` §6.
-
-**Backlog post-Fase 7 cerrado (03/11/2026).** Suite 577/577
-PASSED. Próxima decisión: publicar 1.0.0 estable en PyPI o iniciar
-la Fase 8. La release 1.0.0rc5 sigue vigente en PyPI hasta la
-próxima decisión de release.
-
-**Nota de release:** `1.0.0rc5` está publicada en PyPI tras el cambio material de 4.0.1.b. La publicación quedó registrada en el commit `ab8849a` y el tag `v1.0.0rc5`.
+**Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
+Suite 603/603 PASSED. CV k-fold, guardrail de imports en GUI e iconos
+SVG incorporados. Próxima decisión: método de distribución (C1), y
+después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc5
+sigue vigente hasta esa decisión.
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

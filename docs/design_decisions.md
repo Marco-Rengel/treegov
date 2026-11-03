@@ -2513,6 +2513,57 @@ IFRS 9.
 
 ---
 
+## §23. Cross-Validation k-fold (Phase 2.1.b)
+
+Decisión de pipeline: esquema CV alternativo al holdout. Cinco
+decisiones aprobadas el 03/11/2026.
+
+| ID | Decisión | Consecuencia |
+|---|---|---|
+| D1 | CV es un modo alternativo; el holdout sigue siendo el default | Cero breaking change: todo el código existente usa `scheme="holdout"` sin cambios |
+| D2 | k-fold estratificado (misma proporción de clase por fold) | Reutiliza la lógica de permutación por clase de `stratified_split` |
+| D3 | Se reporta media ± desviación estándar sobre los k folds | `evaluate_oos` en modo CV devuelve `metrics_mean` + `metrics_std` + `metrics_per_fold` |
+| D4 | El modelo final se entrena con el 100% de los datos | CV solo estima desempeño; no hay k modelos finales. `_X_train` = todos, `_X_test` = None en modo CV |
+| D5 | `validation_scheme` y `cv_k` entran en `params_fingerprint` SOLO si difieren del default | Los fingerprints holdout existentes (14 UCI + internos) no cambian. Los modelos CV tienen fingerprint distinto |
+
+Referencia: `docs/audit_log.md` entrada del 03/11/2026 (B2a).
+
+## §24. SVG Icon Infrastructure (Phase 2.1.b, deuda B1)
+
+Decisión de presentación: sustituir los `QStyle.StandardPixmap` nativos
+por iconos SVG propios.
+
+**Contexto.** La toolbar y el wizard usaban pixmaps nativos de Qt
+(`QStyle.StandardPixmap.SP_*`). Son fijos, no coloreables por tema, y
+visualmente distintos entre plataformas. El diseño 3.11 §1 ya preveía
+iconos SVG propios; la Fase 3.11.a los difirió.
+
+**Decisión.** Set de 22 iconos SVG de Bootstrap Icons v1.11.3 (MIT),
+descargados vía `scripts/fetch_icons.py` (idempotente), guardados en
+`frontend_v3/resources/icons/` con nombres semánticos. Helper
+`frontend_v3.icons.load_icon(name, theme)` sustituye `currentColor` por
+`$FG` de la paleta activa al cargar y devuelve un `QIcon` coloreado por
+tema. Reemplazo completo de `QStyle.StandardPixmap` en `main_window.py`
+(9 iconos de toolbar) y `wizard.py` (13 iconos: 4 motores, 3 tipos de
+predictor, 4 botones de mover, 2 de gobernanza).
+
+**Alternativas rechazadas.** (a) Material Symbols: sus SVG usan fill hex
+baked-in, complicando la sustitución por tema. (b) Iconos propios
+diseñados: fuera de alcance, requiere diseñador. (c) Mantener
+QStyle.StandardPixmap: no son coloreables por tema ni consistentes
+entre plataformas.
+
+**Consecuencias.** 22 SVG versionados en el repo (~30 KB). Toolbar
+recoloca sus 9 iconos al cambiar de tema. Wizard usa SVG para motores,
+tipos, movimiento y gobernanza. Cero ocurrencias de
+`QStyle.StandardPixmap` en `frontend_v3/` (verificado). El icono para
+RESEARCH es Bootstrap `search`: v1.11.3 no incluye `flask.svg` y
+`search` es la metáfora más cercana.
+
+Referencia: `docs/audit_log.md` entrada del 03/11/2026 (B1).
+
+---
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

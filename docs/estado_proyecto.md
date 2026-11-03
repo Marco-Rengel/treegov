@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado; suite 577/577; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado salvo distribución; suite 603/603; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -653,6 +653,23 @@ decisión: `docs/design_decisions.md` §21. Suite: **553/553 PASSED**.
 **7.0.b — GUI.** `frontend_v3/ecl_dialog.py` incorpora `ECLDialog` y worker, integrados en `MainWindow` con i18n EN/ES, gating por modelo entrenado y tabla de resumen con Ctrl+C → TSV.
 **7.0.c — MCP.** La tool `calculate_ecl` expone el mismo resumen mediante JSON estricto; los tests unitarios, GUI headless y E2E MCP cierran la fase con suite verde.
 
+### Backlog post-Fase 7 — cierre parcial ✅ (03/11/2026)
+
+Las 52 deudas del backlog forense están resueltas (commits cdf6de4,
+f9e1c73, y los de CV e iconos). Dos hitos notables:
+
+- **Fase 2.1.b (CV + guardrail).** Validación cruzada k-fold
+  estratificada como modo alternativo (`Session.partition(scheme="cv",
+  k=...)`), con media ± desviación estándar sobre k folds y modelo
+  final entrenado con el 100% de los datos. Guardrail de imports
+  instalado también en la capa GUI (`frontend_v3.__init__`).
+- **B1 (iconos SVG).** 22 iconos de Bootstrap Icons v1.11.3 (MIT)
+  sustituyen a los `QStyle.StandardPixmap` en toolbar y wizard, con
+  recolocación automática al cambiar de tema.
+
+Pendiente formal antes de 1.0.0: decisión de distribución (PyPI solo
+/ + PyInstaller / + Inno Setup / + MSI / firma digital).
+
 ---
 
 ## 4. Arquitectura
@@ -671,7 +688,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (577 tests)
+├── tests/ # Suite de tests (603 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -794,20 +811,21 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | crt_engine.py | 27 |
 | quest_engine.py | 35 |
 | imputation.py | 5 |
-| splitting.py | 11 |
+| splitting.py | 14 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 95 |
+| session_state.py | 99 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
 | reporting.py | 28 |
-| gui_smoke (frontend) | 14 |
-| wizard (frontend) | 28 |
+| gui_smoke (frontend) | 20 |
+| icons (frontend) | 5 |
+| wizard (frontend) | 32 |
 | tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
-| e2e_mainwindow (frontend) | 11 |
-| reports_panel (frontend) | 13 |
+| e2e_mainwindow (frontend) | 12 |
+| reports_panel (frontend) | 15 |
 | prune_dialog (frontend) | 1 |
 | data_viewer (frontend) | 4 |
 | tree_map (frontend) | 7 |
@@ -829,9 +847,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | ecl.py (backend) | 4 |
 | ecl_dialog.py (frontend) | 3 |
 | mcp_ecl.py (backend/MCP) | 1 |
-| **Total** | **577** |
+| **Total** | **603** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 577/577 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 603/603 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -864,11 +882,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Backlog post-Fase 7 cerrado (03/11/2026).** Las 52 deudas
-documentadas en docs/roadmap.md (grupos T, F, U, V, P, N) están
-resueltas. Suite 577/577 PASSED. El repositorio está sincronizado con
-origin/main (commit 2021212). Próxima decisión: publicar 1.0.0
-estable en PyPI o iniciar la Fase 8.
+**Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
+Suite 603/603. CV k-fold, guardrail de imports en GUI e iconos SVG
+incorporados. La única decisión formal pendiente antes de publicar
+1.0.0 es el método de distribución (PyPI solo / + PyInstaller / +
+Inno Setup / + MSI / firma digital).
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 

@@ -727,6 +727,10 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | N6 | GUI | ECLDialog/scoring_dialogs sin tests de error (_on_error, _on_worker_failed) | ✅ Resuelto |
 | N7 | GUI | scoring_dialogs test mockea BatchWorker/CCWorker (sin E2E real) | ✅ Resuelto |
 | N8 | Docs | _FakeDialog de test_advanced_options no distingue wiring de comportamiento real | ✅ Resuelto |
+| A1 | Docs | Término neutro capture_rate en RESEARCH | ✅ Resuelto (cdf6de4) |
+| B2b | GUI | Guardrail de imports en frontend_v3 | ✅ Resuelto (f9e1c73) |
+| B2a | Backend | Cross-validation k-fold estratificado | ✅ Resuelto (este commit) |
+| B1 | GUI | Iconos SVG propios (Bootstrap Icons v1.11.3) en toolbar y wizard | ✅ Resuelto (commit 03efcad) |
 
 ## Recorded architectural decisions
 

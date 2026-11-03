@@ -4,7 +4,7 @@
     .venv\\Scripts\\python tests\\test_gui_smoke.py
 
 Headless: QT_QPA_PLATFORM defaults to offscreen here (setdefault, so a
-real display session keeps its platform). 17 tests: smoke + i18n.
+real display session keeps its platform). 20 tests: smoke + i18n + icons.
 """
 
 import ast
@@ -37,6 +37,7 @@ from frontend_v3.i18n import (  # noqa: E402
     tr,
 )
 from frontend_v3.main_window import MainWindow  # noqa: E402
+from frontend_v3.wizard import EnginePage, PredictorsPage  # noqa: E402
 from frontend_v3.theme import (  # noqa: E402
     apply_palette,
     apply_theme,
@@ -459,6 +460,51 @@ def test_hud_labels_translated():
         set_language(prev)
         w.close()
         w.deleteLater()
+
+
+def test_toolbar_icons_use_svg():
+    """Las acciones de toolbar tienen icono no nulo cargado desde SVG."""
+    _get_app()
+    w = MainWindow()
+    actions = [
+        action for action in w._toolbar.actions() if not action.isSeparator()
+    ]
+    assert len(actions) == 9
+    assert all(action.icon().isNull() is False for action in actions)
+    w.close()
+    w.deleteLater()
+
+
+def test_wizard_engine_icons_use_svg():
+    """Los 4 radios de motor tienen icono no nulo."""
+    _get_app()
+    page = EnginePage()
+    assert len(page._radios) == 4
+    assert all(radio.icon().isNull() is False for radio in page._radios.values())
+    page.close()
+    page.deleteLater()
+
+
+def test_wizard_move_buttons_have_icons():
+    """Los 4 botones de mover tienen icono no nulo."""
+    _get_app()
+    page = PredictorsPage(
+        ("target", "age", "segment"),
+        {
+            "target": "NOMINAL",
+            "age": "CONTINUOUS",
+            "segment": "NOMINAL",
+        },
+    )
+    buttons = (
+        page._btn_add,
+        page._btn_remove,
+        page._btn_add_all,
+        page._btn_remove_all,
+    )
+    assert all(button.icon().isNull() is False for button in buttons)
+    page.close()
+    page.deleteLater()
 
 
 if __name__ == "__main__":
