@@ -181,15 +181,25 @@ Tres reglas gobiernan el diseño:
 
 ## §4. tests/test_scripts.py
 
-Los tests viven en un solo archivo nuevo, `tests/test_scripts.py` (la suite pasa de 561 a 561 + 12). La red está prohibida por el invariante §7-2: `urllib.request.urlopen` y `time.sleep` se monkeypatchean siempre. Los fixtures son CSV sintéticos mínimos construidos en el propio test o en `tmp_path`, con cero dependencia de `data/uci/` y de las descargas reales. Los exit codes se fijan por contrato: `0` = al día, `1` = pendiente/regenerable en `--check`, `2` = error de datos (métrica None en V6); los abortos en mitad de flujo usan `RuntimeError`.
+Los tests viven en un solo archivo, `tests/test_scripts.py` (la suite pasa de 561 a 561 + 6 = 567). La red está prohibida por el invariante §7-2: `urllib.request.urlopen` se monkeypatchea siempre. Los fixtures son CSV y READMEs sintéticos construidos en `tmp_path`, con cero dependencia de `data/uci/`, de los READMEs reales y de las descargas. Los tests son argless y duales (`pytest` y `python tests/test_scripts.py`, `CONVENTIONS.md` §Tests); el aislamiento usa `tempfile.TemporaryDirectory` y `unittest.mock.patch`, sin fixtures de pytest. Los exit codes se fijan por contrato: `0` = al día, `1` = pendiente/regenerable en `--check`, `2` = error de datos (métrica None en V6); los abortos en mitad de flujo usan `RuntimeError`.
 
-- **fetch_datasets.py (4 tests):** (1) *idempotencia*: primera pasada descarga (urlopen fake); segunda pasada, con el mismo SHA-256 en disco y sidecar F1, no invoca urlopen y logea skip. (2) *mismatch de hash*: el contenido fake difiere del SHA del manifiesto → `RuntimeError` y sidecar no escrito. (3) *target_map incompleto*: dataset fake con un valor de target fuera del mapa → `RuntimeError` con dataset y valor (contrato F4). (4) *path anclado*: con cwd en `tmp_path`, la escritura cae bajo `REPO_ROOT / "data" / "uci"` y no bajo el cwd.
-- **update_readme_date.py (4 tests):** (5) *--check al día*: fecha vigente igual a la candidata → exit 0 y sin escritura (mtime invariado). (6) *--check desactualizado*: fecha vigente anterior → exit 1 y sin escritura. (7) *regex no matchea*: README fake con formato alterado → `RuntimeError` que menciona ruta y patrón (contrato U1). (8) *escritura atómica*: ambos targets escritos vía temp+rename; simulando el fallo del segundo rename, el primero queda restaurado al valor previo (contrato U2).
-- **validate_uci.py (4 tests):** (9) *--check al día*: informe vigente byte-a-byte → exit 0. (10) *--check desactualizado*: informe con una métrica alterada → exit 1. (11) *n_groups adaptativo*: dataset sintético con 30 filas de test → n_groups == 3 (contrato V1). (12) *target_type multiclase*: dataset fake tipo car (K=3) declarado CATEGORICAL → el informe usa semántica multiclase y no colapsa a BINARY (contratos V2/V8).
+Contratos as-built (6 tests, 2 por script):
+
+- **fetch_datasets.py (2 tests).**
+  - `test_fetch_parse_robust` (F3/F4): `process_row` recibe una fila ya particionada por `csv.reader`; mapea el target y lanza `ValueError` ("sin mapear") cuando el valor no está en `target_map`, nombrando dataset y valor; las filas en blanco devuelven `None`.
+  - `test_fetch_idempotency_and_hash` (F1/F5/F6): `urlopen` fake devuelve un CSV en memoria con su SHA-256 real; `DATA_DIR` y `LOG_PATH` se redirigen a `tmp_path` (y `setup_logging` se neutraliza para no dejar file handles abiertos); la primera pasada de `main()` crea `<name>.csv` + sidecar `<name>.csv.sha256` y llama a `urlopen` una vez; la segunda pasada no vuelve a descargar y emite el log de skip del logger `treegov.fetch`.
+- **update_readme_date.py (2 tests).**
+  - `test_update_readme_check_mode` (U4/U5): READMEs sintéticos en `tmp_path`; `--check --date` con la fecha vigente igual devuelve 0 y no escribe (bytes invariados); con la fecha vigente anterior devuelve 1 y tampoco escribe.
+  - `test_update_readme_atomic` (U2): con `os.replace` parcheado para fallar en el segundo rename, `run_mutate` lanza `RuntimeError` ("escritura atomica fallida"), restaura el primer target a su contenido previo, deja el segundo intacto y no deja `.tmp` huérfanos.
+- **validate_uci.py (2 tests).**
+  - `test_validate_n_groups_adaptive` (V1): `Session` parcheada con `test_idx` de 20 filas; `_run_one` pasa `n_groups == 4` a `evaluate_oos` (`min(10, max(3, 20 // 5))`) y la fila no queda en error.
+  - `test_validate_target_type` (V2): `Session` parcheada registra los kwargs de `train`; `car_evaluation` entrena con `TargetType.CATEGORICAL` y `german_credit` con `TargetType.BINARY`.
+
+**Reconciliación (02/11/2026).** El diseño inicial de §4 preveía 12 tests (4 por script) y el caso "30 filas de test → n_groups == 3". La fórmula V1 (`n_test // 5`) da 6 grupos con 30 filas; 3 grupos requieren 15 filas. El contrato as-built usa 20 filas → 4 grupos, que ejercita la fórmula sin depender de esa aritmética errónea. Los dos tests de `--check` de validate_uci previstos en el diseño inicial no viven aquí: se verificaron en el sanity de 1.d.1 (`_check_against_target` con informe idéntico/alterado y SHA-256 del informe invariado) para no reentrenar los 14 pares dentro de la suite.
 
 ## §5. Proceso (P1–P4)
 
-- **P1 — los tres scripts sin tests en pytest.** Se cierra con `tests/test_scripts.py` (§4): 12 tests, duales (ejecutables con `pytest` y con `python tests/test_scripts.py`, `CONVENTIONS.md` §Tests), sin red y sin dependencia de `data/uci/`. La suite pasa de 561 a 573 al cerrar la sub-fase 1.e.1.
+- **P1 — los tres scripts sin tests en pytest.** Se cierra con `tests/test_scripts.py` (§4): 6 tests, duales (ejecutables con `pytest` y con `python tests/test_scripts.py`, `CONVENTIONS.md` §Tests), sin red y sin dependencia de `data/uci/`. La suite pasa de 561 a 567 al cerrar la sub-fase 1.e.1.
 - **P2 — scripts/ ausente en árboles de READMEs.** El árbol de estructura de ambos READMEs incorpora la carpeta `scripts/` con una línea de descripción de los tres scripts y su rol de infraestructura de la Fase 3.6. Es un cambio cosmético: no dispara release (regla PyPI del 20/10/2026) y se agrupa en la sub-fase 1.f.1.
 - **P3 — scripts/ no empaquetado en pyproject.toml.** Decisión devenida en documentación explícita: los scripts NO se empaquetan en el wheel/sdist de PyPI porque son herramientas operativas del repo (descargas de auditoría, validación de fixtures, fechas de READMEs), no parte de la superficie pública importable de TreeGov. La decisión se registra en `docs/design_decisions.md` en el cierre 1.f.1.
 - **P4 — scripts/ sin guarda de escritura en data/ o archive/.** Los únicos targets de escritura legítimos de la Fase 1 son `data/uci/` (fetch) y `docs/validation_results_3.6.md` (validate). Se añade una guarda central en `scripts/` que bloquea toda escritura bajo `tests/fixtures/`, `archive/` y cualquier path no declarado como target canónico; la violación aborta con `RuntimeError` antes de abrir el file handler, con test que verifica la guarda.
@@ -201,16 +211,16 @@ Los tests viven en un solo archivo nuevo, `tests/test_scripts.py` (la suite pasa
 | 1.b.1 | fetch_datasets.py: F1–F8 (idempotencia sidecar, destino data/uci/, csv.reader, target_map con RuntimeError, logging, reintentos, workflow de hashes, anclaje __file__) | Los 8 contratos de §1 implementados; ejecución idempotente desde la raíz y desde scripts/ | `scripts/fetch_datasets.py` |
 | 1.c.1 | update_readme_date.py: U1–U6 (--check con exit 0/1, RuntimeError con patrón+ruta, temp+rename, guarda de retroceso, anclaje __file__) | Los 6 contratos de §2 implementados; modo --check verificable | `scripts/update_readme_date.py` |
 | 1.d.1 | validate_uci.py: V1–V12 (n_groups adaptativo, target_type explícito, --check, guarda de git, None→exit 2, CHAID 6/6, métricas por tipo, target_class justificada, PD_FLOOR, anclajes) | Los 12 contratos de §3 implementados; informe regenerado byte-a-byte sobre árbol limpio | `scripts/validate_uci.py`, `docs/validation_results_3.6.md` |
-| 1.e.1 | tests/test_scripts.py: 12 tests de §4 (4 fetch, 4 update_readme, 4 validate) | Suite de 561 a 573 PASSED; sin urlopen real; dual-mode | `tests/test_scripts.py` |
+| 1.e.1 | tests/test_scripts.py: 6 tests de §4 (2 fetch, 2 update_readme, 2 validate) | Suite de 561 a 567 PASSED; sin urlopen real; dual-mode | `tests/test_scripts.py` |
 | 1.f.1 | Cierre del bloque: READMEs (P2), pyproject (P3), checklist de cierre | Checklist de 8 documentos al día; fila roadmap del backlog actualizada (F/U/V/P → ✅) | `README.md`, `README.es.md`, `pyproject.toml`, `docs/design_decisions.md`, `docs/roadmap.md`, `docs/audit_log.md` |
 
 ## §7. Invariantes
 
-1. **Suite 561/561 entre sub-fases.** Ninguna sub-fase se commitea con la suite por debajo del conteo vigente (561 al momento de este diseño; 573 desde 1.e.1 en adelante).
-2. **Sin red real en tests.** Ninguno de los 12 tests de §4 abre sockets: `urlopen` y `time.sleep` se monkeypatchean siempre. Regla fijada aquí como invariante, compatible con `CONVENTIONS.md` §Tests.
+1. **Suite 561/561 entre sub-fases.** Ninguna sub-fase se commitea con la suite por debajo del conteo vigente (561 al momento de este diseño; 567 desde 1.e.1 en adelante).
+2. **Sin red real en tests.** Ninguno de los 6 tests de §4 abre sockets: `urlopen` se monkeypatchea siempre. Regla fijada aquí como invariante, compatible con `CONVENTIONS.md` §Tests.
 3. **Reproducibilidad byte-a-byte de `docs/validation_results_3.6.md`.** La regeneración del informe sobre un árbol limpio (guarda V5) debe producir un archivo idéntico byte a byte al vigente; `--check` es la herramienta sin escritura que lo verifica (exit 0 = idéntico).
 4. **No escrituras en `data/` fuera de `fetch_datasets.py`.** Ni validate_uci ni update_readme_date ni los tests escriben bajo `data/`; la guarda de P4 lo vuelve determinista, no una expectativa social.
-5. **No modificación de tests existentes salvo congelación de bug.** La Fase 1 no toca ningún test existente (ningún bug del backlog exige congelar un comportamiento falso); los 12 tests son adiciones puras en `tests/test_scripts.py`.
+5. **No modificación de tests existentes salvo congelación de bug.** La Fase 1 no toca ningún test existente (ningún bug del backlog exige congelar un comportamiento falso); los 6 tests son adiciones puras en `tests/test_scripts.py`.
 
 ## §8. Referencias
 
