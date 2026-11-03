@@ -12,23 +12,23 @@ that produced these results are available via
 
 | Dataset | Engine | Fingerprint | Nodes | Leaves | Gini | KS | AUC | Accuracy |
 |---|---|---|---|---|---|---|---|---|
-| german_credit | CRT | 85fc3fee3afe2015 | 9 | 5 | 0.4415 | 0.4079 | 0.7208 | 0.7100 |
-| german_credit | QUEST | 4cb2415a6ce26776 | 7 | 4 | 0.4182 | 0.4079 | 0.7091 | 0.6867 |
-| car_evaluation | CRT | 5c9c4ac311a2efc5 | 7 | 4 | 0.4660 | 0.0000 | 0.7330 | 0.7838 |
-| car_evaluation | CHAID | 2fef573e713c8b5b | 14 | 9 | 0.6264 | 0.4435 | 0.8132 | 0.7992 |
-| car_evaluation | QUEST | d52401118ea2078b | 7 | 4 | 0.4660 | 0.0000 | 0.7330 | 0.7838 |
-| balance_scale | CRT | d06048e406f9b220 | 13 | 7 | 0.4085 | 0.3050 | 0.7043 | 0.7219 |
-| balance_scale | CHAID | 464bb506b94b8e8b | 21 | 12 | 0.3955 | 0.2888 | 0.6977 | 0.6791 |
-| balance_scale | QUEST | 34678ed5eaa34241 | 13 | 7 | 0.3686 | 0.2609 | 0.6843 | 0.7219 |
-| breast_cancer_wdbc | CRT | e46011f55ed957bf | 3 | 2 | 0.7595 | 0.7595 | 0.8797 | 0.9006 |
-| breast_cancer_wdbc | QUEST | 389f70f0fba1a180 | 7 | 4 | 0.8188 | 0.7596 | 0.9094 | 0.8889 |
-| iris | CRT | cbc4051bc41e628a | 5 | 3 | 0.9556 | 0.8667 | 0.9778 | 0.9556 |
-| iris | QUEST | 32a5ee7f69260fed | 5 | 3 | 0.9778 | 0.9333 | 0.9889 | 0.9778 |
-| blood_transfusion | CRT | 4bbeec6ddda3d774 | 11 | 6 | 0.4359 | 0.3584 | 0.7180 | 0.7634 |
-| blood_transfusion | QUEST | cd6b4399350c44e4 | 7 | 4 | 0.3877 | 0.3740 | 0.6939 | 0.7500 |
+| german_credit | CRT | 446828aabc058614 | 9 | 5 | 0.4415 | 0.4079 | 0.7208 | 0.7100 |
+| german_credit | QUEST | 2859f6c5a0b6b9bd | 7 | 4 | 0.4182 | 0.4079 | 0.7091 | 0.6867 |
+| car_evaluation | CRT | 6cf501a3bbd9a52e | 7 | 4 | 0.4660 | 0.0000 | 0.7330 | 0.7838 |
+| car_evaluation | CHAID | 5338999051a797a1 | 14 | 9 | 0.6264 | 0.4435 | 0.8132 | 0.7992 |
+| car_evaluation | QUEST | 73b70052738ce671 | 7 | 4 | 0.4660 | 0.0000 | 0.7330 | 0.7838 |
+| balance_scale | CRT | a09f3f34dc301b8f | 13 | 7 | 0.4085 | 0.3050 | 0.7043 | 0.7219 |
+| balance_scale | CHAID | 877a6e1e3fa28697 | 21 | 12 | 0.3955 | 0.2888 | 0.6977 | 0.6791 |
+| balance_scale | QUEST | 0ebe693b7eb51653 | 13 | 7 | 0.3686 | 0.2609 | 0.6843 | 0.7219 |
+| breast_cancer_wdbc | CRT | dcaa012993a65f8f | 3 | 2 | 0.7595 | 0.7595 | 0.8797 | 0.9006 |
+| breast_cancer_wdbc | QUEST | 24cb11d933da55c6 | 7 | 4 | 0.8188 | 0.7596 | 0.9094 | 0.8889 |
+| iris | CRT | 219eed39e7117a49 | 5 | 3 | 0.9556 | 0.8667 | 0.9778 | 0.9556 |
+| iris | QUEST | cafc73dcf547ec12 | 5 | 3 | 0.9778 | 0.9333 | 0.9889 | 0.9778 |
+| blood_transfusion | CRT | fc203ac81f15cea6 | 11 | 6 | 0.4359 | 0.3584 | 0.7180 | 0.7634 |
+| blood_transfusion | QUEST | eb420400fbbbf0fc | 7 | 4 | 0.3877 | 0.3740 | 0.6939 | 0.7500 |
 
 ## Revision notes
 
-### 2026-10-25 — Fingerprints recapturados
+### 2026-11-02 — Fingerprints recapturados
 
-Los fingerprints actuales fueron generados con el código de tree_builder.py del commit del 2026-10-25.
+Los fingerprints actuales fueron generados con el código de tree_builder.py del commit del 2026-11-02.
