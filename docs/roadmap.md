@@ -730,7 +730,7 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | A1 | Docs | Término neutro capture_rate en RESEARCH | ✅ Resuelto (cdf6de4) |
 | B2b | GUI | Guardrail de imports en frontend_v3 | ✅ Resuelto (f9e1c73) |
 | B2a | Backend | Cross-validation k-fold estratificado | ✅ Resuelto (este commit) |
-| B1 | GUI | Iconos SVG propios (Bootstrap Icons v1.11.3) en toolbar y wizard | ✅ Resuelto (commit 03efcad) |
+| B1 | GUI | Iconos SVG propios (Bootstrap Icons v1.11.3) en toolbar y wizard | ✅ Resuelto (commit 5681386) |
 
 ## Recorded architectural decisions
 
