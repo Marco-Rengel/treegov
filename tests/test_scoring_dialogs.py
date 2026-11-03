@@ -7,6 +7,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import pytest  # noqa: E402
+from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
@@ -119,6 +120,90 @@ def test_batch_dialog_run_mocked(tmp_path):
             assert dialog._progress.minimum() == 0
             assert dialog._progress.maximum() == 0
     finally:
+        dialog._set_running(False)
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_batch_dialog_run_real_worker(tmp_path):
+    """N7: a real BatchWorker scores a CSV and reports GUI success."""
+    _get_app()
+    set_language("en")
+    session, _ = _setup_session(tmp_path)
+    input_path = tmp_path / "score_input.csv"
+    output_path = tmp_path / "scored_real.csv"
+    pd.DataFrame(
+        {"edad": [25, 45, 55], "seg": ["A", "B", "C"]}
+    ).to_csv(input_path, index=False)
+
+    dialog = BatchScoringDialog(session)
+    worker = None
+    try:
+        dialog._input_edit.setText(str(input_path))
+        dialog._output_edit.setText(str(output_path))
+        assert dialog._run_button.isEnabled()
+
+        with patch(
+            "frontend_v3.scoring_dialogs.QMessageBox.information"
+        ) as information:
+            dialog._run_button.click()
+            worker = dialog._worker
+            assert worker is not None
+            assert worker.wait(5000)
+            QTest.qWait(100)
+
+            information.assert_called_once()
+            args = information.call_args.args
+            assert args[0] is dialog
+            assert args[1] == tr("batch_success_title")
+            assert output_path.name in args[2]
+
+        assert output_path.exists()
+        assert len(pd.read_csv(output_path)) == 3
+        assert not dialog._running
+    finally:
+        if worker is not None and worker.isRunning():
+            assert worker.wait(5000)
+        dialog._set_running(False)
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_batch_dialog_missing_file_shows_critical(tmp_path):
+    """N6: a real worker failure reaches the critical error message box."""
+    _get_app()
+    set_language("en")
+    session, _ = _setup_session(tmp_path)
+    missing_path = tmp_path / "missing_input.csv"
+    output_path = tmp_path / "unused_output.csv"
+
+    dialog = BatchScoringDialog(session)
+    worker = None
+    try:
+        dialog._input_edit.setText(str(missing_path))
+        dialog._output_edit.setText(str(output_path))
+        assert dialog._run_button.isEnabled()
+
+        with patch(
+            "frontend_v3.scoring_dialogs.QMessageBox.critical"
+        ) as critical:
+            dialog._run_button.click()
+            worker = dialog._worker
+            assert worker is not None
+            assert worker.wait(5000)
+            QTest.qWait(100)
+
+            critical.assert_called_once()
+            args = critical.call_args.args
+            assert args[0] is dialog
+            assert args[1] == tr("msg_error_title")
+            assert missing_path.name in args[2]
+
+        assert not dialog._running
+        assert dialog._run_button.isEnabled()
+    finally:
+        if worker is not None and worker.isRunning():
+            assert worker.wait(5000)
         dialog._set_running(False)
         dialog.close()
         dialog.deleteLater()

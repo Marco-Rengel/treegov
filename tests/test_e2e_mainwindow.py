@@ -53,11 +53,12 @@ def _quiet_logger(name: str = "treegov.e2e") -> logging.Logger:
 def _make_csv(path: Path, n: int = 300, seed: int = 42) -> Path:
     """Deterministic synthetic CSV: target is `default` = 1_{edad >= 40}."""
     rng = np.random.default_rng(seed)
+    edad = rng.integers(20, 60, size=n)
     df = pd.DataFrame({
-        "edad": rng.integers(20, 60, size=n),
+        "edad": edad,
         "seg": rng.choice(["a", "b", "c"], size=n),
         "ratio": rng.uniform(0.1, 0.9, size=n),
-        "default": (rng.integers(20, 60, size=n) >= 40).astype(int),
+        "default": (edad >= 40).astype(int),
     })
     df.to_csv(path, index=False)
     return path
@@ -70,11 +71,12 @@ def _make_csv_population(path: Path, n: int = 300, seed: int = 42) -> Path:
     romper consumidores existentes, y añade `pop`.
     """
     rng = np.random.default_rng(seed)
+    edad = rng.integers(20, 60, size=n)
     df = pd.DataFrame({
-        "edad": rng.integers(20, 60, size=n),
+        "edad": edad,
         "seg": rng.choice(["a", "b", "c"], size=n),
         "ratio": rng.uniform(0.1, 0.9, size=n),
-        "default": (rng.integers(20, 60, size=n) >= 40).astype(int),
+        "default": (edad >= 40).astype(int),
     })
     n_ok = int(round(n * 0.60))
     n_indet = int(round(n * 0.25))
@@ -145,7 +147,7 @@ def _open_window(csv_path: Path) -> MainWindow:
 
 
 # ---------------------------------------------------------------------------
-# E2E tests (5)
+# E2E tests (11)
 # ---------------------------------------------------------------------------
 
 
@@ -246,21 +248,18 @@ def test_e2e_inversion_recovery_full_flow():
     reversion via inversion_requested corrige el modelo reentrenando
     con el mismo cfg.
 
-    Nota: el target de _make_csv es ruido independiente de los
-    predictores, asi que el Gini OOS cae cerca de 0 por azar; con el
-    dataset determinista (seed=42) es target_class=1 quien da gini
-    negativo (-0.156) y target_class=0 el positivo (+0.156), al reves
-    de lo que sugiere la intuicion. El test arranca por tanto en
-    target_class=1 y la reversion corrige a target_class=0.
+    Nota: el target de _make_csv depende deterministicamente de edad.
+    Con target_class=0 la clase de interes queda invertida y el Gini OOS
+    es negativo; la reversion a target_class=1 lo corrige.
     """
     with tempfile.TemporaryDirectory() as td:
         csv = _make_csv(Path(td) / "mini.csv")
         w = _open_window(csv)
         try:
-            cfg_invertido = dict(_cfg(), target_class=1)
+            cfg_invertido = dict(_cfg(), target_class=0)
             w._on_wizard_finished(cfg_invertido)
             assert w._session.state.tree is not None
-            assert w._session.state.target_class == 1
+            assert w._session.state.target_class == 0
             w._on_evaluate_oos()
             # Badge + boton activos (gini OOS negativo)
             assert w._metrics_panel._invert_button is not None
@@ -272,10 +271,10 @@ def test_e2e_inversion_recovery_full_flow():
             w._metrics_panel.inversion_requested.emit()
             st = w._session.state
             assert st.state.name == "TRAINED"
-            assert st.target_class == 0
+            assert st.target_class == 1
             assert st.tree is not None
             assert st.tree.params_fingerprint != fp_antes
-            assert w._last_train_cfg["target_class"] == 0
+            assert w._last_train_cfg["target_class"] == 1
             # A1: el HUD de gobernanza refleja el fingerprint post-inversión
             assert w._hud_lbl_gov_fp.text() != fp_antes
         finally:

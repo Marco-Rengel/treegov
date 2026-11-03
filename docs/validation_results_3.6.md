@@ -32,3 +32,15 @@ that produced these results are available via
 ### 2026-11-02 — Fingerprints recapturados
 
 Los fingerprints actuales fueron generados con el código de tree_builder.py del commit del 2026-11-02.
+
+### 2026-11-03 — Por qué car_evaluation (CRT/QUEST) tiene KS = 0.0
+
+El KS multiclase es el mínimo de los KS por par (decisión D4 en
+`docs/3.5_design_multiclass_weighted_reports.md` §2.3). Con `max_depth=3` y
+`min_child_size=50`, el árbol no puede aislar las clases minoritarias
+`good` (~48 filas en train) ni `vgood` (~46 filas): ambas caen en las mismas
+hojas. El par (good, vgood) produce `ks_pair = 0.0`, y al ser el mínimo,
+arrastra el KS agregado a 0.0. Esto no indica un fallo del modelo: el AUC
+de Hand & Till (0.7330) mide el rendimiento agregado y es el indicador
+correcto en K>2. CHAID sí separa ese par (tiene 9 hojas), por eso su KS es
+0.4435.

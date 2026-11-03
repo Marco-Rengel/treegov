@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -31,7 +32,7 @@ from frontend_v3.i18n import (  # noqa: E402
     tr,
 )
 from frontend_v3.main_window import MainWindow  # noqa: E402
-from frontend_v3.wizard import ModelWizard  # noqa: E402
+from frontend_v3.wizard import AdvancedOptionsDialog, ModelWizard  # noqa: E402
 
 _COLS = ("default", "edad", "seg", "ingreso")
 _TYPES = {
@@ -397,6 +398,7 @@ def test_mainwindow_wizard_config_trains():
             "weight_col": None,
             "population_col": None,
             "population_ok_values": (),
+            "cost_matrix": (),
             "train_frac": 0.7, "seed": 42,
             "max_depth": 4, "min_child_size": 5,
             "min_child_weight": None,
@@ -723,7 +725,6 @@ def test_wizard_advanced_options_update_config():
     la página; el diálogo modal 'Opciones avanzadas...' edita Stopping
     Rules y sus valores fluyen a current_config() al aceptar."""
     from PySide6.QtWidgets import QDialog
-    import frontend_v3.wizard as wz
 
     wiz = _make_wizard()
     page = wiz.page_governance
@@ -735,8 +736,8 @@ def test_wizard_advanced_options_update_config():
     assert not hasattr(page, "_spin_depth")
     assert not hasattr(page, "_spin_child")
 
-    # el diálogo se construye con los valores vigentes y los expone
-    dlg = wz.AdvancedOptionsDialog(
+    # el diálogo real se construye con los valores vigentes y los expone
+    dlg = AdvancedOptionsDialog(
         max_depth=page._max_depth,
         min_child_size=page._min_child_size,
         min_child_weight=page._min_child_weight,
@@ -757,26 +758,18 @@ def test_wizard_advanced_options_update_config():
     dlg.close()
     dlg.deleteLater()
 
-    # wiring de la página: Accept -> current_config() actualizado
-    class _FakeDialog:
-        def __init__(self, **kwargs):
-            pass
+    # N8: solo se evita el bucle modal; construcción, edición, accept(),
+    # values() y get_cost_matrix() pertenecen al diálogo real.
+    def _edit_and_accept(dialog):
+        dialog._spin_depth.setValue(8)
+        dialog._spin_child.setValue(200)
+        dialog._spin_min_child_weight.setValue(3.0)
+        dialog.accept()
+        return QDialog.DialogCode.Accepted
 
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-        def values(self):
-            return (8, 200, 3.0)
-
-        def get_cost_matrix(self):
-            return ((0.0, 0.0), (0.0, 0.0))
-
-    original = wz.AdvancedOptionsDialog
-    wz.AdvancedOptionsDialog = _FakeDialog
-    try:
+    with patch.object(AdvancedOptionsDialog, "exec", _edit_and_accept):
         page._open_advanced_options()
-    finally:
-        wz.AdvancedOptionsDialog = original
+
     cfg2 = wiz.current_config()
     assert cfg2["max_depth"] == 8
     assert cfg2["min_child_size"] == 200

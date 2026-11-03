@@ -7392,3 +7392,123 @@ Kimi comodín).
 **Tests**: **575/575 PASSED** (`python -m pytest tests -q`).
 
 **Referencias cruzadas**: `docs/audit_log.md` entradas inmediatamente anteriores del bloque backend N1/N2/T11 y de la tasa binaria sobre el código canónico 0; `docs/roadmap.md` (deudas N1 y N2).
+
+### 02/11/2026 — Mini-cierre: señal determinista en fixtures E2E de MainWindow
+
+**Estado**: Corrección de tests aplicada; suite 575/575 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `tests/test_e2e_mainwindow.py`, `docs/audit_log.md`.
+
+**Hallazgos**: `_make_csv` y `_make_csv_population` generaban `default` a partir de una segunda muestra aleatoria de edad, independiente del predictor `edad`. Ambos fixtures derivan ahora el target de la columna `edad` efectivamente almacenada. El contador de pruebas E2E refleja las 11 funciones existentes. `test_e2e_inversion_recovery_full_flow` parte de `target_class=0` para provocar el Gini negativo y verifica la recuperación mediante la inversión a `target_class=1`. No se modificó código de producción.
+
+**Tests**: `tests/test_e2e_mainwindow.py`: **11/11 PASSED**. Suite completa: **575/575 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `tests/test_e2e_mainwindow.py::test_e2e_inversion_recovery_full_flow`; `frontend_v3/main_window.py::MainWindow._on_inversion_requested` (flujo E2E de la Fase 3.1.f).
+
+### 02/11/2026 — N4: endurecimiento de métricas en integración UCI (bloqueado por KS)
+
+**Estado**: Aserciones solicitadas aplicadas; suite roja por discrepancia empírica con el umbral KS indicado.
+
+**Artefactos tocados (rutas exactas)**: `tests/test_uci_integration.py`, `docs/audit_log.md`.
+
+**Hallazgos**: `_check_dataset` verifica ahora `ks > 0.25` y `auc > 0.65`, además del Gini previo. La ejecución real contradice la premisa de que el umbral KS es seguro: `test_uci_car_evaluation` (CRT) y `test_uci_car_evaluation_quest` obtienen ambos `ks=0.0`, con `auc=0.7329919750868368` y `gini=0.46598395017367356`. Los otros 12 tests UCI superan las tres aserciones. No se alteraron umbrales ni código de producción.
+
+**Tests**: `tests/test_uci_integration.py`: **12 passed, 2 failed**. Suite completa: **573 passed, 2 failed** (`python -m pytest tests -q`); ambos fallos corresponden exclusivamente a la nueva guarda KS de `car_evaluation`.
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, deuda N4); `tests/test_uci_integration.py::_check_dataset`.
+
+### 02/11/2026 — N3/N6/N7/N8: configuración del wizard y pruebas reales de scoring
+
+**Estado**: Correcciones de tests verificadas; los dos fallos UCI de N4 permanecen aislados y sin cambios.
+
+**Artefactos tocados (rutas exactas)**: `tests/test_wizard.py`, `tests/test_scoring_dialogs.py`, `docs/audit_log.md`.
+
+**Hallazgos**: el cfg manual de `test_mainwindow_wizard_config_trains` incluye ahora `cost_matrix=()`, como el cfg emitido por el wizard. `test_wizard_advanced_options_update_config` usa el `AdvancedOptionsDialog` real: solo se sustituye `exec()` para evitar el bucle modal, mientras la edición de spinboxes, `accept()`, `values()` y la propagación a `current_config()` ejercitan el comportamiento real. Se añadieron dos pruebas de `BatchScoringDialog` con `BatchWorker` real: scoring de un CSV temporal con creación del archivo de salida y mensaje de éxito, y ruta inexistente con invocación de `QMessageBox.critical` y recuperación del estado del formulario. Ambos hilos se esperan explícitamente. No se modificó código de producción.
+
+**Tests**: `tests/test_wizard.py` + `tests/test_scoring_dialogs.py`: **39/39 PASSED**. Suite completa: **575 passed, 2 failed** (`python -m pytest tests -q`); los únicos fallos son los dos casos `car_evaluation` ya documentados en N4 (`ks=0.0`), sin regresiones adicionales.
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, deudas N3, N6, N7 y N8); `docs/audit_log.md` entrada N4 inmediatamente anterior; `frontend_v3/wizard.py::GovernancePage._open_advanced_options`; `frontend_v3/scoring_dialogs.py::BatchScoringDialog`.
+
+### 03/11/2026 — N4 resuelto: aserción UCI multiclase-aware
+
+**Estado**: ✅ Resuelto. Suite **577/577 PASSED**.
+
+**Modelo**: OpenCode + Kimi K3.1 Pro, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: el prompt 6.2 añadió `assert metrics.ks > 0.25` uniforme en
+`tests/test_uci_integration.py::_check_dataset`. Falla en `car_evaluation`
+con CRT y QUEST con `ks = 0.0`.
+
+**Diagnóstico (el test estaba mal calibrado, no el código)**:
+- `car_evaluation` es K=4: unacc (1210), acc (384), good (~48 en train),
+  vgood (~46 en train).
+- `min_child_size=50` impide aislar las dos clases minoritarias en ramas
+  propias.
+- Con `max_depth=3`, CRT y QUEST producen 4 hojas; good y vgood caen en las
+  mismas hojas.
+- El KS multiclase es el MÍNIMO de los KS por par (decisión D4). El par
+  (good, vgood) da 0.0 porque todas sus filas comparten score; al ser el
+  mínimo, arrastra el KS agregado a 0.0.
+- El AUC de Hand & Till sí discrimina (0.7330), y es el indicador agregado
+  correcto en K>2.
+- CHAID tiene 9 hojas y separa el par: KS=0.4435.
+- El código de `backend_v3/validation.py` es correcto. La aserción del
+  test era la incorrecta.
+
+**Fix aplicado**: en `_check_dataset`, la aserción de KS pasa a ser
+multiclase-aware: `auc > 0.65` para todos; `ks > 0.25` solo en K=2; en K>2
+basta con `ks is not None`. Cero cambios en `backend_v3/`.
+
+**Verificación**: `tests/test_uci_integration.py` → 14/14 PASSED. Suite
+completa → **577/577 PASSED** (2 fallos previos de `car_evaluation`
+convertidos en verdes).
+
+**Referencias**: `docs/design_decisions.md` §7.7 (simetrización KS);
+`docs/3.5_design_multiclass_weighted_reports.md` §2.3 (D4: KS = mínimo por
+par); `docs/validation_results_3.6.md` tabla `car_evaluation` (KS=0.0000);
+`backend_v3/validation.py` camino multiclase.
+
+### 03/11/2026 — Cierre documental del bloque 6 (T12, T13, T14, N3, N5, N6, N7, N8)
+
+**Estado**: ✅ Resuelto. Suite **577/577 PASSED**.
+
+**Modelo**: OpenCode + Kimi K3.1 Pro, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: los tres prompts del bloque 6 se ejecutaron el 02/11/2026
+(Kimi) pero el commit estaba condicionado a suite verde. La suite quedó
+en 2 failed por N4 (aserción KS uniforme en car_evaluation con CRT/QUEST).
+Por eso el commit del bloque 6 no se hizo y su cierre documental quedó
+bloqueado. Esta entrada lo resuelve en retrospectiva.
+
+**Cambios de código aplicados el 02/11/2026** (presentes en el working
+tree, no commiteados hasta hoy):
+- `tests/test_e2e_mainwindow.py` — target `default` derivado de
+  `(edad >= 40)` en `_make_csv` y `_make_csv_population`; docstring de
+  cabecera actualizado de "E2E tests (5)" a "E2E tests (11)";
+  `test_e2e_inversion_recovery_full_flow` ahora entrena con
+  `target_class=0` para provocar Gini negativo con señal real.
+- `tests/test_wizard.py` — `cost_matrix=()` añadido al cfg manual de
+  `test_mainwindow_wizard_config_trains`; `AdvancedOptionsDialog` real
+  sustituye al `_FakeDialog` en `test_wizard_advanced_options_update_config`;
+  `test_wizard_finish_emits_config` con provider emitiendo target_class
+  coherente.
+- `tests/test_scoring_dialogs.py` — E2E real con `BatchWorker` sobre un
+  CSV temporal; test de error con archivo inexistente verificando
+  `QMessageBox.critical`; los hilos se esperan explícitamente.
+
+**Verificación al cierre**:
+- `tests/test_uci_integration.py` → 14/14 PASSED (N4 resuelto, ver
+  entrada separada del 03/11/2026).
+- Suite completa → 577/577 PASSED.
+- `git diff --stat backend_v3/` → vacío.
+- `git diff --stat docs/design_decisions.md docs/api.md docs/playbook.md`
+  → vacío.
+- `git diff docs/audit_log.md` → solo adiciones.
+
+**Referencias**: prompts del bloque 6 (Kimi, 02/11/2026); entrada
+"03/11/2026 — N4 resuelto" (esta bitácora); `docs/roadmap.md` (filas
+T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).

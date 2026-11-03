@@ -144,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 575/575 PASSED
+**Suite de tests:** 577/577 PASSED
 
 ## Entorno de desarrollo
 
@@ -293,7 +293,7 @@ release; este bloque es exclusivamente documental y no cambia la versión public
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **575/575 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
+**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **577/577 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
 
 **Fase 6.0 — Batch scoring y Champion-Challenger: ✅ cerrada (02/11/2026).** Backend por chunks con escritura atómica anti-overwrite, comparación sobre población común, dos diálogos GUI y dos nuevas tools MCP (26 en total). Diseño as-built: `docs/6.0_design_batch_scoring.md` §6; decisión: `docs/design_decisions.md` §21.
 

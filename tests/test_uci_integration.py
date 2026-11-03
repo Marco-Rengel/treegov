@@ -138,6 +138,16 @@ def _check_dataset(name, engine="CRT"):
     assert tree.params_fingerprint == exp["fingerprint"]
     assert len(tree.nodes) == exp["nodes"]
     assert metrics.gini is not None and metrics.gini > 0.3
+    assert metrics.auc is not None and metrics.auc > 0.65
+    assert metrics.ks is not None
+    # KS multiclase: mínimo de los pares (decisión D4). Un par no separable
+    # por min_child_size (good/vgood en car_evaluation con max_depth=3)
+    # puede dar 0.0 aunque el modelo discrimine bien. En K=2 el KS
+    # coincide con el binario y sigue siendo exigible.
+    if len(tree.class_labels) == 2:
+        assert metrics.ks > 0.25, (
+            f"{name}/{engine}: KS binario <= 0.25 (ks={metrics.ks})"
+        )
 
 
 def test_uci_german_credit():

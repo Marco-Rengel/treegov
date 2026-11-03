@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 02/11/2026 (Fase 7.0 cerrada; suite 561/561; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 03/11/2026 (N4 resuelto; suite 577/577; release 1.0.0rc5 vigente)
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -671,7 +671,7 @@ TreeGov/
 │ # (app, main_window, wizard, tree_view,
 │ # metrics_panel, reports_panel, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (561 tests)
+├── tests/ # Suite de tests (577 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -829,9 +829,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | ecl.py (backend) | 4 |
 | ecl_dialog.py (frontend) | 3 |
 | mcp_ecl.py (backend/MCP) | 1 |
-| **Total** | **561** |
+| **Total** | **577** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 561/561 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 577/577 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 

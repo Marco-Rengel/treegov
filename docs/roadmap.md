@@ -685,9 +685,9 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | T9 | GUI | HUD sin set_governance_mode; RESEARCH sin cobertura en ReportsPanel/MetricsPanel | ✅ Resuelto |
 | T10 | GUI | _on_tree_context_menu con confirmación BANKING en español hardcodeado | ✅ Resuelto |
 | T11 | Backend | _last_train_params sin max_depth; D9 no se cumple en compare_champion_challenger | ⏳ Pendiente |
-| T12 | Docs | _make_csv E2E genera target ruido, no 1_{edad>=40} | ⏳ Pendiente |
-| T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ⏳ Pendiente |
-| T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ⏳ Pendiente |
+| T12 | Docs | _make_csv E2E genera target ruido, no 1_{edad>=40} | ✅ Resuelto |
+| T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ✅ Resuelto |
+| T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ✅ Resuelto |
 | T15 | GUI | step2_subtitle dice "binary target" con target K>=3 | ✅ Resuelto |
 | F1 | Scripts | fetch_datasets.py idempotencia prometida no implementada | ✅ Resuelto |
 | F2 | Scripts | fetch_datasets.py escribe en tests/fixtures/uci/ en lugar de data/uci/ | ✅ Resuelto |
@@ -721,12 +721,12 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | P4 | Proceso | scripts/ sin guarda de escritura en data/ o archive/ | ✅ Resuelto |
 | N1 | Backend | target_type no entra en _fingerprint y no se valida contra K | ⏳ Pendiente |
 | N2 | Backend | crt_engine._rates_cls para K=2 usa clase 1 sorted, no target_class | ⏳ Pendiente |
-| N3 | Docs | test_mainwindow_wizard_config_trains usa cfg que el wizard nunca produce | ⏳ Pendiente |
-| N4 | Docs | test_uci_integration._check_dataset solo verifica gini>0.3 | ⏳ Pendiente |
-| N5 | Docs | test_wizard_finish_emits_config sin provider emite target_class=None | ⏳ Pendiente |
-| N6 | GUI | ECLDialog/scoring_dialogs sin tests de error (_on_error, _on_worker_failed) | ⏳ Pendiente |
-| N7 | GUI | scoring_dialogs test mockea BatchWorker/CCWorker (sin E2E real) | ⏳ Pendiente |
-| N8 | Docs | _FakeDialog de test_advanced_options no distingue wiring de comportamiento real | ⏳ Pendiente |
+| N3 | Docs | test_mainwindow_wizard_config_trains usa cfg que el wizard nunca produce | ✅ Resuelto |
+| N4 | Docs | test_uci_integration._check_dataset solo verifica gini>0.3 | ✅ Resuelto |
+| N5 | Docs | test_wizard_finish_emits_config sin provider emite target_class=None | ✅ Resuelto |
+| N6 | GUI | ECLDialog/scoring_dialogs sin tests de error (_on_error, _on_worker_failed) | ✅ Resuelto |
+| N7 | GUI | scoring_dialogs test mockea BatchWorker/CCWorker (sin E2E real) | ✅ Resuelto |
+| N8 | Docs | _FakeDialog de test_advanced_options no distingue wiring de comportamiento real | ✅ Resuelto |
 
 ## Recorded architectural decisions
 
