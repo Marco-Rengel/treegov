@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from frontend_v3.app import create_app  # noqa: E402
-from frontend_v3.i18n import set_language, tr, _STRINGS  # noqa: E402
+from frontend_v3.i18n import get_language, set_language, tr, _STRINGS  # noqa: E402
 from frontend_v3.reports_panel import ReportsPanel  # noqa: E402
 
 
@@ -285,6 +285,43 @@ def test_matrix_title_binary_when_k2():
     assert panel._matrix_title.text() == tr("reports_matrix_title")
     panel.close()
     panel.deleteLater()
+
+
+def test_export_html_research_uses_neutral_capture_rate():
+    _get_app()
+    previous = get_language()
+    panel = ReportsPanel()
+    try:
+        panel.set_classification_matrix(_sample_matrix_dto())
+        panel.set_governance_mode("RESEARCH")
+        for lang in ("en", "es"):
+            set_language(lang)
+            html = panel._build_report_html()
+            assert tr("term_research_capture_rate") in html
+            assert "Bad capture rate" not in html
+            assert tr("reports_matrix_bad_capture_rate") not in html
+    finally:
+        panel.close()
+        panel.deleteLater()
+        set_language(previous)
+
+
+def test_export_html_banking_keeps_bad_capture_rate():
+    _get_app()
+    previous = get_language()
+    panel = ReportsPanel()
+    try:
+        set_language("en")
+        panel.set_classification_matrix(_sample_matrix_dto())
+        panel.set_governance_mode("BANKING")
+        html = panel._build_report_html()
+        assert "Bad capture rate" in html
+        assert tr("reports_matrix_bad_capture_rate") in html
+        assert tr("term_research_capture_rate") not in html
+    finally:
+        panel.close()
+        panel.deleteLater()
+        set_language(previous)
 
 
 # ---------------------------------------------------------------------------

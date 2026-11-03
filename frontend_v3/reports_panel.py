@@ -519,7 +519,7 @@ class ReportsPanel(QWidget):
         parts.append("<table><tbody>")
         for key in self._MATRIX_METRICS:
             parts.append(
-                f"<tr><td class='label'>{esc(tr('reports_matrix_' + key))}</td>"
+                f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_' + key))}</td>"
                 f"<td>{esc(matrix.get(key))}</td></tr>"
             )
         parts.append("</tbody></table>")
@@ -748,9 +748,6 @@ class ReportsPanel(QWidget):
         `reports_sum_bad_rate_global`). BANKING conserva tr(key)
         intacto (paridad; los tests existentes aserten sobre el HTML
         en modo por defecto).
-        TODO(zona_gris): `reports_matrix_bad_capture_rate` sigue siendo
-        bancario en RESEARCH ("Bad capture rate"); requiere clave neutra
-        propia (diferido al cierre de la Fase 3.6.e).
         """
         if self._mode != "RESEARCH":
             return tr(key)
@@ -762,6 +759,7 @@ class ReportsPanel(QWidget):
             "reports_matrix_pred_bad": tr_term("event", self._mode),
             "reports_matrix_actual_good": tr_term("no_event", self._mode),
             "reports_matrix_actual_bad": tr_term("event", self._mode),
+            "reports_matrix_bad_capture_rate": tr("term_research_capture_rate"),
         }
         return mapping.get(key, tr(key))
 
