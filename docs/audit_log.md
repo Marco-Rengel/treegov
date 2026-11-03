@@ -7223,3 +7223,26 @@ Kimi comodín).
 
 **Referencias cruzadas**: `docs/7.0_design_ifrs9.md` §5–§6; `docs/api.md` §`backend_v3.ecl` y §`backend_v3.session_state`; `docs/design_decisions.md` §22; `backend_v3/ecl.py`; `backend_v3/session_state.py::Session.calculate_ecl`; cierres de Fase 7, Tandas A y B, en las entradas anteriores de `docs/audit_log.md`.
 
+### 02/11/2026 — Auditoría forense post-Fase 7 y registro del backlog de zonas grises
+
+**Estado**: ✅ Cerrada (registro documental, sin cambios de código).
+
+**Modelo**: OpenCode v2.2.5 + GLM-5.3-Flash-Free (max).
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Auditoría forense de 8 archivos críticos (session_state, scoring, ecl, exporters, main_window, scoring_dialogs, ecl_dialog, tree_view) y de 6 tandas de documentación (todos los .md de docs/, READMEs, pyproject.toml, AGENTS.md, CONVENTIONS.md) ejecutada el 02/11/2026. Se detectaron 52 deudas no capturadas por la suite 561/561: T1–T15 (transversales), F1–F8 (fetch_datasets.py), U1–U6 (update_readme_date.py), V1–V12 (validate_uci.py), P1–P4 (proceso), N1–N8 (hallazgos derivados de tests). T4 (opencode.json con doble -free) se cerró como falso positivo: el archivo real de la raíz no tiene el typo. El inventario completo con descripción por ID vive en docs/roadmap.md sección "Deferred (no blocking current work)" subsección "⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026". Resumen por categoría: 9 GUI (T5, T6, T7, T8, T9, T10, T15, N6, N7), 11 Docs (T1, T2, T3, T12, T13, T14, N3, N4, N5, N8, T4→falso positivo), 8 Scripts fetch (F1–F8), 6 Scripts update_readme (U1–U6), 12 Scripts validate_uci (V1–V12), 4 Proceso (P1–P4), 3 Backend (T11, N1, N2). T4 excluido del recuento activo.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `docs/roadmap.md` — nueva subsección en Deferred con la tabla completa (52 IDs activos + T4 falso positivo).
+- `docs/scripts_design.md` — creado en este mismo bloque (diseño de Fase 1: fetch, update_readme, validate_uci, tests, proceso). `TODO(zona_gris): el archivo no existe aún en el working tree al registrar esta entrada; la afirmación quedará verdadera cuando se cree en el bloque de diseño correspondiente.`
+
+**Hallazgos**: el inventario completo con cada ID y su descripción corta está en docs/roadmap.md. Los hallazgos que exigen decisión de diseño (no solo fix directo) son: N1 (target_type en fingerprint → rompe fingerprints preexistentes, requiere recaptura de los 14 UCI + internos), N2 (_rates_cls para K=2 sin target_class → cambio de criterio de split), T11 (_last_train_params sin max_depth → contrato D9 no cumplido en Champion-Challenger). El resto son fixes acotados con contratos ya definidos.
+
+**Plan de resolución**: 8 bloques documentados en docs/scripts_design.md (bloques 1–3) y docs/gui_i18n_governance_design.md (bloques 4–5). Los bloques de código puro (6–8) se documentan en este audit_log al ejecutarse. Cada bloque es una unidad atómica de ráfaga (Skill 5): todos los prompts seguidos, 1 commit, 1 push. Sin verificación intermedia entre prompts del mismo bloque. `TODO(zona_gris): al registrar la entrada ni docs/scripts_design.md ni docs/gui_i18n_governance_design.md existen; las referencias quedan como placeholder hasta la creación de ambos documentos.`
+
+**Tests**: 561/561 PASSED (bloque documental, sin cambios de código).
+
+**Referencias cruzadas**: docs/roadmap.md (sección Deferred), docs/scripts_design.md (creado en este bloque), docs/audit_log.md entradas del 02/11/2026 (cierre Fase 7), .treegovrules (mini-cierre), AGENTS.md (checklist de 8 documentos). `TODO(zona_gris): docs/scripts_design.md aún no existe (ver nota en Artefactos y Plan de resolución).`
+

@@ -668,6 +668,66 @@ de Clean Room: cero código del prototipo.
 
 La Fase 4.0.b se cerró el 01/11/2026 con suite 532/532 sin añadir tests para `export_to_markdown` (deuda silenciosa: el exportador existía pero no estaba verificado empíricamente). Los 4 tests nuevos de `tests/test_exporters.py` (P5 de la Fase 4.0.c) cierran la deuda: header/fingerprint/method, rama de threshold, probabilidades por hoja, firma sin imputer. Cierre: `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c, hallazgo #4).
 
+### ⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026
+
+Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturadas por la suite 561/561. Registrado como backlog oficial post-Fase 7. Plan de resolución en 8 bloques documentado en docs/scripts_design.md y docs/gui_i18n_governance_design.md; los bloques de código puro se documentan al ejecutarse en docs/audit_log.md.
+
+| ID | Categoría | Descripción corta | Estado |
+|----|-----------|-------------------|--------|
+| T1 | Docs | prompt_para_asistente.md stale (553/553, próximo paso Fase 7) | ⏳ Pendiente |
+| T2 | Docs | contexto_para_nueva_sesion.md "cerró Fase 6 con 553/553" en Estado de release | ⏳ Pendiente |
+| T3 | Docs | AGENTS.md con bloques duplicados (opencode.json + plugin caché ×2) | ⏳ Pendiente |
+| T4 | Docs | ❌ Falso positivo (opencode.json real no tiene doble -free) | ✅ Cerrado como falso positivo |
+| T5 | GUI | ECLDialog sin i18n ni retranslate_ui; test congela literales ES | ⏳ Pendiente |
+| T6 | GUI | BatchScoringDialog y ChampionChallengerDialog sin retranslate_ui ni language_bus | ⏳ Pendiente |
+| T7 | GUI | BatchWorker.progress señal muerta (declarada y nunca emitida) | ⏳ Pendiente |
+| T8 | GUI | ChampionChallengerDialog omite CHAID_EXHAUSTIVE en combo; no expone n_groups ni challenger_params | ⏳ Pendiente |
+| T9 | GUI | HUD sin set_governance_mode; RESEARCH sin cobertura en ReportsPanel/MetricsPanel | ⏳ Pendiente |
+| T10 | GUI | _on_tree_context_menu con confirmación BANKING en español hardcodeado | ⏳ Pendiente |
+| T11 | Backend | _last_train_params sin max_depth; D9 no se cumple en compare_champion_challenger | ⏳ Pendiente |
+| T12 | Docs | _make_csv E2E genera target ruido, no 1_{edad>=40} | ⏳ Pendiente |
+| T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ⏳ Pendiente |
+| T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ⏳ Pendiente |
+| T15 | GUI | step2_subtitle dice "binary target" con target K>=3 | ⏳ Pendiente |
+| F1 | Scripts | fetch_datasets.py idempotencia prometida no implementada | ⏳ Pendiente |
+| F2 | Scripts | fetch_datasets.py escribe en tests/fixtures/uci/ en lugar de data/uci/ | ⏳ Pendiente |
+| F3 | Scripts | fetch_datasets.py line.split(sep) sin csv.reader | ⏳ Pendiente |
+| F4 | Scripts | fetch_datasets.py target_map={} silencioso en blood_transfusion | ⏳ Pendiente |
+| F5 | Scripts | fetch_datasets.py sin logging estructurado | ⏳ Pendiente |
+| F6 | Scripts | fetch_datasets.py sin reintentos en urlopen | ⏳ Pendiente |
+| F7 | Scripts | workflow de actualización de hashes hardcoded no documentado | ⏳ Pendiente |
+| F8 | Scripts | fetch_datasets.py rutas relativas al cwd (sin __file__) | ⏳ Pendiente |
+| U1 | Scripts | update_readme_date.py fallo silencioso si el regex no matchea | ⏳ Pendiente |
+| U2 | Scripts | update_readme_date.py no atómico entre README.md y README.es.md | ⏳ Pendiente |
+| U3 | Scripts | update_readme_date.py solo actualiza fechas marcadas con 📅 | ⏳ Pendiente |
+| U4 | Scripts | update_readme_date.py sin --check / dry-run | ⏳ Pendiente |
+| U5 | Scripts | update_readme_date.py sin guarda de retroceso temporal | ⏳ Pendiente |
+| U6 | Scripts | update_readme_date.py path anclado a scripts/ | ⏳ Pendiente |
+| V1 | Scripts | validate_uci.py n_groups=10 sin adaptación (falla con test<50 binario) | ⏳ Pendiente |
+| V2 | Scripts | validate_uci.py target_type implícito BINARY en car/balance/iris (K>2) | ⏳ Pendiente |
+| V3 | Scripts | validate_uci.py narrativa _QUALITY/_REVISION hardcoded | ⏳ Pendiente |
+| V4 | Scripts | validate_uci.py revision notes congeladas en rc2 | ⏳ Pendiente |
+| V5 | Scripts | validate_uci.py sin --check ni guarda de git status | ⏳ Pendiente |
+| V6 | Scripts | validate_uci.py degradación silenciosa a None (exit 0) | ⏳ Pendiente |
+| V7 | Scripts | validate_uci.py CHAID solo 2/6 datasets (cobertura desbalanceada) | ⏳ Pendiente |
+| V8 | Scripts | validate_uci.py accuracy mezcla semántica binaria y multiclase | ⏳ Pendiente |
+| V9 | Scripts | validate_uci.py target_class multiclase sin justificar (car usa la mayoritaria) | ⏳ Pendiente |
+| V10 | Scripts | validate_uci.py pd_floor implícito en CONFIGS | ⏳ Pendiente |
+| V11 | Scripts | validate_uci.py FIXTURES relativas al cwd | ⏳ Pendiente |
+| V12 | Scripts | validate_uci.py sys.path anclado a scripts/ | ⏳ Pendiente |
+| P1 | Proceso | los tres scripts sin tests en pytest | ⏳ Pendiente |
+| P2 | Proceso | scripts/ ausente en árboles de README.md/README.es.md | ⏳ Pendiente |
+| P3 | Proceso | scripts/ no empaquetado en pyproject.toml (consistente, no bug) | ⏳ Pendiente |
+| P4 | Proceso | scripts/ sin guarda de escritura en data/ o archive/ | ⏳ Pendiente |
+| N1 | Backend | target_type no entra en _fingerprint y no se valida contra K | ⏳ Pendiente |
+| N2 | Backend | crt_engine._rates_cls para K=2 usa clase 1 sorted, no target_class | ⏳ Pendiente |
+| N3 | Docs | test_mainwindow_wizard_config_trains usa cfg que el wizard nunca produce | ⏳ Pendiente |
+| N4 | Docs | test_uci_integration._check_dataset solo verifica gini>0.3 | ⏳ Pendiente |
+| N5 | Docs | test_wizard_finish_emits_config sin provider emite target_class=None | ⏳ Pendiente |
+| N6 | GUI | ECLDialog/scoring_dialogs sin tests de error (_on_error, _on_worker_failed) | ⏳ Pendiente |
+| N7 | GUI | scoring_dialogs test mockea BatchWorker/CCWorker (sin E2E real) | ⏳ Pendiente |
+| N8 | Docs | _FakeDialog de test_advanced_options no distingue wiring de comportamiento real | ⏳ Pendiente |
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality
