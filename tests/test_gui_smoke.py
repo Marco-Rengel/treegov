@@ -4,7 +4,7 @@
     .venv\\Scripts\\python tests\\test_gui_smoke.py
 
 Headless: QT_QPA_PLATFORM defaults to offscreen here (setdefault, so a
-real display session keeps its platform). 14 tests: smoke + i18n.
+real display session keeps its platform). 15 tests: smoke + i18n.
 """
 
 import ast
@@ -357,6 +357,68 @@ def test_tr_term_dynamic():
         assert tr_term("event", "RESEARCH") == "Event"
     finally:
         set_language(prev)
+
+
+def test_hud_research_mode():
+    """Training in RESEARCH renders neutral HUD terminology in EN and ES."""
+    import csv
+    import tempfile
+
+    from backend_v3.session_state import Session
+    from backend_v3.types import PredictorType
+
+    _get_app()
+    previous = get_language()
+    with tempfile.TemporaryDirectory() as tmp:
+        csv_path = Path(tmp) / "research.csv"
+        with csv_path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.writer(handle)
+            writer.writerow(["age", "target"])
+            writer.writerows(
+                (20 + index * 5, int(index >= 6)) for index in range(12)
+            )
+
+        session = Session()
+        session.load_dataset(str(csv_path))
+        window = MainWindow(session=session)
+        try:
+            set_language("en")
+            window.retranslate_ui()
+            window._on_wizard_finished(
+                {
+                    "target": "target",
+                    "predictors": {"age": PredictorType.CONTINUOUS},
+                    "target_class": 1,
+                    "class_labels": {0: "Non-event", 1: "Event"},
+                    "weight_col": None,
+                    "population_col": None,
+                    "population_ok_values": (),
+                    "train_frac": 0.75,
+                    "seed": 42,
+                    "engine": "CRT",
+                    "max_depth": 2,
+                    "min_child_size": 1,
+                    "min_child_weight": None,
+                    "governance_mode": "RESEARCH",
+                    "apply_jeffreys": False,
+                    "pd_floor": None,
+                }
+            )
+            assert session.state.tree is not None
+            assert window._governance_mode == "RESEARCH"
+            assert window._hud_lbl_gov_mode.text() == "Research"
+            assert window._hud_lbl_bad_rate_cap.text() == "Event rate"
+            assert window._reports_panel._mode == "RESEARCH"
+            assert window._metrics_panel._mode == "RESEARCH"
+
+            set_language("es")
+            window.retranslate_ui()
+            assert window._hud_lbl_gov_mode.text() == "Investigación"
+            assert window._hud_lbl_bad_rate_cap.text() == "Tasa de evento"
+        finally:
+            set_language(previous)
+            window.close()
+            window.deleteLater()
 
 
 def test_hud_labels_translated():

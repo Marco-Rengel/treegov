@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
+    QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
@@ -30,7 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from frontend_v3.i18n import tr
+from frontend_v3.i18n import language_bus, tr
 from frontend_v3.reports_panel import ReportsPanel
 
 if TYPE_CHECKING:
@@ -80,9 +81,12 @@ class ECLDialog(QDialog):
         self._session = session
         self._worker: ECLWorker | None = None
         self._running = False
+        # Cached flat DTO: retranslate_ui repaints the five rows from it so a
+        # language switch never leaves the table in the previous language.
+        self._report_dto: dict | None = None
+        self._bus_attached = False
         self.setModal(True)
         self.setObjectName("ecl_dialog")
-        self.setWindowTitle("Cálculo ECL")
         self.resize(560, 400)
 
         layout = QVBoxLayout(self)
@@ -98,24 +102,26 @@ class ECLDialog(QDialog):
         csv_row.addWidget(self._browse_button)
         csv_container = QWidget(self)
         csv_container.setLayout(csv_row)
-        form.addRow("CSV de entrada", csv_container)
+        self._lbl_input_csv = QLabel(self)
+        form.addRow(self._lbl_input_csv, csv_container)
 
         self._pd_edit = QLineEdit("pd_current", self)
-        form.addRow("Columna de PD", self._pd_edit)
+        self._lbl_pd_col = QLabel(self)
+        form.addRow(self._lbl_pd_col, self._pd_edit)
 
         self._eir_spin = QDoubleSpinBox(self)
         self._eir_spin.setDecimals(6)
         self._eir_spin.setRange(-0.999999, 1_000_000.0)
         self._eir_spin.setValue(0.0)
         self._eir_spin.setEnabled(False)
-        form.addRow("Tasa EIR", self._eir_spin)
+        self._lbl_eir = QLabel(self)
+        form.addRow(self._lbl_eir, self._eir_spin)
 
-        self._discount_check = QCheckBox("Aplicar descuento", self)
+        self._discount_check = QCheckBox(self)
         self._discount_check.toggled.connect(self._eir_spin.setEnabled)
         form.addRow("", self._discount_check)
 
         self._table = QTableWidget(0, 2, self)
-        self._table.setHorizontalHeaderLabels(["Métrica", "Valor"])
         self._table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
         )
@@ -136,9 +142,9 @@ class ECLDialog(QDialog):
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        self._cancel_button = QPushButton("Cancelar", self)
+        self._cancel_button = QPushButton(self)
         self._cancel_button.clicked.connect(self.reject)
-        self._calculate_button = QPushButton("Calcular", self)
+        self._calculate_button = QPushButton(self)
         self._calculate_button.setEnabled(False)
         self._calculate_button.clicked.connect(self._on_calculate)
         buttons.addWidget(self._cancel_button)
@@ -146,6 +152,41 @@ class ECLDialog(QDialog):
         layout.addLayout(buttons)
 
         self._csv_edit.textChanged.connect(self._sync_calculate_button)
+
+        self.retranslate_ui()
+        language_bus.language_changed.connect(self.retranslate_ui)
+        self._bus_attached = True
+
+    # ------------------------------------------------------------ Public API
+
+    def retranslate_ui(self) -> None:
+        """Single text path: first paint and live language switches."""
+        self.setWindowTitle(tr("ecl_dlg_title"))
+        self._lbl_input_csv.setText(tr("ecl_input_csv"))
+        self._lbl_pd_col.setText(tr("ecl_pd_col"))
+        self._lbl_eir.setText(tr("ecl_eir"))
+        self._browse_button.setText(tr("scoring_btn_browse"))
+        self._discount_check.setText(tr("ecl_apply_eir"))
+        self._table.setHorizontalHeaderLabels(
+            [tr("ecl_col_metric"), tr("ecl_col_value")]
+        )
+        self._cancel_button.setText(tr("wizard_cancel"))
+        self._calculate_button.setText(tr("ecl_btn_calculate"))
+        # Without the cached DTO a switch would leave the rendered rows in the
+        # previous language; a running worker owns the table until it finishes.
+        if self._report_dto is not None and not self._running:
+            self._on_finished(self._report_dto)
+
+    def _detach_bus(self) -> None:
+        """Idempotent disconnect so a dead dialog never gets stale signals."""
+        if not self._bus_attached:
+            return
+        try:
+            language_bus.language_changed.disconnect(self.retranslate_ui)
+        except (RuntimeError, TypeError):
+            pass  # already disconnected
+        finally:
+            self._bus_attached = False
 
     def _sync_calculate_button(self) -> None:
         """Enable calculation only with a CSV path and no active worker."""
@@ -168,7 +209,7 @@ class ECLDialog(QDialog):
         """Select the input CSV without reading it in the frontend."""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Seleccionar CSV de entrada",
+            tr("ecl_input_dialog_title"),
             "",
             tr("scoring_csv_filter"),
         )
@@ -209,17 +250,18 @@ class ECLDialog(QDialog):
 
     def _on_finished(self, result: dict) -> None:
         """Render the bounded summary and hide the calculate action."""
+        self._report_dto = result
         self._running = False
         self._cancel_button.setEnabled(True)
         self._calculate_button.setVisible(False)
 
         stage_counts = result.get("stage_counts", (None, None, None))
         metrics = (
-            ("ECL 12m", result.get("total_ecl_12m")),
-            ("ECL Lifetime", result.get("total_ecl_lifetime")),
-            ("Etapa 1", stage_counts[0]),
-            ("Etapa 2", stage_counts[1]),
-            ("Etapa 3", stage_counts[2]),
+            (tr("ecl_total_12m"), result.get("total_ecl_12m")),
+            (tr("ecl_total_lifetime"), result.get("total_ecl_lifetime")),
+            (tr("ecl_stage_1"), stage_counts[0]),
+            (tr("ecl_stage_2"), stage_counts[1]),
+            (tr("ecl_stage_3"), stage_counts[2]),
         )
         self._table.setSortingEnabled(False)
         self._table.setRowCount(len(metrics))
@@ -251,3 +293,13 @@ class ECLDialog(QDialog):
         if self._running:
             return
         super().reject()
+
+    def closeEvent(self, event) -> None:
+        """Detach the bus on window close (QDialog.close)."""
+        self._detach_bus()
+        super().closeEvent(event)
+
+    def done(self, result: int) -> None:
+        """Detach the bus on accept/reject; ``closeEvent`` does not fire there."""
+        self._detach_bus()
+        super().done(result)

@@ -12,6 +12,12 @@ from backend_v3.session_state import Session  # noqa: E402
 from backend_v3.types import PredictorType, TargetType  # noqa: E402
 from frontend_v3.app import create_app  # noqa: E402
 from frontend_v3.ecl_dialog import ECLDialog  # noqa: E402
+from frontend_v3.i18n import (  # noqa: E402
+    get_language,
+    language_bus,
+    set_language,
+    tr,
+)
 from frontend_v3.main_window import MainWindow  # noqa: E402
 
 
@@ -72,9 +78,16 @@ def test_ecl_dialog_creation(tmp_path):
         dialog.deleteLater()
 
 
-def test_ecl_dialog_table_population(tmp_path):
-    """The result slot renders five ordered and formatted summary rows."""
+@pytest.mark.parametrize("lang", ["en", "es"])
+def test_ecl_dialog_table_population(tmp_path, lang):
+    """The result slot renders five ordered and formatted summary rows.
+
+    Las expectativas se leen de ``tr()``: el test deja de congelar literales
+    en español (deuda T5) y pasa en los dos idiomas soportados.
+    """
     _get_app()
+    prev = get_language()
+    set_language(lang)
     session, _ = _setup_session(tmp_path)
     dialog = ECLDialog(session)
     try:
@@ -91,11 +104,11 @@ def test_ecl_dialog_table_population(tmp_path):
         assert not dialog._table.isHidden()
         assert dialog._calculate_button.isHidden()
         assert [dialog._table.item(row, 0).text() for row in range(5)] == [
-            "ECL 12m",
-            "ECL Lifetime",
-            "Etapa 1",
-            "Etapa 2",
-            "Etapa 3",
+            tr("ecl_total_12m"),
+            tr("ecl_total_lifetime"),
+            tr("ecl_stage_1"),
+            tr("ecl_stage_2"),
+            tr("ecl_stage_3"),
         ]
         assert [dialog._table.item(row, 1).text() for row in range(5)] == [
             "99.00",
@@ -107,6 +120,88 @@ def test_ecl_dialog_table_population(tmp_path):
     finally:
         dialog.close()
         dialog.deleteLater()
+        set_language(prev)
+
+
+def test_ecl_dialog_retranslate(tmp_path):
+    """A live language switch retranslates every text and keeps the data."""
+    _get_app()
+    prev = get_language()
+    set_language("en")
+    session, _ = _setup_session(tmp_path)
+    dialog = ECLDialog(session)
+    try:
+        # Primera pintura en EN.
+        assert dialog.windowTitle() == tr("ecl_dlg_title", "en")
+        assert dialog._lbl_input_csv.text() == tr("ecl_input_csv", "en")
+        assert dialog._cancel_button.text() == tr("wizard_cancel", "en")
+        assert dialog._calculate_button.text() == tr("ecl_btn_calculate", "en")
+
+        dialog._on_finished(
+            {
+                "total_ecl_12m": 99.0,
+                "total_ecl_lifetime": 405.0,
+                "stage_counts": (1, 2, 3),
+            }
+        )
+        labels_en = [dialog._table.item(row, 0).text() for row in range(5)]
+        assert labels_en == [
+            tr("ecl_total_12m", "en"),
+            tr("ecl_total_lifetime", "en"),
+            tr("ecl_stage_1", "en"),
+            tr("ecl_stage_2", "en"),
+            tr("ecl_stage_3", "en"),
+        ]
+
+        # Conmutación EN -> ES disparada por el bus real, no por llamada directa.
+        set_language("es")
+        language_bus.language_changed.emit("es")
+
+        assert dialog.windowTitle() == tr("ecl_dlg_title", "es")
+        assert dialog.windowTitle() != tr("ecl_dlg_title", "en")
+        assert dialog._lbl_input_csv.text() == tr("ecl_input_csv", "es")
+        assert dialog._lbl_pd_col.text() == tr("ecl_pd_col", "es")
+        assert dialog._lbl_eir.text() == tr("ecl_eir", "es")
+        assert dialog._discount_check.text() == tr("ecl_apply_eir", "es")
+        assert dialog._browse_button.text() == tr("scoring_btn_browse", "es")
+        assert dialog._cancel_button.text() == tr("wizard_cancel", "es")
+        assert dialog._calculate_button.text() == tr("ecl_btn_calculate", "es")
+        assert [
+            dialog._table.horizontalHeaderItem(col).text() for col in range(2)
+        ] == [tr("ecl_col_metric", "es"), tr("ecl_col_value", "es")]
+
+        # Las cinco filas se repintan desde el DTO cacheado: cambian los textos
+        # y los valores siguen intactos.
+        labels_es = [dialog._table.item(row, 0).text() for row in range(5)]
+        assert labels_es == [
+            tr("ecl_total_12m", "es"),
+            tr("ecl_total_lifetime", "es"),
+            tr("ecl_stage_1", "es"),
+            tr("ecl_stage_2", "es"),
+            tr("ecl_stage_3", "es"),
+        ]
+        assert labels_es != labels_en
+        assert dialog._report_dto is not None
+        assert [dialog._table.item(row, 1).text() for row in range(5)] == [
+            "99.00",
+            "405.00",
+            "1",
+            "2",
+            "3",
+        ]
+
+        # Ciclo de vida del bus: la desconexión es idempotente y, ya desconectado,
+        # un nuevo cambio de idioma no vuelve a pintar el diálogo.
+        dialog._detach_bus()
+        dialog._detach_bus()
+        set_language("en")
+        language_bus.language_changed.emit("en")
+        assert dialog.windowTitle() == tr("ecl_dlg_title", "es")
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+        set_language(prev)
+        language_bus.language_changed.emit(prev)
 
 
 def test_mainwindow_ecl_action(tmp_path):

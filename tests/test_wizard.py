@@ -24,7 +24,12 @@ from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication, QRadioButton, QWizard  # noqa: E402
 
 from frontend_v3.app import create_app  # noqa: E402
-from frontend_v3.i18n import language_bus, set_language, tr  # noqa: E402
+from frontend_v3.i18n import (  # noqa: E402
+    get_language,
+    language_bus,
+    set_language,
+    tr,
+)
 from frontend_v3.main_window import MainWindow  # noqa: E402
 from frontend_v3.wizard import ModelWizard  # noqa: E402
 
@@ -288,6 +293,40 @@ def test_wizard_research_mode_disables_governance():
 # ---------------------------------------------------------------------------
 # 6: retraduccion en caliente + persistencia del combo (micro-ajustes 3)
 # ---------------------------------------------------------------------------
+
+
+def test_wizard_multiclass_subtitle():
+    """The subtitle follows no-target, binary and multiclass selections."""
+    counts = {
+        "default": {0: 50, 1: 50},
+        "seg": {"A": 20, "B": 30, "C": 50},
+    }
+    wiz = ModelWizard(
+        _COLS,
+        _TYPES,
+        target_provider=lambda col: counts.get(col, {}),
+    )
+    previous = get_language()
+    try:
+        set_language("en")
+        wiz.retranslate_ui()
+        page = wiz.page_predictors
+        assert page.subTitle() == tr("step2_subtitle_no_target", "en")
+
+        _select_target(wiz, "default")
+        assert page.subTitle() == tr("step2_subtitle", "en")
+
+        _select_target(wiz, "seg")
+        assert page.subTitle() == tr("step2_subtitle_multiclass", "en")
+
+        set_language("es")
+        language_bus.language_changed.emit("es")
+        assert page.subTitle() == tr("step2_subtitle_multiclass", "es")
+    finally:
+        set_language(previous)
+        language_bus.language_changed.emit(previous)
+        wiz.close()
+        wiz.deleteLater()
 
 
 def test_wizard_retranslate_via_bus():

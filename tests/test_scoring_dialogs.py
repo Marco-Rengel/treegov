@@ -13,10 +13,16 @@ from unittest.mock import patch  # noqa: E402
 from backend_v3.session_state import Session  # noqa: E402
 from backend_v3.types import PredictorType, TargetType  # noqa: E402
 from frontend_v3.app import create_app  # noqa: E402
-from frontend_v3.i18n import set_language, tr  # noqa: E402
+from frontend_v3.i18n import (  # noqa: E402
+    get_language,
+    language_bus,
+    set_language,
+    tr,
+)
 from frontend_v3.main_window import MainWindow  # noqa: E402
 from frontend_v3.scoring_dialogs import (  # noqa: E402
     BatchScoringDialog,
+    BatchWorker,
     ChampionChallengerDialog,
 )
 
@@ -151,6 +157,151 @@ def test_cc_dialog_table_population(tmp_path):
         assert "fp-challenger" in dialog._result_label.text()
         assert "97" in dialog._result_label.text()
     finally:
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_batch_worker_progress_signal_removed():
+    """T7: the indeterminate progress bar has no dead worker signal."""
+    assert "progress" not in BatchWorker.__dict__
+
+
+def test_scoring_dialogs_retranslate():
+    """Both dialogs switch language without changing canonical combo data."""
+    _get_app()
+    previous = get_language()
+    set_language("en")
+    session = Session()
+    batch = BatchScoringDialog(session)
+    champion = ChampionChallengerDialog(session)
+    try:
+        batch._policy_combo.setCurrentIndex(2)
+        champion._policy_combo.setCurrentIndex(1)
+        champion._engine_combo.setCurrentIndex(2)
+        result = {
+            "champion_fingerprint": "fp-champion",
+            "challenger_fingerprint": "fp-challenger",
+            "n_common_routed": 97,
+            "metrics": (),
+        }
+        champion._on_worker_finished(result)
+        batch_policy_en = batch._policy_combo.currentText()
+        champion_policy_en = champion._policy_combo.currentText()
+
+        set_language("es")
+        language_bus.language_changed.emit("es")
+
+        assert batch.windowTitle() == tr("batch_dialog_title", "es")
+        assert batch._lbl_input.text() == tr("batch_input_label", "es")
+        assert batch._lbl_output.text() == tr("batch_output_label", "es")
+        assert batch._lbl_policy.text() == tr("scoring_policy_label", "es")
+        assert batch._lbl_chunksize.text() == tr("batch_chunksize_label", "es")
+        assert batch._lbl_rules.text() == tr("batch_include_rules_label", "es")
+        assert batch._input_button.text() == tr("scoring_btn_browse", "es")
+        assert batch._output_button.text() == tr("scoring_btn_browse", "es")
+        assert batch._cancel_button.text() == tr("wizard_cancel", "es")
+        assert batch._run_button.text() == tr("scoring_btn_execute", "es")
+        assert batch._policy_combo.currentData() == "majority"
+        assert batch._policy_combo.currentText() == tr(
+            "unseen_policy_majority", "es"
+        )
+        assert batch._policy_combo.currentText() != batch_policy_en
+
+        assert champion.windowTitle() == tr("cc_dialog_title", "es")
+        assert champion._lbl_eval.text() == tr("cc_eval_label", "es")
+        assert champion._lbl_engine.text() == tr("cc_engine_label", "es")
+        assert champion._lbl_target.text() == tr("cc_target_label", "es")
+        assert champion._lbl_weight.text() == tr("cc_weight_label", "es")
+        assert champion._lbl_policy.text() == tr("scoring_policy_label", "es")
+        assert champion._lbl_n_groups.text() == tr("cc_n_groups_label", "es")
+        assert champion._lbl_params.text() == tr("cc_params_label", "es")
+        assert champion._eval_button.text() == tr("scoring_btn_browse", "es")
+        assert champion._cancel_button.text() == tr("wizard_cancel", "es")
+        assert champion._run_button.text() == tr("scoring_btn_execute", "es")
+        assert champion._policy_combo.currentData() == "error"
+        assert champion._policy_combo.currentText() == tr(
+            "unseen_policy_error", "es"
+        )
+        assert champion._policy_combo.currentText() != champion_policy_en
+        assert champion._engine_combo.currentData() == "CHAID_EXHAUSTIVE"
+        assert [
+            champion._table.horizontalHeaderItem(column).text()
+            for column in range(4)
+        ] == [
+            tr("cc_col_metric", "es"),
+            tr("cc_col_champion", "es"),
+            tr("cc_col_challenger", "es"),
+            tr("cc_col_delta", "es"),
+        ]
+        assert champion._result_label.text() == tr(
+            "cc_result_summary", "es"
+        ).format(
+            champion="fp-champion",
+            challenger="fp-challenger",
+            common=97,
+        )
+
+        set_language("en")
+        language_bus.language_changed.emit("en")
+        assert batch._policy_combo.currentData() == "majority"
+        assert batch._policy_combo.currentText() == batch_policy_en
+        assert champion._policy_combo.currentData() == "error"
+        assert champion._policy_combo.currentText() == champion_policy_en
+        assert champion._engine_combo.currentData() == "CHAID_EXHAUSTIVE"
+    finally:
+        batch.close()
+        champion.close()
+        batch.deleteLater()
+        champion.deleteLater()
+        set_language(previous)
+        language_bus.language_changed.emit(previous)
+
+
+def test_cc_dialog_engine_combo():
+    """T8: all backend engines are offered in canonical order."""
+    _get_app()
+    set_language("en")
+    dialog = ChampionChallengerDialog(Session())
+    try:
+        assert [
+            dialog._engine_combo.itemData(index)
+            for index in range(dialog._engine_combo.count())
+        ] == ["CRT", "CHAID", "CHAID_EXHAUSTIVE", "QUEST"]
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_cc_dialog_n_groups_forwarded():
+    """The spinbox and parsed overrides reach the worker unchanged."""
+    _get_app()
+    set_language("en")
+    session = Session()
+    dialog = ChampionChallengerDialog(session)
+    try:
+        assert dialog._n_groups_spin.minimum() == 3
+        assert dialog._n_groups_spin.maximum() == 20
+        assert dialog._n_groups_spin.value() == 10
+        dialog._eval_edit.setText("evaluation.csv")
+        dialog._n_groups_spin.setValue(7)
+        dialog._params_edit.setText("max_depth=4,alpha=0.25,mode=fast")
+
+        with patch("frontend_v3.scoring_dialogs.CCWorker") as worker_type:
+            dialog._execute()
+
+            worker_type.assert_called_once_with(
+                session,
+                "evaluation.csv",
+                "CRT",
+                None,
+                None,
+                "exclude",
+                7,
+                {"max_depth": 4, "alpha": 0.25, "mode": "fast"},
+            )
+            worker_type.return_value.start.assert_called_once_with()
+    finally:
+        dialog._set_running(False)
         dialog.close()
         dialog.deleteLater()
 

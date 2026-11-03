@@ -53,6 +53,7 @@ from frontend_v3.i18n import (
     language_bus,
     set_language,
     tr,
+    tr_term,
 )
 from frontend_v3.theme import apply_palette, apply_theme
 from frontend_v3.tree_view import (
@@ -95,6 +96,7 @@ class MainWindow(QMainWindow):
         # Phase 3.1.f: last successful wizard cfg (needed to retrain after
         # a class-of-interest inversion without reopening the wizard)
         self._last_train_cfg: dict | None = None
+        self._governance_mode: str = "BANKING"
         self._mode_name: str = "—"
         self._security_warning_shown: bool = False
 
@@ -120,6 +122,22 @@ class MainWindow(QMainWindow):
     def set_session(self, session: Session) -> None:
         """Inject/refresh the backend session handle."""
         self._session = session
+
+    def set_governance_mode(self, mode: str) -> None:
+        """Render the canonical governance mode across the HUD and panels."""
+        self._governance_mode = mode
+        short_key = (
+            "step4_govmode_research_short"
+            if mode == "RESEARCH"
+            else "step4_govmode_banking_short"
+        )
+        self._hud_lbl_gov_mode.setText(tr(short_key))
+        if mode == "RESEARCH":
+            self._hud_lbl_bad_rate_cap.setText(tr_term("bad_rate", mode))
+        else:
+            self._hud_lbl_bad_rate_cap.setText(tr("hud_lbl_bad_rate"))
+        self._reports_panel.set_governance_mode(mode)
+        self._metrics_panel.set_governance_mode(mode)
 
     def retranslate_ui(self) -> None:
         """Re-apply tr() to every visible string (called on language
@@ -222,7 +240,6 @@ class MainWindow(QMainWindow):
         self._hud_lbl_cols_cap.setText(tr("hud_lbl_cols"))
         self._hud_lbl_pop_cap.setText(tr("hud_lbl_pop"))
         self._hud_lbl_events_cap.setText(tr("hud_lbl_events"))
-        self._hud_lbl_bad_rate_cap.setText(tr("hud_lbl_bad_rate"))
         self._hud_lbl_rule_var_cap.setText(tr("hud_lbl_rule_var"))
         self._hud_lbl_rule_cond_cap.setText(tr("hud_lbl_rule_cond"))
         self._hud_lbl_rule_stat_cap.setText(tr("hud_lbl_rule_stat"))
@@ -230,6 +247,7 @@ class MainWindow(QMainWindow):
         self._hud_gb_node.setTitle(tr("hud_group_node"))
         self._hud_gb_rule.setTitle(tr("hud_group_rule"))
         self._hud_placeholder.setText(tr("tree_prop_empty"))
+        self.set_governance_mode(self._governance_mode)
         self._hud_reset()
 
     # ------------------------------------------------------------------
@@ -894,10 +912,8 @@ class MainWindow(QMainWindow):
         tree = st.tree
         if tree is not None:
             self._tree_panel.set_model(tree, cfg["governance_mode"])
-            # Fase 3.6.e.2: la terminología visible de los paneles sigue
-            # al modo de gobernanza congelado en el fingerprint.
-            self._reports_panel.set_governance_mode(cfg["governance_mode"])
-            self._metrics_panel.set_governance_mode(cfg["governance_mode"])
+            # Una sola entrada propaga modo y terminología a HUD y paneles.
+            self.set_governance_mode(cfg["governance_mode"])
             # Phase 3.11.b.4: Project Explorer refleja el modelo entrenado
             if tree is not None:
                 self._lbl_explorer_model.setText(f"{tree.method} · {tree.params_fingerprint[:8]}")
@@ -906,7 +922,6 @@ class MainWindow(QMainWindow):
             self._tree_map.set_model(tree)
             # Phase 3.11.a: governance panel shows the model identity
             self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
-            self._hud_lbl_gov_mode.setText(cfg["governance_mode"])
             # Phase 3.11.d.3: con modelo entrenado, el Manual Override
             # Log (aunque esté vacío) ya es consultable
             self._hud_btn_view_audit.setEnabled(True)
@@ -982,7 +997,7 @@ class MainWindow(QMainWindow):
             self._tree_panel.set_model(tree, cfg_inv["governance_mode"])
             self._tree_map.set_model(tree)
             self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
-            self._hud_lbl_gov_mode.setText(cfg_inv["governance_mode"])
+            self.set_governance_mode(cfg_inv["governance_mode"])
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
         self._refresh_session_indicator()
@@ -1185,10 +1200,8 @@ class MainWindow(QMainWindow):
             if mode == "BANKING":
                 answer = QMessageBox.question(
                     self,
-                    "Prune Branch",
-                    f"Podar la rama del nodo {node_id}: la intervención "
-                    "manual quedará registrada en el Manual Override Log "
-                    "y alterará el fingerprint del modelo. ¿Continuar?",
+                    tr("menu_tree_prune_confirm_title"),
+                    tr("menu_tree_prune_confirm_body").format(node_id=node_id),
                 )
                 if answer != QMessageBox.StandardButton.Yes:
                     return

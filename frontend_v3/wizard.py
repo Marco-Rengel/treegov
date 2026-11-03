@@ -71,12 +71,13 @@ _ENGINES: tuple[tuple[str, str], ...] = (
     ("CHAID_EXHAUSTIVE", "step1_desc_chaid_exhaustive"),
     ("QUEST", "step1_desc_quest"),
 )
-_ENGINE_LABELS = {
+ENGINE_LABELS = {
     "CRT": "C&RT",
     "CHAID": "CHAID",
     "CHAID_EXHAUSTIVE": "CHAID (Exhaustive)",
     "QUEST": "QUEST",
 }
+_ENGINE_LABELS = ENGINE_LABELS
 # TODO(zona_gris): el brief pedia iconos SP_* en los radios de motor sin
 # fijar cuáles; mapeo semántico conservador (C&RT = split binario,
 # CHAID = rejilla multivía, Exhaustive = recorrido iterativo, QUEST =
@@ -548,6 +549,7 @@ class PredictorsPage(QWizardPage):
         Warning amber si la clase seleccionada es la mayoritaria y
         NO hay empate entre clases.
         """
+        self._refresh_subtitle()
         # Capturar las etiquetas previas ANTES de vaciar la tabla: los
         # QLineEdit mueren con setRowCount(0).
         prev_labels = {
@@ -698,9 +700,29 @@ class PredictorsPage(QWizardPage):
         # gate for the user is the Next button, disabled via completeChanged
         return self.isComplete()
 
+    def _subtitle_key(self) -> str:
+        """Choose the subtitle from the selected target's class count."""
+        if self._combo_target.currentData() is None:
+            return "step2_subtitle_no_target"
+        target = self.target()
+        if not target.strip() or self._target_provider is None:
+            return "step2_subtitle_no_target"
+        try:
+            counts = self._target_provider(target)
+        except (ValueError, RuntimeError):
+            return "step2_subtitle_no_target"
+        if not counts:
+            return "step2_subtitle_no_target"
+        if len(counts) > 2:
+            return "step2_subtitle_multiclass"
+        return "step2_subtitle"
+
+    def _refresh_subtitle(self) -> None:
+        self.setSubTitle(tr(self._subtitle_key()))
+
     def retranslate_ui(self) -> None:
         self.setTitle(tr("step2_title"))
-        self.setSubTitle(tr("step2_subtitle"))
+        self._refresh_subtitle()
         self._lbl_target.setText(tr("step2_target_label"))
         self._combo_target.setItemText(0, tr("step2_target_placeholder"))
         self._lbl_available.setText(tr("step2_available"))

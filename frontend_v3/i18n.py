@@ -100,6 +100,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
         "step2_title": "Step 2 — Predictors and target",
         "step2_subtitle": "Pick the binary target and at least one predictor.",
+        "step2_subtitle_no_target": "Select a target",
+        "step2_subtitle_multiclass": (
+            "Pick a multiclass target and at least one predictor."
+        ),
         "step2_target_label": "Target (binary 0/1):",
         "step2_target_placeholder": "— Select target column —",   # bloque "en"
         "step2_available": "Available predictors",
@@ -378,9 +382,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_analysis_ecl": "IFRS 9 / ECL...",
         "ecl_dlg_title": "IFRS 9 / ECL Calculation",
         "ecl_input_csv": "Scoring CSV:",
+        "ecl_input_dialog_title": "Select scoring CSV",
         "ecl_pd_col": "PD Column:",
         "ecl_eir": "EIR (%):",
         "ecl_apply_eir": "Apply discounting",
+        "ecl_btn_calculate": "Calculate",
         "ecl_col_metric": "Metric",
         "ecl_col_value": "Value",
         "ecl_stage_1": "Stage 1 (12m)",
@@ -412,6 +418,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "scoring_btn_execute": "Run",
         "scoring_csv_filter": "CSV files (*.csv)",
         "scoring_policy_label": "Unseen policy:",
+        "unseen_policy_exclude": "Exclude unseen categories",
+        "unseen_policy_error": "Raise an error for unseen categories",
+        "unseen_policy_majority": "Use majority fallback",
         "batch_dialog_title": "Batch Scoring",
         "batch_input_label": "Input CSV:",
         "batch_output_label": "Output CSV:",
@@ -430,6 +439,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "cc_engine_label": "Challenger Engine:",
         "cc_target_label": "Target column:",
         "cc_weight_label": "Weight column:",
+        "cc_n_groups_label": "Number of groups:",
+        "cc_params_label": "Challenger parameters:",
+        "cc_params_invalid": (
+            "Invalid challenger parameters. Use comma-separated key=value pairs."
+        ),
         "cc_col_metric": "Metric",
         "cc_col_champion": "Champion",
         "cc_col_challenger": "Challenger",
@@ -450,6 +464,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         # --- Phase 3.11.d: context menu + Manual Override Log ---
         "menu_tree_grow": "Grow Tree",
         "menu_tree_prune_branch": "Prune Branch",
+        "menu_tree_prune_confirm_title": "Prune Branch",
+        "menu_tree_prune_confirm_body": (
+            "Pruning node {node_id} will log a manual override in the Manual "
+            "Override Log and change the model fingerprint. Continue?"
+        ),
         "menu_tree_select_predictor": "Select Predictor",
         "menu_tree_define_split": "Define Split",
         "override_title": "Manual Override Log",
@@ -570,6 +589,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
         "step2_title": "Paso 2 — Predictores y objetivo",
         "step2_subtitle": "Elija el objetivo binario y al menos un predictor.",
+        "step2_subtitle_no_target": "Seleccione un objetivo",
+        "step2_subtitle_multiclass": (
+            "Elija un objetivo multiclase y al menos un predictor."
+        ),
         "step2_target_label": "Objetivo (binario 0/1):",
         "step2_target_placeholder": "— Seleccione columna target —",  # bloque "es"
         "step2_available": "Predictores disponibles",
@@ -854,9 +877,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_analysis_ecl": "IFRS 9 / ECL...",
         "ecl_dlg_title": "Cálculo IFRS 9 / ECL",
         "ecl_input_csv": "CSV de scoring:",
+        "ecl_input_dialog_title": "Seleccionar CSV de scoring",
         "ecl_pd_col": "Columna de PD:",
         "ecl_eir": "Tasa EIR (%):",
         "ecl_apply_eir": "Aplicar descuento",
+        "ecl_btn_calculate": "Calcular",
         "ecl_col_metric": "Métrica",
         "ecl_col_value": "Valor",
         "ecl_stage_1": "Etapa 1 (12m)",
@@ -888,6 +913,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "scoring_btn_execute": "Ejecutar",
         "scoring_csv_filter": "Archivos CSV (*.csv)",
         "scoring_policy_label": "Política de no vistos:",
+        "unseen_policy_exclude": "Excluir categorías no vistas",
+        "unseen_policy_error": "Lanzar error con categorías no vistas",
+        "unseen_policy_majority": "Usar fallback de mayoría",
         "batch_dialog_title": "Puntuación por Lotes",
         "batch_input_label": "CSV de entrada:",
         "batch_output_label": "CSV de salida:",
@@ -906,6 +934,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "cc_engine_label": "Motor del retador:",
         "cc_target_label": "Columna objetivo:",
         "cc_weight_label": "Columna de pesos:",
+        "cc_n_groups_label": "Número de grupos:",
+        "cc_params_label": "Parámetros del retador:",
+        "cc_params_invalid": (
+            "Parámetros del retador no válidos. Use pares clave=valor "
+            "separados por comas."
+        ),
         "cc_col_metric": "Métrica",
         "cc_col_champion": "Campeón",
         "cc_col_challenger": "Retador",
@@ -926,6 +960,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         # --- Fase 3.11.d: menú contextual + Registro de Intervenciones ---
         "menu_tree_grow": "Crecer Árbol",
         "menu_tree_prune_branch": "Podar Rama",
+        "menu_tree_prune_confirm_title": "Podar Rama",
+        "menu_tree_prune_confirm_body": (
+            "Podar el nodo {node_id} registrará una intervención manual en "
+            "el Manual Override Log y alterará el fingerprint del modelo. "
+            "¿Continuar?"
+        ),
         "menu_tree_select_predictor": "Seleccionar Predictor",
         "menu_tree_define_split": "Definir Corte",
         "override_title": "Registro de Intervenciones Manuales",

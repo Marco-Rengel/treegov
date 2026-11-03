@@ -31,8 +31,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from frontend_v3.i18n import tr
+from frontend_v3.i18n import language_bus, tr
 from frontend_v3.reports_panel import ReportsPanel
+from frontend_v3.wizard import ENGINE_LABELS
 
 if TYPE_CHECKING:
     from backend_v3.session_state import Session
@@ -55,7 +56,6 @@ class BatchWorker(QThread):
 
     finished_ok = Signal(dict)
     failed = Signal(str)
-    progress = Signal(int)
 
     def __init__(
         self,
@@ -103,6 +103,8 @@ class CCWorker(QThread):
         target: str | None,
         weight_col: str | None,
         unseen_policy: str,
+        n_groups: int = 10,
+        challenger_params: dict | None = None,
     ) -> None:
         super().__init__()
         self._session = session
@@ -111,6 +113,8 @@ class CCWorker(QThread):
         self._target = target
         self._weight_col = weight_col
         self._unseen_policy = unseen_policy
+        self._n_groups = n_groups
+        self._challenger_params = challenger_params
 
     def run(self) -> None:
         try:
@@ -120,6 +124,8 @@ class CCWorker(QThread):
                 target=self._target,
                 weight_col=self._weight_col,
                 unseen_policy=self._unseen_policy,
+                n_groups=self._n_groups,
+                challenger_params=self._challenger_params,
             )
         except Exception as exc:  # noqa: BLE001 - transport backend error to UI
             self.failed.emit(str(exc))
@@ -135,6 +141,7 @@ class BatchScoringDialog(QDialog):
         self._session = session
         self._worker: BatchWorker | None = None
         self._running = False
+        self._bus_attached = False
         self.setModal(True)
         self.setObjectName("batch_scoring_dialog")
         self.resize(620, 280)
@@ -144,7 +151,7 @@ class BatchScoringDialog(QDialog):
         layout.addLayout(form)
 
         self._input_edit = QLineEdit(self)
-        self._input_button = QPushButton(tr("scoring_btn_browse"), self)
+        self._input_button = QPushButton(self)
         self._input_button.clicked.connect(self._browse_input)
         input_row = QHBoxLayout()
         input_row.addWidget(self._input_edit, 1)
@@ -152,10 +159,11 @@ class BatchScoringDialog(QDialog):
         input_container = QWidget(self)
         input_container.setLayout(input_row)
         input_row.setContentsMargins(0, 0, 0, 0)
-        form.addRow(tr("batch_input_label"), input_container)
+        self._lbl_input = QLabel(self)
+        form.addRow(self._lbl_input, input_container)
 
         self._output_edit = QLineEdit(self)
-        self._output_button = QPushButton(tr("scoring_btn_browse"), self)
+        self._output_button = QPushButton(self)
         self._output_button.clicked.connect(self._browse_output)
         output_row = QHBoxLayout()
         output_row.addWidget(self._output_edit, 1)
@@ -163,20 +171,25 @@ class BatchScoringDialog(QDialog):
         output_container = QWidget(self)
         output_container.setLayout(output_row)
         output_row.setContentsMargins(0, 0, 0, 0)
-        form.addRow(tr("batch_output_label"), output_container)
+        self._lbl_output = QLabel(self)
+        form.addRow(self._lbl_output, output_container)
 
         self._policy_combo = QComboBox(self)
-        self._policy_combo.addItems(["exclude", "error", "majority"])
-        form.addRow(tr("scoring_policy_label"), self._policy_combo)
+        for policy in ("exclude", "error", "majority"):
+            self._policy_combo.addItem("", policy)
+        self._lbl_policy = QLabel(self)
+        form.addRow(self._lbl_policy, self._policy_combo)
 
         self._chunksize_spin = QSpinBox(self)
         self._chunksize_spin.setRange(1, 10_000_000)
         self._chunksize_spin.setValue(50000)
-        form.addRow(tr("batch_chunksize_label"), self._chunksize_spin)
+        self._lbl_chunksize = QLabel(self)
+        form.addRow(self._lbl_chunksize, self._chunksize_spin)
 
         self._rules_check = QCheckBox(self)
         self._rules_check.setChecked(True)
-        form.addRow(tr("batch_include_rules_label"), self._rules_check)
+        self._lbl_rules = QLabel(self)
+        form.addRow(self._lbl_rules, self._rules_check)
 
         self._progress = QProgressBar(self)
         self._progress.setTextVisible(False)
@@ -185,9 +198,9 @@ class BatchScoringDialog(QDialog):
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        self._cancel_button = QPushButton(tr("wizard_cancel"), self)
+        self._cancel_button = QPushButton(self)
         self._cancel_button.clicked.connect(self.reject)
-        self._run_button = QPushButton(tr("scoring_btn_execute"), self)
+        self._run_button = QPushButton(self)
         self._run_button.setEnabled(False)
         self._run_button.clicked.connect(self._execute)
         buttons.addWidget(self._cancel_button)
@@ -196,7 +209,36 @@ class BatchScoringDialog(QDialog):
 
         self._input_edit.textChanged.connect(self._sync_execute_button)
         self._output_edit.textChanged.connect(self._sync_execute_button)
+        self.retranslate_ui()
+        language_bus.language_changed.connect(self.retranslate_ui)
+        self._bus_attached = True
+
+    def retranslate_ui(self) -> None:
+        """Refresh every visible text without changing canonical form data."""
         self.setWindowTitle(tr("batch_dialog_title"))
+        self._lbl_input.setText(tr("batch_input_label"))
+        self._lbl_output.setText(tr("batch_output_label"))
+        self._lbl_policy.setText(tr("scoring_policy_label"))
+        self._lbl_chunksize.setText(tr("batch_chunksize_label"))
+        self._lbl_rules.setText(tr("batch_include_rules_label"))
+        self._input_button.setText(tr("scoring_btn_browse"))
+        self._output_button.setText(tr("scoring_btn_browse"))
+        self._cancel_button.setText(tr("wizard_cancel"))
+        self._run_button.setText(tr("scoring_btn_execute"))
+        for index in range(self._policy_combo.count()):
+            policy = self._policy_combo.itemData(index)
+            self._policy_combo.setItemText(index, tr(f"unseen_policy_{policy}"))
+
+    def _detach_bus(self) -> None:
+        """Disconnect once; closeEvent and done may both run for one close."""
+        if not self._bus_attached:
+            return
+        try:
+            language_bus.language_changed.disconnect(self.retranslate_ui)
+        except (RuntimeError, TypeError):
+            pass
+        finally:
+            self._bus_attached = False
 
     def _sync_execute_button(self) -> None:
         has_paths = bool(
@@ -253,7 +295,7 @@ class BatchScoringDialog(QDialog):
             self._session,
             self._input_edit.text().strip(),
             self._output_edit.text().strip(),
-            self._policy_combo.currentText(),
+            self._policy_combo.currentData(),
             self._chunksize_spin.value(),
             self._rules_check.isChecked(),
         )
@@ -282,6 +324,14 @@ class BatchScoringDialog(QDialog):
             return
         super().reject()
 
+    def closeEvent(self, event) -> None:
+        self._detach_bus()
+        super().closeEvent(event)
+
+    def done(self, result: int) -> None:
+        self._detach_bus()
+        super().done(result)
+
 
 class ChampionChallengerDialog(QDialog):
     """Configure a challenger and render the comparison DTO without analytics."""
@@ -291,6 +341,8 @@ class ChampionChallengerDialog(QDialog):
         self._session = session
         self._worker: CCWorker | None = None
         self._running = False
+        self._report_dto: dict | None = None
+        self._bus_attached = False
         self.setModal(True)
         self.setObjectName("champion_challenger_dialog")
         self.resize(760, 520)
@@ -300,7 +352,7 @@ class ChampionChallengerDialog(QDialog):
         layout.addLayout(form)
 
         self._eval_edit = QLineEdit(self)
-        self._eval_button = QPushButton(tr("scoring_btn_browse"), self)
+        self._eval_button = QPushButton(self)
         self._eval_button.clicked.connect(self._browse_evaluation)
         eval_row = QHBoxLayout()
         eval_row.addWidget(self._eval_edit, 1)
@@ -308,21 +360,38 @@ class ChampionChallengerDialog(QDialog):
         eval_container = QWidget(self)
         eval_container.setLayout(eval_row)
         eval_row.setContentsMargins(0, 0, 0, 0)
-        form.addRow(tr("cc_eval_label"), eval_container)
+        self._lbl_eval = QLabel(self)
+        form.addRow(self._lbl_eval, eval_container)
 
         self._engine_combo = QComboBox(self)
-        self._engine_combo.addItems(["CRT", "CHAID", "QUEST"])
-        form.addRow(tr("cc_engine_label"), self._engine_combo)
+        for engine in ENGINE_LABELS:
+            self._engine_combo.addItem("", engine)
+        self._lbl_engine = QLabel(self)
+        form.addRow(self._lbl_engine, self._engine_combo)
 
         self._target_edit = QLineEdit(self)
-        form.addRow(tr("cc_target_label"), self._target_edit)
+        self._lbl_target = QLabel(self)
+        form.addRow(self._lbl_target, self._target_edit)
 
         self._weight_edit = QLineEdit(self)
-        form.addRow(tr("cc_weight_label"), self._weight_edit)
+        self._lbl_weight = QLabel(self)
+        form.addRow(self._lbl_weight, self._weight_edit)
 
         self._policy_combo = QComboBox(self)
-        self._policy_combo.addItems(["exclude", "error", "majority"])
-        form.addRow(tr("scoring_policy_label"), self._policy_combo)
+        for policy in ("exclude", "error", "majority"):
+            self._policy_combo.addItem("", policy)
+        self._lbl_policy = QLabel(self)
+        form.addRow(self._lbl_policy, self._policy_combo)
+
+        self._n_groups_spin = QSpinBox(self)
+        self._n_groups_spin.setRange(3, 20)
+        self._n_groups_spin.setValue(10)
+        self._lbl_n_groups = QLabel(self)
+        form.addRow(self._lbl_n_groups, self._n_groups_spin)
+
+        self._params_edit = QLineEdit(self)
+        self._lbl_params = QLabel(self)
+        form.addRow(self._lbl_params, self._params_edit)
 
         self._result_label = QLabel(self)
         self._result_label.setWordWrap(True)
@@ -335,12 +404,6 @@ class ChampionChallengerDialog(QDialog):
         layout.addWidget(self._progress)
 
         self._table = QTableWidget(0, 4, self)
-        self._table.setHorizontalHeaderLabels([
-            tr("cc_col_metric"),
-            tr("cc_col_champion"),
-            tr("cc_col_challenger"),
-            tr("cc_col_delta"),
-        ])
         self._table.setSelectionBehavior(
             QAbstractItemView.SelectionBehavior.SelectRows
         )
@@ -360,9 +423,9 @@ class ChampionChallengerDialog(QDialog):
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
-        self._cancel_button = QPushButton(tr("wizard_cancel"), self)
+        self._cancel_button = QPushButton(self)
         self._cancel_button.clicked.connect(self.reject)
-        self._run_button = QPushButton(tr("scoring_btn_execute"), self)
+        self._run_button = QPushButton(self)
         self._run_button.setEnabled(False)
         self._run_button.clicked.connect(self._execute)
         buttons.addWidget(self._cancel_button)
@@ -370,7 +433,72 @@ class ChampionChallengerDialog(QDialog):
         layout.addLayout(buttons)
 
         self._eval_edit.textChanged.connect(self._sync_execute_button)
+        self.retranslate_ui()
+        language_bus.language_changed.connect(self.retranslate_ui)
+        self._bus_attached = True
+
+    def retranslate_ui(self) -> None:
+        """Refresh visible texts while preserving canonical combo data."""
         self.setWindowTitle(tr("cc_dialog_title"))
+        self._lbl_eval.setText(tr("cc_eval_label"))
+        self._lbl_engine.setText(tr("cc_engine_label"))
+        self._lbl_target.setText(tr("cc_target_label"))
+        self._lbl_weight.setText(tr("cc_weight_label"))
+        self._lbl_policy.setText(tr("scoring_policy_label"))
+        self._lbl_n_groups.setText(tr("cc_n_groups_label"))
+        self._lbl_params.setText(tr("cc_params_label"))
+        self._eval_button.setText(tr("scoring_btn_browse"))
+        self._cancel_button.setText(tr("wizard_cancel"))
+        self._run_button.setText(tr("scoring_btn_execute"))
+        self._table.setHorizontalHeaderLabels(
+            [
+                tr("cc_col_metric"),
+                tr("cc_col_champion"),
+                tr("cc_col_challenger"),
+                tr("cc_col_delta"),
+            ]
+        )
+        for index in range(self._policy_combo.count()):
+            policy = self._policy_combo.itemData(index)
+            self._policy_combo.setItemText(index, tr(f"unseen_policy_{policy}"))
+        for index in range(self._engine_combo.count()):
+            engine = self._engine_combo.itemData(index)
+            self._engine_combo.setItemText(index, ENGINE_LABELS[engine])
+        if self._report_dto is not None and not self._running:
+            self._on_worker_finished(self._report_dto)
+
+    def _detach_bus(self) -> None:
+        """Disconnect once; closeEvent and done may both run for one close."""
+        if not self._bus_attached:
+            return
+        try:
+            language_bus.language_changed.disconnect(self.retranslate_ui)
+        except (RuntimeError, TypeError):
+            pass
+        finally:
+            self._bus_attached = False
+
+    @staticmethod
+    def _parse_challenger_params(text: str) -> dict | None:
+        """Parse comma-separated key=value pairs without statistical logic."""
+        if not text.strip():
+            return None
+        params = {}
+        for pair in text.split(","):
+            key, separator, value = pair.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if not separator or not key:
+                raise ValueError("invalid challenger parameters")
+            try:
+                parsed = int(value)
+            except ValueError:
+                try:
+                    parsed = float(value)
+                except ValueError:
+                    parsed = value
+            params[key] = parsed
+        return params
 
     def _sync_execute_button(self) -> None:
         self._run_button.setEnabled(
@@ -386,6 +514,8 @@ class ChampionChallengerDialog(QDialog):
             self._target_edit,
             self._weight_edit,
             self._policy_combo,
+            self._n_groups_spin,
+            self._params_edit,
             self._cancel_button,
         ):
             widget.setEnabled(not running)
@@ -410,16 +540,29 @@ class ChampionChallengerDialog(QDialog):
     def _execute(self) -> None:
         if self._running:
             return
+        try:
+            challenger_params = self._parse_challenger_params(
+                self._params_edit.text()
+            )
+        except ValueError:
+            QMessageBox.critical(
+                self,
+                tr("msg_error_title"),
+                tr("cc_params_invalid"),
+            )
+            return
         self._set_running(True)
         self._table.setVisible(False)
         self._result_label.setVisible(False)
         self._worker = CCWorker(
             self._session,
             self._eval_edit.text().strip(),
-            self._engine_combo.currentText(),
+            self._engine_combo.currentData(),
             self._target_edit.text().strip() or None,
             self._weight_edit.text().strip() or None,
-            self._policy_combo.currentText(),
+            self._policy_combo.currentData(),
+            self._n_groups_spin.value(),
+            challenger_params,
         )
         self._worker.finished_ok.connect(self._on_worker_finished)
         self._worker.failed.connect(self._on_worker_failed)
@@ -430,6 +573,7 @@ class ChampionChallengerDialog(QDialog):
         return "—" if value is None else f"{float(value):.6g}"
 
     def _on_worker_finished(self, res: dict) -> None:
+        self._report_dto = res
         self._set_running(False)
         self._result_label.setText(
             tr("cc_result_summary").format(
@@ -467,3 +611,11 @@ class ChampionChallengerDialog(QDialog):
         if self._running:
             return
         super().reject()
+
+    def closeEvent(self, event) -> None:
+        self._detach_bus()
+        super().closeEvent(event)
+
+    def done(self, result: int) -> None:
+        self._detach_bus()
+        super().done(result)
