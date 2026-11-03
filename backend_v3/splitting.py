@@ -19,7 +19,7 @@ import pandas as pd
 
 from .log_config import get_logger
 
-__all__ = ["stratified_split"]
+__all__ = ["stratified_split", "stratified_kfold"]
 
 
 def stratified_split(
@@ -146,3 +146,56 @@ def stratified_split(
         len(idx_test), seed, n_clases,
     )
     return idx_train, idx_test
+
+
+def stratified_kfold(
+    y: pd.Series,
+    k: int,
+    seed: int,
+    log: logging.Logger | None = None,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Devuelve k pares (train_idx, val_idx) estratificados y disjuntos.
+
+    Cada clase se permuta con la misma seed y se reparte por turno circular
+    entre los folds. La union de las validaciones cubre 0..N-1 y cada indice
+    aparece en exactamente un fold de validacion.
+    """
+    if log is None:
+        log = get_logger("splitting")
+    if isinstance(k, bool) or not isinstance(k, (int, np.integer)):
+        raise ValueError(f"[splitting] k debe ser entero: {k!r}")
+    if not 2 <= int(k) <= 20:
+        raise ValueError(f"[splitting] k fuera de [2, 20]: {k!r}")
+    if isinstance(seed, bool) or not isinstance(seed, (int, np.integer)):
+        raise ValueError(f"[splitting] seed debe ser entera: {seed!r}")
+
+    yv = pd.Series(y).to_numpy()
+    n_total = len(yv)
+    if n_total == 0:
+        raise ValueError("[splitting] y vacio")
+
+    rng = np.random.default_rng(seed)
+    partes: list[list[int]] = [[] for _ in range(int(k))]
+    for clase in np.unique(yv):
+        idx_c = np.flatnonzero(yv == clase)
+        if len(idx_c) < int(k):
+            raise ValueError(
+                f"[splitting] clase {clase!r} tiene {len(idx_c)} filas; "
+                f"se requieren al menos k={int(k)} para estratificar"
+            )
+        idx_c = idx_c[rng.permutation(len(idx_c))]
+        for pos, idx in enumerate(idx_c):
+            partes[pos % int(k)].append(int(idx))
+
+    todos = np.arange(n_total, dtype=int)
+    folds: list[tuple[np.ndarray, np.ndarray]] = []
+    for parte in partes:
+        idx_val = np.asarray(sorted(parte), dtype=int)
+        idx_train = np.setdiff1d(todos, idx_val, assume_unique=False)
+        folds.append((idx_train, idx_val))
+
+    log.info(
+        "[splitting] stratified_kfold N=%d k=%d (seed=%d, clases=%d)",
+        n_total, int(k), int(seed), len(np.unique(yv)),
+    )
+    return folds

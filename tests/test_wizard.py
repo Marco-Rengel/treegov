@@ -252,8 +252,8 @@ def test_wizard_finish_emits_config():
     cfg = captured[0]
     assert set(cfg) == {
         "engine", "target", "predictors", "target_class", "class_labels",
-        "train_frac", "seed", "max_depth", "min_child_size",
-        "min_child_weight",
+        "train_frac", "seed", "validation_scheme", "cv_k",
+        "max_depth", "min_child_size", "min_child_weight",
         "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
         "population_col", "population_ok_values", "cost_matrix",
     }
@@ -264,6 +264,7 @@ def test_wizard_finish_emits_config():
     assert cfg["target_class"] is None
     assert cfg["class_labels"] == {}
     assert cfg["train_frac"] == 0.7 and cfg["seed"] == 42
+    assert cfg["validation_scheme"] == "holdout" and cfg["cv_k"] == 5
     assert cfg["max_depth"] == 4 and cfg["min_child_size"] == 50
     assert cfg["governance_mode"] == "BANKING"
     assert cfg["apply_jeffreys"] is True and cfg["pd_floor"] == 0.0005
@@ -686,8 +687,8 @@ def test_wizard_validation_scheme_radios():
     """Phase 3.11.a.1 (Paso 3 clásico): tres radios verticales (No validar /
     Partición / Validación cruzada), Partición por defecto; slider y barra
     solo habilitados con Partición; aviso al seleccionar CV o No validar.
-    El config sigue emitiendo holdout (TODO zona gris: NONE/CV pendientes
-    de backend)."""
+    CV ya fluye al backend; NONE conserva el aviso de comportamiento
+    presentacional."""
     wiz = _make_wizard()
     page = wiz.page_validation
     assert page._rb_holdout.isChecked() is True      # default: Partición
@@ -716,6 +717,37 @@ def test_wizard_validation_scheme_radios():
     # el contrato con MainWindow no cambia (holdout estratificado)
     assert wiz.current_config()["train_frac"] == 0.7
     assert wiz.current_config()["seed"] == 42
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_cv_shows_k_spinbox():
+    wiz = _make_wizard()
+    page = wiz.page_validation
+    page._rb_cv.setChecked(True)
+    assert page._spin_cv_k.isHidden() is False
+    assert page.cv_k() == 5
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_cv_k_flows_to_config():
+    wiz = _make_wizard()
+    page = wiz.page_validation
+    page._rb_cv.setChecked(True)
+    page._spin_cv_k.setValue(7)
+    cfg = wiz.current_config()
+    assert cfg["validation_scheme"] == "cv"
+    assert cfg["cv_k"] == 7
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_holdout_hides_k_spinbox():
+    wiz = _make_wizard()
+    page = wiz.page_validation
+    page._rb_holdout.setChecked(True)
+    assert page._spin_cv_k.isHidden() is True
     wiz.close()
     wiz.deleteLater()
 

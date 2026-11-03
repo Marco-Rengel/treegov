@@ -147,7 +147,7 @@ def _open_window(csv_path: Path) -> MainWindow:
 
 
 # ---------------------------------------------------------------------------
-# E2E tests (11)
+# E2E tests (12)
 # ---------------------------------------------------------------------------
 
 
@@ -487,6 +487,43 @@ def test_e2e_context_menu_prune_updates_hud():
             assert st.tree.params_fingerprint != fp_antes
             assert st.tree.params_fingerprint.endswith("-i1")
             assert w._hud_lbl_gov_fp.text() == st.tree.params_fingerprint
+        finally:
+            w.close()
+            w.deleteLater()
+
+
+def test_e2e_cv_full_flow():
+    """CV fluye del cfg al backend y el informe queda disponible en la GUI."""
+    with tempfile.TemporaryDirectory() as td:
+        csv = _make_csv(Path(td) / "mini_cv.csv")
+        w = _open_window(csv)
+        try:
+            cfg = dict(_cfg(), validation_scheme="cv", cv_k=3)
+            w._on_wizard_finished(cfg)
+            st = w._session.state
+            assert st.validation_scheme == "cv"
+            assert st.cv_k == 3
+            assert st.tree is not None
+            assert st.tree.nodes[0].n == 300
+
+            w._on_evaluate_oos()
+            report = w._last_cv_report
+            assert isinstance(report, dict)
+            assert report["scheme"] == "cv" and report["k"] == 3
+            assert len(report["metrics_per_fold"]) == 3
+            assert w._metrics_panel._report["oos"] == {}
+            assert w._act_view_cv.isEnabled()
+
+            with patch(
+                "frontend_v3.main_window.QMessageBox.information"
+            ) as information:
+                w._on_view_cv()
+                information.assert_called_once()
+                body = information.call_args.args[2]
+                assert "k = 3" in body
+                assert "Mean ± std" in body
+                assert "Fold 3" in body
+                assert "metrics_mean" not in body
         finally:
             w.close()
             w.deleteLater()

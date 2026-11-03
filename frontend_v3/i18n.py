@@ -38,6 +38,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_window_tile": "Tile",
         "menu_model_train": "Train",
         "menu_model_evaluate_oos": "Evaluate OOS",
+        "menu_model_view_cv": "View CV",
+        "cv_report_title": "Cross-validation report",
+        "cv_report_fold_header": "Per-fold metrics",
         "menu_model_load_oot": "Load OOT Cohort...",
         "menu_model_prune": "Prune Tree...",
         "prune_dialog_title": "Prune Tree (Cost-Complexity)",
@@ -159,7 +162,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step3_scheme_none": "Do not validate",
         "step3_scheme_partition": "Partition (Holdout)",
         "step3_scheme_cv": "Cross-validation",
-        "step3_cv_notice": "Cross-validation is not available in this version.",
+        "step3_cv_notice": (
+            "Cross-validation is active. The final model will be trained "
+            "on 100% of the data. Evaluation reports mean ± standard "
+            "deviation over k folds."
+        ),
+        "step3_cv_k_label": "Folds (k):",
         "step3_none_notice": (
             "Training without a holdout partition is not available yet; "
             "the stratified holdout is still applied."
@@ -528,6 +536,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu_window_tile": "Mosaico",
         "menu_model_train": "Entrenar",
         "menu_model_evaluate_oos": "Evaluar OOS",
+        "menu_model_view_cv": "Ver CV",
+        "cv_report_title": "Reporte de validación cruzada",
+        "cv_report_fold_header": "Métricas por fold",
         "menu_model_load_oot": "Cargar cohorte OOT...",
         "menu_model_prune": "Podar Árbol...",
         "prune_dialog_title": "Podar Árbol (Coste-Complejidad)",
@@ -653,7 +664,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "step3_scheme_none": "No validar",
         "step3_scheme_partition": "Partición (Holdout)",
         "step3_scheme_cv": "Validación cruzada",
-        "step3_cv_notice": "La validación cruzada no está disponible en esta versión.",
+        "step3_cv_notice": (
+            "La validación cruzada está activa. El modelo final se entrenará "
+            "con el 100% de los datos. La evaluación reporta media ± "
+            "desviación estándar sobre k folds."
+        ),
+        "step3_cv_k_label": "Folds (k):",
         "step3_none_notice": (
             "Entrenar sin partición holdout aún no está disponible; "
             "la partición estratificada sigue aplicándose."

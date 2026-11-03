@@ -233,6 +233,8 @@ class TreeBuilder:
         weight_col: str | None = None,
         population_col: str | None = None,
         population_ok_values: tuple[str, ...] = (),
+        validation_scheme: str = "holdout",
+        cv_k: int | None = None,
     ) -> None:
         """max_depth=None -> modo grow_full (crece hasta min_child_size).
 
@@ -387,6 +389,8 @@ class TreeBuilder:
         self._weight_col = weight_col
         self._population_col = pop_col_norm
         self._population_ok_values = pop_ok_norm
+        self._validation_scheme = validation_scheme
+        self._cv_k = cv_k
         self._log = logger if logger is not None else get_logger("builder")
 
     # ------------------------------------------------------------------
@@ -712,5 +716,9 @@ class TreeBuilder:
             "population_col": self._population_col,
             "population_ok_values": list(self._population_ok_values),
         }
+        if self._validation_scheme != "holdout":
+            payload["validation_scheme"] = self._validation_scheme
+        if self._cv_k is not None:
+            payload["cv_k"] = self._cv_k
         blob = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hashlib.sha256(blob).hexdigest()[:16]

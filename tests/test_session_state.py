@@ -1996,6 +1996,104 @@ def test_intervene_prune():
         assert st.manual_overrides[0][2] == "prune_branch"
 
 
+def _cv_session(tmp: Path, k: int = 3) -> Session:
+    csv_path = _csv(tmp)
+    s = Session(logger=_quiet_logger())
+    s.load_dataset(str(csv_path))
+    s.fix_spec("default", target_class=1,
+               class_labels={0: "Bueno", 1: "Malo"})
+    s.partition(seed=42, scheme="cv", k=k)
+    return s
+
+
+def test_partition_cv_mode():
+    with tempfile.TemporaryDirectory() as td:
+        s = _cv_session(Path(td), k=3)
+        st = s.state
+        assert s._X_train is not None and len(s._X_train) == 120
+        assert s._X_test is None and s._y_test is None
+        assert st.validation_scheme == "cv"
+        assert st.cv_k == 3
+        assert len(st.cv_folds) == 3
+        assert st.train_idx is None and st.test_idx is None
+
+
+def test_partition_cv_preserves_holdout_fingerprints():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        fingerprints = []
+        for explicit in (False, True):
+            s = Session(logger=_quiet_logger())
+            s.load_dataset(str(csv_path))
+            s.fix_spec("default", target_class=1,
+                       class_labels={0: "Bueno", 1: "Malo"})
+            kwargs = {"scheme": "holdout"} if explicit else {}
+            s.partition(train_frac=0.7, seed=42, **kwargs)
+            s.train(CrtEngine(), max_depth=4, min_child_size=5)
+            assert s.state.tree is not None
+            fingerprints.append(s.state.tree.params_fingerprint)
+        assert fingerprints[0] == fingerprints[1]
+
+
+def test_train_cv_mode_uses_100pct_data():
+    with tempfile.TemporaryDirectory() as td:
+        s = _cv_session(Path(td), k=3)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert s.state.tree is not None
+        root = s.state.tree.nodes[0]
+        assert root.n == 120
+        assert root.n_events == (60, 60)
+
+
+def test_evaluate_oos_cv_returns_dto_with_mean_std():
+    with tempfile.TemporaryDirectory() as td:
+        s = _cv_session(Path(td), k=3)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        report = s.evaluate_oos()
+        assert isinstance(report, dict)
+        assert report["scheme"] == "cv" and report["k"] == 3
+        assert len(report["metrics_per_fold"]) == 3
+        for key in ("auc", "gini", "ks"):
+            assert key in report["metrics_mean"]
+            assert key in report["metrics_std"]
+        assert s.state.oos_metrics is None
+
+
+def test_fingerprint_differs_between_holdout_and_cv():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        s_cv = _cv_session(tmp, k=3)
+        s_cv.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert s_cv.state.tree is not None
+
+        s_holdout = Session(logger=_quiet_logger())
+        s_holdout.load_dataset(str(tmp / "mini.csv"))
+        s_holdout.fix_spec("default", target_class=1,
+                           class_labels={0: "Bueno", 1: "Malo"})
+        s_holdout.partition(train_frac=0.7, seed=42)
+        s_holdout.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert s_holdout.state.tree is not None
+        assert (
+            s_cv.state.tree.params_fingerprint
+            != s_holdout.state.tree.params_fingerprint
+        )
+
+
+def test_get_cv_report_returns_none_without_cv():
+    s = Session(logger=_quiet_logger())
+    assert s.get_cv_report() is None
+
+
+def test_get_cv_report_returns_dto_after_evaluate():
+    with tempfile.TemporaryDirectory() as td:
+        s = _cv_session(Path(td), k=3)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        expected = s.evaluate_oos()
+        report = s.get_cv_report()
+        assert isinstance(report, dict)
+        assert report == expected
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

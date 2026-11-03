@@ -23,6 +23,7 @@ Dependencias permitidas: numpy, pandas y los modulos propios de backend_v3.
 
 from __future__ import annotations
 
+import copy
 import datetime
 import logging
 import os
@@ -58,7 +59,7 @@ from .scoring import (
     compare_champion_challenger as compare_models,
     score_batch_to_csv,
 )
-from .splitting import stratified_split
+from .splitting import stratified_kfold, stratified_split
 from .stability import OOTReport
 from .tree_builder import TreeBuilder, TreeModel
 from .types import PredictorType, TargetType
@@ -141,6 +142,9 @@ class SessionState:
     # (timestamp_str, node_id, action, params_str, fp_before, fp_after).
     manual_overrides: tuple[tuple[str, int, str, str, str, str], ...] = ()
     event_log: tuple[str, ...] = ("init/state=EMPTY",)
+    validation_scheme: str = "holdout"
+    cv_k: int | None = None
+    cv_folds: tuple[tuple[tuple[int, ...], tuple[int, ...]], ...] = ()
 
 
 class Session:
@@ -172,6 +176,8 @@ class Session:
         self._pop_ok_values: tuple[str, ...] | None = None
         # ZG-3: parametros del ultimo train() para los arboles univariados
         self._last_train_params: dict | None = None
+        self._cv_report: dict | None = None
+        self._cv_engine = None
 
     @property
     def state(self) -> SessionState:
@@ -567,6 +573,8 @@ class Session:
         self._pop_col = None
         self._pop_ok_values = None
         self._last_train_params = None
+        self._cv_report = None
+        self._cv_engine = None
         self._state = SessionState(
             state=FlowState.DATA_LOADED,
             csv_path=self._state.csv_path,
@@ -836,7 +844,10 @@ class Session:
             cost_matrix=cost_matrix if cost_matrix else (),
         )
 
-    def partition(self, train_frac: float = 0.7, seed: int = 42) -> SessionState:
+    def partition(
+        self, train_frac: float = 0.7, seed: int = 42,
+        *, scheme: str = "holdout", k: int = 5,
+    ) -> SessionState:
         """SPEC_FIXED -> PARTITIONED (Hamilton-Hare + imputer SOLO train).
 
         Fase 3.2: si fix_spec declaro `weight_col`, los pesos se VALIDAN
@@ -850,6 +861,13 @@ class Session:
         assert self._df is not None
         st = self._state
         assert st.target is not None and st.spec is not None
+        if scheme == "cv":
+            return self._partition_cv(seed=seed, k=k)
+        if scheme != "holdout":
+            raise ValueError(
+                f"[session] validation scheme desconocido: {scheme!r}"
+            )
+        self._cv_report = None
         spec_d = dict(st.spec)  # tuple inmutable -> dict para el imputer
         # Fase 3.3: aplicar filtro de poblacion si esta declarado.
         if self._pop_col is not None:
@@ -919,6 +937,86 @@ class Session:
             train_frac=float(train_frac), seed=int(seed),
             n_excluded_population=n_excluded,
             population_breakdown=breakdown,
+        )
+
+    def _partition_cv(self, *, seed: int, k: int) -> SessionState:
+        """Particiona en folds CV y deja el 100% OK listo para el modelo final."""
+        assert self._df is not None
+        st = self._state
+        assert st.target is not None and st.spec is not None
+        spec_d = dict(st.spec)
+
+        if self._pop_col is not None:
+            ok_mask = (
+                self._df[self._pop_col]
+                .isin(self._pop_ok_values or ())
+                .to_numpy()
+            )
+            n_excluded = int((~ok_mask).sum())
+            non_ok = self._df.loc[~ok_mask, self._pop_col]
+            vc = non_ok.value_counts()
+            breakdown = tuple(
+                (str(v), int(c))
+                for v, c in sorted(
+                    vc.items(), key=lambda kv: (-int(kv[1]), str(kv[0]))
+                )
+            )
+        else:
+            ok_mask = np.ones(len(self._df), dtype=bool)
+            n_excluded = 0
+            breakdown = ()
+        ok_indices = np.flatnonzero(ok_mask)
+        if self._w_col is not None:
+            w_ok = self._df[self._w_col].to_numpy(dtype=float)[ok_indices]
+            if not np.isfinite(w_ok).all():
+                raise ValueError("[session] weights contiene valores no finitos")
+        y_ok = self._df[st.target].iloc[ok_indices]
+        folds_rel = stratified_kfold(y_ok, k, seed, self._log)
+        cv_folds = tuple(
+            (
+                tuple(int(i) for i in ok_indices[idx_tr]),
+                tuple(int(i) for i in ok_indices[idx_val]),
+            )
+            for idx_tr, idx_val in folds_rel
+        )
+
+        X = self._df[[c for c in self._df.columns if c != st.target]]
+        X_train = X.iloc[ok_indices].reset_index(drop=True)
+        y_train = (
+            self._df[st.target].iloc[ok_indices].astype(int).reset_index(drop=True)
+        )
+        imp = TrainOnlyImputer(logger=get_logger("imputation"))
+        imp.fit(X_train, spec_d)
+        self._X_train = imp.transform(X_train)
+        self._X_test = None
+        self._y_train = y_train
+        self._y_test = None
+        self._imputer = imp
+        if self._w_col is not None:
+            self._w_train = self._df[self._w_col].to_numpy(dtype=float)[ok_indices]
+        else:
+            self._w_train = None
+        self._w_test = None
+        self._cv_report = None
+        self._cv_engine = None
+
+        evento = f"partition:scheme=cv|k={int(k)}|seed={seed}|train={len(ok_indices)}"
+        if self._w_col is not None:
+            evento += "|weighted=true"
+        if self._pop_col is not None:
+            evento += f"|population_col={self._pop_col}|excluded={n_excluded}"
+        return self._commit(
+            FlowState.PARTITIONED,
+            evento=evento,
+            train_idx=None,
+            test_idx=None,
+            train_frac=None,
+            seed=int(seed),
+            n_excluded_population=n_excluded,
+            population_breakdown=breakdown,
+            validation_scheme="cv",
+            cv_k=int(k),
+            cv_folds=cv_folds,
         )
 
     def train(
@@ -1014,6 +1112,9 @@ class Session:
             "pd_floor": pd_floor,
             "apply_jeffreys": apply_jeffreys
         }
+        cv_engine = (
+            copy.deepcopy(engine) if st.validation_scheme == "cv" else None
+        )
         builder = TreeBuilder(
             engine, target_type=target_type, target_class=target_class,
             class_labels=class_labels_canonical,
@@ -1023,8 +1124,12 @@ class Session:
             weights=self._w_train, weight_col=self._w_col,
             min_child_weight=min_child_weight,
             seed=st.seed, logger=get_logger("builder"),
+            validation_scheme=st.validation_scheme,
+            cv_k=st.cv_k,
         )
         modelo = builder.build(self._X_train, self._y_train, dict(st.spec))
+        self._cv_report = None
+        self._cv_engine = cv_engine
         evento = (f"train:{modelo.method}|nodos={len(modelo.nodes)}"
                   f"|fp={modelo.params_fingerprint}")
         if self._w_col is not None:
@@ -1037,7 +1142,7 @@ class Session:
             tree=modelo,
         )
 
-    def evaluate_oos(self, *, n_groups: int = 10) -> SessionState:
+    def evaluate_oos(self, *, n_groups: int = 10) -> SessionState | dict:
         """TRAINED -> TRAINED con oos_metrics rellenado (no cambia FlowState).
 
         X_test se asume imputado con TrainOnlyImputer (hecho en partition);
@@ -1050,6 +1155,8 @@ class Session:
         self._require(FlowState.TRAINED, "evaluate_oos")
         st = self._state
         assert st.tree is not None
+        if st.validation_scheme == "cv":
+            return self._evaluate_oos_cv(n_groups=n_groups)
         assert self._X_test is not None and self._y_test is not None
         K = len(st.tree.class_labels)
         p_2d = predict_pd(st.tree, self._X_test)
@@ -1072,6 +1179,106 @@ class Session:
             ),
             oos_metrics=metrics,
         )
+
+    def _evaluate_oos_cv(self, *, n_groups: int) -> dict:
+        """Entrena un modelo temporal por fold y agrega sus metricas OOS."""
+        st = self._state
+        assert st.tree is not None and st.spec is not None
+        assert self._df is not None and st.target is not None
+        if self._cv_engine is None or self._last_train_params is None:
+            raise RuntimeError("[session] CV sin configuracion de entrenamiento")
+
+        params = self._last_train_params
+        spec_d = dict(st.spec)
+        X = self._df[[c for c in self._df.columns if c != st.target]]
+        w_full = (
+            None if self._w_col is None
+            else self._df[self._w_col].to_numpy(dtype=float)
+        )
+        metrics_per_fold: list[dict] = []
+        for train_idx, val_idx in st.cv_folds:
+            idx_tr = np.asarray(train_idx, dtype=int)
+            idx_val = np.asarray(val_idx, dtype=int)
+            X_tr = X.iloc[idx_tr].reset_index(drop=True)
+            X_val = X.iloc[idx_val].reset_index(drop=True)
+            y_tr = self._df[st.target].iloc[idx_tr].astype(int).reset_index(drop=True)
+            y_val = self._df[st.target].iloc[idx_val].astype(int).to_numpy()
+
+            imp = TrainOnlyImputer(logger=get_logger("imputation"))
+            imp.fit(X_tr, spec_d)
+            X_tr = imp.transform(X_tr)
+            X_val = imp.transform(X_val)
+            w_tr = None if w_full is None else w_full[idx_tr]
+            w_val = None if w_full is None else w_full[idx_val]
+            builder = TreeBuilder(
+                copy.deepcopy(self._cv_engine),
+                target_type=params["target_type"],
+                target_class=st.target_class,
+                class_labels=st.tree.class_labels,
+                max_depth=params["max_depth"],
+                min_child_size=params["min_child_size"],
+                min_child_weight=params["min_child_weight"],
+                pd_floor=params["pd_floor"],
+                apply_jeffreys=params["apply_jeffreys"],
+                weights=w_tr,
+                weight_col=self._w_col,
+                seed=st.seed,
+                logger=get_logger("builder"),
+                validation_scheme="cv",
+                cv_k=st.cv_k,
+            )
+            model = builder.build(X_tr, y_tr, spec_d)
+            p_2d = predict_pd(model, X_val)
+            if len(model.class_labels) == 2:
+                p = p_2d[:, 0]
+                y_eval = y_val
+            else:
+                p = p_2d
+                y_eval = self._translate_y_to_internal(y_val)
+            n_groups_fold = min(n_groups, max(3, len(idx_val) // 5))
+            metrics = compute_oos_metrics(
+                p, y_eval, n_groups=n_groups_fold, weights=w_val
+            )
+            metrics_per_fold.append(asdict(metrics))
+
+        metrics_mean: dict[str, float] = {}
+        metrics_std: dict[str, float] = {}
+        if metrics_per_fold:
+            for key in metrics_per_fold[0]:
+                values = [fold[key] for fold in metrics_per_fold]
+                if all(
+                    isinstance(v, (int, float, np.integer, np.floating))
+                    and not isinstance(v, (bool, np.bool_))
+                    and np.isfinite(v)
+                    for v in values
+                ):
+                    metrics_mean[key] = float(np.mean(values))
+                    metrics_std[key] = float(np.std(values, ddof=0))
+
+        report = {
+            "scheme": "cv",
+            "k": len(st.cv_folds),
+            "metrics_mean": metrics_mean,
+            "metrics_std": metrics_std,
+            "metrics_per_fold": metrics_per_fold,
+        }
+        gini = metrics_mean.get("gini")
+        self._commit(
+            st.state,
+            evento=(
+                f"evaluate_oos:scheme=cv|k={len(st.cv_folds)}"
+                f"|gini_mean={'nan' if gini is None else format(gini, '.4g')}"
+            ),
+            oos_metrics=None,
+        )
+        self._cv_report = report
+        return report
+
+    def get_cv_report(self) -> dict | None:
+        """Ultimo reporte CV calculado; None si no hay CV o aun no se evalua."""
+        if self._state.validation_scheme != "cv":
+            return None
+        return self._cv_report
 
     def prune(self, alpha: float) -> SessionState:
         """TRAINED -> TRAINED con pruned_tree (poda coste-complejidad).

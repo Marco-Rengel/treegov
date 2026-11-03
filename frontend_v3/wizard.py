@@ -770,14 +770,10 @@ class ValidationPage(QWizardPage):
 
     Phase 3.11.a.1: three vertical radio buttons — Do not validate /
     Partition (Holdout, default) / Cross-validation. The progress bar and
-    the slider are enabled ONLY under Holdout. CV shows a Phase 2.1.b
-    notice.
+    the slider are enabled ONLY under Holdout. CV exposes its fold count.
 
-    TODO(zona_gris): the scheme radios are presentational for now — the
-    backend pipeline (Session.partition -> train) ALWAYS applies the
-    stratified holdout; there is no no-validation or CV flow yet. To
-    avoid a silent UI/backend mismatch, NONE and CV show an explicit
-    notice and current_config() keeps emitting the holdout fraction.
+    TODO(zona_gris): NONE remains presentational; the stratified holdout
+    is still applied and the explicit notice prevents a silent mismatch.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -809,6 +805,20 @@ class ValidationPage(QWizardPage):
         self._lbl_cv_notice.setVisible(False)
         layout.addWidget(self._lbl_none_notice)
         layout.addWidget(self._lbl_cv_notice)
+
+        self._lbl_cv_k = QLabel()
+        self._lbl_cv_k.setObjectName("lblCvK")
+        self._lbl_cv_k.setVisible(False)
+        self._spin_cv_k = QSpinBox()
+        self._spin_cv_k.setObjectName("spinCvK")
+        self._spin_cv_k.setRange(2, 20)
+        self._spin_cv_k.setValue(5)
+        self._spin_cv_k.setVisible(False)
+        row_cv_k = QHBoxLayout()
+        row_cv_k.addWidget(self._lbl_cv_k)
+        row_cv_k.addWidget(self._spin_cv_k)
+        row_cv_k.addStretch(1)
+        layout.addLayout(row_cv_k)
 
         # Hotfix 3.11.a.1: modern split visualisation — section title,
         # proportional progress bar and large train/test percentage labels.
@@ -875,12 +885,15 @@ class ValidationPage(QWizardPage):
         return int(self._spin_seed.value())
 
     def validation_scheme(self) -> str:
-        """Selected scheme: NONE / HOLDOUT / CV (presentational, see TODO)."""
+        """Selected scheme: NONE / HOLDOUT / CV."""
         if self._rb_none.isChecked():
             return "NONE"
         if self._rb_cv.isChecked():
             return "CV"
         return "HOLDOUT"
+
+    def cv_k(self) -> int:
+        return int(self._spin_cv_k.value())
 
     def _sync_scheme_controls(self, *_args) -> None:
         holdout = self._rb_holdout.isChecked()
@@ -890,6 +903,9 @@ class ValidationPage(QWizardPage):
         self._split_bar.setEnabled(holdout)
         self._lbl_none_notice.setVisible(self._rb_none.isChecked())
         self._lbl_cv_notice.setVisible(self._rb_cv.isChecked())
+        cv = self._rb_cv.isChecked()
+        self._lbl_cv_k.setVisible(cv)
+        self._spin_cv_k.setVisible(cv)
 
     def _update_split_ui(self, value: int) -> None:
         self._split_bar.setValue(value)
@@ -907,6 +923,7 @@ class ValidationPage(QWizardPage):
         self._rb_cv.setText(tr("step3_scheme_cv"))
         self._lbl_none_notice.setText(tr("step3_none_notice"))
         self._lbl_cv_notice.setText(tr("step3_cv_notice"))
+        self._lbl_cv_k.setText(tr("step3_cv_k_label"))
         self._lbl_seed.setText(tr("step3_seed_label"))
         self._lbl_split_title.setText(tr("step3_split_title"))
         self._update_split_ui(self._slider.value())
@@ -1363,6 +1380,7 @@ class ModelWizard(QWizard):
     def current_config(self) -> dict:
         """Plain-Python snapshot of the 4 steps (the contract to MainWindow)."""
         banking = self.page_governance.is_banking()
+        validation_scheme = self.page_validation.validation_scheme()
         return {
             "engine": self.page_engine.selected_engine(),
             "target": self.page_predictors.target(),
@@ -1374,6 +1392,10 @@ class ModelWizard(QWizard):
             "population_ok_values": self.page_predictors.population_ok_values(),
             "train_frac": self.page_validation.train_frac(),
             "seed": self.page_validation.seed(),
+            "validation_scheme": (
+                "cv" if validation_scheme == "CV" else "holdout"
+            ),
+            "cv_k": self.page_validation.cv_k(),
             "max_depth": self.page_governance.max_depth(),
             "min_child_size": self.page_governance.min_child_size(),
             "min_child_weight": self.page_governance.min_child_weight(),

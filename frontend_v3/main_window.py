@@ -96,6 +96,7 @@ class MainWindow(QMainWindow):
         # Phase 3.1.f: last successful wizard cfg (needed to retrain after
         # a class-of-interest inversion without reopening the wizard)
         self._last_train_cfg: dict | None = None
+        self._last_cv_report: dict | None = None
         self._governance_mode: str = "BANKING"
         self._mode_name: str = "—"
         self._security_warning_shown: bool = False
@@ -169,6 +170,7 @@ class MainWindow(QMainWindow):
         self._act_window_tile.setText(tr("menu_window_tile"))
         self._act_train.setText(tr("menu_model_train"))
         self._act_evaluate_oos.setText(tr("menu_model_evaluate_oos"))
+        self._act_view_cv.setText(tr("menu_model_view_cv"))
         self._act_load_oot.setText(tr("menu_model_load_oot"))
         self._act_prune.setText(tr("menu_model_prune"))
         self._act_zoom_in.setText(tr("tree_zoom_in"))
@@ -443,6 +445,8 @@ class MainWindow(QMainWindow):
             "act_evaluate_oos", enabled=False
         )
         self._act_evaluate_oos.triggered.connect(self._on_evaluate_oos)
+        self._act_view_cv = self._new_action("act_view_cv", enabled=False)
+        self._act_view_cv.triggered.connect(self._on_view_cv)
         self._act_load_oot = self._new_action(
             "act_load_oot", enabled=False
         )
@@ -451,6 +455,7 @@ class MainWindow(QMainWindow):
         self._act_prune.triggered.connect(self._on_prune)
         self._menu_tree.addAction(self._act_train)
         self._menu_tree.addAction(self._act_evaluate_oos)
+        self._menu_tree.addAction(self._act_view_cv)
         self._menu_tree.addAction(self._act_load_oot)
         self._menu_tree.addAction(self._act_prune)
         bar.addMenu(self._menu_tree)
@@ -846,6 +851,8 @@ class MainWindow(QMainWindow):
             self._tree_panel.clear_model()
             self._tree_map.set_model(None)
             self._metrics_panel.set_report(None)
+            self._last_cv_report = None
+            self._act_view_cv.setEnabled(False)
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
             self._data_viewer.set_preview(None)
@@ -1022,6 +1029,8 @@ class MainWindow(QMainWindow):
         )
 
     def _train_pipeline(self, cfg: dict) -> None:
+        self._last_cv_report = None
+        self._act_view_cv.setEnabled(False)
         self._session.fix_spec(
             cfg["target"],
             predictors=cfg["predictors"],
@@ -1032,7 +1041,12 @@ class MainWindow(QMainWindow):
             population_ok_values=cfg["population_ok_values"],
             cost_matrix=cfg.get("cost_matrix", ()),
         )
-        self._session.partition(cfg["train_frac"], cfg["seed"])
+        scheme = cfg.get("validation_scheme", "holdout")
+        cv_k = cfg.get("cv_k", 5)
+        self._session.partition(
+            train_frac=cfg["train_frac"], seed=cfg["seed"],
+            scheme=scheme, k=cv_k,
+        )
         self._session.train(
             cfg["engine"],
             max_depth=cfg["max_depth"],
@@ -1237,6 +1251,7 @@ class MainWindow(QMainWindow):
         """Model > Evaluate OOS: runs evaluate_oos() on the trained model."""
         if self._session is None:
             return
+        is_cv = self._session.state.validation_scheme == "cv"
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             ok = self._run_guarded(self._session.evaluate_oos)
@@ -1244,12 +1259,38 @@ class MainWindow(QMainWindow):
             QApplication.restoreOverrideCursor()
         if not ok:
             return
-        self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        report = self._session.get_oos_oot_report()
+        if is_cv:
+            self._last_cv_report = self._session.get_cv_report()
+            self._act_view_cv.setEnabled(self._last_cv_report is not None)
+            report["oos"] = {}
+        self._metrics_panel.set_report(report)
         self._refresh_reports_panel()
         self._main_tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
         if self._logger is not None:
             self._logger.info("[gui] OOS evaluation done")
+
+    def _on_view_cv(self) -> None:
+        """Muestra el ultimo reporte CV en formato legible."""
+        report = self._last_cv_report
+        if not report:
+            return
+        lines = [f"k = {report.get('k', 0)}", "", "Mean ± std"]
+        mean = report.get("metrics_mean") or {}
+        std = report.get("metrics_std") or {}
+        for name in sorted(mean):
+            lines.append(f"{name}: {mean[name]:.6g} ± {std.get(name, 0.0):.6g}")
+        lines.extend(("", tr("cv_report_fold_header")))
+        for index, fold in enumerate(report.get("metrics_per_fold") or (), 1):
+            lines.extend(("", f"Fold {index}"))
+            for name in ("auc", "gini", "ks", "brier"):
+                value = fold.get(name)
+                if value is not None:
+                    lines.append(f"{name}: {value:.6g}")
+        QMessageBox.information(
+            self, tr("cv_report_title"), "\n".join(lines)
+        )
 
     def _on_load_oot(self) -> None:
         """Model > Load OOT Cohort: pick a CSV, load, then evaluate."""

@@ -9,7 +9,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from backend_v3.splitting import stratified_split  # noqa: E402
+from backend_v3.splitting import stratified_kfold, stratified_split  # noqa: E402
 
 
 def _assert_raises(exc_type, fn, *args, **kwargs):
@@ -142,6 +142,41 @@ def test_weighted_splitting_check_b2_not_applied_without_weights():
     tr, te = stratified_split(y, 0.7, 42)  # sin weights: no debe lanzar
     yte = y.iloc[te]
     assert int((yte == 1).sum()) == 1  # confirma que el fixture es el mismo
+
+
+def test_stratified_kfold_basic():
+    y = pd.Series([0] * 30 + [1] * 30 + [2] * 30)
+    folds = stratified_kfold(y, k=5, seed=42)
+    assert len(folds) == 5
+    seen = set()
+    for train_idx, val_idx in folds:
+        assert not set(train_idx) & set(val_idx)
+        assert not seen & set(val_idx)
+        seen.update(int(i) for i in val_idx)
+    assert seen == set(range(len(y)))
+
+    again = stratified_kfold(y, k=5, seed=42)
+    for (tr_a, val_a), (tr_b, val_b) in zip(folds, again):
+        assert np.array_equal(tr_a, tr_b)
+        assert np.array_equal(val_a, val_b)
+
+
+def test_stratified_kfold_stratified():
+    y = pd.Series([0] * 700 + [1] * 200 + [2] * 100)
+    folds = stratified_kfold(y, k=5, seed=7)
+    global_props = {c: float((y == c).mean()) for c in (0, 1, 2)}
+    for _, val_idx in folds:
+        y_val = y.iloc[val_idx]
+        for clase, expected in global_props.items():
+            observed = float((y_val == clase).mean())
+            assert abs(observed - expected) <= 0.02
+
+
+def test_stratified_kfold_invalid_k():
+    y = pd.Series([0, 1] * 20)
+    _assert_raises(ValueError, stratified_kfold, y, 1, 42)
+    _assert_raises(ValueError, stratified_kfold, y, 21, 42)
+    _assert_raises(ValueError, stratified_kfold, pd.Series([0, 0, 1, 1]), 3, 42)
 
 
 if __name__ == "__main__":
