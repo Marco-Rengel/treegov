@@ -4,7 +4,7 @@
     .venv\\Scripts\\python tests\\test_gui_smoke.py
 
 Headless: QT_QPA_PLATFORM defaults to offscreen here (setdefault, so a
-real display session keeps its platform). 15 tests: smoke + i18n.
+real display session keeps its platform). 17 tests: smoke + i18n.
 """
 
 import ast
@@ -241,6 +241,23 @@ def test_frontend_clean_room():
             if bad:
                 offenders.append(f"{path.name}: {sorted(bad)}")
     assert not offenders, f"forbidden imports in frontend_v3: {offenders}"
+
+
+def test_import_guard_installed_via_frontend_init():
+    """The import guard must be active after importing frontend_v3."""
+    import frontend_v3  # noqa: F401 — trigger the __init__ side effect
+    from backend_v3.import_guard import is_installed
+
+    assert is_installed() is True
+
+
+def test_sklearn_blocked_in_gui_process():
+    """sklearn import must raise ImportError in any GUI process."""
+    import frontend_v3  # noqa: F401
+    import pytest
+
+    with pytest.raises(ImportError):
+        import sklearn  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
