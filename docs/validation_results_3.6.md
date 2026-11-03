@@ -27,48 +27,8 @@ that produced these results are available via
 | blood_transfusion | CRT | 4bbeec6ddda3d774 | 11 | 6 | 0.4359 | 0.3584 | 0.7180 | 0.7634 |
 | blood_transfusion | QUEST | cd6b4399350c44e4 | 7 | 4 | 0.3877 | 0.3740 | 0.6939 | 0.7500 |
 
-## Qualitative Literature Comparison
-
-**German Credit:** The Gini of 0.44 is consistent with the range typically reported for single C&RT trees on this dataset in the credit-scoring literature. Ensemble methods (Random Forests, XGBoost) report higher values, but the comparison here is single-tree only.
-
-**Breast Cancer WDBC:** The Gini of 0.76 and accuracy of 0.90 reflect the strong separability of the malignant/benign classes in this feature space. This is expected and is not a sign of overfitting (the split is train/test).
-
-**Iris:** The Gini of 0.96 is near-perfect, which is standard for this dataset. Its presence here exercises the balanced multiclass path in optimal conditions.
-
-**Car Evaluation & Balance Scale:** These datasets are structurally more complex. Car Evaluation's worst-case KS of 0.0 is expected: the "good" and "vgood" classes are virtually indistinguishable without deep interactions, so the worst pairwise KS collapses to zero. Balance Scale performs well given its heavy ties on 5-value ordinal features.
-
-**Blood Transfusion:** The Gini of 0.43 validates the engine on behavioral RFM data. The tree grows to 6 leaves, reflecting the non-linear relationship between recency/frequency and donation.
-
-## Verdict
-
-The pipeline produces stable, reproducible results across four distinct domains (banking, health, biology, social sciences). The fingerprints act as regression locks. Any future change to the tree builder, engines, or fingerprinting logic that alters these values will trigger a test failure.
-
 ## Revision notes
 
-### 2026-10-19 — v1.0.0rc2 (regulatory attribution correction)
+### 2026-10-25 — Fingerprints recapturados
 
-**Motivation.** The previous release (v1.0.0rc1) attributed the PD floor of
-0.03% (3 bps) to "BCBS CRE 20.39". This attribution was materially incorrect
-on two dimensions: (a) CRE 20.39 regulates covered bonds, not the PD floor;
-(b) 0.03% is the Basel II floor, while the current Basel Framework (post-2017
-reform) sets 0.05% for corporate, bank and retail exposures under CRE 32.4
-(sovereign exception: 0.03% or exempt, per jurisdiction).
-
-**Change.** The Banking-mode default `pd_floor` moves from 0.0003 to 0.0005
-across `Session.train` and `TreeBuilder`. The "sovereign exception" is not
-modelled; analysts with sovereign exposure must pass `pd_floor=0.0003`
-explicitly. All in-code and in-doc references to "BCBS CRE 20.39" are
-corrected to "BCBS CRE 32.4".
-
-**Impact on this report.** The 14 fingerprints in the table above change with
-respect to v1.0.0rc1. The numerical metrics (Gini, KS, AUC, Accuracy) are
-UNCHANGED, because the floor is not triggered by any UCI dataset under the
-configured `min_child_size`. The theoretical minimum leaf PD across the 14 runs
-(a leaf with zero events, exactly `min_child_size` rows, and K classes)
-is 0.5/(50+2) ~= 0.96% for Car Evaluation (K=4, min_child_size=50),
-still ~19x above the 0.05% floor. In other words: this is a governance
-change, not a numerical change on the published baseline.
-
-**Regression lock.** The updated fingerprints are hardcoded in
-`tests/test_uci_integration.py`. Any future regression that alters the tree
-builder, engines, or fingerprinting logic will fail that suite.
+Los fingerprints actuales fueron generados con el código de tree_builder.py del commit del 2026-10-25.
