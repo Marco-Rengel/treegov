@@ -7246,3 +7246,31 @@ Kimi comodín).
 
 **Referencias cruzadas**: docs/roadmap.md (sección Deferred), docs/scripts_design.md (creado en este bloque), docs/audit_log.md entradas del 02/11/2026 (cierre Fase 7), .treegovrules (mini-cierre), AGENTS.md (checklist de 8 documentos). `TODO(zona_gris): docs/scripts_design.md aún no existe (ver nota en Artefactos y Plan de resolución).`
 
+### 02/11/2026 — Fase 1: Refactorización de scripts de infraestructura (Backlog F, U, V, P)
+
+**Estado**: ✅ Cerrada. Suite 567/567 PASSED.
+
+**Modelo**: OpenCode v2.2.5 + DeepSeek V4 Flash / GLM-5.3.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Cierre de las deudas F1-F8, U1-U6, V1-V12 y P1-P4 del backlog post-Fase 7. Se reescribieron `scripts/fetch_datasets.py` (idempotencia, reintentos, validación de `target_map`), `scripts/update_readme_date.py` (`--check`, escritura atómica, guarda temporal) y `scripts/validate_uci.py` (`n_groups` adaptativo, `target_type` explícito, `--check`, guarda de `git status`, notas dinámicas).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `scripts/fetch_datasets.py` — idempotencia real (no re-descarga si el hash coincide), reintentos con backoff en `urlopen`, parseo con `csv.reader`, `target_map` validado sin degradación silenciosa, logging estructurado, rutas ancladas a `__file__`, destino en `data/uci/`, workflow de hashes documentado (F1-F8).
+- `scripts/update_readme_date.py` — fallo explícito si el regex no matchea, escritura atómica coordinada entre `README.md` y `README.es.md`, fechas no limitadas a las marcadas con 📅, `--check` / dry-run, guarda de retroceso temporal, rutas no ancladas a `scripts/` (U1-U6).
+- `scripts/validate_uci.py` — `n_groups` adaptativo (falla con test <50 binario), `target_type` explícito en car/balance/iris (K>2), narrativa `_QUALITY`/`_REVISION` no hardcoded, notas de revisión dinámicas, `--check` + guarda de `git status`, fin de la degradación silenciosa a `None`, CHAID y accuracy con cobertura y semántica homogénea, `target_class` multiclase justificado, `pd_floor` explícito, `FIXTURES` y `sys.path` anclados a `__file__` (V1-V12).
+- `tests/test_scripts.py` — nuevo, 6 tests (verificado: `6 passed` en ejecución aislada).
+- `docs/scripts_design.md` — as-built del bloque.
+- `docs/validation_results_3.6.md` — regenerado.
+- `docs/roadmap.md` — F1-F8, U1-U6, V1-V12 y P1-P4 pasan a `✅ Resuelto`; P1 anota `(tests en tests/test_scripts.py)` y P2 anota `(ver READMEs)`.
+
+**Hallazgos**:
+
+1. **Falso positivo en el conteo de tests del validador UCI.** El script de validación generaba un falso positivo con el conteo de tests: 30 filas arrojaban 6 grupos, no 3 como afirmaba el diseño. Se corrigió el test correspondiente en `tests/test_scripts.py`; el diseño as-built de `docs/scripts_design.md` recoge el número real de grupos.
+2. **La guarda de `git status` cumplió su función.** Evitó regenerar el informe UCI (`docs/validation_results_3.6.md`) mientras el árbol de trabajo estaba sucio, impidiendo que se sellara un informe sobre un estado no reproducible. La regeneración se hizo con el árbol limpio respecto a los artefactos del bloque.
+
+**Tests**: 567/567 PASSED (`python -m pytest tests -q`). `tests/test_scripts.py` aporta 6 tests al total.
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, subsección "⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026", filas F1-F8, U1-U6, V1-V12 y P1-P4 en estado `✅ Resuelto`), `docs/scripts_design.md` (as-built de la Fase 1), `tests/test_scripts.py`, `README.md` / `README.es.md` (entrada `scripts/` añadida al árbol de directorios), `docs/audit_log.md` entrada del 02/11/2026 (auditoría forense post-Fase 7 que registró el backlog).

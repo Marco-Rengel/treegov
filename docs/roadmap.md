@@ -689,36 +689,36 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ⏳ Pendiente |
 | T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ⏳ Pendiente |
 | T15 | GUI | step2_subtitle dice "binary target" con target K>=3 | ⏳ Pendiente |
-| F1 | Scripts | fetch_datasets.py idempotencia prometida no implementada | ⏳ Pendiente |
-| F2 | Scripts | fetch_datasets.py escribe en tests/fixtures/uci/ en lugar de data/uci/ | ⏳ Pendiente |
-| F3 | Scripts | fetch_datasets.py line.split(sep) sin csv.reader | ⏳ Pendiente |
-| F4 | Scripts | fetch_datasets.py target_map={} silencioso en blood_transfusion | ⏳ Pendiente |
-| F5 | Scripts | fetch_datasets.py sin logging estructurado | ⏳ Pendiente |
-| F6 | Scripts | fetch_datasets.py sin reintentos en urlopen | ⏳ Pendiente |
-| F7 | Scripts | workflow de actualización de hashes hardcoded no documentado | ⏳ Pendiente |
-| F8 | Scripts | fetch_datasets.py rutas relativas al cwd (sin __file__) | ⏳ Pendiente |
-| U1 | Scripts | update_readme_date.py fallo silencioso si el regex no matchea | ⏳ Pendiente |
-| U2 | Scripts | update_readme_date.py no atómico entre README.md y README.es.md | ⏳ Pendiente |
-| U3 | Scripts | update_readme_date.py solo actualiza fechas marcadas con 📅 | ⏳ Pendiente |
-| U4 | Scripts | update_readme_date.py sin --check / dry-run | ⏳ Pendiente |
-| U5 | Scripts | update_readme_date.py sin guarda de retroceso temporal | ⏳ Pendiente |
-| U6 | Scripts | update_readme_date.py path anclado a scripts/ | ⏳ Pendiente |
-| V1 | Scripts | validate_uci.py n_groups=10 sin adaptación (falla con test<50 binario) | ⏳ Pendiente |
-| V2 | Scripts | validate_uci.py target_type implícito BINARY en car/balance/iris (K>2) | ⏳ Pendiente |
-| V3 | Scripts | validate_uci.py narrativa _QUALITY/_REVISION hardcoded | ⏳ Pendiente |
-| V4 | Scripts | validate_uci.py revision notes congeladas en rc2 | ⏳ Pendiente |
-| V5 | Scripts | validate_uci.py sin --check ni guarda de git status | ⏳ Pendiente |
-| V6 | Scripts | validate_uci.py degradación silenciosa a None (exit 0) | ⏳ Pendiente |
-| V7 | Scripts | validate_uci.py CHAID solo 2/6 datasets (cobertura desbalanceada) | ⏳ Pendiente |
-| V8 | Scripts | validate_uci.py accuracy mezcla semántica binaria y multiclase | ⏳ Pendiente |
-| V9 | Scripts | validate_uci.py target_class multiclase sin justificar (car usa la mayoritaria) | ⏳ Pendiente |
-| V10 | Scripts | validate_uci.py pd_floor implícito en CONFIGS | ⏳ Pendiente |
-| V11 | Scripts | validate_uci.py FIXTURES relativas al cwd | ⏳ Pendiente |
-| V12 | Scripts | validate_uci.py sys.path anclado a scripts/ | ⏳ Pendiente |
-| P1 | Proceso | los tres scripts sin tests en pytest | ⏳ Pendiente |
-| P2 | Proceso | scripts/ ausente en árboles de README.md/README.es.md | ⏳ Pendiente |
-| P3 | Proceso | scripts/ no empaquetado en pyproject.toml (consistente, no bug) | ⏳ Pendiente |
-| P4 | Proceso | scripts/ sin guarda de escritura en data/ o archive/ | ⏳ Pendiente |
+| F1 | Scripts | fetch_datasets.py idempotencia prometida no implementada | ✅ Resuelto |
+| F2 | Scripts | fetch_datasets.py escribe en tests/fixtures/uci/ en lugar de data/uci/ | ✅ Resuelto |
+| F3 | Scripts | fetch_datasets.py line.split(sep) sin csv.reader | ✅ Resuelto |
+| F4 | Scripts | fetch_datasets.py target_map={} silencioso en blood_transfusion | ✅ Resuelto |
+| F5 | Scripts | fetch_datasets.py sin logging estructurado | ✅ Resuelto |
+| F6 | Scripts | fetch_datasets.py sin reintentos en urlopen | ✅ Resuelto |
+| F7 | Scripts | workflow de actualización de hashes hardcoded no documentado | ✅ Resuelto |
+| F8 | Scripts | fetch_datasets.py rutas relativas al cwd (sin __file__) | ✅ Resuelto |
+| U1 | Scripts | update_readme_date.py fallo silencioso si el regex no matchea | ✅ Resuelto |
+| U2 | Scripts | update_readme_date.py no atómico entre README.md y README.es.md | ✅ Resuelto |
+| U3 | Scripts | update_readme_date.py solo actualiza fechas marcadas con 📅 | ✅ Resuelto |
+| U4 | Scripts | update_readme_date.py sin --check / dry-run | ✅ Resuelto |
+| U5 | Scripts | update_readme_date.py sin guarda de retroceso temporal | ✅ Resuelto |
+| U6 | Scripts | update_readme_date.py path anclado a scripts/ | ✅ Resuelto |
+| V1 | Scripts | validate_uci.py n_groups=10 sin adaptación (falla con test<50 binario) | ✅ Resuelto |
+| V2 | Scripts | validate_uci.py target_type implícito BINARY en car/balance/iris (K>2) | ✅ Resuelto |
+| V3 | Scripts | validate_uci.py narrativa _QUALITY/_REVISION hardcoded | ✅ Resuelto |
+| V4 | Scripts | validate_uci.py revision notes congeladas en rc2 | ✅ Resuelto |
+| V5 | Scripts | validate_uci.py sin --check ni guarda de git status | ✅ Resuelto |
+| V6 | Scripts | validate_uci.py degradación silenciosa a None (exit 0) | ✅ Resuelto |
+| V7 | Scripts | validate_uci.py CHAID solo 2/6 datasets (cobertura desbalanceada) | ✅ Resuelto |
+| V8 | Scripts | validate_uci.py accuracy mezcla semántica binaria y multiclase | ✅ Resuelto |
+| V9 | Scripts | validate_uci.py target_class multiclase sin justificar (car usa la mayoritaria) | ✅ Resuelto |
+| V10 | Scripts | validate_uci.py pd_floor implícito en CONFIGS | ✅ Resuelto |
+| V11 | Scripts | validate_uci.py FIXTURES relativas al cwd | ✅ Resuelto |
+| V12 | Scripts | validate_uci.py sys.path anclado a scripts/ | ✅ Resuelto |
+| P1 | Proceso | los tres scripts sin tests en pytest (tests en tests/test_scripts.py) | ✅ Resuelto |
+| P2 | Proceso | scripts/ ausente en árboles de README.md/README.es.md (ver READMEs) | ✅ Resuelto |
+| P3 | Proceso | scripts/ no empaquetado en pyproject.toml (consistente, no bug) | ✅ Resuelto |
+| P4 | Proceso | scripts/ sin guarda de escritura en data/ o archive/ | ✅ Resuelto |
 | N1 | Backend | target_type no entra en _fingerprint y no se valida contra K | ⏳ Pendiente |
 | N2 | Backend | crt_engine._rates_cls para K=2 usa clase 1 sorted, no target_class | ⏳ Pendiente |
 | N3 | Docs | test_mainwindow_wizard_config_trains usa cfg que el wizard nunca produce | ⏳ Pendiente |

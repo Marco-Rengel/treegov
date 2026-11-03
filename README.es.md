@@ -141,6 +141,7 @@ TreeGov/
 │   ├── reporting.py         # DTOs de gains table + matriz de clasificación
 │   └── stability.py         # PSI / CSI / Gini Drop
 ├── frontend_v3/             # Capa de presentación (Fase 2)
+├── scripts/                 # Utilidades de infraestructura (descarga, validación, fechas)
 ├── tests/                   # Tests unitarios (dual: pytest / python directo)
 ├── docs/                    # Documentación
 │   ├── methodology.md       # Metodología matemática (EN)
