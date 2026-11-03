@@ -7274,3 +7274,121 @@ Kimi comodín).
 **Tests**: 567/567 PASSED (`python -m pytest tests -q`). `tests/test_scripts.py` aporta 6 tests al total.
 
 **Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, subsección "⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026", filas F1-F8, U1-U6, V1-V12 y P1-P4 en estado `✅ Resuelto`), `docs/scripts_design.md` (as-built de la Fase 1), `tests/test_scripts.py`, `README.md` / `README.es.md` (entrada `scripts/` añadida al árbol de directorios), `docs/audit_log.md` entrada del 02/11/2026 (auditoría forense post-Fase 7 que registró el backlog).
+
+### 02/11/2026 — Fase 2.b.1: retraducción en caliente de `ECLDialog` (T5)
+
+**Estado**: Implementación verificada; pendiente del cierre documental completo de la sub-fase.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `frontend_v3/ecl_dialog.py` — captions recuperables como `QLabel`, textos visibles mediante `tr()`, conexión a `language_bus`, caché `_report_dto`, repintado de las cinco filas en `retranslate_ui()` y desconexión idempotente en `closeEvent()` / `done()`.
+- `frontend_v3/i18n.py` — claves `ecl_input_dialog_title` y `ecl_btn_calculate` añadidas en EN y ES.
+- `tests/test_ecl_dialog.py` — expectativas de tabla basadas en `tr()` en EN/ES y nuevo test de conmutación real por el bus con preservación de datos e idempotencia de desconexión.
+- `docs/audit_log.md` — esta entrada de trazabilidad.
+
+**Hallazgos**: la primera verificación detectó un `RuntimeWarning` de PySide al desconectar dos veces la misma señal. Se añadió la guarda de estado `_bus_attached`; la doble desconexión y el cierre ya no emiten ese aviso. La retraducción repinta desde el DTO cacheado sin alterar valores ni mover analítica al frontend.
+
+**Tests**: `tests/test_ecl_dialog.py`: **5/5 PASSED** con `RuntimeWarning` elevado a error. Suite completa: **569/569 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/gui_i18n_governance_design.md` §1 y §5–§6; `docs/roadmap.md` (backlog post-Fase 7, deuda T5); `docs/3.11_gui_design_system.md` §4.1 y §4.3.
+
+### 02/11/2026 — Fase 2.c.1: i18n y parámetros en diálogos de scoring (T6–T8)
+
+**Estado**: Implementación verificada; pendiente del cierre documental completo de la sub-fase.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `frontend_v3/scoring_dialogs.py` — retraducción en caliente de ambos diálogos, captions explícitos, desconexión idempotente del bus, combos con códigos canónicos en `itemData`, eliminación de `BatchWorker.progress`, motor `CHAID_EXHAUSTIVE`, campos `n_groups` / `challenger_params` y reenvío por `CCWorker`.
+- `frontend_v3/wizard.py` — `ENGINE_LABELS` promovido a constante pública con `_ENGINE_LABELS` conservado como alias.
+- `frontend_v3/i18n.py` — etiquetas bilingües de políticas, nuevos campos del retador y error de parseo.
+- `tests/test_scoring_dialogs.py` — cuatro adiciones: ausencia de la señal muerta, retraducción EN↔ES con preservación de datos, combo completo de motores y reenvío de `n_groups` / parámetros al worker.
+- `docs/audit_log.md` — esta entrada de trazabilidad.
+
+**Hallazgos**: los valores enviados al backend siguen siendo los códigos canónicos aunque cambie el texto visible. El parseo de parámetros es exclusivamente cadena→diccionario y aborta antes de crear el worker ante pares inválidos. Con `n_groups=10` y parámetros vacíos se conservan los defaults del backend; no se tocó la capa analítica ni el cálculo de fingerprints.
+
+**Tests**: `tests/test_scoring_dialogs.py`: **8/8 PASSED** con `RuntimeWarning` elevado a error. Suite completa: **573/573 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/gui_i18n_governance_design.md` §2 y §5–§6; `docs/roadmap.md` (backlog post-Fase 7, deudas T6–T8); `docs/3.11_gui_design_system.md` §4.1 y §4.3; `backend_v3/session_state.py::Session.compare_champion_challenger`.
+
+### 02/11/2026 — Fase 2.d.1/2.f.1: gobernanza HUD y subtítulo dinámico (T9, T10, T15)
+
+**Estado**: Implementación verificada; pendiente del cierre documental completo de las sub-fases.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `frontend_v3/main_window.py` — nuevo `MainWindow.set_governance_mode()`, propagación a HUD y paneles, retraducción desde el modo canónico y confirmación de poda mediante claves i18n con `node_id`.
+- `frontend_v3/i18n.py` — textos bilingües para la confirmación de poda y los subtítulos sin target / multiclase.
+- `frontend_v3/wizard.py` — `_subtitle_key()` según el número de clases del provider, con fallback sin target y refresco al cambiar target o repoblar la tabla.
+- `tests/test_gui_smoke.py` — entrenamiento RESEARCH real y verificación de terminología HUD en EN/ES.
+- `tests/test_wizard.py` — subtítulos sin target, binario y multiclase, incluida conmutación EN→ES por el bus.
+- `docs/audit_log.md` — esta entrada de trazabilidad.
+
+**Hallazgos**: RESEARCH muestra `Event rate` / `Tasa de evento` y propaga el mismo modo a `ReportsPanel` y `MetricsPanel`; BANKING conserva las captions previas. El subtítulo se deriva del DTO del provider sin incorporar analítica al frontend. La confirmación de poda ya no contiene literales visibles en español y conserva el id del nodo. No se modificaron rutas analíticas ni fingerprints.
+
+**Tests**: `tests/test_gui_smoke.py`: **15/15 PASSED**; `tests/test_wizard.py`: **29/29 PASSED**. Suite completa: **575/575 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/gui_i18n_governance_design.md` §3–§6; `docs/roadmap.md` (backlog post-Fase 7, deudas T9, T10 y T15); `frontend_v3.i18n.tr_term`; `backend_v3/session_state.py::Session.describe_target`.
+
+### 02/11/2026 — Fase 2: i18n, Gobernanza y Wizard Multiclase (Backlog T5-T15)
+
+**Estado**: ✅ Cerrada. Suite 575/575 PASSED.
+
+**Modelo**: OpenCode v2.2.5 + DeepSeek V4 Flash / Kimi K3.1 Pro.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: Cierre de las deudas GUI del backlog. Se implementó retraducción en caliente en ECLDialog, BatchScoringDialog y ChampionChallengerDialog (desconexión idempotente en closeEvent y done). Se eliminó BatchWorker.progress. Se añadió CHAID_EXHAUSTIVE y n_groups a Champion-Challenger. El HUD ahora usa set_governance_mode (terminología RESEARCH/BANKING). La confirmación de poda usa i18n. El wizard adapta step2_subtitle según K (binario/multiclase).
+
+**Artefactos**: `frontend_v3/ecl_dialog.py`, `frontend_v3/scoring_dialogs.py`, `frontend_v3/main_window.py`, `frontend_v3/wizard.py`, `frontend_v3/i18n.py`, `tests/test_ecl_dialog.py`, `tests/test_scoring_dialogs.py`, `tests/test_gui_smoke.py`, `tests/test_wizard.py`.
+
+**Hallazgos**: La desconexión del bus en PySide6 debe hacerse en done() además de closeEvent(), porque accept() no siempre dispara el cierre.
+
+**Tests**: 575/575 PASSED.
+
+### 02/11/2026 — Mini-cierre documental: contexto sincronizado y `AGENTS.md` sin duplicados
+
+**Estado**: ✅ Cerrado. Actualización exclusivamente documental; suite 575/575 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `AGENTS.md`, `docs/audit_log.md`.
+
+**Hallazgos**: los conteos y el mensaje de arranque reflejan ahora la Fase 7 y 575/575 tests; el próximo paso activo es el cierre del backlog post-Fase 7. La fecha de cabecera ya era 02/11/2026 y se conservó. En `AGENTS.md` quedó una sola copia de la configuración histórica `moonshotai/kimi-k3` y una sola del bloque histórico `@jimmyyen/opencode-context-cache`.
+
+**Tests**: 575/575 PASSED (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, deudas T1–T3); `docs/audit_log.md` (cierre de la Fase 2, 02/11/2026).
+
+### 02/11/2026 — Bloque backend N1/N2/T11: `target_type`, códigos canónicos y herencia de `max_depth`
+
+**Estado**: Implementación de producción aplicada; suite roja esperada pendiente de recaptura de fingerprints y actualización posterior de fixtures.
+
+**Artefactos tocados (rutas exactas)**: `backend_v3/tree_builder.py`, `backend_v3/session_state.py`, `docs/audit_log.md`.
+
+**Hallazgos**: el payload del fingerprint incluye ahora `target_type`; `build()` rechaza BINARY con K>2 y CATEGORICAL con K<3; los motores reciben el target como códigos canónicos 0..K-1 conservando el índice de las filas; `_last_train_params` conserva `max_depth` para los consumidores que heredan la configuración. La nueva validación también evidencia fixtures multiclase heredados que aún invocan `train()` con el default BINARY. No se modificaron tests ni fingerprints esperados, conforme al alcance de este paso.
+
+**Tests**: **547 passed, 28 failed** (`python -m pytest tests -q`). Los 28 fallos son el resultado esperado del cambio de contrato: fingerprints anteriores y llamadas multiclase con `target_type` implícito BINARY. No se intentó corregir la suite en este bloque.
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, deudas N1, N2 y T11); `backend_v3/session_state.py::Session.compare_champion_challenger`; `backend_v3/tree_builder.py::TreeBuilder.build`.
+
+### 02/11/2026 — N2: tasa binaria sobre el código canónico 0 en C&RT y QUEST
+
+**Estado**: Implementación de producción aplicada; suite roja esperada pendiente de actualización posterior de fixtures y fingerprints.
+
+**Artefactos tocados (rutas exactas)**: `backend_v3/crt_engine.py`, `backend_v3/quest_engine.py`, `docs/audit_log.md`.
+
+**Hallazgos**: `_rates_cls` (C&RT) y la rama de alta cardinalidad de `_subset_cut` (QUEST) calculan ahora la tasa binaria sobre la columna 0, coherente con el target canónico que reciben desde `TreeBuilder` (0 = clase de interés). El docstring de C&RT se sincronizó con ese contrato. La prueba directa heredada `test_nominal_heuristico_k11`, que conserva la expectativa basada en la columna 1, añade un fallo esperado a los 28 ya registrados; no se modificaron tests.
+
+**Tests**: **546 passed, 29 failed** (`python -m pytest tests -q`). Los 28 fallos previos persisten y se añade el fallo esperado de la expectativa heredada de tasa binaria en C&RT.
+
+**Referencias cruzadas**: `docs/roadmap.md` (backlog post-Fase 7, deuda N2); `docs/audit_log.md` entrada inmediatamente anterior (códigos canónicos en `TreeBuilder`); `backend_v3/tree_builder.py::TreeBuilder.build`.
+
+### 02/11/2026 — Actualización de fixtures para `target_type` y fingerprints N1/N2
+
+**Estado**: Fixtures actualizados; suite 575/575 PASSED.
+
+**Artefactos tocados (rutas exactas)**: `tests/test_session_state.py`, `tests/test_stability.py`, `tests/test_tree_builder.py`, `tests/test_validation.py`, `tests/test_crt_engine.py`, `tests/test_uci_integration.py`, `docs/audit_log.md`.
+
+**Hallazgos**: las llamadas de entrenamiento con fixtures K>2 declaran ahora `TargetType.CATEGORICAL`; la integración UCI distingue explícitamente datasets binarios y categóricos. Se recapturaron los fingerprints CRT, CHAID y QUEST conforme al nuevo payload con `target_type`. `test_nominal_heuristico_k11` refleja ahora el criterio sobre la clase canónica 0, incluida la pertenencia de las categorías de tasa alta a la rama derecha. No se modificó código de producción.
+
+**Tests**: **575/575 PASSED** (`python -m pytest tests -q`).
+
+**Referencias cruzadas**: `docs/audit_log.md` entradas inmediatamente anteriores del bloque backend N1/N2/T11 y de la tasa binaria sobre el código canónico 0; `docs/roadmap.md` (deudas N1 y N2).

@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend_v3.crt_engine import CrtEngine  # noqa: E402
 from backend_v3.session_state import FlowState, Session, SessionState  # noqa: E402
-from backend_v3.types import PredictorType  # noqa: E402
+from backend_v3.types import PredictorType, TargetType  # noqa: E402
 
 
 def _quiet_logger(name="treegov.session.tests"):
@@ -725,7 +725,7 @@ def test_train_allows_crt_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("CRT", max_depth=3, min_child_size=5)
+        s.train("CRT", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         assert s.state.state is FlowState.TRAINED
         assert s.state.tree is not None
         assert s.state.tree.method == "CRT"
@@ -746,7 +746,7 @@ def test_train_allows_quest_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("QUEST", max_depth=3, min_child_size=5)
+        s.train("QUEST", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         assert s.state.state is FlowState.TRAINED
         assert s.state.tree is not None
         assert s.state.tree.method == "QUEST"
@@ -765,7 +765,7 @@ def test_quest_multiclass_k3_tree_is_coherent():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("QUEST", max_depth=4, min_child_size=5)
+        s.train("QUEST", max_depth=4, min_child_size=5, target_type=TargetType.CATEGORICAL)
         tree = s.state.tree
         assert tree is not None
         assert tree.method == "QUEST"
@@ -786,7 +786,7 @@ def test_train_allows_chaid_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         assert s.state.state is FlowState.TRAINED
 
 
@@ -798,7 +798,7 @@ def test_train_allows_chaid_exhaustive_multiclass():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("CHAID_EXHAUSTIVE", max_depth=3, min_child_size=5)
+        s.train("CHAID_EXHAUSTIVE", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         assert s.state.state is FlowState.TRAINED
 
 
@@ -828,7 +828,7 @@ def test_gains_table_multiclass_works():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         dto = s.get_gains_table(partition="oos")
         assert dto is not None
         # En K>2 el DTO lleva class_labels canónicos (target_class primero)
@@ -1628,7 +1628,8 @@ def test_crt_multiclass_k3_tree_is_coherent():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition()
-        s.train("CRT", max_depth=4, min_child_size=5)
+        s.train("CRT", max_depth=4, min_child_size=5,
+                target_type=TargetType.CATEGORICAL)
         tree = s.state.tree
         assert tree is not None
         for nd in tree.nodes:
@@ -1693,7 +1694,7 @@ def test_evaluate_oos_multiclass_works():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         st_part = s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         st = s.evaluate_oos(n_groups=3)
         m = st.oos_metrics
         assert m is not None
@@ -1744,7 +1745,7 @@ def test_evaluate_oot_multiclass_works():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         s.load_oot(str(csv_oot))
         st = s.evaluate_oot()
         r = st.oot_report
@@ -1769,7 +1770,7 @@ def test_get_classification_matrix_multiclass_works():
         s.fix_spec("default", target_class=2,
                    class_labels={0: "bajo", 1: "medio", 2: "alto"})
         s.partition(train_frac=0.7, seed=42)
-        s.train("CHAID", max_depth=3, min_child_size=5)
+        s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
         dto = s.get_classification_matrix(partition="oos")
         assert dto is not None
         assert isinstance(dto["confusion_matrix"], tuple)
@@ -1819,7 +1820,7 @@ def test_get_classification_matrix_multiclass_threshold_ignored():
             s.fix_spec("default", target_class=2,
                        class_labels={0: "bajo", 1: "medio", 2: "alto"})
             s.partition(train_frac=0.7, seed=42)
-            s.train("CHAID", max_depth=3, min_child_size=5)
+            s.train("CHAID", max_depth=3, min_child_size=5, target_type=TargetType.CATEGORICAL)
             return s.get_classification_matrix(partition="oos", threshold=thr)
 
     d1 = _dto_con_threshold(0.99)

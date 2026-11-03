@@ -1008,6 +1008,7 @@ class Session:
         # que get_univariate_trees replique la configuracion del modelo.
         self._last_train_params = {
             "target_type": target_type,
+            "max_depth": max_depth,
             "min_child_size": min_child_size,
             "min_child_weight": min_child_weight,
             "pd_floor": pd_floor,

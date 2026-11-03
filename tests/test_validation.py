@@ -171,7 +171,7 @@ def test_predict_pd_2d_multiclass_shape():
     X = pd.DataFrame({"seg": seg})
     from backend_v3.chaid_engine import ChaidEngine
     m = TreeBuilder(
-        ChaidEngine(), target_type=TargetType.BINARY, target_class=2,
+        ChaidEngine(), target_type=TargetType.CATEGORICAL, target_class=2,
         class_labels=("Alto", "Bajo", "Medio"),
         max_depth=3, min_child_size=5,
     ).build(X, y, {"seg": PredictorType.NOMINAL})

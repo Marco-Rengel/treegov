@@ -427,6 +427,10 @@ class TreeBuilder:
         other_classes = tuple(c for c in observed if c != self._target_class)
         ordered_classes = (self._target_class,) + other_classes
         K = len(ordered_classes)
+        if self._target_type == TargetType.BINARY and K > 2:
+            raise ValueError("target_type BINARY no puede tener K > 2 clases")
+        if self._target_type == TargetType.CATEGORICAL and K < 3:
+            raise ValueError("target_type CATEGORICAL requiere K >= 3")
         if K < 2:
             raise ValueError(
                 "[tree_builder] target constante (K=1 clase observada); un "
@@ -528,7 +532,9 @@ class TreeBuilder:
                 razon = "min_child"
             else:
                 cfg = self._engine.best_split(
-                    X.iloc[idx], yv.iloc[idx], spec,
+                    X.iloc[idx],
+                    pd.Series(ycodes[idx], index=yv.iloc[idx].index),
+                    spec,
                     target_type=self._target_type,
                     weights=None if self._weights is None else w[idx],
                 )  # excepciones PROPAGAN (fail-fast, no capturamos)
@@ -693,6 +699,7 @@ class TreeBuilder:
             "apply_jeffreys": self.apply_jeffreys,
             "pd_floor": self.pd_floor,  # None serializa como null (json)
             "seed": self.seed,
+            "target_type": self._target_type.name,
             "target_class": str(self._target_class),
             "target_class_index": 0,
             "class_labels": list(class_labels),

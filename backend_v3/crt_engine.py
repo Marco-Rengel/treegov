@@ -660,14 +660,15 @@ class CrtEngine:
     ) -> tuple[np.ndarray, bool]:
         """Tasa por categoria para el orden inducido.
 
-        Binario: tasa de la clase 1 (indice 1). Multiclase: tasa de la clase
-        modal global; devuelve (tasas, aviso_heuristica_multiclase).
+        Binario: tasa de la clase de interes (indice canonico 0). Multiclase:
+        tasa de la clase modal global; devuelve (tasas,
+        aviso_heuristica_multiclase).
         """
         totales = counts.sum(axis=0)
         k_cls = counts.shape[1]
         aviso = False
         if k_cls == 2:
-            clase = 1
+            clase = 0
         else:
             clase = int(np.argmax(totales))  # clase modal global
             aviso = k_cats > self.max_exhaustive_cardinality

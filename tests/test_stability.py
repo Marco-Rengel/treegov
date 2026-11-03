@@ -233,8 +233,8 @@ def test_stability_monitor_agnostic_to_k():
     y = np.tile([0, 1, 2], 30)
     X = pd.DataFrame({"seg": seg})
     from backend_v3.chaid_engine import ChaidEngine
-    m = TreeBuilder(ChaidEngine(), target_type=_BIN, target_class=2,
-                    class_labels=("Bajo", "Alto", "Medio"),
+    m = TreeBuilder(ChaidEngine(), target_type=TargetType.CATEGORICAL,
+                    target_class=2, class_labels=("Bajo", "Alto", "Medio"),
                     max_depth=3, min_child_size=5).build(
         X, pd.Series(y), {"seg": PredictorType.NOMINAL})
     # leaf_psi: misma cohorte como train y como actual -> PSI = 0.

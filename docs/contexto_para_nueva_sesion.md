@@ -144,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 561/561 PASSED
+**Suite de tests:** 575/575 PASSED
 
 ## Entorno de desarrollo
 
@@ -287,13 +287,13 @@ La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
 releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
 cierre de la Fase 4.0.1, la versión publicada sigue siendo `1.0.0rc5`; su README
-de PyPI refleja 537/537 tests, mientras el repositorio cerró la Fase 6 con
-553/553. La sincronización de la página queda pendiente de una decisión de
+de PyPI refleja 537/537 tests, mientras el repositorio cerró la Fase 7 con
+575/575. La sincronización de la página queda pendiente de una decisión de
 release; este bloque es exclusivamente documental y no cambia la versión publicada.
 
 ## Próximos pasos
 
-**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **561/561 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
+**Estado actual:** Fases 0 a 7 cerradas, incluidas 3.6.e y 4.0.1. Suite **575/575 PASSED**. Release `1.0.0rc5` publicada en PyPI (02/11/2026).
 
 **Fase 6.0 — Batch scoring y Champion-Challenger: ✅ cerrada (02/11/2026).** Backend por chunks con escritura atómica anti-overwrite, comparación sobre población común, dos diálogos GUI y dos nuevas tools MCP (26 en total). Diseño as-built: `docs/6.0_design_batch_scoring.md` §6; decisión: `docs/design_decisions.md` §21.
 

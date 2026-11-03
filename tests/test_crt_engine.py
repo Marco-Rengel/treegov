@@ -144,13 +144,13 @@ def test_nominal_heuristico_k11():
     assert cfg is not None
     # dI maximo exacto = 0.15 (empate teorico m=5/m=6; argmax -> primero)
     assert math.isclose(cfg.statistic, 0.15, rel_tol=1e-9)
-    # convencion: derecha = tramo de tasas ALTAS (analogo a x > t en continuo)
+    # convencion: derecha = tramo de tasas ALTAS de clase 0
     izq = set(cfg.branches[0])
     der = set(cfg.branches[1])
     assert izq | der == set(tasas)
     assert len(izq & der) == 0
-    assert der in ({"b", "d", "f", "h", "j"}, {"b", "d", "f", "h", "j", "k"})
-    assert "a" in izq and "c" in izq  # las tasas mas bajas a la izquierda
+    assert der in ({"a", "c", "e", "g", "i"}, {"a", "c", "e", "g", "i", "k"})
+    assert "a" in der and "c" in der  # tasas altas de clase 0 a la derecha
     assert cfg.child_ns[0] + cfg.child_ns[1] == 1100
 
 

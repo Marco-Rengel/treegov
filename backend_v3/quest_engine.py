@@ -730,7 +730,7 @@ class QuestEngine:
             mask_der = masks[best]
         else:
             if counts.shape[1] == 2:
-                clase = 1
+                clase = 0
             else:
                 clase = int(np.argmax(counts.sum(axis=0)))
                 self._log.warning(

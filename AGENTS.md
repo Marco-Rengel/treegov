@@ -225,9 +225,6 @@ Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
 
 El archivo `opencode.json` del proyecto debe tener
 `"model": "moonshotai/kimi-k3"` y `"small_model": "moonshotai/kimi-k3"`
-
-El archivo `opencode.json` del proyecto debe tener
-`"model": "moonshotai/kimi-k3"` y `"small_model": "moonshotai/kimi-k3"`
 (con "ai" al final). Un typo como `"moonshot"` hace que OpenCode caiga
 silenciosamente a un modelo de fallback más caro. Este fue el origen
 del gasto anómalo del 05-06/10/2026 ($5.14 y $13.75 en Model
@@ -238,8 +235,6 @@ moonshotai-cn?".
 ### Plugin de caché (Histórico - Obsoleto en OpenCode v2)
 
 > **NOTA DE ACTUALIZACIÓN (01/11/2026):** Este plugin fue eliminado en la migración a OpenCode v2.2.5 porque la nueva versión ya tiene una caché nativa. No intentar instalarlo.
-
-El plugin `@jimmyyen/opencode-context-cache` debe estar en el array
 
 El plugin `@jimmyyen/opencode-context-cache` debe estar en el array
 `plugin` del `opencode.json`. Sin él, la caché de prompt de Moonshot

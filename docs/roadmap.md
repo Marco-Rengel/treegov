@@ -677,18 +677,18 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | T1 | Docs | prompt_para_asistente.md stale (553/553, próximo paso Fase 7) | ⏳ Pendiente |
 | T2 | Docs | contexto_para_nueva_sesion.md "cerró Fase 6 con 553/553" en Estado de release | ⏳ Pendiente |
 | T3 | Docs | AGENTS.md con bloques duplicados (opencode.json + plugin caché ×2) | ⏳ Pendiente |
-| T4 | Docs | ❌ Falso positivo (opencode.json real no tiene doble -free) | ✅ Cerrado como falso positivo |
-| T5 | GUI | ECLDialog sin i18n ni retranslate_ui; test congela literales ES | ⏳ Pendiente |
-| T6 | GUI | BatchScoringDialog y ChampionChallengerDialog sin retranslate_ui ni language_bus | ⏳ Pendiente |
-| T7 | GUI | BatchWorker.progress señal muerta (declarada y nunca emitida) | ⏳ Pendiente |
-| T8 | GUI | ChampionChallengerDialog omite CHAID_EXHAUSTIVE en combo; no expone n_groups ni challenger_params | ⏳ Pendiente |
-| T9 | GUI | HUD sin set_governance_mode; RESEARCH sin cobertura en ReportsPanel/MetricsPanel | ⏳ Pendiente |
-| T10 | GUI | _on_tree_context_menu con confirmación BANKING en español hardcodeado | ⏳ Pendiente |
+| T4 | Docs | ❌ Falso positivo (opencode.json real no tiene doble -free) | ✅ Resuelto |
+| T5 | GUI | ECLDialog sin i18n ni retranslate_ui; test congela literales ES | ✅ Resuelto |
+| T6 | GUI | BatchScoringDialog y ChampionChallengerDialog sin retranslate_ui ni language_bus | ✅ Resuelto |
+| T7 | GUI | BatchWorker.progress señal muerta (declarada y nunca emitida) | ✅ Resuelto |
+| T8 | GUI | ChampionChallengerDialog omite CHAID_EXHAUSTIVE en combo; no expone n_groups ni challenger_params | ✅ Resuelto |
+| T9 | GUI | HUD sin set_governance_mode; RESEARCH sin cobertura en ReportsPanel/MetricsPanel | ✅ Resuelto |
+| T10 | GUI | _on_tree_context_menu con confirmación BANKING en español hardcodeado | ✅ Resuelto |
 | T11 | Backend | _last_train_params sin max_depth; D9 no se cumple en compare_champion_challenger | ⏳ Pendiente |
 | T12 | Docs | _make_csv E2E genera target ruido, no 1_{edad>=40} | ⏳ Pendiente |
 | T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ⏳ Pendiente |
 | T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ⏳ Pendiente |
-| T15 | GUI | step2_subtitle dice "binary target" con target K>=3 | ⏳ Pendiente |
+| T15 | GUI | step2_subtitle dice "binary target" con target K>=3 | ✅ Resuelto |
 | F1 | Scripts | fetch_datasets.py idempotencia prometida no implementada | ✅ Resuelto |
 | F2 | Scripts | fetch_datasets.py escribe en tests/fixtures/uci/ en lugar de data/uci/ | ✅ Resuelto |
 | F3 | Scripts | fetch_datasets.py line.split(sep) sin csv.reader | ✅ Resuelto |

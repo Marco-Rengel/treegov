@@ -502,8 +502,9 @@ def test_multiclass_k3_builds():
     x = pd.Series(["a"] * 40 + ["b"] * 40 + ["c"] * 40)
     y = pd.Series([0] * 40 + [1] * 40 + [2] * 40)
     X = pd.DataFrame({"nivel": x})
-    m = TreeBuilder(_quiet_engine(ChaidEngine), target_type=_BIN,
-                    target_class=0, class_labels=("Low", "Mid", "High"),
+    m = TreeBuilder(_quiet_engine(ChaidEngine),
+                    target_type=TargetType.CATEGORICAL, target_class=0,
+                    class_labels=("Low", "Mid", "High"),
                     max_depth=3, min_child_size=10).build(
         X, y, {"nivel": _NOM})
     assert m.method == "CHAID"

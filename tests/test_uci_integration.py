@@ -6,6 +6,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend_v3.session_state import Session
+from backend_v3.types import TargetType
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "uci"
 
@@ -67,16 +68,16 @@ CONFIGS = {
 }
 
 EXPECTED = {
-    "german_credit": {"fingerprint": "85fc3fee3afe2015", "nodes": 9},
-    "car_evaluation": {"fingerprint": "5c9c4ac311a2efc5", "nodes": 7},
-    "balance_scale": {"fingerprint": "d06048e406f9b220", "nodes": 13},
-    "breast_cancer_wdbc": {"fingerprint": "e46011f55ed957bf", "nodes": 3},
-    "iris": {"fingerprint": "cbc4051bc41e628a", "nodes": 5},
-    "blood_transfusion": {"fingerprint": "4bbeec6ddda3d774", "nodes": 11},
+    "german_credit": {"fingerprint": "446828aabc058614", "nodes": 9},
+    "car_evaluation": {"fingerprint": "6cf501a3bbd9a52e", "nodes": 7},
+    "balance_scale": {"fingerprint": "a09f3f34dc301b8f", "nodes": 13},
+    "breast_cancer_wdbc": {"fingerprint": "dcaa012993a65f8f", "nodes": 3},
+    "iris": {"fingerprint": "219eed39e7117a49", "nodes": 5},
+    "blood_transfusion": {"fingerprint": "fc203ac81f15cea6", "nodes": 11},
 }
 
 
-def _build_session(cfg, engine="CRT"):
+def _build_session(name, cfg, engine="CRT"):
     sess = Session()
     sess.load_dataset(str(FIXTURES / cfg["csv"]))
     cols, _ = sess.describe_dataset()
@@ -89,27 +90,34 @@ def _build_session(cfg, engine="CRT"):
         class_labels=cfg["class_labels"]
     )
     sess.partition(train_frac=0.7, seed=cfg["seed"])
+    if name in ("german_credit", "breast_cancer_wdbc", "blood_transfusion"):
+        target_type = TargetType.BINARY
+    elif name in ("car_evaluation", "balance_scale", "iris"):
+        target_type = TargetType.CATEGORICAL
+    else:
+        raise ValueError(f"Unknown dataset: {name}")
     sess.train(
         engine=engine,
         max_depth=cfg["max_depth"],
-        min_child_size=cfg["min_child_size"]
+        min_child_size=cfg["min_child_size"],
+        target_type=target_type,
     )
     sess.evaluate_oos()
     return sess
 
 
 EXPECTED_CHAID = {
-    "car_evaluation": {"fingerprint": "2fef573e713c8b5b", "nodes": 14},
-    "balance_scale": {"fingerprint": "464bb506b94b8e8b", "nodes": 21},
+    "car_evaluation": {"fingerprint": "5338999051a797a1", "nodes": 14},
+    "balance_scale": {"fingerprint": "877a6e1e3fa28697", "nodes": 21},
 }
 
 EXPECTED_QUEST = {
-    "german_credit": {"fingerprint": "4cb2415a6ce26776", "nodes": 7},
-    "car_evaluation": {"fingerprint": "d52401118ea2078b", "nodes": 7},
-    "balance_scale": {"fingerprint": "34678ed5eaa34241", "nodes": 13},
-    "breast_cancer_wdbc": {"fingerprint": "389f70f0fba1a180", "nodes": 7},
-    "iris": {"fingerprint": "32a5ee7f69260fed", "nodes": 5},
-    "blood_transfusion": {"fingerprint": "cd6b4399350c44e4", "nodes": 7},
+    "german_credit": {"fingerprint": "2859f6c5a0b6b9bd", "nodes": 7},
+    "car_evaluation": {"fingerprint": "73b70052738ce671", "nodes": 7},
+    "balance_scale": {"fingerprint": "0ebe693b7eb51653", "nodes": 13},
+    "breast_cancer_wdbc": {"fingerprint": "24cb11d933da55c6", "nodes": 7},
+    "iris": {"fingerprint": "cafc73dcf547ec12", "nodes": 5},
+    "blood_transfusion": {"fingerprint": "eb420400fbbbf0fc", "nodes": 7},
 }
 
 
@@ -122,7 +130,7 @@ def _check_dataset(name, engine="CRT"):
     else:
         exp = EXPECTED[name]
 
-    sess = _build_session(cfg, engine)
+    sess = _build_session(name, cfg, engine)
 
     tree = sess.state.tree
     metrics = sess.state.oos_metrics
