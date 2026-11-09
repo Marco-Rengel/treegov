@@ -7676,3 +7676,24 @@ T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).
 **Lección MRM**: el fallo vivió en producción (PyPI, `rc1`–`rc5`) porque el checklist de release no incluía verificación del wheel. La corrección no es solo el fix: es el test que previene la regresión y la regla en `AGENTS.md` que obliga a verificar el wheel antes de cada upload.
 
 **Referencias cruzadas**: `docs/design_decisions.md` §25; `AGENTS.md` sección "Verificación del wheel antes de release"; `tests/test_packaging.py`.
+
+### 08/11/2026 — Publicación de v1.0.0rc6 en PyPI
+
+**Estado**: ✅ Publicada. Primera release con el wheel verificado y el fix de `py-modules` aplicado.
+
+**Publicación**:
+- Wheel: `treegov-1.0.0rc6-py3-none-any.whl` (266455 bytes / 266.5 kB), SHA-256 `7d824d8dd1695660a890007b1745b61f1b87d3f3dc77563d9ba03d54e98e5ea2`. Tamaño verificado contra PyPI (el `294.5 kB` del log de `twine` incluye el framing multipart del upload, no el tamaño del archivo).
+- Sdist: `treegov-1.0.0rc6.tar.gz` (393089 bytes / 393.1 kB), SHA-256 `bb05063c8b34af837e076b3cff5de19edfab4e59df7337a007a8e6570962b850`. Tamaño verificado contra PyPI.
+- Tag: `v1.0.0rc6` → commit `38ab606`.
+- URL: https://pypi.org/project/treegov/1.0.0rc6/
+
+**Verificación post-publicación**:
+- `Invoke-WebRequest https://pypi.org/pypi/treegov/1.0.0rc6/json` → HTTP 200.
+- Hashes publicados en PyPI coinciden byte a byte con los locales.
+- `$root.releases` incluye `1.0.0rc6`.
+- Instalación desde PyPI en venv aislado: `pip install treegov[mcp]==1.0.0rc6` + imports (`backend_v3`, `frontend_v3`, `mcp_v3`, `treegov`, `treegov_gui`, `treegov_mcp`) → `ALL IMPORTS OK`, `version: 1.0.0rc6`.
+- `treegov-mcp --help` arranca el servidor MCP stdio sin `ModuleNotFoundError`. Bug de rc1–rc5 confirmado resuelto en producción.
+
+**Observación (rc3 en `$root.releases`)**: el JSON raíz de PyPI incluye `1.0.0rc3` aunque el audit_log del 21/10/2026 registró "rc3 no existe (quemada por conflicto de inmutabilidad)". Probablemente release yanked (no instalable, pero registrada en el índice). Se anota para revisión futura; no afecta al release actual.
+
+**Referencias cruzadas**: entrada del 08/11/2026 "Release v1.0.0rc6 preparada" y "Mini-cierre: bug de empaquetado detectado"; `docs/design_decisions.md` §25; `AGENTS.md` §"Verificación del wheel antes de release".

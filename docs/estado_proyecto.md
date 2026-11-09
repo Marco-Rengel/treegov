@@ -896,7 +896,7 @@ firma digital) y publicación de 1.0.0 estable.
 - [x] **Fase 3.3** — Categorías de población. Completada 11/10/2026. 5 sub-fases (a-e). Suite 384/384.
 - [x] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend. **Completada el 03/11/2026**: `stratified_kfold` (`backend_v3/splitting.py`), `Session.partition(scheme="cv", k=...)`, `Session.get_cv_report`, wizard con selector k, y guardrail de imports instalado en `frontend_v3/__init__.py` (B2a + B2b).
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
-- [ ] *Datasets* públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
+- [x] *Datasets* públicos para validación multi-dominio (Fase 3) — **Completado en Fase 3.6** con 6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion.
 - [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
 
 ### Pendientes diferidos / estructurales
@@ -908,7 +908,7 @@ firma digital) y publicación de 1.0.0 estable.
 - [ ] QThread para entrenamiento largo (Fase 2.3+).
 - [ ] Firma digital + instalador PyInstaller/Inno Setup (Fase 4).
 - [ ] Licencia comercial paralela (análisis legal si se considera).
-- [ ] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8. Ver `docs/roadmap.md` sección Deferred. No bloquea el desarrollo actual.
+- [x] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8 — **Resueltos entre Fases 3.7.e y 3.10.a**: H1-H2 en 3.7.e, H3-H8 en 3.10.a, H9-H13 en 3.10.a.1.
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.
 - [x] Deuda post-rc1, target: 1.0.0 estable: D13 (KS/AUC/Gini del gains table binaria no ponderados con pesos no triviales; contradicción visible entre panel OOS/OOT y Reports/HTML para la misma partición). **Resuelto el 20/10/2026** (ver audit_log y design_decisions §13.7).
 - [x] Deuda post-rc1, target: 1.0.0 estable: `pruning.py` integrado en Session (vía `Session.prune()`), pero no en la GUI. **Diseño 3.9 (Poda Interactiva y Ponderada) aprobado el 20/10/2026**. Implementación completa (backend, Session y GUI) el 20/10/2026.

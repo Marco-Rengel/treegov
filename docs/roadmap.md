@@ -440,8 +440,8 @@ La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actua
 
 **Desincronización posterior a la Fase 7 (02/11/2026):** los READMEs del repositorio reflejan ahora las Fases 0–7 y 561/561 tests; la página de PyPI permanece congelada en el README de `1.0.0rc5` (537/537). Este cierre documental no publica una nueva versión: la sincronización se difiere a la próxima decisión de release conforme al protocolo PyPI.
 
-### ⏳ Phase 2.1.b — Hardening extras
-**Priority: LOW (deferred)**
+### ✅ Phase 2.1.b — Hardening extras — RESUELTO 03/11/2026 (B2a + B2b)
+**Priority: LOW (deferred; resuelto en el bloque del backlog post-Fase 7)**
 
 - Cross-validation scheme (Step 3 combo placeholder already in place).
 - Runtime backend-import guardrail in the GUI process (deferred from
@@ -456,8 +456,8 @@ incidente que exponga la ausencia del guardrail runtime).
 
 Ambas limitaciones quedaron resueltas con la Fase 3.9 (Poda Interactiva y Ponderada): la poda se cableó en la GUI (`PruneDialog`, menú Model) y el error de poda es ponderado (`r_w(t)`) cuando el árbol lleva `w_events`. Ver `docs/3.9_design_interactive_weighted_pruning.md`.
 
-### ⏳ E2E test fixture: target con señal real
-**Priority: LOW (deferred)**
+### ✅ E2E test fixture: target con señal real — RESUELTO 02/11/2026 (T12)
+**Priority: LOW (deferred; resuelto en el bloque del backlog post-Fase 7)**
 
 El helper `_make_csv` de `tests/test_e2e_mainwindow.py` y
 `tests/test_e2e_reports.py` genera un target con relación aleatoria a los
@@ -654,8 +654,8 @@ Suite 478 → 480 (tests nuevos: `test_e2e_context_menu_prune_updates_hud`, `tes
 
 La Fase 3.6.e se validó con un fixture sintético no-bancario (`edad`, `presion`, target `enfermo`; `tests/test_e2e_non_banking.py`). La integración del dataset real Wholesale Customers (UCI) para la validación multi-dominio extensiva (marketing/ecología, decisión D11 del diseño 3.6) queda diferida a la 1.1.0 o posterior. Ver `docs/3.6.e_design_non_banking.md` §3 (ZG-3).
 
-### ⏳ Término neutro para `reports_matrix_bad_capture_rate` en RESEARCH
-**Priority: LOW (registrado 25/10/2026, cierre de la Fase 3.6.e).**
+### ✅ Término neutro para `reports_matrix_bad_capture_rate` en RESEARCH — RESUELTO 03/11/2026 (A1)
+**Priority: LOW (registrado 25/10/2026; resuelto en el bloque del backlog post-Fase 7).**
 
 El export HTML en modo RESEARCH mantiene la etiqueta bancaria "Bad capture rate" (`reports_matrix_bad_capture_rate`): requiere una clave i18n neutra propia (p. ej. `term_research_capture_rate`). `TODO(zona_gris)` en `frontend_v3/reports_panel.py::_term_report_label`. No afecta a los asertos del E2E (`"Bad rate" ∉ html` pasa: "Bad capture rate" no contiene la subcadena).
 
@@ -674,7 +674,7 @@ de Clean Room: cero código del prototipo.
 
 La Fase 4.0.b se cerró el 01/11/2026 con suite 532/532 sin añadir tests para `export_to_markdown` (deuda silenciosa: el exportador existía pero no estaba verificado empíricamente). Los 4 tests nuevos de `tests/test_exporters.py` (P5 de la Fase 4.0.c) cierran la deuda: header/fingerprint/method, rama de threshold, probabilidades por hoja, firma sin imputer. Cierre: `docs/audit_log.md` entrada del 01/11/2026 (Fase 4.0.c, hallazgo #4).
 
-### ⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026
+### ✅ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026 — CERRADO 03/11/2026
 
 Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturadas por la suite 561/561. Registrado como backlog oficial post-Fase 7. Plan de resolución en 8 bloques documentado en docs/scripts_design.md y docs/gui_i18n_governance_design.md; los bloques de código puro se documentan al ejecutarse en docs/audit_log.md.
 

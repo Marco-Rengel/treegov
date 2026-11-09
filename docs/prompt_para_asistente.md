@@ -177,7 +177,8 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 **Estado al 08/11/2026:** Fases 0 a 7 cerradas. Backlog post-Fase 7
-cerrado. Suite 607/607 PASSED. Release 1.0.0rc6 publicada en PyPI.
+cerrado. Suite 607/607 PASSED. Release 1.0.0rc6 publicada en PyPI
+(verificada con hashes e instalación en venv aislado).
 Próximo paso: revisión del aplicativo en pantalla real (CV con
 datasets grandes, iconos SVG en tema oscuro, arranque real en
 Windows nativo, uso prolongado). La decisión de distribución (C1) y
@@ -415,7 +416,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 > "Retomamos TreeGov. Soy Marco. Estado al 08/11/2026: Fases 0 a
 > 7.0 cerradas, incluidas 3.6.e, 4.0.1 y 5.0. La Fase 7 entrega backend
 > IFRS 9 / ECL, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total).
-> Suite 607/607. Release 1.0.0rc6 publicada en PyPI. Backlog post-Fase 7
+> Suite 607/607. Release 1.0.0rc6 publicada en PyPI (verificada). Backlog post-Fase 7
 > cerrado. Próximo paso: revisión del aplicativo en pantalla real (CV
 > con datasets grandes, iconos SVG en tema oscuro, arranque en Windows
 > nativo, uso prolongado). Herramienta activa: OpenCode v2.2.5 +

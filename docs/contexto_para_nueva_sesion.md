@@ -270,7 +270,7 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 **Última versión publicada:** `treegov 1.0.0rc6` en PyPI (08/11/2026).
 URL: https://pypi.org/project/treegov/1.0.0rc6/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026); el tag v1.0.0rc6 se crea al cerrar este bloque (08/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4, v1.0.0rc5 y v1.0.0rc6 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026; rc6 verificado el 08/11/2026). El tag git v1.0.0rc3 no existe (nunca se creó), pero la release `1.0.0rc3` sí está en PyPI (subida el 21/10/2026, no yanked); un intento de sobreescribirla con los cambios de D13 falló por inmutabilidad y se publicó rc4 como siguiente release.
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -284,8 +284,10 @@ Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
 PySide6). Verificación de instalación limpia completada.
 
 La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
-releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
-de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
+releases posteriores. La versión `1.0.0rc3` se subió el 21/10/2026 y
+sigue disponible en PyPI (no yanked); un intento posterior de sobreescribirla
+con los cambios de D13 falló por inmutabilidad, y se publicó `1.0.0rc4` como
+siguiente release. Tras el
 cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
 publicada es `1.0.0rc6`, cuyo README refleja el estado actual del
 repositorio (Fases 0 a 7 cerradas, backlog cerrado, 607/607 tests). La
