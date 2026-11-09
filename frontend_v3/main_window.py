@@ -181,8 +181,9 @@ class MainWindow(QMainWindow):
         # el tooltip (y el status tip) son la única etiqueta. Se fijan
         # aquí con el mismo tr() para re-traducirse al cambiar de
         # idioma.
-        # TODO(zona_gris): el brief asumía que las acciones ya tenían
-        # tooltip; no lo tenían (ni menús ni zoom). Se añaden aquí.
+        # DECISIÓN (24/10/2026): el brief asumía que las acciones ya
+        # tenían tooltip; no lo tenían (ni menús ni zoom). Se fijan aquí
+        # con tr() para que se retraduzcan en caliente.
         for act, key in (
             (self._act_export_sql, "menu_file_export_sql"),
             (self._act_export_python, "menu_file_export_python"),
@@ -642,7 +643,7 @@ class MainWindow(QMainWindow):
 
         self._act_toggle_left.toggled.connect(self._left_panel.setVisible)
         self._act_toggle_hud.toggled.connect(self._hud_panel.setVisible)
-        # TODO(zona_gris): el hotfix pedía estas conexiones en
+        # DECISIÓN (24/10/2026): el hotfix pedía estas conexiones en
         # _build_menus, pero los QGroupBox se crean en _build_central
         # (que corre después); van aquí, junto a las conexiones
         # equivalentes de los paneles laterales.

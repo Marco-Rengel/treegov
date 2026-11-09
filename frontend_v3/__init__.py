@@ -14,4 +14,4 @@ from backend_v3.import_guard import install_import_guard
 
 install_import_guard()
 
-__version__ = "1.0.0rc5"
+__version__ = "1.0.0rc6"

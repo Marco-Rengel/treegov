@@ -131,7 +131,7 @@ class _CajaNodo(QGraphicsRectItem):
         self._aplicar_estilo()
 
     def _aplicar_estilo(self) -> None:
-        # TODO(zona_gris): the design lists both "normal border: BORDER"
+        # DECISIÓN (31/10/2026): the design lists both "normal border: BORDER"
         # and kind-specific borders (leaf: STATUS_OK, internal: ACCENT).
         # Resolved conservatively: the kind-specific rule wins for boxes
         # (every node is either leaf or internal); BORDER is used for the

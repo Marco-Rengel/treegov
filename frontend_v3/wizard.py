@@ -758,7 +758,7 @@ class ValidationPage(QWizardPage):
     Partition (Holdout, default) / Cross-validation. The progress bar and
     the slider are enabled ONLY under Holdout. CV exposes its fold count.
 
-    TODO(zona_gris): NONE remains presentational; the stratified holdout
+    DECISIÓN (24/10/2026): NONE remains presentational; the stratified holdout
     is still applied and the explicit notice prevents a silent mismatch.
     """
 
@@ -928,7 +928,7 @@ class AdvancedOptionsDialog(QDialog):
         (editable; they flow into ModelWizard.current_config() on Accept).
       - "CHAID": alpha_merge / alpha_split.
 
-    TODO(zona_gris): the CHAID alpha controls are DISABLED on purpose.
+    DECISIÓN (24/10/2026): the CHAID alpha controls are DISABLED on purpose.
     ChaidEngine accepts alpha_merge/alpha_split (default 0.05) but
     Session.train does not expose them and they are not part of
     SplitConfig/params_fingerprint: editable-but-inert controls would be
@@ -1003,7 +1003,7 @@ class AdvancedOptionsDialog(QDialog):
         self._spin_alpha_split.setRange(0.001, 0.5)
         self._spin_alpha_split.setSingleStep(0.005)
         self._spin_alpha_split.setValue(0.05)  # ChaidEngine default
-        self._spin_alpha_merge.setEnabled(False)  # TODO(zona_gris), arriba
+        self._spin_alpha_merge.setEnabled(False)  # Ver DECISIÓN (24/10/2026) arriba
         self._spin_alpha_split.setEnabled(False)
         form_chaid.addRow(tr("adv_chaid_alpha_merge"), self._spin_alpha_merge)
         form_chaid.addRow(tr("adv_chaid_alpha_split"), self._spin_alpha_split)

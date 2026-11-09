@@ -1,6 +1,6 @@
 # TreeGov — Diseño Fase 2: i18n y gobernanza GUI (post-Fase 7)
 
-- **Estado:** propuesto (pendiente de veredicto de auditoría de diseño).
+- **Estado:** ✅ Cerrada (02/11/2026). As-built verificado contra `frontend_v3/ecl_dialog.py`, `frontend_v3/scoring_dialogs.py`, `frontend_v3/main_window.py`, `frontend_v3/wizard.py` y `tests/test_ecl_dialog.py`, `tests/test_scoring_dialogs.py`, `tests/test_gui_smoke.py`, `tests/test_wizard.py` (suite 575/575).
 - **Fecha:** 2026-11-02.
 - **Origen:** backlog de zonas grises registrado en `docs/roadmap.md` (sección Deferred, subsección "⏳ Backlog post-Fase 7 — Zonas grises detectadas el 02/11/2026") tras la auditoría forense del 02/11/2026 (`docs/audit_log.md`, entrada "Auditoría forense post-Fase 7 y registro del backlog de zonas grises").
 - **Alcance:** 7 deudas de GUI (T5, T6, T7, T8, T9, T10, T15) sobre 4 módulos de `frontend_v3/` y sus tests. Diseño gemelo de `docs/scripts_design.md` (Fase 1).
@@ -138,3 +138,15 @@ Tres reglas gobiernan el diseño:
 5. **Frontend sin analítica.** El parseo de `challenger_params` es cadena→diccionario; ninguna validación estadística, de rangos de `n_groups` más allá del mínimo de presentación, ni de motores se implementa en la GUI. El backend sigue siendo la autoridad y sus errores llegan por `_on_worker_failed`.
 6. **No se modifican tests existentes salvo congelación de bug.** La única excepción de la Fase 2 es `test_ecl_dialog_table_population`, que aserta literales ES y por tanto congela el defecto T5; se reescribe contra `tr(...)` en 2.b.1 y se documenta en el `audit_log`. El resto de tests existentes se conserva intacto y los nuevos son adiciones puras.
 7. **Ciclo de vida del bus.** Todo widget que conecta `language_bus.language_changed` lo desconecta en su ruta de cierre, con guarda `try/except RuntimeError`, cubriendo tanto `closeEvent` como `done()` (accept/reject). Un diálogo destruido con la conexión viva es un fallo de la sub-fase.
+
+## §7. As-built
+
+Verificado el 02/11/2026 contra el código real:
+
+- **T5** (`ecl_dialog.py`): `ECLDialog.retranslate_ui()` implementado; `_detach_bus()` idempotente en `closeEvent` y `done()`; `_report_dto` cacheado y repintado en `retranslate_ui`; claves nuevas `ecl_btn_calculate` y `ecl_input_dialog_title` en `i18n.py` (EN/ES).
+- **T6** (`scoring_dialogs.py`): `BatchScoringDialog.retranslate_ui()` y `ChampionChallengerDialog.retranslate_ui()` implementados; `_detach_bus()` en ambos; combos con doble representación (`itemData` + texto traducido); `ENGINE_LABELS` importado desde `frontend_v3.wizard`.
+- **T7**: `BatchWorker.progress` eliminada (no aparece en `scoring_dialogs.py`).
+- **T8**: combo de motores del retador usa `ENGINE_LABELS` (4 motores, incluye `CHAID_EXHAUSTIVE`); `_n_groups_spin` (rango 3–20, default 10) y `_params_edit` con `_parse_challenger_params` (cadena→dict, entero/float/str) presentes; `CCWorker` propaga `n_groups` y `challenger_params`.
+- **T9**: `MainWindow.set_governance_mode(mode)` propaga a `_reports_panel` y `_metrics_panel`; `retranslate_ui` re-renderiza desde `self._governance_mode`. Test `test_hud_research_mode` cubre el flujo en EN y ES.
+- **T10**: `_on_tree_context_menu` usa `tr("menu_tree_prune_confirm_title")` y `tr("menu_tree_prune_confirm_body").format(node_id=node_id)`.
+- **T15**: `PredictorsPage._subtitle_key()` selecciona `step2_subtitle_no_target` / `step2_subtitle_multiclass` / `step2_subtitle` según el conteo del `target_provider`. Test `test_wizard_multiclass_subtitle` cubre los tres casos.

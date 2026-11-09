@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc5
+**Version**: 1.0.0rc6
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 complete<br/>📦 v1.0.0rc5 published on PyPI<br/>🧪 603 / 603 tests PASSED<br/>📅 Nov 3, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 complete<br/>📦 v1.0.0rc6 published on PyPI<br/>🧪 603 / 603 tests PASSED<br/>📅 Nov 3, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff

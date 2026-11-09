@@ -267,10 +267,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc5` en PyPI (02/11/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc5/
+**Última versión publicada:** `treegov 1.0.0rc6` en PyPI (03/11/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc6/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026); el tag v1.0.0rc6 se crea al cerrar este bloque (03/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -286,18 +286,18 @@ PySide6). Verificación de instalación limpia completada.
 La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
 releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
-cierre de la Fase 4.0.1, la versión publicada sigue siendo `1.0.0rc5`; su README
-de PyPI refleja 537/537 tests, mientras el repositorio tiene actualmente
-603/603. La sincronización de la página queda pendiente de una decisión de
-release; este bloque es exclusivamente documental y no cambia la versión publicada.
+cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
+publicada es `1.0.0rc6`, cuyo README refleja el estado actual del
+repositorio (Fases 0 a 7 cerradas, backlog cerrado, 603/603 tests). La
+página de PyPI queda sincronizada hasta la próxima release material.
 
 ## Próximos pasos
 
 **Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
 Suite 603/603 PASSED. CV k-fold, guardrail de imports en GUI e iconos
 SVG incorporados. Próxima decisión: método de distribución (C1), y
-después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc5
-sigue vigente hasta esa decisión.
+después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc6
+queda vigente hasta esa decisión.
 
 **Deudas diferidas:**
 - Fixture de tests E2E con señal real (el `_make_csv` actual genera

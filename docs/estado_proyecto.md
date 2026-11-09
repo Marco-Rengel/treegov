@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado salvo distribución; suite 603/603; release 1.0.0rc5 vigente)
+**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado; suite 603/603; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc5 (release candidate) |
+| Versión | 1.0.0rc6 (release candidate) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc5/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc6/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -355,21 +355,7 @@ limpieza en la rama de reseteo (`_on_new_wizard`). 4 tests nuevos
 headless (construcción/retraducción, poblado + aviso, TSV, estado
 vacío). Suite 460/460.
 
-**3.11.b.3 — Tree Map** ✅ Completada (25/10/2026). Nuevo widget
-`TreeMap` (`frontend_v3/tree_map.py`) en el bloque `gbTreeMap` del
-panel izquierdo (decisión D2 del diseño auditado
-`docs/3.11.b_design_treemap_dataviewer.md`): minimapa pasivo del
-árbol completo con escena `QGraphicsScene`/`QGraphicsView`
-independientes del canvas principal, rectángulos planos por nodo,
-clic sobre un rectángulo → `centerOn` en la vista principal **sin
-tocar zoom ni selección**, reconstrucción completa del mapa ante
-cualquier cambio del modelo, `fitInView` exclusivo del minimapa
-(prohibido tocar el `QTransform` de la vista principal, corrección
-O6) y resaltado pasivo del nodo actual (refleja la selección del
-canvas, sin selección propia ni propagación). Cableado en
-`main_window.py`: reconstrucción tras entrenar y limpieza en la rama
-de reseteo. 3 tests nuevos headless en `tests/test_tree_map.py`.
-Suite 463/463.
+**3.11.b.3 — Tree Map** ✅ Completada (25/10/2026). Nuevo widget `TreeMap` (`frontend_v3/tree_map.py`) en el bloque `gbTreeMap` del panel izquierdo. Reescrito desde cero el 31/10/2026 (Fase 3.11.e, Clean Room): layout tidy top-down estilo Reingold-Tilford (cajas 48×30, gaps 16/36), conectores ortogonales en 3 tramos (`QGraphicsPathItem` con pluma `BORDER`), etiquetas `node_id` con `ItemIgnoresTransformations` (8 pt, tamaño de pantalla constante), colores 100% desde `PALETTES` del Design System (cero hex hardcodeados, cero código del prototipo previo del autor). `fitInView` con `MIN_SCALE = 0.02` + scrollbars si el fit real es menor; navegación por `node_id` (`node_clicked` → `_tree_panel.select_node` + `center_on_node`, hotfix post-3.6.e que hizo el mapa bidireccional); resaltado pasivo del nodo actual desde el canvas (`set_selected_node`). 7 tests en `tests/test_tree_map.py` (determinismo, colores desde `PALETTES`, `ItemIgnoresTransformations`, conectores ortogonales, clic emite `node_id`, empty state sin branding, `set_theme`). Suite 483/483 al cierre (480 + 7 nuevos − 4 antiguos). Diseño: `docs/3.11.e_design_treemap_rewrite.md`; nota histórica en `docs/design_decisions.md` §18.11.
 
 **3.11.b.4 — Project Explorer** ✅ Completada (25/10/2026). El
 bloque `gbProjectExplorer` del panel izquierdo muestra la
@@ -502,7 +488,7 @@ ID ya no intercepta el clic del rectángulo); Menú Ver granular
 Data Viewer en lugar del toggle global del panel); texto del wizard de
 Validación Cruzada sin referencias a fases internas. Decisión:
 `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md`
-entrada del 25/10/2026. Suite 477/477. Ampliación (25/10/2026, mini-cierre #3): conectores ortogonales con codo (`QGraphicsPathItem`, token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (visibles a cualquier zoom). Suite 478/478. Ampliación (25/10/2026, bloque de iteración #4-#8): Tree Map reescrito con layout abstracto desacoplado (cajas 48×30), navegación por `node_id` (`TreePanel.center_on_node`) y colores del prototipo Antigravity (fondo oscuro fijo). Sustituye el diseño de coordenadas compartidas. Suite 478/478. Deuda diferida: paleta propia del minimapa para el tema claro (`roadmap.md` Deferred).
+entrada del 25/10/2026. Suite 477/477. Ampliación (25/10/2026, mini-cierre #3): conectores ortogonales con codo (`QGraphicsPathItem`, token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (visibles a cualquier zoom). Suite 478/478. Ampliación (25/10/2026, bloque de iteración #4-#8): Tree Map reescrito con layout abstracto desacoplado (cajas 48×30), navegación por `node_id` (`TreePanel.center_on_node`) y colores del prototipo previo (fondo oscuro fijo). Sustituye el diseño de coordenadas compartidas. Suite 478/478. Deuda diferida: paleta propia del minimapa para el tema claro (`roadmap.md` Deferred).
 **Próximo paso: recogida de feedback para la v1.0.0 estable o inicio de
 la Fase 4.0**.
 
@@ -872,7 +858,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc5/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc6/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |
@@ -882,11 +868,13 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
+**Backlog post-Fase 7 cerrado; release 1.0.0rc6 publicada (03/11/2026).**
 Suite 603/603. CV k-fold, guardrail de imports en GUI e iconos SVG
-incorporados. La única decisión formal pendiente antes de publicar
-1.0.0 es el método de distribución (PyPI solo / + PyInstaller / +
-Inno Setup / + MSI / firma digital).
+incorporados. Próximo paso: revisión del aplicativo en pantalla real
+(CV con datasets grandes, iconos SVG en tema oscuro, arranque real en
+Windows nativo, uso prolongado). Después de esa revisión: decisión de
+distribución (C1: PyPI solo / + PyInstaller / + Inno Setup / + MSI /
+firma digital) y publicación de 1.0.0 estable.
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
@@ -906,7 +894,7 @@ Inno Setup / + MSI / firma digital).
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
 - [x] **Fase 3.2** — Ponderación por muestra: Cerrada 10/10/2026 (8 sub-fases a-h, suite 346/346).
 - [x] **Fase 3.3** — Categorías de población. Completada 11/10/2026. 5 sub-fases (a-e). Suite 384/384.
-- [ ] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend.
+- [x] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend. **Completada el 03/11/2026**: `stratified_kfold` (`backend_v3/splitting.py`), `Session.partition(scheme="cv", k=...)`, `Session.get_cv_report`, wizard con selector k, y guardrail de imports instalado en `frontend_v3/__init__.py` (B2a + B2b).
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [ ] *Datasets* públicos (German Credit, UCI health/social) para validación multi-dominio (Fase 3).
 - [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
@@ -964,12 +952,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0, 1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4,
-> 3.0, 3.1 (multiclase), 3.2 (ponderación por muestra), 3.3 (categorías
-> de población), 3.4 (CRT y QUEST multiclase), 3.5.a, 3.5.b, 3.5.c y
-> 3.5.d cerradas (Fase 3.5 completa). Suite 416/416. Próximo paso:
-> Fase 3.6 (validación con datasets públicos) con OpenCode 1.19.0 +
-> Kimi K3 vía Moonshot AI directo (key propia)."
+> "Retomamos TreeGov. Fases 0 a 7 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 603/603. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

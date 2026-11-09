@@ -7612,3 +7612,46 @@ T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).
 **Tests**: 603/603 PASSED.
 
 **Referencias cruzadas**: mini-cierres inmediatamente anteriores de API/decisiones y estado/contexto; `AGENTS.md`, protocolo PyPI.
+
+### 03/11/2026 — Mini-cierre documental: sincronización post-Fase 7 (22 hallazgos)
+
+**Estado**: ✅ Cerrado. Suite 603/603 PASSED.
+
+**Artefactos tocados (por ruta exacta)**:
+- `docs/scripts_design.md` — línea 3: `Estado: propuesto` → `Estado: ✅ Cerrada (02/11/2026)`. Nueva §9 `As-built` con los contratos F1-F8, U1-U6, V1-V12 y P1-P4 implementados.
+- `docs/gui_i18n_governance_design.md` — línea 3: `Estado: propuesto` → `Estado: ✅ Cerrada (02/11/2026)`. Nueva §7 `As-built` con las siete entradas T5, T6, T7, T8, T9, T10, T15.
+- `docs/philosophy.md` y `docs/philosophy.es.md` — `561/561` → `603/603` (1 línea cada uno).
+- `docs/estado_proyecto.md` — §3 (párrafo 3.11.b.3 reescrito como as-built de 3.11.e), §10 (`- [ ] Fase 2.1.b` → `- [x]`), §11 (primer mensaje reescrito).
+- `docs/roadmap.md` — cinco items Deferred marcados como resueltos (iconos SVG B1, CV B2a, barra clásica parcialmente absorbida B1, T1-T3, T11/N1/N2), Pending decisions actualizado.
+- `docs/playbook.md` — Skill 4 con cuatro filas nuevas (`3.11.e`, `3.11 (Design System)`, `Fase 1 (scripts)`, `Fase 2 (GUI/i18n)`).
+- `frontend_v3/theme.py` — comentario `NODE_BG` en light y dark sincronizado con A2.
+- `frontend_v3/reports_panel.py`, `frontend_v3/main_window.py`, `frontend_v3/wizard.py`, `frontend_v3/tree_map.py` — siete `TODO(zona_gris)` que describían decisiones tomadas renombrados a `DECISIÓN (fecha)`; dos TODOs genuinos preservados (Grow Tree en `_on_tree_context_menu`, tooltip de PredictorType en `_make_item`); línea 1006 de `wizard.py` actualizada (`# TODO(zona_gris), arriba` → `# Ver DECISIÓN (24/10/2026) arriba`).
+
+**Hallazgos**: 22 fixes de la auditoría de contexto del traspaso del 03/11/2026 (A1, A2, B1-B4, C1-C4, D1, D2, D4). D3 (mojibake en `api.md`) excluido: requiere verificación empírica con `Select-String` para distinguir el artefacto de codepage del portapapeles del mojibake real en disco.
+
+**Tests**: 603/603 PASSED. Sin cambios de código funcional en este bloque (solo comentarios y documentación).
+
+**Referencias cruzadas**: entradas del 02/11/2026 y 03/11/2026; entrada siguiente de este mismo bloque (release rc6).
+
+---
+
+### 03/11/2026 — Release v1.0.0rc6 preparada (upload pendiente tras revisión GitHub)
+
+**Estado**: ✅ Preparada; el upload a PyPI se ejecuta tras la revisión del commit en GitHub.
+
+**Contexto**: cambio material desde `1.0.0rc5` (02/11/2026): Fase 1 (scripts de infraestructura), Fase 2 (i18n/GUI), B1 (iconos SVG), B2a (CV k-fold), B2b (guardrail de imports GUI), A1 (HUD), A3 (HUD i18n) y las 52 deudas del backlog post-Fase 7. Suite 537/537 → 603/603 (+66 tests). Protocolo PyPI: cambio material → nueva release.
+
+**Artefactos (por ruta exacta)**:
+- `pyproject.toml`, `frontend_v3/__init__.py`: bump `1.0.0rc5` → `1.0.0rc6`.
+- `README.md`, `README.es.md`: cabecera (versión) y Mermaid (versión publicada).
+- `docs/estado_proyecto.md`: cabecera (fecha + release), §1 (Versión + PyPI URL), §9 (PyPI URL actual), §10 (backlog cerrado; próximo paso = revisión GUI).
+- `docs/contexto_para_nueva_sesion.md`: `Estado de release` y `Próximos pasos`.
+- `docs/roadmap.md`: sección `Releases` con la entrada `v1.0.0rc6`.
+- `docs/prompt_para_asistente.md`: `Estado al 03/11/2026` y primer mensaje sugerido.
+- `docs/audit_log.md`: esta entrada y la del mini-cierre.
+
+**URL (al publicar)**: https://pypi.org/project/treegov/1.0.0rc6/
+
+**Tests**: 603/603 PASSED. Release candidate: mismo aviso regulatorio que rc5 (validación MRM, no apto para producción bancaria sin aprobación).
+
+**Próximo paso**: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). Decisión de distribución (C1) y publicación de 1.0.0 estable en PyPI DESPUÉS de esa revisión.

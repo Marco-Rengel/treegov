@@ -1,6 +1,6 @@
 # TreeGov — Diseño Fase 1: Scripts de infraestructura (post-Fase 7)
 
-- **Estado:** propuesto (pendiente de veredicto de auditoría de diseño).
+- **Estado:** ✅ Cerrada (02/11/2026). As-built verificado contra `scripts/fetch_datasets.py`, `scripts/update_readme_date.py`, `scripts/validate_uci.py` y `tests/test_scripts.py` (suite 567/567). Contratos F1–F8, U1–U6, V1–V12 y P1–P4 implementados.
 - **Fecha:** 2026-11-02.
 - **Origen:** backlog de zonas grises registrado en `docs/roadmap.md` (sección Deferred) tras la auditoría forense del 02/11/2026; entrada correspondiente en `docs/audit_log.md` ("Auditoría forense post-Fase 7 y registro del backlog de zonas grises").
 - **Alcance:** 26 deudas del backlog (F1–F8, U1–U6, V1–V12 y P1–P4) sobre los tres scripts de `scripts/`.
@@ -221,6 +221,17 @@ Contratos as-built (6 tests, 2 por script):
 3. **Reproducibilidad byte-a-byte de `docs/validation_results_3.6.md`.** La regeneración del informe sobre un árbol limpio (guarda V5) debe producir un archivo idéntico byte a byte al vigente; `--check` es la herramienta sin escritura que lo verifica (exit 0 = idéntico).
 4. **No escrituras en `data/` fuera de `fetch_datasets.py`.** Ni validate_uci ni update_readme_date ni los tests escriben bajo `data/`; la guarda de P4 lo vuelve determinista, no una expectativa social.
 5. **No modificación de tests existentes salvo congelación de bug.** La Fase 1 no toca ningún test existente (ningún bug del backlog exige congelar un comportamiento falso); los 6 tests son adiciones puras en `tests/test_scripts.py`.
+
+## §9. As-built
+
+Verificado el 02/11/2026 contra el código real:
+
+- `scripts/fetch_datasets.py`: F1 (sidecar SHA-256 en `data/uci/<name>/<name>.csv.sha256`), F2 (`DATA_DIR = ROOT_DIR / "data" / "uci"`), F3 (`csv.reader`), F4 (`ValueError` con dataset+valor), F5 (`backend_v3.log_config`, logger `treegov.fetch`), F6 (3 intentos, backoff 2s/4s, solo `URLError`/`socket.timeout`/`HTTPError` transitorio), F7 (`--refresh-hash` reescribe este archivo), F8 (`ROOT_DIR = Path(__file__).resolve().parent.parent`).
+- `scripts/update_readme_date.py`: U1 (`RuntimeError` con ruta+patrón), U2 (`_apply_atomic_pair` con temps + `os.replace` + `_restore` en fallo), U3 (`TARGET_FILES` por constante), U4 (`--check` exit 0/1), U5 (guarda de retroceso con `--date`), U6 (`ROOT_DIR` desde `__file__`).
+- `scripts/validate_uci.py`: V1 (`n_groups = min(10, max(3, n_test // 5))`), V2 (`target_type` explícito), V3/V4 (`_get_revision_notes()` con `git log` sin fallback), V5 (`--check` + `_assert_clean_tree`), V6 (métrica None → exit 2), V9 (`target_class` justificada en CONFIGS), V10 (`PD_FLOOR = 0.0005`), V11/V12 (`ROOT_DIR` desde `__file__`; `sys.path` a la raíz).
+- `tests/test_scripts.py`: 6 tests duales (2 por script), sin red real, `urlopen` monkeypatcheado.
+
+Los contratos V7 (CHAID 6/6) y V8 (separar semántica de accuracy) quedan documentados como `TODO(zona_gris)` en `validate_uci.py`, según el propio diseño original.
 
 ## §8. Referencias
 

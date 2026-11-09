@@ -2109,7 +2109,7 @@ predictor.
 **Consecuencia:** Mayor claridad visual sin salir de la paleta oscura. Los tests de contraste se mantienen.
 
 ### 15.2 Enriched Tree Nodes with HTML (H4)
-**Contexto:** Los nodos del árbol eran cajas de texto plano. El prototipo Antigravity sugería un diseño más denso en información.
+**Contexto:** Los nodos del árbol eran cajas de texto plano. El prototipo previo del autor sugería un diseño más denso en información.
 **Decisión:** Se migró `NodeItem` de `setPlainText` a `setHtml`. El HTML permite renderizar cabeceras de color, mini-barras de proporción y métricas adicionales (Gini, p-valor) dentro del nodo sin añadir lógica analítica en el frontend (los datos siguen viniendo precalculados del backend en el `TreeNode`).
 **Consecuencia:** Los nodos miden 180x100 (antes 150x64). El auto-fit del zoom se ajustó para respetar el `ZOOM_MIN` con la nueva geometría.
 
@@ -2220,7 +2220,7 @@ El `TreeBuilder` no crea un nodo hijo por cada bin individual (lo que resultarí
 **Actualización (25/10/2026, mini-cierre #3):** Los conectores del minimapa ahora replican la geometría del canvas principal (`QGraphicsPathItem` con tres segmentos ortogonales y `mid_y = (y0b + y1t)/2.0`, pluma del token `BORDER` de la paleta activa) en lugar del `QGraphicsLineItem` diagonal de un solo tramo con color fijo. Las etiquetas de `node_id` usan `ItemIgnoresTransformations` para mantener tamaño de pantalla constante bajo el `fitInView` del minimapa (el factor de encaje típico de un árbol de ~15 hojas es ~0.05-0.10, insuficiente para texto normal), color `FG` del tema y `z=1.0` para quedar por encima de los rectángulos. Tests: `tests/test_tree_map.py::test_tree_map_orthogonal_connectors_and_numbered_labels`. Cierre: `docs/audit_log.md` entrada del 25/10/2026 (mini-cierre #3).
 
 > **Actualización (31/10/2026, A2):** el TreeMap previo contenía un
-> port del prototipo Antigravity; se reescribió desde cero por Clean
+> port del prototipo previo del autor; se reescribió desde cero por Clean
 > Room. Ver `docs/3.11.e_design_treemap_rewrite.md`. Esta §18.11 queda
 > como registro histórico de la iteración #4-#8; el estado as-built vive
 > en 3.11.e.

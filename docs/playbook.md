@@ -59,6 +59,10 @@
 | **3.11.b** | `docs/3.11.b_design_treemap_dataviewer.md` | ✅ Completed (25/10/2026) |
 | **3.11.c** | `docs/3.11.c_design_univariate_cost_matrix.md` | ✅ Completed (25/10/2026) |
 | **3.11.d** | `docs/3.11.d_design_context_menu_interactivity.md` | ✅ Completed (25/10/2026) |
+| **3.11.e** | `docs/3.11.e_design_treemap_rewrite.md` | ✅ Completed (31/10/2026) |
+| **3.11 (Design System)** | `docs/3.11_gui_design_system.md` | ✅ Normativo (24/10/2026, as-built) |
+| **Fase 1 (scripts)** | `docs/scripts_design.md` | ✅ Completed (02/11/2026; as-built §9) |
+| **Fase 2 (GUI/i18n)** | `docs/gui_i18n_governance_design.md` | ✅ Completed (02/11/2026; as-built §7) |
 | **3.6.e** | `docs/3.6.e_design_non_banking.md` | ✅ Completed (25/10/2026) |
 | **5.0** | `docs/5.0_design_mcp.md` | ✅ Approved (01/11/2026) |
 | **5.0.a** | `docs/5.0_design_mcp.md` (as-built §1) | ✅ Completed (01/11/2026) |

@@ -710,7 +710,7 @@ class ReportsPanel(QWidget):
     def _term_header(self, key: str) -> str:
         """Cabecera de la gains table según el modo de gobernanza.
 
-        TODO(zona_gris): el prompt 3.6.e.2 mapeaba también el modo
+        DECISIÓN (25/10/2026): el prompt 3.6.e.2 mapeaba también el modo
         BANKING a tr_term(...), lo que cambiaba textos visibles en
         BANKING (p. ej. ES "Tasa malos" -> "Tasa de malos") y rompía la
         paridad visual exigida por el diseño (3.6.e §5: BANKING bit a
@@ -748,6 +748,7 @@ class ReportsPanel(QWidget):
         `reports_sum_bad_rate_global`). BANKING conserva tr(key)
         intacto (paridad; los tests existentes aserten sobre el HTML
         en modo por defecto).
+        Decisión 3.6.e.3 (25/10/2026): BANKING intacto; RESEARCH neutro.
         """
         if self._mode != "RESEARCH":
             return tr(key)

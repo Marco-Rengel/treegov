@@ -371,7 +371,7 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Nota:** la especificación visual para todas las sub-fases 3.11.a.1 a 3.11.d vive en `docs/3.11_classic_tree_ui_reference.md`.
 
-**Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478. **Nota (25/10/2026, iteración #4-#8):** Tree Map reescrito con layout abstracto desacoplado (cajas 48×30, orientación vertical, colores del prototipo Antigravity) y navegación por `node_id` (`TreePanel.center_on_node`). Sustituye el diseño de coordenadas compartidas que dejaba los números ilegibles en árboles anchos. Suite 478/478. Decisión: `design_decisions.md` §18.11 (actualización). Deuda diferida: paleta propia del minimapa.
+**Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478. **Nota (25/10/2026, iteración #4-#8):** Tree Map reescrito con layout abstracto desacoplado (cajas 48×30, orientación vertical, colores del prototipo previo) y navegación por `node_id` (`TreePanel.center_on_node`). Sustituye el diseño de coordenadas compartidas que dejaba los números ilegibles en árboles anchos. Suite 478/478. Decisión: `design_decisions.md` §18.11 (actualización). Deuda diferida: paleta propia del minimapa.
 
 ### ✅ Phase 4.0 — Export to production (SQL / Python / Markdown)
 
@@ -600,25 +600,31 @@ Cerrada el 23/10/2026 como alineación del motor CHAID con predictores continuos
 
 **Diferido a la Fase 3.11:** la interactividad visual (Tree Map, menú contextual) y el panel inferior de cortes candidatos (WOE/IV/Odds) descrito originalmente para esta sub-fase en `docs/3.10.a_design_ux_ui_redesign.md` §0.2 (renombrado el 24/10/2026 desde `docs/3.10_design_ux_redesign.md`).
 
-### ⏳ Barra superior con iconos detallados (estilo clásico 2001)
+### ✅ Barra superior con iconos detallados (estilo clásico 2001) — PARCIALMENTE ABSORBIDO 03/11/2026 (B1)
 **Priority: LOW (registered 24/10/2026).**
 
 Barra superior con iconos detallados (estilo clásico 2001) diferido a la Fase 4.0 o posterior.
 
-### ⏳ Iconos SVG personalizados (toolbar y wizard)
+> Absorbido parcialmente por B1: la toolbar ya usa iconos SVG temáticos (16×16, IconOnly, tooltips). La barra "detallada" de 2001 como pieza diferenciada queda definitivamente cancelada; si se necesita más densidad visual, se evalúa en una iteración visual, no como tarea separada.
+
+### ✅ Iconos SVG personalizados (toolbar y wizard) — RESUELTO 03/11/2026 (B1)
 **Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1).**
 
 La toolbar y el wizard usan iconos estándar de Qt (`QStyle.StandardPixmap`, `main_window.py:382-406`, `wizard.py:116`). El autor definirá un set de iconos SVG propios (coloreables vía tokens de tema) para la toolbar y el wizard en una fase futura. Referencia visual: `docs/3.11_classic_tree_ui_reference.md` §1. Divergencia as-built ya registrada en `docs/3.11.a_design_colab_theme.md` §7 (ítem 1).
+
+> Cerrado en el bloque B1: 22 SVG de Bootstrap Icons v1.11.3 (MIT) en `frontend_v3/resources/icons/`, helper `frontend_v3.icons.load_icon(name, theme)` con sustitución de `currentColor`, script reproducible `scripts/fetch_icons.py`. Toolbar y wizard ya no usan `QStyle.StandardPixmap`. Ver `docs/audit_log.md` 03/11/2026.
 
 ### ✅ Copiado TSV en PruneDialog — RESUELTO (25/10/2026)
 **Priority: LOW (registered 24/10/2026, post-mortem 3.11.a.1; resolved 25/10/2026).**
 
 La tabla del diálogo de poda (`frontend_v3/prune_dialog.py`, `PruneDialog._table`) soporta Ctrl+C → TSV desde el 25/10/2026: `ReportsPanel._copy_selection_to_clipboard` se refactorizó a `@staticmethod` (firma `(table: QTableWidget) -> None`) y el diálogo cablea un `QShortcut(QKeySequence.StandardKey.Copy, ...)` con contexto `WidgetWithChildrenShortcut`. Hallazgo de implementación: el fallback "sin selección → toda la tabla" dejó de usar `selectAll()` (no-op en `SelectionMode.SingleSelection`, el modo del diálogo) y ahora itera las celdas directamente — comportamiento idéntico en la tabla de ganancias. Cobertura: `tests/test_prune_dialog.py::test_prune_dialog_copy_tsv_to_clipboard`.
 
-### ⏳ Validación cruzada (Wizard, Paso 3)
+### ✅ Validación cruzada (Wizard, Paso 3) — RESUELTO 03/11/2026 (B2a)
 **Priority: MEDIUM (registered 24/10/2026, post-mortem 3.11.a.1; backend diferido a la Fase 2.1.b).**
 
 El radio "Cross-validation" del Paso 3 del wizard (`wizard.py:764`, `rbSchemeCV`) es seleccionable pero presentacional: al marcarlo se muestra el aviso `step3_cv_notice` ("La validación cruzada estará disponible en la Fase 2.1.b.") y `current_config()` sigue emitiendo la fracción de holdout, porque el backend (Session.partition → train) SIEMPRE aplica el holdout estratificado y no existe flujo de CV (`TODO(zona_gris)` en `wizard.py:746-750`). La deuda real es de backend (Fase 2.1.b, ya registrada arriba como "Hardening extras"); este asiento la vincula al control de UI que la expone.
+
+> Cerrado en el bloque B2a: `stratified_kfold` + `Session.partition(scheme="cv", k=...)` + wizard con selector k + `Session.get_cv_report`. Ver `docs/audit_log.md` 03/11/2026.
 
 ### ✅ Bloque de Saneamiento Post-Auditoría Externa (ZG-1, ZG-2, ZG-3, ZG-5 + fugas frontend) — RESUELTO (25/10/2026)
 **Priority: MEDIUM (detectado y resuelto el 25/10/2026, mismo bloque).**
@@ -674,9 +680,9 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 
 | ID | Categoría | Descripción corta | Estado |
 |----|-----------|-------------------|--------|
-| T1 | Docs | prompt_para_asistente.md stale (553/553, próximo paso Fase 7) | ⏳ Pendiente |
-| T2 | Docs | contexto_para_nueva_sesion.md "cerró Fase 6 con 553/553" en Estado de release | ⏳ Pendiente |
-| T3 | Docs | AGENTS.md con bloques duplicados (opencode.json + plugin caché ×2) | ⏳ Pendiente |
+| T1 | Docs | prompt_para_asistente.md stale (553/553, próximo paso Fase 7) | ✅ Resuelto (02/11/2026) |
+| T2 | Docs | contexto_para_nueva_sesion.md "cerró Fase 6 con 553/553" en Estado de release | ✅ Resuelto (02/11/2026) |
+| T3 | Docs | AGENTS.md con bloques duplicados (opencode.json + plugin caché ×2) | ✅ Resuelto (02/11/2026) |
 | T4 | Docs | ❌ Falso positivo (opencode.json real no tiene doble -free) | ✅ Resuelto |
 | T5 | GUI | ECLDialog sin i18n ni retranslate_ui; test congela literales ES | ✅ Resuelto |
 | T6 | GUI | BatchScoringDialog y ChampionChallengerDialog sin retranslate_ui ni language_bus | ✅ Resuelto |
@@ -684,7 +690,7 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | T8 | GUI | ChampionChallengerDialog omite CHAID_EXHAUSTIVE en combo; no expone n_groups ni challenger_params | ✅ Resuelto |
 | T9 | GUI | HUD sin set_governance_mode; RESEARCH sin cobertura en ReportsPanel/MetricsPanel | ✅ Resuelto |
 | T10 | GUI | _on_tree_context_menu con confirmación BANKING en español hardcodeado | ✅ Resuelto |
-| T11 | Backend | _last_train_params sin max_depth; D9 no se cumple en compare_champion_challenger | ⏳ Pendiente |
+| T11 | Backend | _last_train_params sin max_depth; D9 no se cumple en compare_champion_challenger | ✅ Resuelto (02/11/2026) |
 | T12 | Docs | _make_csv E2E genera target ruido, no 1_{edad>=40} | ✅ Resuelto |
 | T13 | Docs | docstring stale en test_e2e_mainwindow.py ("5 tests") | ✅ Resuelto |
 | T14 | Docs | cost_matrix inconsistente entre fixtures de test; cfg canónico no unificado | ✅ Resuelto |
@@ -719,8 +725,8 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | P2 | Proceso | scripts/ ausente en árboles de README.md/README.es.md (ver READMEs) | ✅ Resuelto |
 | P3 | Proceso | scripts/ no empaquetado en pyproject.toml (consistente, no bug) | ✅ Resuelto |
 | P4 | Proceso | scripts/ sin guarda de escritura en data/ o archive/ | ✅ Resuelto |
-| N1 | Backend | target_type no entra en _fingerprint y no se valida contra K | ⏳ Pendiente |
-| N2 | Backend | crt_engine._rates_cls para K=2 usa clase 1 sorted, no target_class | ⏳ Pendiente |
+| N1 | Backend | target_type no entra en _fingerprint y no se valida contra K | ✅ Resuelto (02/11/2026) |
+| N2 | Backend | crt_engine._rates_cls para K=2 usa clase 1 sorted, no target_class | ✅ Resuelto (02/11/2026) |
 | N3 | Docs | test_mainwindow_wizard_config_trains usa cfg que el wizard nunca produce | ✅ Resuelto |
 | N4 | Docs | test_uci_integration._check_dataset solo verifica gini>0.3 | ✅ Resuelto |
 | N5 | Docs | test_wizard_finish_emits_config sin provider emite target_class=None | ✅ Resuelto |
@@ -785,6 +791,13 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 
 ## Releases
 
+- **v1.0.0rc6** (03/11/2026) — Release candidate. Cierra el backlog
+  post-Fase 7 (52 deudas) e incorpora: Fase 1 (scripts de
+  infraestructura), Fase 2 (i18n y gobernanza GUI), B1 (iconos SVG
+  temáticos en toolbar y wizard), B2a (validación cruzada k-fold
+  estratificada), B2b (guardrail de imports en la capa GUI). Suite
+  537/537 → 603/603 (+66 tests). Tag `v1.0.0rc6`.
+  URL: https://pypi.org/project/treegov/1.0.0rc6/
 - **v1.0.0rc5** (02/11/2026) — Release candidate. Incluye los modos
   `"error"` y `"majority"` en los exportadores SQL, Python y Markdown,
   junto con el modo `"exclude"` y el forwarding de `unseen_policy` en los
@@ -829,9 +842,5 @@ when a mathematical formula or convention changes.
 
 ## Pending decisions
 
-- **Distribution**: packaging method (PyInstaller / Inno Setup /
-  MSI installer), digital signature, and distribution channel. To be
-  decided before v1.0.
-- **Commercial license format** (if ever considered): the current Apache
-  2.0 is *open source*; a parallel commercial version would require
-  legal analysis.
+- **Distribution (C1)**: packaging method (PyInstaller / Inno Setup / MSI installer), digital signature y canal de distribución. **Decisión diferida**: el siguiente paso del proyecto es la revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución y la publicación de 1.0.0 estable en PyPI se toman DESPUÉS de esa revisión.
+- **Commercial license format** (if ever considered): the current Apache 2.0 is *open source*; a parallel commercial version would require legal analysis.
