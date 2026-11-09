@@ -54,7 +54,7 @@ flowchart TB
 
     BE -.->|Session| FE
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 completas<br/>📦 v1.0.0rc6 publicada en PyPI<br/>🧪 603 / 603 tests PASSED<br/>📅 3 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 completas<br/>📦 v1.0.0rc6 publicada en PyPI<br/>🧪 603 / 603 tests PASSED<br/>📅 8 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 03/11/2026 (backlog post-Fase 7 cerrado; suite 603/603; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 08/11/2026 (backlog post-Fase 7 cerrado; suite 603/603; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -868,7 +868,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Backlog post-Fase 7 cerrado; release 1.0.0rc6 publicada (03/11/2026).**
+**Backlog post-Fase 7 cerrado; release 1.0.0rc6 publicada (08/11/2026).**
 Suite 603/603. CV k-fold, guardrail de imports en GUI e iconos SVG
 incorporados. Próximo paso: revisión del aplicativo en pantalla real
 (CV con datasets grandes, iconos SVG en tema oscuro, arranque real en

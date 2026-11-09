@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 03/11/2026
+**Fecha de última actualización:** 08/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -267,10 +267,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc6` en PyPI (03/11/2026).
+**Última versión publicada:** `treegov 1.0.0rc6` en PyPI (08/11/2026).
 URL: https://pypi.org/project/treegov/1.0.0rc6/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026); el tag v1.0.0rc6 se crea al cerrar este bloque (03/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4 y v1.0.0rc5 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026); el tag v1.0.0rc6 se crea al cerrar este bloque (08/11/2026). El tag v1.0.0rc3 no existe (consistente con el audit_log: rc3 quedó quemada por conflicto de inmutabilidad en PyPI).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una

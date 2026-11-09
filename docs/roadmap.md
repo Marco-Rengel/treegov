@@ -791,7 +791,7 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 
 ## Releases
 
-- **v1.0.0rc6** (03/11/2026) — Release candidate. Cierra el backlog
+- **v1.0.0rc6** (08/11/2026) — Release candidate. Cierra el backlog
   post-Fase 7 (52 deudas) e incorpora: Fase 1 (scripts de
   infraestructura), Fase 2 (i18n y gobernanza GUI), B1 (iconos SVG
   temáticos en toolbar y wizard), B2a (validación cruzada k-fold
