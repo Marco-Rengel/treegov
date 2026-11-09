@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 08/11/2026 (backlog post-Fase 7 cerrado; suite 603/603; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 08/11/2026 (backlog post-Fase 7 cerrado; suite 607/607; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -835,7 +835,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | mcp_ecl.py (backend/MCP) | 1 |
 | **Total** | **603** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 603/603 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 607/607 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -869,7 +869,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 ## 10. Pendientes y decisiones abiertas
 
 **Backlog post-Fase 7 cerrado; release 1.0.0rc6 publicada (08/11/2026).**
-Suite 603/603. CV k-fold, guardrail de imports en GUI e iconos SVG
+Suite 607/607. CV k-fold, guardrail de imports en GUI e iconos SVG
 incorporados. Próximo paso: revisión del aplicativo en pantalla real
 (CV con datasets grandes, iconos SVG en tema oscuro, arranque real en
 Windows nativo, uso prolongado). Después de esa revisión: decisión de
@@ -952,7 +952,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0 a 7 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 603/603. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
+> "Retomamos TreeGov. Fases 0 a 7 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 607/607. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

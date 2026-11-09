@@ -2564,6 +2564,43 @@ Referencia: `docs/audit_log.md` entrada del 03/11/2026 (B1).
 
 ---
 
+## §25. Packaging: py-modules en pyproject.toml (Phase 1.0.0rc6)
+
+**Contexto.** Hasta `1.0.0rc5`, `pyproject.toml` declaraba
+`packages = ["backend_v3", "frontend_v3", "frontend_v3.resources", "mcp_v3"]`
+pero no declaraba los tres archivos `.py` sueltos en la raíz
+(`treegov.py`, `treegov_gui.py`, `treegov_mcp.py`). Consecuencia: el wheel
+publicado en PyPI contenía las carpetas pero no esos tres archivos, y
+`pip install treegov` producía un paquete donde el entry point
+`treegov-mcp` (declarado en `[project.scripts]`) fallaba con
+`ModuleNotFoundError: No module named 'treegov_mcp'`. El fallo pasó
+inadvertido en `rc1`–`rc5` porque nadie ejecutó `pip install` en un
+entorno limpio seguido de los comandos documentados en el README.
+
+**Alternativas consideradas.**
+- (a) Mover `treegov_mcp.py` a `mcp_v3/__main__.py` y cambiar el entry
+  point. Rechazado: rompe la convención `python treegov_mcp.py`
+  documentada y requiere mover también los otros dos archivos por simetría.
+- (b) Declarar `py-modules` con los tres archivos. Adoptado.
+- (c) Usar `include-package-data` con `MANIFEST.in`. Rechazado: más
+  complejo y sigue requiriendo declarar los archivos explícitamente.
+
+**Decisión.** Añadir `py-modules = ["treegov", "treegov_gui", "treegov_mcp"]`
+a `[tool.setuptools]`. Complementar con `tests/test_packaging.py`
+(4 tests) para prevenir la regresión antes de cada publicación.
+
+**Consecuencias.**
+- El wheel incluye los 3 archivos raíz y los entry points funcionan.
+- Cualquier nuevo `.py` en la raíz debe añadirse a `py-modules` o fallará
+  `test_py_modules_declared`.
+- La verificación manual del wheel (`python -c` con `zipfile`) sigue
+  siendo la comprobación definitiva antes de cada upload (ver `AGENTS.md`
+  sección "Verificación del wheel antes de release").
+
+**Referencias.** `docs/audit_log.md` entrada del 08/11/2026 (mini-cierre
+del bug); `AGENTS.md` sección "Verificación del wheel antes de release";
+`tests/test_packaging.py`.
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:

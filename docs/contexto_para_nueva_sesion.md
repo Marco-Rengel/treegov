@@ -144,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 603/603 PASSED
+**Suite de tests:** 607/607 PASSED
 
 ## Entorno de desarrollo
 
@@ -288,13 +288,13 @@ releases posteriores. La versión `1.0.0rc3` quedó quemada por un conflicto
 de inmutabilidad en PyPI: se subió solo con los cambios de D13. Tras el
 cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
 publicada es `1.0.0rc6`, cuyo README refleja el estado actual del
-repositorio (Fases 0 a 7 cerradas, backlog cerrado, 603/603 tests). La
+repositorio (Fases 0 a 7 cerradas, backlog cerrado, 607/607 tests). La
 página de PyPI queda sincronizada hasta la próxima release material.
 
 ## Próximos pasos
 
 **Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
-Suite 603/603 PASSED. CV k-fold, guardrail de imports en GUI e iconos
+Suite 607/607 PASSED. CV k-fold, guardrail de imports en GUI e iconos
 SVG incorporados. Próxima decisión: método de distribución (C1), y
 después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc6
 queda vigente hasta esa decisión.

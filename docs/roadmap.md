@@ -796,7 +796,7 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
   infraestructura), Fase 2 (i18n y gobernanza GUI), B1 (iconos SVG
   temáticos en toolbar y wizard), B2a (validación cruzada k-fold
   estratificada), B2b (guardrail de imports en la capa GUI). Suite
-  537/537 → 603/603 (+66 tests). Tag `v1.0.0rc6`.
+  537/537 → 607/607 (+70 tests). Tag `v1.0.0rc6`.
   URL: https://pypi.org/project/treegov/1.0.0rc6/
 - **v1.0.0rc5** (02/11/2026) — Release candidate. Incluye los modos
   `"error"` y `"majority"` en los exportadores SQL, Python y Markdown,

@@ -96,7 +96,7 @@ decisions that are auditable in the source code.
   TreeGov can be used in any domain where traceability, explainability,
   and governance are important.
 
-**Current Status:** Phases 0 through 7 complete. 603/603 tests passing.
+**Current Status:** Phases 0 through 7 complete. 607/607 tests passing.
 
 ---
 *[Leer en español](philosophy.es.md)*

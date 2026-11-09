@@ -127,10 +127,29 @@ tokens. Formalizado como Skill 5 en `docs/playbook.md`.
 
 El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
 
+## Verificación del wheel antes de release (regla desde 08/11/2026)
+
+Antes de cada `twine upload`, verificar que el wheel contiene los tres
+archivos raíz (`treegov.py`, `treegov_gui.py`, `treegov_mcp.py`) y que
+`frontend_v3.resources/icons/` incluye los 22 SVG. Motivación: de
+`1.0.0rc1` a `1.0.0rc5` el wheel no incluía esos tres archivos (faltaba
+`py-modules` en `pyproject.toml`), y `pip install treegov` producía un
+paquete donde el entry point `treegov-mcp` fallaba con
+`ModuleNotFoundError`. El fallo se detectó antes de publicar `1.0.0rc6`
+y se corrigió con `py-modules` + `tests/test_packaging.py` (4 tests de
+regresión). Ver `docs/audit_log.md` entrada del 08/11/2026 y
+`docs/design_decisions.md` §25.
+
+Comando de verificación (PowerShell, con el wheel ya construido en `dist/`):
+
+    python -c "import zipfile, glob; z = zipfile.ZipFile(glob.glob('dist/*.whl')[0]); names = z.namelist(); [print(('OK   ' if r in names else 'MISS ') + r) for r in ('treegov.py', 'treegov_gui.py', 'treegov_mcp.py')]"
+
+Los tres deben imprimir `OK`. Cualquier `MISS` bloquea el upload.
+
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 02/11/2026: 561/561 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 08/11/2026: 607/607 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).

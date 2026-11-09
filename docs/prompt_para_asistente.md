@@ -110,7 +110,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
   reversión en MetricsPanel.
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** **603/603 PASSED** (03/11/2026). Fases 4.0, 4.0.1,
+- **Suite de tests:** **607/607 PASSED** (08/11/2026). Fases 4.0, 4.0.1,
   5.0 y 6.0 cerradas. La Fase 6 incorpora batch scoring atómico por chunks,
   comparación Champion-Challenger sobre población común, dos diálogos GUI y
   26 tools MCP. Diseño as-built: `docs/6.0_design_batch_scoring.md` §6;
@@ -177,7 +177,7 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 **Estado al 08/11/2026:** Fases 0 a 7 cerradas. Backlog post-Fase 7
-cerrado. Suite 603/603 PASSED. Release 1.0.0rc6 publicada en PyPI.
+cerrado. Suite 607/607 PASSED. Release 1.0.0rc6 publicada en PyPI.
 Próximo paso: revisión del aplicativo en pantalla real (CV con
 datasets grandes, iconos SVG en tema oscuro, arranque real en
 Windows nativo, uso prolongado). La decisión de distribución (C1) y
@@ -415,7 +415,7 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 > "Retomamos TreeGov. Soy Marco. Estado al 08/11/2026: Fases 0 a
 > 7.0 cerradas, incluidas 3.6.e, 4.0.1 y 5.0. La Fase 7 entrega backend
 > IFRS 9 / ECL, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total).
-> Suite 603/603. Release 1.0.0rc6 publicada en PyPI. Backlog post-Fase 7
+> Suite 607/607. Release 1.0.0rc6 publicada en PyPI. Backlog post-Fase 7
 > cerrado. Próximo paso: revisión del aplicativo en pantalla real (CV
 > con datasets grandes, iconos SVG en tema oscuro, arranque en Windows
 > nativo, uso prolongado). Herramienta activa: OpenCode v2.2.5 +

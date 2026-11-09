@@ -7655,3 +7655,24 @@ T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).
 **Tests**: 603/603 PASSED. Release candidate: mismo aviso regulatorio que rc5 (validación MRM, no apto para producción bancaria sin aprobación).
 
 **Próximo paso**: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). Decisión de distribución (C1) y publicación de 1.0.0 estable en PyPI DESPUÉS de esa revisión.
+
+### 08/11/2026 — Mini-cierre: bug de empaquetado detectado antes de publicar rc6
+
+**Estado**: ✅ Corregido. Suite 603/603 → 607/607 PASSED (+4 tests de regresión).
+
+**Contexto**: durante el bloque de release de `1.0.0rc6`, la verificación del wheel construido (con `zipfile`, tras `pyproject-build`) detectó que `treegov.py`, `treegov_gui.py` y `treegov_mcp.py` NO estaban dentro del wheel. Consecuencia real: cualquier `pip install treegov` (incluidas todas las versiones `rc1`–`rc5` ya publicadas) producía un paquete donde el entry point `treegov-mcp` fallaba con `ModuleNotFoundError`. El bug era preexistente, no introducido por rc6.
+
+**Causa raíz**: `pyproject.toml` declaraba `packages` (las 4 carpetas) pero no `py-modules` (los 3 archivos raíz). El empaquetador ignora los `.py` sueltos en la raíz si no se declaran explícitamente.
+
+**Artefactos (por ruta exacta)**:
+- `pyproject.toml`: +1 línea `py-modules = ["treegov", "treegov_gui", "treegov_mcp"]`.
+- `tests/test_packaging.py` (nuevo): 4 tests de regresión (`test_py_modules_declared`, `test_py_modules_exist_on_disk`, `test_packages_declared`, `test_version_matches_between_pyproject_and_frontend`).
+- `AGENTS.md`: nueva sección "Verificación del wheel antes de release".
+- `docs/design_decisions.md`: nueva §25.
+- `docs/audit_log.md`: esta entrada.
+
+**Verificación**: `python -m pytest tests -q` → 607/607 PASSED. Rebuild del wheel pendiente en el mismo bloque; la publicación de rc6 queda bloqueada hasta que el script `zipfile` devuelva `OK` para los 3 archivos.
+
+**Lección MRM**: el fallo vivió en producción (PyPI, `rc1`–`rc5`) porque el checklist de release no incluía verificación del wheel. La corrección no es solo el fix: es el test que previene la regresión y la regla en `AGENTS.md` que obliga a verificar el wheel antes de cada upload.
+
+**Referencias cruzadas**: `docs/design_decisions.md` §25; `AGENTS.md` sección "Verificación del wheel antes de release"; `tests/test_packaging.py`.
