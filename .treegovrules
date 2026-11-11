@@ -75,10 +75,50 @@ Any sub-phase whose closure leaves any of the eight out of sync is not considere
 
 El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
 
+## Grey zones during a burst (rule from 10/10/2026)
+
+When the agent detects an ambiguity (grey zone) while executing a burst of
+consecutive prompts, it MUST NOT stop to ask: stopping breaks the flow and the
+prompt cache. It must take the most conservative decision (preserving K=2
+parity, clean room, or immutability), document it with a
+`# TODO(zona_gris): [description]` comment in the relevant file, and continue
+with the task. The strategic assistant resolves the TODO on the next turn.
+
+## Strict burst flow (rule from 25/10/2026)
+
+Every sub-phase is executed as ONE atomic unit of work: 1) all code prompts in
+a row (design → implementation → tests, without closing the client), 2) a
+single commit, 3) a single documentation prompt (the full 8-document closure
+checklist in one block), and 4) a single push at the end. Asking for a
+commit/push between micro-steps of the same sub-phase is forbidden: intermediate
+suite counts live only in the working tree and generate neither commits nor
+separate documentation entries. Rationale: intermediate micro-commits fragment
+traceability and multiply token cost. Formalised as Skill 5 in
+`docs/playbook.md`.
+
+## Wheel verification before release (rule from 08/11/2026)
+
+Before every `twine upload`, verify that the wheel contains the three root
+modules (`treegov.py`, `treegov_gui.py`, `treegov_mcp.py`) and that
+`frontend_v3.resources/icons/` includes the 22 SVG files. Rationale: from
+`1.0.0rc1` to `1.0.0rc5` the wheel was missing those three modules (no
+`py-modules` in `pyproject.toml`), so `pip install treegov` produced a package
+whose `treegov-mcp` entry point failed with `ModuleNotFoundError`. Detected
+before publishing `1.0.0rc6` and fixed with `py-modules` +
+`tests/test_packaging.py` (4 regression tests). See `docs/audit_log.md` entry
+of 08/11/2026 and `docs/design_decisions.md` §25.
+
+Verification command (PowerShell, wheel already built in `dist/`):
+
+    python -c "import zipfile, glob; z = zipfile.ZipFile(glob.glob('dist/*.whl')[0]); names = z.namelist(); [print(('OK   ' if r in names else 'MISS ') + r) for r in ('treegov.py', 'treegov_gui.py', 'treegov_mcp.py')]"
+
+The three must print `OK`. Any `MISS` blocks the upload.
+
 ## Language
 
 - Code: English.
-- Documentation: English for technical and reference documents (README, docs/methodology.md, docs/design_decisions.md, docs/api.md, docs/roadmap.md, docs/3.x_design_*.md). Spanish for operational and traceability documents (docs/audit_log.md, docs/estado_proyecto.md, docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md). Bilingual: README.md / README.es.md and docs/philosophy.md / docs/philosophy.es.md.
+- Documentation: English for technical and reference documents (README, docs/methodology.md, docs/design_decisions.md, docs/api.md, docs/roadmap.md, docs/security_audit.md, the design documents from 3.1 to 3.9). Spanish for operational and traceability documents (docs/audit_log.md, docs/estado_proyecto.md, docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md). Bilingual: README.md / README.es.md and docs/philosophy.md / docs/philosophy.es.md.
+- **Language shift from 3.10 onwards:** the design documents stop being English. `docs/3.10.a_*`, `docs/3.10.b_*`, `docs/3.6.e_design_non_banking.md`, every `docs/3.11_*` document (3.11 through 3.11.e and the GUI Design System), `docs/4.0_design_exports.md`, `docs/4.0.1_design_categorical_exporters.md`, `docs/5.0_design_mcp.md`, `docs/6.0_design_batch_scoring.md`, `docs/7.0_design_ifrs9.md` and `docs/playbook.md` are written in **Spanish**. The `X.Y_design_*.md` filename pattern does NOT imply English.
 - Bilingual documents: README and philosophy (both English and Spanish).
 - Historical document: audit_log.md (kept in Spanish for traceability).
 - File and module names: English.

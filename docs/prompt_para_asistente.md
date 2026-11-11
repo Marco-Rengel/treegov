@@ -111,10 +111,14 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 - **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
   sub-fases (a-h). Suite 346/346.
 - **Suite de tests:** **607/607 PASSED** (08/11/2026). Fases 4.0, 4.0.1,
-  5.0 y 6.0 cerradas. La Fase 6 incorpora batch scoring atómico por chunks,
-  comparación Champion-Challenger sobre población común, dos diálogos GUI y
-  26 tools MCP. Diseño as-built: `docs/6.0_design_batch_scoring.md` §6;
-  contrato: `docs/design_decisions.md` §21.
+  5.0, 6.0 y 7.0 cerradas. La Fase 6 incorpora batch scoring atómico por
+  chunks, comparación Champion-Challenger sobre población común, dos diálogos
+  GUI y las tools MCP de scoring; la **Fase 7.0** añade el cálculo ECL
+  simplificado (PD × LGD × EAD, descuento 1/(1+EIR) y staging determinista
+  1/2/3) en backend, diálogo GUI y la tool MCP `calculate_ecl`. El registro
+  `mcp_v3.tools.TOOLS` expone **27 tools**. Diseño as-built:
+  `docs/6.0_design_batch_scoring.md` §6 y `docs/7.0_design_ifrs9.md` §6;
+  contratos: `docs/design_decisions.md` §21 y §22.
 
 **Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
 Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
@@ -122,30 +126,27 @@ declarado en `fix_spec`, propagación por toda la *pipeline*, wizard con
 combo y tabla de valores OK, tests E2E. Invariante C1: sin
 `population_col`, comportamiento idéntico al pre-3.3. Suite 384/384.
 
-**Fase 3.4 (multiclass C&RT y QUEST): ✅ cerrada 12/10/2026.** 3.4.b abrió QUEST a K ≥ 3 con F de K grupos + barrido de Gini para Etapa 2. Próximo paso: 3.5. Diseño aprobado en `docs/3.4_design_multiclass_crt_quest.md`. Las seis decisiones de diseño auditadas: Etapa 1 QUEST con F-test de K grupos; Etapa 2 QUEST con barrido de Gini (coherente con C&RT); Brown-Forsythe con K grupos; retirada completa del bloqueo al cerrar 3.4.b; nueva subsección §3.8 en `methodology.md`.
+**Fase 3.4 (multiclass C&RT y QUEST): ✅ cerrada 12/10/2026.** 3.4.b abrió QUEST a K ≥ 3 con F de K grupos + barrido de Gini para Etapa 2. Diseño aprobado en `docs/3.4_design_multiclass_crt_quest.md`. Las seis decisiones de diseño auditadas: Etapa 1 QUEST con F-test de K grupos; Etapa 2 QUEST con barrido de Gini (coherente con C&RT); Brown-Forsythe con K grupos; retirada completa del bloqueo al cerrar 3.4.b; nueva subsección §3.8 en `methodology.md`.
 
 **Fase 3.5.a (multiclase en validation.py): ✅ cerrada 15/10/2026.**
 Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics a K ≥ 2 y
 compone con el modo ponderado de la Fase 3.2. Tres decisiones nuevas
 (D15 contrato de entrada 1D/2D, D16 HL Optional + validaciones
 saltadas, D17 campos ks_pairs / auc_pairs / roc_per_class). Suite
-416/416. Próximo paso: Fase 3.5.b (reporting.py multiclase).
+416/416.
 
 **Fase 3.5.b (multiclase en reporting.py): ✅ cerrada 15/10/2026.**
 Segunda sub-fase de la Fase 3.5. Abre build_gains_table y
 build_classification_matrix a K ≥ 2 con dispatch por K. Tres decisiones
 nuevas (D18 _validated_routed con n_classes, D19 import directo +
 DTO ClassificationMatrix superset, D20 n_groups adaptativo con guarda
-n<15). Suite 416/416. Próximo paso: Fase 3.5.c (stability + Session:
-evaluate_oot multiclase).
+n<15). Suite 416/416.
 
 **Fase 3.5.c (Session multiclase): ✅ cerrada 15/10/2026.** Tercera
 sub-fase de la Fase 3.5. Desbloquea evaluate_oos, evaluate_oot y
 get_classification_matrix a nivel Session. Traducción de etiquetas al
 orden interno dentro de Session (helper privado
 _translate_y_to_internal). stability.py no se toca. Suite 416/416.
-Próximo paso: Fase 3.5.d (wizard, cableado GUI y cierre documental
-de la Fase 3.5).
 
 **Fase 3.5.d (cierre de la familia 3.5): ✅ cerrada 15/10/2026.**
 Última sub-fase de la Fase 3.5. Auditoría de los cuatro archivos de
@@ -157,7 +158,6 @@ K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
 
 **Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
 
-**Adicional 16/10/2026, tarde.** Cerrada la sub-fase 3.6.a (diseño del plan de validación con *datasets* públicos). Próximo paso: 3.6.b (script de descarga + fixtures).
 
 **Fase 3.8 (Corrección regulatoria): ✅ Cerrada (19/10/2026).**
 Se corrigió la atribución del PD floor: la referencia es BCBS CRE 32.4
@@ -173,7 +173,6 @@ fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
   y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
   (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
   entrada del 10/10/2026.
-- **Estado al 25/10/2026:** Fases 0 a 3.11.c cerradas. **La Fase 3.11.c (Árboles Univariados y Matriz de Costos) quedó cerrada el 25/10/2026 con suite 470/470** (cierre en ráfaga, bloque documental único): c.1 (`Session.get_univariate_trees(max_depth=3)` — un árbol por predictor, DTO `predictor`/`gini`/`ks`/`cut_points`), c.2 (`UnivariateDialog` en el menú Análisis, tabla Predictor | Gini | KS | Cortes, TSV/CSV) y c.3 (`SessionState.cost_matrix` inmutable + pestaña "Costs" del wizard; NO entra en `params_fingerprint` — `design_decisions.md` §18.8). Diseño: `docs/3.11.c_design_univariate_cost_matrix.md`. **La Fase 3.11.d (Menú Contextual e Interactividad y Manual Override Log) quedó cerrada el 25/10/2026 con suite 477/477** (cierre en ráfaga, bloque documental único): d.1 (`Session.intervene_node` con `prune_branch` + re-indexado BFS `_reindex_tree` + `SessionState.manual_overrides` inmutable + fingerprint `-pN`), d.2 (menú contextual del canvas —señal `node_context_menu`, QMenu Grow/Prune, confirmación BANKING vía `QMessageBox`—) y d.3 (`ManualOverrideDialog` + botón "Ver Auditoría" del HUD habilitado tras entrenar). Diseño: `docs/3.11.d_design_context_menu_interactivity.md`; decisión: `design_decisions.md` §18.9. Con esto la **Fase 3.11 queda cerrada por completo**. Tras el cierre, el **bloque de saneamiento post-auditoría externa (25/10/2026)** dejó el código saneado (ZG-1: fingerprint `-iN`; ZG-2: matriz de costos N×N dinámica; ZG-3: parámetros de `train()` propagados a univariados; ZG-5: `np.digitize(right=True)`; fugas frontend: `html.escape` y `closeEvent` en DataViewer; suite 475/475). **La Fase 3.6.e (Modo No-Bancario y Terminología Neutral) quedó cerrada el 25/10/2026 con suite 477/477** (ráfaga e.1+e.2+e.3: resolvedor `tr_term(concepto, mode)` con 24 claves `term_banking_*`/`term_research_*`, paneles Reports/Metrics/Tree con `set_governance_mode` atados al `GovernanceMode` congelado en el fingerprint, E2E no-bancario en `tests/test_e2e_non_banking.py`; diseño aprobado: `docs/3.6.e_design_non_banking.md`; decisión: `design_decisions.md` §18.10). Próximo paso: recogida de feedback para la `1.0.0` estable o inicio de la **Fase 4.0**. La 3.11.a (Rediseño Base: Tema Colab, Layout Excel con pestañas a página completa, Wizard redimensionado con banner de título, Nodos HTML estación clásica, HUD acotado y colapsable) y la 3.11.a.1 (Hotfix Visual: layout clásico de 8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel, nodos QPainter "hoja de auditoría" sin espacio vacío, tema oscuro forzado vía QPalette, aristas con cortes numéricos, copia TSV Ctrl+C en tablas) cerraron el 24/10/2026; la 3.11.b (Tree Map, Data Viewer, Project Explorer y `pct_global` en la fila Total) cerró el 25/10/2026 con suite 465/465. El 25/10/2026 se cerraron dos mini-cierres: resolución de zonas grises (tests de routing por `bin_edges`, terminología "Nodo/Nodo terminal" en GUI) y blindaje de gobernanza Clean Room (`design_decisions.md` §0.5). El código de la 3.11.a.1 está commiteado (`d8194dc`); el cierre documental de la 3.11.a.1 (`bf02f66`), los mini-cierres del 25/10 (`a426842`, `7d05aa2`), la corrección del diseño 3.11.b (`910edb5`), el backend de la b.1 (`6e4c4b5`) y el frontend de la b.2 (`a856c2c`) están commiteados — verificar con `git status` antes de editar. Archivos de diseño canónicos de las fases recientes: `docs/3.10.a_design_ux_ui_redesign.md`, `docs/3.10.b_design_chaid_binning.md`, `docs/3.11.a_design_colab_theme.md` (as-built), `docs/3.11_gui_design_system.md` (sistema de diseño normativo), `docs/3.11_design_interactive_tree.md`, `docs/3.11_classic_tree_ui_reference.md` y `docs/3.11.c_design_univariate_cost_matrix.md`. En paralelo, recogida de feedback de 1.0.0rc4 para la 1.0.0 estable. Ver `docs/roadmap.md` sección 3.11 y `docs/audit_log.md` entradas del 24-25/10/2026.
 - **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
 
 **Estado al 08/11/2026:** Fases 0 a 7 cerradas. Backlog post-Fase 7

@@ -42,7 +42,8 @@ that the project is honest about what it does and does not cover today.
 **Profile.** A modeller in a bank or bureau who builds segmentation
 models on default/attrition/prepayment, subject to MRM review.
 
-**Needs and current coverage (as of v1.0.0a1, end of Phase 2):**
+**Needs and current coverage (table opened at v1.0.0a1; statuses updated at
+the close of Phase 7.0):**
 
 | Need | Covered? | Where |
 |---|---|---|
@@ -53,20 +54,24 @@ models on default/attrition/prepayment, subject to MRM review.
 | OOT monitoring (PSI, CSI, Gini Drop) | ✅ | `backend_v3/stability.py` |
 | Gains table + classification matrix | ✅ | `backend_v3/reporting.py` |
 | HTML export of reports | ✅ | `frontend_v3/reports_panel.py` |
-| **Sample weighting** (biased samples from bureaus) | ❌ | Planned: Phase 3.2 |
-| **Indet / Insufficient / No Perf categories** | ❌ | Planned: Phase 3.3 |
-| **Multiclass targets** (low/medium/high risk) | ❌ | Planned: Phase 3.1 |
-| **Cost-optimal threshold** (IFRS 9 §8.6) | 🟡 | Formula documented, not implemented |
+| **Sample weighting** (biased samples from bureaus) | ✅ | Phase 3.2 |
+| **Indet / Insufficient / No Perf categories** | ✅ | Phase 3.3 |
+| **Multiclass targets** (low/medium/high risk) | ✅ | Phase 3.1/3.4 |
+| **Cost-optimal threshold** (`docs/methodology.md` §8.6) | 🟡 | Formula documented, not implemented |
 | **Monotonicity constraints** (age, income) | ❌ | Expert idea; not scheduled |
 | **Champion-challenger** | ✅ | `backend_v3/scoring.py`, `Session.compare_champion_challenger` (Phase 6) |
 | **Batch scoring** (apply to full portfolio) | ✅ | `backend_v3/scoring.py`, `Session.score_batch` (Phase 6) |
-| **Export to production** (SQL, pure Python) | ❌ | Phase 4 |
+| **Export to production** (SQL, pure Python) | ✅ | Phase 4.0 |
 
 **Verdict.** A credit-risk econometrician **can use TreeGov today** for
-exploratory modelling, metrics validation, and report generation on a
-single development sample. The tool is **not yet production-ready** for
-banking deployment until at least Phase 3.2 (weighting) and Phase 4
-(export).
+exploratory modelling, metrics validation, report generation, production
+export (SQL / Python / Markdown, Phase 4.0), batch scoring (Phase 6) and a
+simplified IFRS 9 / ECL calculation (Phase 7). The weighting, population
+filter, multiclass and export gaps listed above were closed by Phases 3.1,
+3.2, 3.3, 3.4 and 4.0, so the earlier "not yet production-ready" caveat no
+longer applies to those items. What remains open for a banking deployment
+is the **cost-optimal threshold** (documented only, 🟡) and
+**monotonicity constraints** (not scheduled).
 
 ### 0.2 Biologist / social scientist
 
@@ -80,19 +85,21 @@ constraints; needs a clear, honest tool.
 |---|---|---|
 | Decision-tree engines | ✅ | Same as above |
 | **RESEARCH mode** (no Jeffreys, no PD floor) | ✅ | `GovernanceMode.RESEARCH` |
-| **Multiclass targets** (species, diagnoses) | ❌ | Phase 3.1 |
+| **Multiclass targets** (species, diagnoses) | ✅ | Phase 3.1/3.4 |
 | **Continuous targets** (regression trees) | ❌ | `TargetType.CONTINUOUS` exists but blocked by `TreeBuilder.build()` |
-| **Class-imbalanced samples** | ❌ | Phase 3.2 (weighting) |
+| **Class-imbalanced samples** | ✅ | Phase 3.2 (weighting) |
 | **Regression metrics** (RMSE, MAE) | ❌ | Only binary metrics implemented |
-| **Neutral vocabulary** (no "PD", "default", "bad/good") | ❌ | Phase 3.6.e |
+| **Neutral vocabulary** (no "PD", "default", "bad/good") | ✅ | Phase 3.6.e |
 | **Non-credit examples and datasets** | ❌ | Phase 3.6 |
 | **Domain-agnostic documentation** | ❌ | This section is the first step |
 
-**Verdict.** A biologist or social scientist **cannot use TreeGov with
-real data today**. Reason: (a) multiclass is blocked by the builder,
-(b) vocabulary is credit-specific, (c) no regression support, (d) no
-non-credit example datasets. Fixing this requires Phase 3.1
-(multiclass) and Phase 3.6.e (neutral vocabulary + examples).
+**Verdict.** A biologist or social scientist **can use TreeGov for
+classification in RESEARCH mode**, including multiclass targets, sample
+weighting and neutral vocabulary in the surfaces covered by Phase 3.6.e.
+The remaining limitations are continuous targets and regression metrics,
+plus domain-specific examples and documentation beyond the public-dataset
+validation. Multiclass is no longer blocked by the builder and vocabulary
+is no longer uniformly credit-specific.
 
 **Honesty rule.** The README's regulatory notice says "not fit for
 banking production". We should add an equivalent note for non-credit
@@ -2596,6 +2603,18 @@ a `[tool.setuptools]`. Complementar con `tests/test_packaging.py`
 - La verificación manual del wheel (`python -c` con `zipfile`) sigue
   siendo la comprobación definitiva antes de cada upload (ver `AGENTS.md`
   sección "Verificación del wheel antes de release").
+
+**Nota: `scripts/` NO se empaqueta en el wheel.** El directorio `scripts/`
+(`fetch_datasets.py`, `fetch_icons.py`, `update_readme_date.py`,
+`validate_uci.py`) contiene herramientas operativas del repositorio, no
+parte del paquete instalable: no se declara en `packages` ni en
+`py-modules`, de modo que el wheel no las incluye y `pip install treegov`
+no expone esos comandos al usuario final. Motivo: dependen del layout del
+repo (rutas relativas a `docs/`, fixtures de tests y datasets descargados)
+y no forman parte de la API pública documentada en `docs/api.md`. Si
+alguna de esas herramientas pasa a ser de uso público, debe moverse a un
+módulo instalable y declararse en `pyproject.toml` — no basta con dejarla
+en `scripts/`.
 
 **Referencias.** `docs/audit_log.md` entrada del 08/11/2026 (mini-cierre
 del bug); `AGENTS.md` sección "Verificación del wheel antes de release";

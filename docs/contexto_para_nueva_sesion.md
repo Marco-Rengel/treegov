@@ -113,7 +113,6 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 3.5.d | Auditoría de frontend + methodology + cierre | ✅ |
 | 3.5 | Reportes adaptados (multiclase + ponderación) | ✅ Completada |
 | 3.6 | Validación con datasets públicos | ✅ |
-| 3.6.e | Modo no-bancario | ⏳ |
 | 3.7 | Cierre Fase 3 + v1.0.0rc1 | ✅ |
 | 3.8 | Corrección de la atribución regulatoria (BCBS CRE 32.4) | ✅ |
 | 3.9 | Poda Interactiva y Ponderada (backend, Session y GUI) | ✅ |
@@ -220,7 +219,6 @@ WSL (bash):
 | **Consumo excesivo de tokens en OpenCode/Kimi Code CLI/Aider** | Causa raíz el 10/10/2026: modelo mal escrito (`moonshot` en lugar de `moonshotai`) + plugins fantasma + TTL de caché expirado por pausas largas. Ver `docs/roadmap.md` subsección "OpenCode token consumption — learning from Fase 3.2 block". Regla refinada (10/10/2026 tarde): ráfaga dentro de cada sub-fase, cierre del cliente al cerrar la sub-fase; ver "Regla de oro de la caché de Moonshot" más arriba. |
 | **El cliente Kimi Code CLI 2.1.1 consume más que OpenCode** | El cliente oficial inyecta metadatos dinámicos (paths absolutos, timestamps, telemetría) que rompen el prefix matching. OpenCode con el plugin `@jimmyyen/opencode-context-cache` sí activa la caché. Kimi Code CLI queda como alternativa puntual, no principal. |
 | **Hosmer-Lemeshow escala con la masa total de pesos** | Comportamiento matemáticamente inevitable (χ² ponderado). Documentado en design_decisions.md §13.8. |
-| **KS/AUC/Gini del gains table no ponderados en 3.2.g** | Decisión diferida explícita. Documentado en design_decisions.md §13.7. |
 | **Hallazgos UX pendientes** | Ninguno. Todos los hallazgos H1–H8 fueron resueltos entre las fases 3.7.e y 3.10.a. |
 | Agente se detiene o alucina por zona gris | El asistente estratégico debe buscar `# TODO(zona_gris)` en el diff. El agente debió aplicar la opción conservadora y continuar. |
 
@@ -302,12 +300,7 @@ después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc6
 queda vigente hasta esa decisión.
 
 **Deudas diferidas:**
-- Fixture de tests E2E con señal real (el `_make_csv` actual genera
-  target aleatorio respecto a los predictores; los E2E verifican
-  *plumbing*, no analítica). Documentado en `docs/roadmap.md` sección
-  "Deferred (no blocking current work)".
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
-- Fase 2.1.b — CV scheme + *guardrail* runtime de imports backend.
 - Fase 3.10.b (Cortes candidatos en panel inferior, requiere backend). Ver `docs/roadmap.md`.
 
 **Ideas del experto (evaluar en Fase 3+):**

@@ -51,8 +51,10 @@ flowchart TB
 
     ARQ --> BE["<b>backend_v3</b><br/>Analytical layer<br/>zero Qt imports"]
     ARQ --> FE["<b>frontend_v3</b><br/>Presentation layer<br/>zero numpy imports"]
+    ARQ --> MC["<b>mcp_v3</b><br/>MCP layer<br/>headless, zero Qt imports"]
 
     BE -.->|Session| FE
+    BE -.->|Session| MC
 
     ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 complete<br/>📦 v1.0.0rc6 published on PyPI<br/>🧪 607 / 607 tests PASSED<br/>📅 Nov 8, 2026"]
 
@@ -64,6 +66,7 @@ flowchart TB
     style ARQ fill:#E65100,color:#fff
     style BE fill:#37474F,color:#fff
     style FE fill:#37474F,color:#fff
+    style MC fill:#37474F,color:#fff
     style ST fill:#1565C0,color:#fff
 ```
 
@@ -77,7 +80,7 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 *   The code: every statistical formula is written explicitly and cited to its original publication.
 *   The decisions: the architecture and *trade-offs* are documented to justify every choice.
 *   The model: every training run generates a unique *fingerprint* that acts as an immutable seal.
-*   The evidence: a transactional log records every step, and a suite of over 400 tests (including validated public *datasets*) guarantees reproducibility.
+*   The evidence: a transactional log records every step, and a suite of over 600 tests (including validated public *datasets*) guarantees reproducibility.
 
 ---
 
@@ -139,9 +142,13 @@ TreeGov/
 │   ├── validation.py        # OOS metrics + OOT evaluation
 │   ├── pruning.py           # Cost-complexity pruning (Breiman)
 │   ├── reporting.py         # Gains table + classification matrix DTOs
-│   └── stability.py         # PSI / CSI / Gini Drop
+│   ├── stability.py         # PSI / CSI / Gini Drop
+│   ├── exporters.py         # SQL / Python / Markdown production exporters (Phase 4.0)
+│   ├── scoring.py           # Batch scoring + champion-challenger (Phase 6.0)
+│   └── ecl.py               # IFRS 9 ECL: staging + PD × LGD × EAD (Phase 7.0)
 ├── frontend_v3/             # Presentation layer (Phase 2)
-├── scripts/                 # Herramientas de infraestructura y validación (fetch, validate, update_readme)
+├── mcp_v3/                  # MCP layer, headless (dto, server, tools — Phase 5.0)
+├── scripts/                 # Infrastructure and validation utilities (fetch, validate, update_readme)
 ├── tests/                   # Unit tests (dual: pytest / python direct)
 ├── docs/                    # Documentation
 │   ├── methodology.md       # Mathematical methodology (EN)
@@ -152,20 +159,30 @@ TreeGov/
 │   ├── 3.4_design_multiclass_crt_quest.md  # Phase 3.4 design (EN)
 │   ├── 3.5_design_multiclass_weighted_reports.md  # Phase 3.5 design (EN)
 │   ├── 3.6_design_public_datasets.md  # Phase 3.6 design (EN)
+│   ├── 3.6.e_design_non_banking.md  # Phase 3.6.e design, non-banking mode (ES)
 │   ├── 3.7_design_pre_release_fixes.md  # Phase 3.7 design (EN)
 │   ├── 3.8_design_regulatory_attribution.md  # Phase 3.8 design (EN)
 │   ├── 3.9_design_interactive_weighted_pruning.md  # Phase 3.9 design (EN)
-│   ├── 3.10.a_design_ux_ui_redesign.md  # Phase 3.10.a design + as-built (EN)
-│   ├── 3.10.b_design_chaid_binning.md  # Phase 3.10.b design + as-built (EN)
-│   ├── 3.11_design_interactive_tree.md  # Phase 3.11 design (EN)
-│   ├── 3.11.a_design_colab_theme.md  # Phase 3.11.a as-built (EN)
+│   ├── 3.10.a_design_ux_ui_redesign.md  # Phase 3.10.a design + as-built (ES)
+│   ├── 3.10.b_design_chaid_binning.md  # Phase 3.10.b design + as-built (ES)
+│   ├── 3.11_design_interactive_tree.md  # Phase 3.11 design (ES)
+│   ├── 3.11.a_design_colab_theme.md  # Phase 3.11.a as-built (ES)
+│   ├── 3.11.b_design_treemap_dataviewer.md  # Phase 3.11.b design + as-built (ES)
+│   ├── 3.11.c_design_univariate_cost_matrix.md  # Phase 3.11.c design + as-built (ES)
+│   ├── 3.11.d_design_context_menu_interactivity.md  # Phase 3.11.d design + as-built (ES)
+│   ├── 3.11.e_design_treemap_rewrite.md  # Phase 3.11.e as-built (ES)
+│   ├── 3.11_gui_design_system.md  # Normative GUI design system (ES)
 │   ├── 3.11_classic_tree_ui_reference.md  # Classic tree-station visual reference, circa 2001 (ES)
-│   ├── 4.0_design_exports.md
-│   ├── 4.0.1_design_categorical_exporters.md
-│   ├── 5.0_design_mcp.md
+│   ├── 4.0_design_exports.md  # Phase 4.0 design (ES)
+│   ├── 4.0.1_design_categorical_exporters.md  # Phase 4.0.1 design (ES)
+│   ├── 5.0_design_mcp.md  # Phase 5.0 design + as-built (ES)
+│   ├── 6.0_design_batch_scoring.md  # Phase 6.0 design + as-built (ES)
+│   ├── 7.0_design_ifrs9.md  # Phase 7.0 design + as-built (ES)
 │   ├── validation_results_3.6.md  # UCI validation report (EN)
 │   ├── security_audit.md      # Security and privacy audit (EN)
-│   ├── playbook.md          # Governance playbook (EN)
+│   ├── playbook.md          # Governance playbook (ES)
+│   ├── scripts_design.md    # scripts/ design + as-built (ES)
+│   ├── gui_i18n_governance_design.md  # GUI i18n + governance design + as-built (ES)
 │   ├── api.md               # Public API (EN)
 │   ├── roadmap.md           # Phase plan (EN)
 │   ├── philosophy.md        # Project philosophy (EN)
@@ -179,6 +196,7 @@ TreeGov/
 ├── logs/                    # Per-run execution logs (Git-ignored)
 ├── treegov.py               # Headless orchestrator (CLI)
 ├── treegov_gui.py           # GUI entry point (Phase 2)
+├── treegov_mcp.py           # MCP server entry point (console script treegov-mcp, Phase 5.0)
 ├── pyproject.toml           # Packaging
 ├── requirements.txt         # Working minimum pins (pyproject.toml is source of truth)
 ├── opencode.json            # OpenCode project configuration
@@ -247,6 +265,7 @@ TreeGov/
 | **2.0-2.2** | GUI with PySide6: skeleton, transactional wizard, tree viewer | Completed |
 | **2.3** | OOS/OOT metrics panel | Completed |
 | **2.4** | Reports + integration | Completed |
+| **2.1.b** | Stratified k-fold cross-validation scheme + runtime import guardrail in the GUI layer (post-Phase 7 backlog B2a/B2b, closed 02/11/2026) | Completed |
 | **3.0** | Documentation closure + configurable canonical parameters | Completed |
 | **3.1** | Multiclass (target + wizard + MetricsPanel alerts) | Completed |
 | **3.2** | Sample weighting | Completed |
@@ -275,11 +294,12 @@ TreeGov/
 | **3.11.c.2** | Univariate trees frontend: `UnivariateDialog` (Predictor \| Gini \| KS \| Cuts), Ctrl+C → TSV (Rule 4.1.1), CSV export, Analysis menu action enabled in TRAINED | Completed |
 | **3.11.c.3** | Cost matrix N×N: immutable `SessionState.cost_matrix`, hardened `fix_spec(cost_matrix=...)`, "Costs" tab in the Advanced Options dialog; NOT in `params_fingerprint` yet (§18.8) | Completed |
 | **3.11.d** | Context menu and interactivity: `Session.intervene_node` (manual prune branch), BFS reindex, immutable `manual_overrides` log, node context menu with BANKING confirmation, `ManualOverrideDialog` + HUD "View Audit Log" button (§18.9) | Completed |
+| **3.11.e** | Tree Map rewrite from scratch (Clean Room): tidy top-down Reingold-Tilford layout, orthogonal 3-segment connectors, screen-constant `node_id` labels, 100% palette-driven colours, bidirectional navigation via `center_on_node`, empty state without branding | Completed |
 | **4.0** | Export to production (SQL/Python/Markdown + GUI integration) | Completed |
 | **4.0.1** | Exporters: categorical unseen_policy | Completed |
-| **5** | Capa MCP para agentes LLM | Completed |
+| **5** | MCP layer for LLM agents | Completed |
 | **6** | Batch scoring + champion-challenger | Completed |
-| **7** | IFRS 9 / ECL (staging, ECL = PD x LGD x EAD) | Completed |
+| **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completed |
 
 **Test suite: 607/607 passing.**
 
@@ -319,10 +339,11 @@ TreeGov/
 ---
 
 ### MCP Layer (Phase 5.0)
-TreeGov expone su backend analítico a agentes LLM mediante el
-estándar Model Context Protocol (MCP).
-Instalación: `pip install treegov[mcp]`
-Uso: `treegov-mcp` (arranca el servidor stdio).
+TreeGov exposes its analytical backend to LLM agents through the Model
+Context Protocol (MCP) standard. The layer is headless (no GUI imports)
+and exposes 27 tools over the same `Session` contract used by the GUI.
+Install: `pip install treegov[mcp]`
+Usage: `treegov-mcp` (starts the stdio server).
 
 ## License
 

@@ -21,9 +21,13 @@ institution (see the regulatory notice in `README.md`).
 
 ## Contributions
 
-Contributions are welcome subject to the terms of the Apache 2.0
-license. See `docs/roadmap.md` for the project plan and
-`docs/audit_log.md` for the chronological log of changes.
+External contributions are **paused** until the project's legal review
+is resolved (licensing and provenance of the clean-room implementation,
+third-party attribution). The repository remains public for reading and
+audit under the terms of the Apache 2.0 license; issues and pull
+requests opened during this period may remain unanswered. See
+`docs/roadmap.md` for the project plan and `docs/audit_log.md` for the
+chronological log of changes.
 
 ---
 

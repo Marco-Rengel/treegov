@@ -9,10 +9,19 @@ filosofía completa (ver `.treegovrules`); son recordatorios operativos.
 
 - `backend_v3/` — capa analítica pura. Cero imports de Qt/PySide6.
 - `frontend_v3/` — capa de presentación. Cero imports de numpy/pandas/scipy.
-- Comunicación exclusiva vía `backend_v3.session_state.Session`.
+- `mcp_v3/` — capa MCP headless (dto, server, tools). Cero imports de Qt/PySide6;
+  consume `backend_v3.session_state.Session` igual que la GUI.
+- Comunicación exclusiva vía `backend_v3.session_state.Session` (la usan la GUI
+  y la capa MCP; ninguna de las dos calcula analítica por su cuenta).
 
-Un test AST (`tests/test_gui_smoke::test_frontend_clean_room`) verifica
-que no se rompa esta separación.
+El guardrail se aplica en dos niveles: **runtime** (`backend_v3/import_guard.py`
+bloquea sklearn, statsmodels, xgboost, lightgbm y catboost a nivel de
+intérprete, incluso imports dinámicos) y **estático**
+(`tests/test_gui_smoke.py::test_frontend_clean_room` recorre el AST de
+`frontend_v3/` y falla si aparece un import de numpy/pandas/scipy). `mcp_v3/`
+no importa hoy ni Qt ni `frontend_v3/` —solo `backend_v3`, el SDK de MCP,
+numpy/pandas y stdlib—, pero todavía no tiene un test AST equivalente:
+registrado como deuda en `docs/roadmap.md` (`## Deferred`).
 
 ## Verificación obligatoria
 
@@ -22,7 +31,7 @@ Después de CADA tarea de edición, el humano verifica con:
     git status
     git diff --stat
 
-Si la suite baja de **561/561** tests (conteo al 02/11/2026), no se commitea.
+Si la suite baja de **607/607** tests (conteo al 10/11/2026), no se commitea.
 
 **Nunca verificar entre tareas.** La caché de prompt de Moonshot expira
 a los 5 minutos de inactividad. Verificar en PowerShell entre cada
@@ -108,8 +117,8 @@ Toda fórmula estadística con cita bibliográfica explícita.
 aprendizajes de las sesiones del 03 y 04/10/2026:**
 
 1. **Un prompt = un archivo.** Cuando un cambio requiere tocar N archivos,
-   hacer N sesiones separadas de OpenCode. Se mantiene por claridad de diffs y
-   auditoría, no por limitación técnica.
+   hacer N prompts separados en la misma sesión de OpenCode. Se mantiene por
+   claridad de diffs y auditoría, no por limitación técnica.
 
 2. **Prosa sin código literal (recomendado, no obligatorio).** Describir la
    estructura en prosa y dejar que Kimi escriba el código. Aunque Moonshot

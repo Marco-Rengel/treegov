@@ -318,7 +318,7 @@ como convención de la industria, no como prescripción de Basilea ni EBA.
 | 6.0.a | Completada | Backend batch: `backend_v3/scoring.py`, `Session.score_batch`, scoring por chunks, imputación congelada, reglas, publicación atómica y protección anti-overwrite. |
 | 6.0.b | Completada | Backend Champion-Challenger: DTOs, `Session.compare_champion_challenger`, retador aislado, métricas sobre población común e inmutabilidad del campeón. |
 | 6.0.c | Completada | GUI: `frontend_v3/scoring_dialogs.py`, workers, dos diálogos, acciones Analysis, i18n y tabla Ctrl+C → TSV. |
-| 6.0.d | Completada | MCP y hardening: `score_batch` y `compare_champion_challenger` en `mcp_v3/tools.py`/`server.py`, 26 tools, JSON estricto, seguridad y cierre documental. |
+| 6.0.d | Completada | MCP y hardening: `score_batch` y `compare_champion_challenger` en `mcp_v3/tools.py`/`server.py`, 26 tools (27 desde la Fase 7.0 con `calculate_ecl`), JSON estricto, seguridad y cierre documental. |
 
 **Cierre as-built.** Batch scoring conserva una fila por entrada, publica de
 forma atómica sin sobrescribir destinos existentes y devuelve un resumen acotado.
@@ -351,8 +351,6 @@ Basilea. El alcance sigue siendo simplificado y no certifica cumplimiento IFRS 9
 **Diseño:** `docs/7.0_design_ifrs9.md` §6. **Cierre:** `docs/audit_log.md`,
 entrada de cierre de la Fase 7.0 del 02/11/2026.
 
-## Upcoming phases
-
 ### ✅ Phase 3.9 — Interactive and Weighted Pruning
 **Status**: ✅ Completed (20/10/2026).
 
@@ -360,8 +358,8 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 - **Diseño aprobado** (20/10/2026): ver `docs/design_decisions.md` §8.5 a §8.7 y `docs/methodology.md` §7.1.
 - **Implementado** (20/10/2026): Backend (`pruning.py` ponderado con `w_events`), Session (`get_prune_sequence()`) y GUI (`PruneDialog` cableado en el menú Model). Auditoría forense superada; test E2E del flujo de poda incluido.
 
-### 🟡 Phase 3.11 — Rediseño Interactivo y Topología Visual
-**Status**: 🟡 En progreso (iniciada el 24/10/2026). Diseño: `docs/3.11_design_interactive_tree.md`. Recoge lo diferido desde 3.10.b (interactividad visual).
+### ✅ Phase 3.11 — Rediseño Interactivo y Topología Visual
+**Status**: ✅ Completed (25/10/2026). Diseño: `docs/3.11_design_interactive_tree.md`. Recogió lo diferido desde 3.10.b (interactividad visual).
 
 - **3.11.a** Rediseño Base (Tema Colab, Layout Excel, Wizard, Nodos HTML). ✅ Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
 - **3.11.a.1** Hotfix Visual (Toolbar compacta, Wizard Dark/Light, Paso 3 moderno, Nodos sin espacio vacío). ✅ Completada (24/10/2026). Implementados el layout clásico (barra de 8 menús, toolbar `IconOnly` 16×16 con tooltips, panel izquierdo de 3 bloques apilados, pestañas inferiores `TabPosition.South` estilo Excel), los nodos del árbol reescritos de HTML a **QPainter puro** ("hoja de auditoría" 220×126 sin espacio muerto), el tema oscuro forzado en ventanas nativas vía `QPalette` (`apply_palette` + wizard anclado a Fusion/ClassicStyle), las aristas ortogonales con cortes numéricos (NUNCA `bin_0`) y la copia TSV al portapapeles (Ctrl+C) en la tabla de ganancias. Sistema de diseño normativo: `docs/3.11_gui_design_system.md`. Decisiones: `docs/design_decisions.md` §18. Cierre: `docs/audit_log.md` 24/10/2026.
@@ -428,6 +426,12 @@ A1–A6: `docs/4.0.1_design_categorical_exporters.md` §5. Decisión:
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.
 
+## Upcoming phases
+
+No hay fases abiertas: las fases 0 a 7.0 están cerradas. El trabajo
+pendiente vive en `## Deferred (no blocking current work)` y en
+`## Pending decisions`.
+
 ## Deferred (no blocking current work)
 
 ### ✅ PyPI synchronization (Resolved: 1.0.0rc5, 02/11/2026)
@@ -439,6 +443,8 @@ La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actua
 **Resolución (02/11/2026): READMEs y PyPI.** La desincronización quedó resuelta con la publicación de `1.0.0rc5`, que incluye los cambios materiales de la Fase 4.0.1 y sincroniza los READMEs publicados con el estado del repositorio.
 
 **Desincronización posterior a la Fase 7 (02/11/2026):** los READMEs del repositorio reflejan ahora las Fases 0–7 y 561/561 tests; la página de PyPI permanece congelada en el README de `1.0.0rc5` (537/537). Este cierre documental no publica una nueva versión: la sincronización se difiere a la próxima decisión de release conforme al protocolo PyPI.
+
+**Desincronización registrada (10/11/2026, post-`1.0.0rc6`):** el bloque de sincronización documental de los READMEs es cosmético (árbol de directorios con `exporters.py`/`scoring.py`/`ecl.py`, `mcp_v3/` y `treegov_mcp.py`, documentos de diseño 3.6.e a 7.0, nodo `mcp_v3` en el diagrama Mermaid, filas 3.11.e y 2.1.b de la tabla de fases, "over 600 tests", y traducción al inglés de tres bloques que seguían en español). No se publica una nueva versión: la página de PyPI queda congelada en el README de `1.0.0rc6` hasta la próxima release material, conforme a la regla del 20/10/2026. **Pendiente para la próxima release:** verificar el wheel con el comando de `.treegovrules` §"Wheel verification before release" antes del `twine upload`.
 
 ### ✅ Phase 2.1.b — Hardening extras — RESUELTO 03/11/2026 (B2a + B2b)
 **Priority: LOW (deferred; resuelto en el bloque del backlog post-Fase 7)**
@@ -715,8 +721,8 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | V4 | Scripts | validate_uci.py revision notes congeladas en rc2 | ✅ Resuelto |
 | V5 | Scripts | validate_uci.py sin --check ni guarda de git status | ✅ Resuelto |
 | V6 | Scripts | validate_uci.py degradación silenciosa a None (exit 0) | ✅ Resuelto |
-| V7 | Scripts | validate_uci.py CHAID solo 2/6 datasets (cobertura desbalanceada) | ✅ Resuelto |
-| V8 | Scripts | validate_uci.py accuracy mezcla semántica binaria y multiclase | ✅ Resuelto |
+| V7 | Scripts | validate_uci.py CHAID solo 2/6 datasets (cobertura desbalanceada) | ✅ Documentado como TODO / Diferido |
+| V8 | Scripts | validate_uci.py accuracy mezcla semántica binaria y multiclase | ✅ Documentado como TODO / Diferido |
 | V9 | Scripts | validate_uci.py target_class multiclase sin justificar (car usa la mayoritaria) | ✅ Resuelto |
 | V10 | Scripts | validate_uci.py pd_floor implícito en CONFIGS | ✅ Resuelto |
 | V11 | Scripts | validate_uci.py FIXTURES relativas al cwd | ✅ Resuelto |
@@ -737,6 +743,50 @@ Detectado en auditoría forense del 02/11/2026. Cubre las 52 deudas no capturada
 | B2b | GUI | Guardrail de imports en frontend_v3 | ✅ Resuelto (f9e1c73) |
 | B2a | Backend | Cross-validation k-fold estratificado | ✅ Resuelto (este commit) |
 | B1 | GUI | Iconos SVG propios (Bootstrap Icons v1.11.3) en toolbar y wizard | ✅ Resuelto (commit 5681386) |
+
+### ⏳ Acciones interactivas Grow Tree / Select Predictor / Define Split
+
+El menú contextual del nodo (`frontend_v3/main_window.py`,
+`_on_tree_context_menu`) muestra las tres acciones con sus reglas de
+habilitación, pero **solo `prune_branch` tiene backend**. Las otras tres
+quedan como `TODO(zona_gris)` en el código: requieren el crecimiento
+interactivo nodo a nodo del `TreeBuilder` (crecer/seleccionar/definir un
+split sobre un nodo concreto, no solo el entrenamiento batch completo).
+Diseño: `docs/3.11_design_interactive_tree.md` §5 y §6; decisión:
+`docs/design_decisions.md` §18.9 (consecuencia).
+
+### ⏳ Multi-modelo en Project Explorer y selector de `n_rows`
+
+Deuda registrada en `docs/3.11.b_design_treemap_dataviewer.md` §7 que
+sigue abierta:
+
+- **Multi-modelo en el Project Explorer** (D1 de ese diseño): el bloque
+  `gbProjectExplorer` muestra un único modelo activo (método +
+  `params_fingerprint[:8]`). Comparar varios modelos exige soporte
+  multi-árbol en `Session`, que no existe.
+- **Selector de `n_rows` en la UI** (D3): `Session.get_data_preview(n_rows=50)`
+  ya acepta el parámetro, pero el `DataViewer` usa el default fijo; el
+  selector en pantalla no está implementado.
+
+### ⏳ Tooltip de `PredictorType` en el wizard
+
+`ModelWizard._make_item` (`frontend_v3/wizard.py`, `TODO(zona_gris)` en la
+línea 393) mantiene pendiente el tooltip que explique al analista qué
+implica declarar un predictor como CONT / ORD / NOM. El tratamiento de
+tipos está implementado y testeado; falta solo la ayuda contextual.
+
+### ⏳ Guardrail AST para `mcp_v3/`
+
+`mcp_v3/` (`dto.py`, `server.py`, `tools.py`) no importa hoy ni Qt ni
+`frontend_v3/`: sus únicos imports externos son `backend_v3`, el SDK de MCP
+(`mcp.server.fastmcp`), numpy/pandas y stdlib. Esa separación **no** está
+protegida por un test: el guardrail AST actual
+(`tests/test_gui_smoke.py::test_frontend_clean_room`) solo recorre
+`frontend_v3/`. Deuda detectada el 10/11/2026 al sincronizar
+`CONVENTIONS.md`; cerrarla exige un test equivalente que recorra `mcp_v3/` y
+falle ante imports de PySide6/Qt. Impacto: bajo (la capa es headless por
+diseño y el paquete no arrastra Qt), pero una regresión futura solo la
+detectaría la revisión manual.
 
 ## Recorded architectural decisions
 

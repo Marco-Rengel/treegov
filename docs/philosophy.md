@@ -67,7 +67,7 @@ This distinction has consequences that the project explicitly assumes:
 
 - *DEBUG logs* contain sensitive information. When training on real data, the log records PD per node, leaf distributions, real *CSV* column names, model fingerprint, and file paths. The analyst must treat them as confidential material.
 - Exported *HTML* reports contain sensitive information. Gains table, classification matrix, segment counts, PD per leaf. Sharing a report is sharing part of the model.
-- The sensitive data policy is treated as explicit work. Before declaring the stable 1.0.0 version, the project plans a specific security and privacy audit block: log retention and cleanup, *GUI* warnings, and a document dedicated to the threat model.
+- The sensitive data policy is treated as explicit work. TreeGov implemented the security and privacy audit block in Phase 3.7.a (`docs/security_audit.md`): log retention and cleanup, *GUI* warnings, and a document dedicated to the threat model. The audit was later extended (§0 and §1.1) to cover the production exports (SQL / Python / Markdown), the Batch Scoring CSVs and the clipboard copies.
 
 Operational summary: during development, zero real data in AI APIs. In end use, the data remains on the analyst's desktop, under their responsibility and their institution's policies.
 

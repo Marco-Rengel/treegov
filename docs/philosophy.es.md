@@ -67,7 +67,7 @@ Esta distinción tiene consecuencias que el proyecto asume explícitamente:
 
 - *Los logs DEBUG* contienen información sensible. Cuando se entrena sobre datos reales, el log registra PD por nodo, distribuciones de hojas, nombres de columnas del *CSV* real, fingerprint del modelo y rutas de archivo. El analista debe tratarlos como material confidencial.
 - Los reports *HTML* exportados contienen información sensible. Gains table, matriz de clasificación, conteos por segmento, PD por hoja. Compartir un reporte es compartir parte del modelo.
-- La política de datos sensibles se trata como trabajo explícito. Antes de declarar la versión 1.0.0 estable, el proyecto planifica un bloque específico de auditoría de seguridad y privacidad: retención y limpieza de logs, advertencias en la *GUI*, y un documento dedicado al modelo de amenazas.
+- La política de datos sensibles se trata como trabajo explícito. TreeGov implementó el bloque de auditoría de seguridad y privacidad en la Fase 3.7.a (`docs/security_audit.md`): retención y limpieza de logs, advertencias en la *GUI* y un documento dedicado al modelo de amenazas. La auditoría se amplió después (§0 y §1.1) para cubrir los exports de producción (SQL / Python / Markdown), los CSV de Batch Scoring y las copias al portapapeles.
 
 Resumen operativo: durante el desarrollo, cero datos reales en APIs de IA. En uso final, los datos quedan en el escritorio del analista, bajo su responsabilidad y las políticas de su institución.
 

@@ -64,13 +64,15 @@
 | **Fase 1 (scripts)** | `docs/scripts_design.md` | ✅ Completed (02/11/2026; as-built §9) |
 | **Fase 2 (GUI/i18n)** | `docs/gui_i18n_governance_design.md` | ✅ Completed (02/11/2026; as-built §7) |
 | **3.6.e** | `docs/3.6.e_design_non_banking.md` | ✅ Completed (25/10/2026) |
+| **4.0** | `docs/4.0_design_exports.md` | ✅ Completed (01/11/2026) |
+| **4.0.1** | `docs/4.0.1_design_categorical_exporters.md` | ✅ Completed (01/11/2026) |
 | **5.0** | `docs/5.0_design_mcp.md` | ✅ Approved (01/11/2026) |
 | **5.0.a** | `docs/5.0_design_mcp.md` (as-built §1) | ✅ Completed (01/11/2026) |
 | **5.0.b** | `docs/5.0_design_mcp.md` (as-built §2) | ✅ Completed (01/11/2026) |
 | **5.0.c** | `docs/5.0_design_mcp.md` (paridad E2E; exportación CHAID en `docs/design_decisions.md` §16.4) | ✅ Completed (01/11/2026) |
 | **5.0.d** | `docs/5.0_design_mcp.md` (as-built; auditoría en `docs/security_audit.md` §5) | ✅ Completed (01/11/2026) |
-| 6.0 | docs/6.0_design_batch_scoring.md | ✅ Completed |
-| 7.0 | docs/7.0_design_ifrs9.md | Completed |
+| **6.0** | `docs/6.0_design_batch_scoring.md` | ✅ Completed (02/11/2026) |
+| **7.0** | `docs/7.0_design_ifrs9.md` | ✅ Completed (02/11/2026) |
 
 **Nota:** El estándar visual de referencia es el Estándar Clásico de Estaciones de Árboles (circa 2001). Terminología: Nodo / Nodo terminal.
 

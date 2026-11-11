@@ -33,6 +33,15 @@ Tres reglas gobiernan el diseño:
 
 **Documentos de referencia.** `docs/3.11_gui_design_system.md` (contrato as-built de tokens, tipografía y tablas; la REGLA CRÍTICA 4.1.1 de Ctrl+C → TSV se respeta sin cambios), `docs/scripts_design.md` (diseño gemelo de la Fase 1), `docs/design_decisions.md` §22 (IFRS 9/ECL, terminología del diálogo ECL), `CONVENTIONS.md` (§Tests, §Caja blanca).
 
+**Nota de reconciliación as-built (08/11/2026).** Las referencias
+`archivo:línea` de §0–§6 son anchors del estado previo a la implementación;
+§7 contiene los nombres y el resultado reales. La desconexión del bus no es un
+helper común a todos los paneles: `DataViewer` desconecta en `closeEvent`,
+mientras `ReportsPanel` y `MetricsPanel` conectan en `__init__` sin un
+`_detach_bus()` propio. Los `_detach_bus()` idempotentes citados por este
+diseño pertenecen a `ECLDialog`, `BatchScoringDialog` y
+`ChampionChallengerDialog`.
+
 ## §1. i18n en ECLDialog (T5)
 
 **Problema.** `ECLDialog` mezcla dos regímenes: algunos textos pasan por `tr()` (`scoring_btn_browse` en `:93`, `scoring_csv_filter` en `:173`, `msg_error_title` en `:243`) y el resto está congelado en español. El resultado es un diálogo bilingüe a medias: en modo EN el título y las etiquetas siguen en español, y el test `test_ecl_dialog_table_population` convierte ese defecto en contrato al asertar sobre literales ES.
@@ -62,6 +71,13 @@ Tres reglas gobiernan el diseño:
 | `"Etapa 1"`, `"Etapa 2"`, `"Etapa 3"` (`:220-222`) | `ecl_stage_1`, `ecl_stage_2`, `ecl_stage_3` | Filas del DTO |
 
 **Consecuencias.** El diálogo queda con un único idioma visible en todo momento. `tests/test_ecl_dialog.py::test_ecl_dialog_table_population` debe asertar sobre `tr("ecl_total_12m")` etc. en lugar de sobre literales: es la única modificación de un test existente en toda la Fase 2 y se justifica porque el test congela el bug (invariante §6-6). Se añade `test_ecl_dialog_retranslate`, que construye el diálogo en EN, emite `language_bus.language_changed("es")` y verifica título, captions, cabeceras, botones y las cinco filas ya cacheadas.
+
+**Reconciliación con §7 (nombres reales).** El DTO cacheado se llama
+**`self._report_dto`**, no `self._last_result`. No existe un helper separado
+`_render_result()`: `_on_finished(result)` cachea y pinta, y `retranslate_ui()`
+vuelve a llamar a `_on_finished(self._report_dto)` cuando hay DTO y el worker
+no está activo. `_detach_bus()` usa el flag `_bus_attached`, captura
+`(RuntimeError, TypeError)` y se invoca desde `closeEvent()` y `done()`.
 
 ## §2. i18n en BatchScoringDialog y ChampionChallengerDialog (T6, T7, T8)
 
@@ -99,6 +115,19 @@ Tres reglas gobiernan el diseño:
 5. T10: la confirmación de poda usa `tr()` en título y cuerpo. Título: `menu_tree_prune_branch` (clave existente, `i18n.py:452` / `:928`). Cuerpo: clave nueva `prune_branch_confirm` con placeholder `{node_id}`, equivalente al texto actual, que se formatea con `.format(node_id=node_id)`. El resto del slot (habilitación de Grow/Prune por hoja, registro en el Manual Override Log, sufijo de fingerprint) no cambia: T10 es estrictamente un cambio de strings.
 
 **Consecuencias.** El modo de gobernanza queda con una sola fuente de verdad visible y auditable, y la terminología RESEARCH de los paneles deja de ser código no verificado. Los tests de 2.d.1 y 2.e.1 cubren: `set_governance_mode("RESEARCH")` pinta etiqueta traducida en ambos idiomas; `MetricsPanel` y `ReportsPanel` reciben el modo y renderizan `tr_term` RESEARCH; la confirmación de poda contiene el id del nodo y no contiene `"Podar la rama"` en modo EN.
+
+**Reconciliación con §7 (nombres reales y alcance).** La confirmación de poda
+usa **`menu_tree_prune_confirm_title`** para el título y
+**`menu_tree_prune_confirm_body`.format(node_id=node_id)** para el cuerpo; no
+usa `menu_tree_prune_branch` como título ni una clave `prune_branch_confirm`.
+`menu_tree_prune_branch` sigue siendo la clave correcta de la acción del menú
+contextual. `MainWindow.set_governance_mode(mode)` actualiza el HUD y propaga
+el modo a ambos paneles, y `retranslate_ui()` lo repinta desde
+`self._governance_mode`, como certifica §7. Dos diferencias permanecen: el
+`_mode_name` de la barra de estado conserva los literales ingleses
+Banking/Research, y `MetricsPanel` almacena el modo pero no renderiza
+`tr_term`; el test `test_hud_research_mode` verifica HUD EN/ES y propagación a
+ambos paneles, no un cambio de cadenas dentro de `MetricsPanel`.
 
 ## §4. `step2_subtitle` dinámico (T15)
 

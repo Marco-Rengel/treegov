@@ -63,6 +63,10 @@ Al cerrar una sub-fase, la sincronización documental exige:
 8. `docs/design_decisions.md`: nueva entrada si el cambio introdujo un nuevo default o alteró un contrato de API.
 Si alguno de los 8 no refleja el estado real, la sub-fase NO se considera cerrada. Motivo: el cierre de la Fase 3.8 el 19/10/2026 omitió la fila en el README, el bloque narrativo en `estado_proyecto.md` y la entrada en `design_decisions.md`, forzando un bloque de corrección post-cierre el 20/10/2026.
 
+**Auditoría de consumidores antes de cambiar firmas públicas (regla #5 de `.treegovrules`).** Cuando una función gana parámetros obligatorios, todos sus consumidores se localizan y adaptan EN EL MISMO BLOQUE de trabajo, nunca en la sub-fase siguiente. Motivo: los 15 fallos evitables de la Fase 3.3.d vinieron de no auditar los helpers `_cfg()` de los tests E2E antes de cambiar `_train_pipeline`.
+
+**Toda deuda técnica o pendiente detectado se registra en `docs/roadmap.md` en la misma sesión (regla #7 de `.treegovrules`).** Se anota en `Deferred` o en `Pending decisions`; mencionarlo solo en `audit_log.md` o en el chat no basta. El roadmap es la fuente de verdad de la deuda técnica; el `audit_log` es la bitácora cronológica. Motivo: el pendiente Aider/build/twine detectado el 12/10/2026 estuvo 4 días sin trazabilidad en el roadmap y hubo que reconstruir el contexto al reanudarlo el 16/10/2026.
+
 ### Mini-cierre: correcciones post-cierre, deudas diferidas y documentación pura
 
 Cualquier corrección post-cierre, resolución de deuda técnica diferida o actualización documental pura (incluso si no hay cambios de código) DEBE ser tratada como un "mini-cierre" y DEBE generar su propia entrada en `docs/audit_log.md` con:
@@ -173,9 +177,11 @@ Verificación fiable (una de dos):
   (internacional, endpoint `https://api.moonshot.ai/v1`). La key es
   propia de Moonshot, NO se pasa por NVIDIA NIM.
 - **Configuración del proyecto:** `opencode.json` en la raíz
-  (versionado), con `model`, `small_model`, `plugin`
-  (`@jimmyyen/opencode-context-cache`), `autoupdate: false`,
-  `share: "disabled"`.
+  (versionado), con `model` y `small_model` =
+  `opencode/deepseek-v4-flash-free`, `autoupdate: false` y
+  `share: "disabled"`. Sin array `plugin`: el plugin de caché
+  (`@jimmyyen/opencode-context-cache`) se retiró en la migración a
+  OpenCode v2 porque la caché ya es nativa.
 - **Sin variables de entorno:** OpenCode gestiona la key internamente
   en `~/.local/share/opencode/auth.json`.
 

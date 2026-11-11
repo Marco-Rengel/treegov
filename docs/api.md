@@ -384,16 +384,18 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 
 ## mcp_v3 (Phase 5.0 — headless MCP layer, stable since 5.0.b)
 
-- `mcp_v3.tools.TOOLS` — registry of 24 frozen `ToolDescriptor`
+- `mcp_v3.tools.TOOLS` — registry of 27 frozen `ToolDescriptor`
   entries (`name`, `description`, `method_name`, `min_state`), each
   mapping 1:1 to a public `Session` method/property (Invariant I-4).
-  Intended consumer: the MCP server built in Phase 5.0.b.
+  Intended consumer: the MCP server built in Phase 5.0.b. The three
+  entries added by Phases 6.0 and 7.0 are `score_batch`,
+  `compare_champion_challenger` and `calculate_ecl`.
 - `mcp_v3.dto._jsonable` — underscore prefix = internal under the
   stability rule above. Invariant I-3: `json.dumps(_jsonable(x),
   allow_nan=False)` never raises (NaN/Inf → None). Enums serialize
   as their `.name` (Phase 5.0.b: `FlowState` rides as `"DATA_LOADED"`
   etc.).
-- `mcp_v3.server` (Phase 5.0.b) — FastMCP server exposing the 24
+- `mcp_v3.server` (Phase 5.0.b) — FastMCP server exposing the 27
   registered tools against `backend_v3.Session` over stdio; SDK pinned
   `mcp>=1.0.0,<2.0.0` (v2 renames FastMCP → MCPServer). `evaluate_oos`
   adapts `n_groups` to the OOS partition size by default (D20 rule);
@@ -407,7 +409,7 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 - `treegov_mcp` — root entry point registered as the `treegov-mcp`
   console script (`treegov_mcp:main`); requires the `[mcp]` extra.
 
-> **Stability (Phase 5.0.b, 01/11/2026).** The MCP adapter is a stable 1.x public API. The public surface is: `mcp_v3.tools.TOOLS` (registry of 24 frozen `ToolDescriptor` entries), `mcp_v3.dto._jsonable` (JSON-native converter, Invariant I-3), `mcp_v3.server.app` (FastMCP stdio server) and `treegov_mcp.main` (console script `treegov-mcp`). The SDK dependency is optional (`pip install treegov[mcp]`, pin `mcp>=1.0.0,<2.0.0`). The `_jsonable` name keeps its underscore prefix per the stability rule above (internal helper), but its contract is public and covered by tests.
+> **Stability (Phase 5.0.b, 01/11/2026).** The MCP adapter is a stable 1.x public API. The public surface is: `mcp_v3.tools.TOOLS` (registry of 27 frozen `ToolDescriptor` entries), `mcp_v3.dto._jsonable` (JSON-native converter, Invariant I-3), `mcp_v3.server.app` (FastMCP stdio server) and `treegov_mcp.main` (console script `treegov-mcp`). The SDK dependency is optional (`pip install treegov[mcp]`, pin `mcp>=1.0.0,<2.0.0`). The `_jsonable` name keeps its underscore prefix per the stability rule above (internal helper), but its contract is public and covered by tests.
 
 ---
 

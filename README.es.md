@@ -51,8 +51,10 @@ flowchart TB
 
     ARQ --> BE["<b>backend_v3</b><br/>Capa analítica<br/>cero imports Qt"]
     ARQ --> FE["<b>frontend_v3</b><br/>Capa de presentación<br/>cero imports numpy"]
+    ARQ --> MC["<b>mcp_v3</b><br/>Capa MCP<br/>headless, cero imports Qt"]
 
     BE -.->|Session| FE
+    BE -.->|Session| MC
 
     ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 completas<br/>📦 v1.0.0rc6 publicada en PyPI<br/>🧪 607 / 607 tests PASSED<br/>📅 8 nov 2026"]
 
@@ -64,6 +66,7 @@ flowchart TB
     style ARQ fill:#E65100,color:#fff
     style BE fill:#37474F,color:#fff
     style FE fill:#37474F,color:#fff
+    style MC fill:#37474F,color:#fff
     style ST fill:#1565C0,color:#fff
 ```
 
@@ -77,7 +80,7 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 *   El código: cada fórmula estadística está escrita explícitamente y citada a su publicación original.
 *   Las decisiones: la arquitectura y los *trade-offs* están documentados para justificar cada elección.
 *   El modelo: cada entrenamiento genera un *fingerprint* (huella) único que actúa como sello inmutable.
-*   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 400 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
+*   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 600 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
 
 ---
 
@@ -139,8 +142,12 @@ TreeGov/
 │   ├── validation.py        # Métricas OOS + evaluación OOT
 │   ├── pruning.py           # Poda coste-complejidad (Breiman)
 │   ├── reporting.py         # DTOs de gains table + matriz de clasificación
-│   └── stability.py         # PSI / CSI / Gini Drop
+│   ├── stability.py         # PSI / CSI / Gini Drop
+│   ├── exporters.py         # Exportadores de producción SQL / Python / Markdown (Fase 4.0)
+│   ├── scoring.py           # Batch scoring + champion-challenger (Fase 6.0)
+│   └── ecl.py               # ECL IFRS 9: staging + PD × LGD × EAD (Fase 7.0)
 ├── frontend_v3/             # Capa de presentación (Fase 2)
+├── mcp_v3/                  # Capa MCP, headless (dto, server, tools — Fase 5.0)
 ├── scripts/                 # Utilidades de infraestructura (descarga, validación, fechas)
 ├── tests/                   # Tests unitarios (dual: pytest / python directo)
 ├── docs/                    # Documentación
@@ -152,20 +159,30 @@ TreeGov/
 │   ├── 3.4_design_multiclass_crt_quest.md  # Diseño Fase 3.4 (EN)
 │   ├── 3.5_design_multiclass_weighted_reports.md  # Diseño Fase 3.5 (EN)
 │   ├── 3.6_design_public_datasets.md  # Diseño Fase 3.6 (EN)
+│   ├── 3.6.e_design_non_banking.md  # Diseño Fase 3.6.e, modo no-bancario (ES)
 │   ├── 3.7_design_pre_release_fixes.md  # Diseño Fase 3.7 (EN)
 │   ├── 3.8_design_regulatory_attribution.md  # Diseño Fase 3.8 (EN)
 │   ├── 3.9_design_interactive_weighted_pruning.md  # Diseño Fase 3.9 (EN)
-│   ├── 3.10.a_design_ux_ui_redesign.md  # Diseño Fase 3.10.a + as-built (EN)
-│   ├── 3.10.b_design_chaid_binning.md  # Diseño Fase 3.10.b + as-built (EN)
-│   ├── 3.11_design_interactive_tree.md  # Diseño Fase 3.11 (EN)
-│   ├── 3.11.a_design_colab_theme.md  # As-built Fase 3.11.a (EN)
+│   ├── 3.10.a_design_ux_ui_redesign.md  # Diseño Fase 3.10.a + as-built (ES)
+│   ├── 3.10.b_design_chaid_binning.md  # Diseño Fase 3.10.b + as-built (ES)
+│   ├── 3.11_design_interactive_tree.md  # Diseño Fase 3.11 (ES)
+│   ├── 3.11.a_design_colab_theme.md  # As-built Fase 3.11.a (ES)
+│   ├── 3.11.b_design_treemap_dataviewer.md  # Diseño + as-built Fase 3.11.b (ES)
+│   ├── 3.11.c_design_univariate_cost_matrix.md  # Diseño + as-built Fase 3.11.c (ES)
+│   ├── 3.11.d_design_context_menu_interactivity.md  # Diseño + as-built Fase 3.11.d (ES)
+│   ├── 3.11.e_design_treemap_rewrite.md  # As-built Fase 3.11.e (ES)
+│   ├── 3.11_gui_design_system.md  # Sistema de Diseño GUI normativo (ES)
 │   ├── 3.11_classic_tree_ui_reference.md  # Referencia visual de estación de árboles clásica, circa 2001 (ES)
-│   ├── 4.0_design_exports.md
-│   ├── 4.0.1_design_categorical_exporters.md
-│   ├── 5.0_design_mcp.md
+│   ├── 4.0_design_exports.md  # Diseño Fase 4.0 (ES)
+│   ├── 4.0.1_design_categorical_exporters.md  # Diseño Fase 4.0.1 (ES)
+│   ├── 5.0_design_mcp.md  # Diseño + as-built Fase 5.0 (ES)
+│   ├── 6.0_design_batch_scoring.md  # Diseño + as-built Fase 6.0 (ES)
+│   ├── 7.0_design_ifrs9.md  # Diseño + as-built Fase 7.0 (ES)
 │   ├── validation_results_3.6.md  # Informe de validación UCI (EN)
 │   ├── security_audit.md      # Auditoría de seguridad y privacidad (EN)
-│   ├── playbook.md          # Playbook de gobernanza (EN)
+│   ├── playbook.md          # Playbook de gobernanza (ES)
+│   ├── scripts_design.md    # Diseño + as-built de scripts/ (ES)
+│   ├── gui_i18n_governance_design.md  # Diseño + as-built de i18n y gobernanza GUI (ES)
 │   ├── api.md               # API pública (EN)
 │   ├── roadmap.md           # Plan de fases (EN)
 │   ├── philosophy.md        # Filosofía (EN)
@@ -179,6 +196,7 @@ TreeGov/
 ├── logs/                    # Logs por corrida (Git-ignored)
 ├── treegov.py               # Orquestador headless (CLI)
 ├── treegov_gui.py           # Entry point de la GUI (Fase 2)
+├── treegov_mcp.py           # Entry point del servidor MCP (console script treegov-mcp, Fase 5.0)
 ├── pyproject.toml           # Empaquetado
 ├── requirements.txt         # Mínimos de trabajo (pyproject.toml es la fuente oficial)
 ├── opencode.json            # Configuración del proyecto OpenCode
@@ -247,6 +265,7 @@ TreeGov/
 | **2.0-2.2** | GUI con PySide6: esqueleto, wizard transaccional, visor de árbol | Completada |
 | **2.3** | Panel de métricas OOS/OOT | Completada |
 | **2.4** | Reportes + integración | Completada |
+| **2.1.b** | Esquema de validación cruzada k-fold estratificado + guardrail runtime de imports en la capa GUI (backlog post-Fase 7 B2a/B2b, cerrado 02/11/2026) | Completada |
 | **3.0** | Cierre documental + parámetros canónicos configurables | Completada |
 | **3.1** | Multiclase (target + wizard + alertas en MetricsPanel) | Completada |
 | **3.2** | Ponderación por muestra | Completada |
@@ -275,6 +294,7 @@ TreeGov/
 | **3.11.c.2** | Frontend de árboles univariados: `UnivariateDialog` (Predictor \| Gini \| KS \| Cortes), Ctrl+C → TSV (REGLA 4.1.1), exportación CSV, acción del menú Análisis habilitada en TRAINED | Completada |
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
 | **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
+| **3.11.e** | Reescritura del Tree Map desde cero (Clean Room): layout tidy top-down estilo Reingold-Tilford, conectores ortogonales en 3 tramos, etiquetas `node_id` de tamaño constante en pantalla, colores 100% desde `PALETTES`, navegación bidireccional vía `center_on_node`, estado vacío sin branding | Completada |
 | **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
 | **4.0.1** | Exporters: categorical unseen_policy | Completada |
 | **5** | Capa MCP para agentes LLM | Completada |
@@ -318,9 +338,10 @@ TreeGov/
 
 ---
 
-### MCP Layer (Phase 5.0)
-TreeGov expone su backend analítico a agentes LLM mediante el
-estándar Model Context Protocol (MCP).
+### Capa MCP (Fase 5.0)
+TreeGov expone su backend analítico a agentes LLM mediante el estándar
+Model Context Protocol (MCP). La capa es headless (sin imports de GUI) y
+expone 27 tools sobre el mismo contrato `Session` que usa la GUI.
 Instalación: `pip install treegov[mcp]`
 Uso: `treegov-mcp` (arranca el servidor stdio).
 

@@ -7697,3 +7697,457 @@ T12, T13, T14, N3, N5, N6, N7, N8, N4 marcadas como ✅).
 **Observación (rc3 en `$root.releases`)**: el JSON raíz de PyPI incluye `1.0.0rc3` aunque el audit_log del 21/10/2026 registró "rc3 no existe (quemada por conflicto de inmutabilidad)". Probablemente release yanked (no instalable, pero registrada en el índice). Se anota para revisión futura; no afecta al release actual.
 
 **Referencias cruzadas**: entrada del 08/11/2026 "Release v1.0.0rc6 preparada" y "Mini-cierre: bug de empaquetado detectado"; `docs/design_decisions.md` §25; `AGENTS.md` §"Verificación del wheel antes de release".
+
+### 10/11/2026 - Mini-cierre: sincronizacion documental (API MCP, seguridad, metodologia, decisiones)
+
+**Estado**: Completado. Solo documentacion, sin cambios de codigo. Suite 607/607 PASSED.
+
+**Contexto**: cuatro documentos canonicos arrastraban afirmaciones desactualizadas
+respecto al codigo real: `docs/api.md` seguia declarando 24 `ToolDescriptor`
+cuando `mcp_v3.tools.TOOLS` tiene 27 desde las Fases 6.0 y 7.0;
+`docs/security_audit.md` ?6 presentaba como no implementada una proteccion
+anti-overwrite que ya existe; `docs/methodology.md` no documentaba el
+k-fold estratificado (Fase 2.1.b) ni el ECL simplificado (Fase 7.0) y
+mantenia duplicada la formula de Hand & Till en ?8.11; y
+`docs/design_decisions.md` ?0.1 seguia marcando como pendientes
+capacidades cerradas en las Fases 3.1-3.4 y 4.0.
+
+**Verificacion previa (ground truth, no supuesto)**:
+- `python -c "from mcp_v3.tools import TOOLS; print(len(TOOLS))"` -> `27`
+  (`get_session_state` ... `calculate_ecl`).
+- `backend_v3/scoring.py` lineas 218-222: `if os.path.exists(output_csv):
+  raise FileExistsError(...)` antes del `tempfile.NamedTemporaryFile`
+  (linea 247). El hallazgo "no implementada" del 02/11/2026 estaba obsoleto.
+- `backend_v3/ecl.py` lineas 173-181: Etapa 3 `is_default or dpd > 90`;
+  Etapa 2 `dpd > 30 or pd_12m > 2.0 * pd_initial`; Etapa 1 resto. Descuento
+  `1.0 / (1.0 + eir)` (lineas 166-168) aplicado a ambas horizontes.
+- `backend_v3/session_state.py` lineas 1244-1256: `metrics_mean` con
+  `np.mean` y `metrics_std` con `np.std(..., ddof=0)` (desviacion poblacional,
+  no muestral). La documentacion nueva refleja `ddof=0`.
+- `backend_v3/splitting.py` lineas 177-195: reparto round-robin por clase,
+  equivalente a Hamilton-Hare con empate resuelto por indice de fold.
+
+**Artefactos (por ruta exacta)**:
+- `docs/api.md`: ?`mcp_v3` pasa de 24 a 27 entradas `ToolDescriptor` en las
+  tres menciones (bullet de `TOOLS`, bullet de `mcp_v3.server` y bloque
+  `Stability`); se nombran `score_batch`, `compare_champion_challenger` y
+  `calculate_ecl`.
+- `docs/security_audit.md`: ?0 y ?1.1 amplian los canales de salida
+  sensibles (exports SQL/Python/MD de la Fase 4.0, CSVs de Batch Scoring de
+  la Fase 6.0 y copia TSV al portapapeles con Ctrl+C); ?6 sustituye el
+  parrafo "Politica de overwrite y hallazgo as-built" por la politica
+  vigente (FileExistsError antes del temporal).
+- `docs/methodology.md`: nueva ?7.2 (k-fold estratificado, Hamilton-Hare en
+  k folds, media/std `ddof=0`, modelo final al 100%); ?8.6 renombrada
+  "Asymmetric decision threshold (Business decision, not IFRS 9 provision)"
+  con la aclaracion de alcance; nueva ?9 (IFRS 9/ECL simplificado,
+  `ECL = PD × LGD × EAD`, descuento `1/(1+EIR)`, staging determinista);
+  ?8.11 sin el bloque duplicado de Hand & Till.
+- `docs/design_decisions.md`: ?0.1 actualiza las filas Sample weighting (3.2),
+  Indet/Insuff/No Perf (3.3), Multiclass targets (3.1/3.4) y Export to
+  production (4.0), y reformula el veredicto para no contradecir la tabla;
+  ?25 a?ade la nota de que `scripts/` no se empaqueta en el wheel.
+- `docs/audit_log.md`: esta entrada.
+
+**Hallazgos**:
+- El conteo de 24 herramientas MCP era un numero congelado desde la Fase
+  5.0.b; la Fase 6.0 y la Fase 7.0 a?adieron entradas al registro sin
+  actualizar `docs/api.md`. El arreglo se verifico contra el objeto real,
+  no contra el changelog.
+- El parrafo de overwrite del 02/11/2026 describia el estado previo al
+  hotfix y podia leerse como control ausente. Se sustituyo por la conducta
+  real del backend.
+- La desviacion estandar del informe de CV es poblacional (`ddof=0`). Se
+  documento explicitamente para que un revisor MRM no asuma `ddof=1`.
+- ?8.6 mezclaba una optimizacion de costes del negocio con IFRS 9. La
+  distincion importa: IFRS 9 regula la medicion de ECL, no el punto de
+  corte de clasificacion del modelo.
+- `scripts/` no esta en `packages` ni en `py-modules`; la ausencia del wheel
+  es deliberada y ahora consta en ?25.
+
+**Tests**: `python -m pytest tests -q` -> `607 passed` (44.56 s, Python
+3.11.9, Windows nativo). Sin codigo tocado; la suite no cambia de conteo.
+
+**Referencias cruzadas**: `docs/api.md` ?`mcp_v3`; `docs/security_audit.md`
+?0, ?1.1 y ?6; `docs/methodology.md` ?7.2, ?8.6, ?8.11 y ?9;
+`docs/design_decisions.md` ?0.1 y ?25; entrada del 02/11/2026 (cierre de
+Fase 6) y del 08/11/2026 (packaging, ?25).
+
+### 10/11/2026 - Mini-cierre: sincronizacion de documentos de estado y contexto
+
+**Estado**: Completado. Solo documentacion, sin cambios de codigo. Suite 607/607 PASSED.
+
+**Contexto**: tras el cierre de la Fase 7.0 y la publicacion de `1.0.0rc6`, los
+documentos de estado seguian describiendo un proyecto anterior: `estado_proyecto.md`
+listaba 603 tests, no incluia `scripts/` ni `treegov_mcp.py` en el arbol y mantenia
+la Fase 3.11 como "En progreso"; `roadmap.md` conservaba cinco fases cerradas en
+"Upcoming phases" y marcaba como resueltas dos deudas (V7/V8) que el propio codigo
+declara diferidas; `contexto_para_nueva_sesion.md` repetia una fila de 3.6.e y
+listaba deudas ya cerradas; `prompt_para_asistente.md` seguia en 26 tools MCP y
+arrastraba parrafos de "proximo paso" de fases terminadas.
+
+**Verificacion previa (ground truth, no supuesto)**:
+- `pytest --collect-only -q` agrupado por archivo: 43 archivos, suma 607. El
+  desglose de `estado_proyecto.md` sumaba 586 (Total declarado 603): tres filas
+  estaban desactualizadas (`session_state.py` 99 -> 102,
+  `test_scoring_dialogs.py` 4 -> 10, `test_ecl_dialog.py` 3 -> 5) y faltaban
+  `tests/test_scripts.py` (6) y `tests/test_packaging.py` (4).
+- `scripts/validate_uci.py` lineas 42-43, 75 y 322: V7 y V8 marcados
+  `TODO(zona_gris)`; no implementados. El estado "Resuelto" del roadmap era falso.
+- `frontend_v3/main_window.py` linea 10: "Keyboard mnemonics ("&") deferred".
+- `QSettings`: solo `language` (`frontend_v3/main_window.py`); ningun parametro de
+  gobernanza se persiste.
+- `QThread`: `BatchWorker`, `CCWorker` (`frontend_v3/scoring_dialogs.py`) y
+  `ECLWorker` (`frontend_v3/ecl_dialog.py`); el entrenamiento sigue en el hilo principal.
+- `README.md` / `README.es.md`: "pyproject.toml is source of truth" para dependencias
+  (cierra la duda `requirements.txt` vs `pyproject.toml`).
+- `mcp_v3.tools.TOOLS`: 27 entradas (verificado en ejecucion).
+
+**Artefactos (por ruta exacta)**:
+- `docs/estado_proyecto.md`: §4 arbol actualizado (`scripts/` con sus 4 scripts,
+  `treegov_mcp.py`, 40 documentos de `docs/` incluyendo 3.5 a 7.0, `playbook.md`,
+  `security_audit.md`, `scripts_design.md` y `gui_i18n_governance_design.md`) y
+  `tests/` a 607; §7 tabla reconciliada con `pytest --collect-only` (43 filas,
+  suma 607) con las filas nuevas `scripts (infraestructura) | 6` y `packaging | 4`;
+  §3 Fase 3.11 pasa a "✅ Completada", se elimina el "Proximo paso ... Fase 4.0" y
+  la vineta obsoleta de 3.6.e "planificada para 1.1.0" (la Fase 4 se marca ademas
+  como completada en la misma lista); §10 cinco items cerrados con matiz veraz
+  (requirements.txt resuelto; mnemonics y QSettings cerrados como diferidos
+  explicitos; QThread parcial por diseno; firma digital/instalador absorbido por la
+  decision C1 todavia abierta).
+- `docs/roadmap.md`: las fases 3.9, 3.11, 4.0, 4.0.1 y 5 se mueven a `## Completed`
+  (3.11 pasa de 🟡 a ✅ Completed 25/10/2026); `## Upcoming phases` queda con nota de
+  que no hay fases abiertas; V7 y V8 pasan a "✅ Documentado como TODO / Diferido";
+  `## Deferred` gana tres entradas (acciones interactivas Grow/Select/Define Split,
+  multi-modelo en Explorer + selector `n_rows`, tooltip de `PredictorType`).
+- `docs/contexto_para_nueva_sesion.md`: eliminada la fila duplicada `3.6.e | ⏳` y
+  tres referencias a deudas ya resueltas (fixture E2E con senal real, Fase 2.1.b,
+  KS/AUC/Gini del gains table en 3.2.g).
+- `docs/prompt_para_asistente.md`: §5 bullet de suite con 607/607, Fase 7.0 y 27
+  tools MCP; eliminados los parrafos historicos "Proximo paso: 3.5",
+  "Proximo paso: 3.6.b" y "Estado al 25/10/2026".
+- `docs/audit_log.md`: esta entrada.
+
+**Hallazgos**:
+- La tabla de tests no era una foto del codigo sino una acumulacion manual: sumaba
+  586 con Total 603. Ahora cada fila se contrasto con `--collect-only` y la suma
+  cuadra con el Total (607). Regla operativa: la tabla se regenera con el conteo
+  real, no se incrementa a mano.
+- V7 y V8 estaban marcados "Resuelto" mientras el script pedia lo contrario. El
+  roadmap ahora distingue "resuelto en codigo" de "documentado como TODO".
+- La lista de pendientes de `estado_proyecto.md` §10 mezclaba deudas reales con
+  fases completadas; se cerro cada casilla con la evidencia que la sostiene o el
+  motivo del cierre, para que un revisor pueda verificarlo.
+- El documento de diseno 3.11.b pedia registrar la deuda multi-modelo en
+  `roadmap.md` (Deferred) y nunca se hizo; queda cerrada esa trazabilidad.
+
+**Tests**: `python -m pytest tests -q` -> `607 passed` (16.04 s, Python 3.11.9,
+Windows nativo). Sin codigo tocado.
+
+**Referencias cruzadas**: `docs/estado_proyecto.md` §3, §4, §7 y §10;
+`docs/roadmap.md` (`## Completed`, `## Upcoming phases`, `## Deferred`);
+`docs/contexto_para_nueva_sesion.md` (tabla de fases y "Deudas diferidas");
+`docs/prompt_para_asistente.md` §5; `docs/3.11.b_design_treemap_dataviewer.md` §7;
+`docs/design_decisions.md` §18.9; `docs/api.md` §`mcp_v3`; entrada del 10/11/2026
+anterior (sincronizacion de API/seguridad/metodologia/decisiones).
+
+### 10/11/2026 - Mini-cierre: sincronizacion de READMEs, filosofia y reglas de gobernanza
+
+**Estado**: Completado. Solo documentacion, sin cambios de codigo. Suite 607/607 PASSED.
+
+**Contexto**: tercer y ultimo bloque documental del dia. Los dos anteriores
+sincronizaron `docs/api.md`, `docs/security_audit.md`, `docs/methodology.md`,
+`docs/design_decisions.md` y los documentos de estado. Este cierra la capa que
+mira hacia fuera (los dos READMEs y `NOTICE.md`) y la capa normativa
+(`.treegovrules`, `AGENTS.md`, `CONVENTIONS.md`, `docs/playbook.md`). Los
+READMEs son la carta de presentacion del proyecto y estaban tres fases por
+detras del codigo; las reglas de gobernanza estaban duplicadas y divergentes
+entre `AGENTS.md` y `.treegovrules`.
+
+**Verificacion previa (ground truth, no supuesto)**:
+- `pytest --collect-only` agrupado por archivo: 607 tests. Ambos READMEs decian
+  "over 400 tests" / "mas de 400 pruebas": la cifra no se habia tocado desde la
+  Fase 3.x, aunque el Mermaid ya declaraba 607/607 (contradiccion interna en el
+  mismo archivo).
+- `backend_v3/`: 20 modulos. `exporters.py` (Fase 4.0), `scoring.py` (Fase 6.0) y
+  `ecl.py` (Fase 7.0) no figuraban en el arbol de los READMEs. En la raiz
+  existian `mcp_v3/` (`dto.py`, `server.py`, `tools.py`) y `treegov_mcp.py`,
+  ninguno listado.
+- `docs/`: 41 archivos. Faltaban 10 en el arbol de los READMEs:
+  `3.6.e_design_non_banking.md`, `3.11.b_design_treemap_dataviewer.md`,
+  `3.11.c_design_univariate_cost_matrix.md`, `3.11.d_design_context_menu_interactivity.md`,
+  `3.11.e_design_treemap_rewrite.md`, `3.11_gui_design_system.md`,
+  `6.0_design_batch_scoring.md`, `7.0_design_ifrs9.md`, `scripts_design.md` y
+  `gui_i18n_governance_design.md`.
+- Idioma fijado leyendo el primer encabezado de cada documento de diseno: 3.1 a
+  3.9 en ingles; `3.6.e`, `3.10.a`, `3.10.b` y toda la serie `3.11`-`7.0` en
+  espanol. `docs/playbook.md` en espanol. Los READMEs etiquetaban
+  `3.10.a`/`3.10.b`/`3.11`/`3.11.a` como `(EN)` y `playbook.md` como `(EN)`.
+- `opencode.json` real: `model` y `small_model` =
+  `opencode/deepseek-v4-flash-free`, `autoupdate: false`, `share: "disabled"`.
+  Sin array `plugin`: el plugin de cache se retiro con OpenCode v2.
+- `docs/security_audit.md` existe con encabezado "Security and Privacy Audit
+  (Phase 3.7.a)" y §0/§1.1 ya ampliados con exports SQL/Python/MD, CSV de batch
+  y copia Ctrl+C -> TSV; `philosophy.md` seguia anunciando ese bloque en futuro.
+- `tests/test_gui_smoke.py::test_frontend_clean_room` y
+  `backend_v3/import_guard.py`: el guardrail tiene dos niveles (estatico AST y
+  runtime de interprete), dato que `CONVENTIONS.md` no recogia.
+
+**Artefactos (por ruta exacta)**:
+- `README.md`: arbol con `exporters.py`, `scoring.py`, `ecl.py`, `mcp_v3/`,
+  `treegov_mcp.py` y los 10 documentos que faltaban; comentario de `scripts/`
+  traducido al ingles; "over 400 tests" -> "over 600 tests"; nodo `mcp_v3` y
+  arista `BE -.->|Session| MC` en el diagrama Mermaid (mas su `style`); filas
+  nuevas `3.11.e` (reescritura del Tree Map) y `2.1.b` (k-fold + guardrail) en
+  la tabla de fases; fila `5` traducida ("Capa MCP para agentes LLM" -> "MCP
+  layer for LLM agents"); seccion "### MCP Layer (Phase 5.0)" traducida al
+  ingles con mencion a las 27 tools; "PD x LGD x EAD" -> "PD × LGD × EAD".
+- `README.es.md`: mismo arbol, mismo Mermaid, mismas filas `3.11.e`/`2.1.b`,
+  "mas de 400 pruebas" -> "mas de 600 pruebas"; encabezado y cuerpo de la capa
+  MCP en espanol ("Capa MCP (Fase 5.0)") con las 27 tools.
+- `docs/philosophy.md` / `docs/philosophy.es.md`: el bloque de auditoria de
+  seguridad pasa de futuro ("the project plans") a presente ("TreeGov
+  implemented ... in Phase 3.7.a, `docs/security_audit.md`"), con nota de la
+  ampliacion posterior de §0 y §1.1.
+- `.treegovrules`: tres secciones nuevas ("Grey zones during a burst", "Strict
+  burst flow", "Wheel verification before release", con el comando de
+  verificacion del wheel); `## Language` reescrito para declarar que los disenos
+  desde 3.10 (y de forma expresa 3.11 a 7.0, mas `3.6.e` y `playbook.md`) estan
+  en espanol y que el patron `X.Y_design_*.md` no implica ingles.
+- `AGENTS.md`: regla #5 de `.treegovrules` (auditar consumidores antes de
+  cambiar firmas publicas) y regla #7 (toda deuda tecnica va a `docs/roadmap.md`
+  en la misma sesion), con la evidencia de la Fase 3.3.d y del pendiente del
+  12/10/2026; descripcion de `opencode.json` sincronizada con el archivo real.
+- `CONVENTIONS.md`: suelo de suite 561/561 -> 607/607; "Sala limpia" con
+  `mcp_v3/` y los dos niveles del guardrail (runtime `import_guard.py` +
+  test AST de `frontend_v3/`); regla 1 de "Prompts grandes": "N sesiones
+  separadas" -> "N prompts separados en la misma sesion".
+- `docs/playbook.md`: tabla del Skill 4 con las filas `4.0` y `4.0.1` (y fechas
+  de cierre), fila `7.0` con `✅ Completed` (antes "Completed" sin emoji),
+  `6.0`/`7.0` normalizadas con backticks.
+- `NOTICE.md`: "Contributions" pasa de invitacion abierta a contribuciones
+  externas **pausadas** hasta que se resuelva la revision legal (licencia y
+  procedencia del clean room, atribucion de terceros), manteniendo el repositorio
+  publico para lectura y auditoria bajo Apache 2.0.
+- `docs/roadmap.md`: nota de desincronizacion PyPI del 10/11/2026 en
+  `## Deferred` (cambios cosmeticos, no disparan release; PyPI queda en el
+  README de `1.0.0rc6`), recordatorio de verificar el wheel antes del proximo
+  `twine upload` y nueva entrada en `## Deferred`: guardrail AST para `mcp_v3/`.
+- `docs/audit_log.md`: esta entrada.
+
+**Hallazgos**:
+- **Etiquetas de idioma falsas en los READMEs.** Cuatro documentos de diseno
+  (3.10.a, 3.10.b, 3.11, 3.11.a) y `playbook.md` estaban marcados `(EN)` siendo
+  espanol. Se corrigieron las etiquetas y, para que no vuelva a ocurrir, la
+  regla de idioma de `.treegovrules` ahora nombra cada documento y advierte que
+  el patron de nombre no implica ingles.
+- **Las reglas de gobernanza estaban partidas en dos archivos.** `AGENTS.md`
+  contenia tres reglas (zonas grises, rafaga estricta, verificacion del wheel)
+  que `.treegovrules` no tenia, y `.treegovrules` contenia las reglas #5 y #7
+  que `AGENTS.md` no tenia. Ambas direcciones quedan sincronizadas; un agente
+  que solo lea uno de los dos archivos ya no pierde ninguna.
+- **Contradiccion interna en el README.** El diagrama Mermaid declaraba
+  607/607 tests mientras la seccion "What is TreeGov?" seguia en "over 400
+  tests" y la tabla de fases no incluia 3.11.e ni 2.1.b. La cifra y la tabla se
+  habian quedado atras en cuatro releases (rc3 a rc6). Regla operativa: al
+  cerrar una release, el conteo de tests se revisa en las cuatro apariciones
+  (Mermaid, bullet de evidencia, linea "Test suite", tabla de fases).
+- **Arbol de directorios desactualizado en ambos READMEs.** Faltaban los tres
+  modulos de las fases 4.0/6.0/7.0, la capa MCP completa y `treegov_mcp.py`
+  (justo los tres archivos raiz que provocaron el fallo de empaquetado de
+  `1.0.0rc1`-`1.0.0rc5`). Un lector de PyPI no podia deducir del README donde
+  vive la capa MCP ni que exista un entry point `treegov-mcp`.
+- **Filosofia desincronizada con la realidad.** Prometia en futuro una auditoria
+  de seguridad ya implementada en la Fase 3.7.a y ampliada en los bloques
+  posteriores. Corregido a presente con la referencia al documento.
+- **`CONVENTIONS.md` con un suelo de suite obsoleto** (561/561): cualquier agente
+  que lo tomara al pie de la letra habria commiteado con 46 tests menos.
+- **`NOTICE.md` invitaba a contribuir** sin mencionar la revision legal abierta.
+  Un contribuidor externo podia enviar codigo a un proyecto cuya procedencia
+  clean-room esta en revision; ahora la pausa es explicita.
+- **Hueco de guardrail detectado al redactar `CONVENTIONS.md`.** La primera
+  redaccion afirmaba que "la suite MCP verifica que `mcp_v3/` no importe Qt".
+  Verificado con `grep`: no existe tal test; el unico guardrail AST
+  (`test_frontend_clean_room`) recorre solo `frontend_v3/`. La afirmacion se
+  corrigio en `CONVENTIONS.md` y el hueco quedo registrado en
+  `docs/roadmap.md` (`## Deferred`) conforme a la regla #7 que este mismo
+  bloque incorpora a `AGENTS.md`. `mcp_v3/` importa hoy solo `backend_v3`, el
+  SDK de MCP, numpy/pandas y stdlib (cero Qt).
+- **Protocolo PyPI aplicado.** Los cambios de este bloque son cosmeticos
+  (arbol, diagrama, traducciones, filas de tabla, "600 tests"), por lo que NO se
+  publica version nueva: la desincronizacion queda registrada en
+  `docs/roadmap.md` (`## Deferred`) y PyPI conserva el README de `1.0.0rc6`.
+
+**Tests**: `python -m pytest tests -q` -> `607 passed` (16.95 s, Python 3.11.9,
+Windows nativo). Sin codigo tocado: `git status` solo muestra `.md` y
+`.treegovrules`.
+
+**Referencias cruzadas**: `README.md` y `README.es.md` (arbol, Mermaid, tabla de
+fases, seccion MCP); `docs/philosophy.md` y `docs/philosophy.es.md`
+("Development vs end use"); `docs/security_audit.md` (encabezado Phase 3.7.a,
+§0, §1.1); `.treegovrules` ("Grey zones during a burst", "Strict burst flow",
+"Wheel verification before release", "Language"); `AGENTS.md` (reglas #5 y #7,
+"Herramienta de desarrollo: OpenCode"); `CONVENTIONS.md` ("Sala limpia",
+"Verificacion obligatoria", "Prompts grandes"); `docs/playbook.md` (Skill 4,
+Skill 5); `NOTICE.md` ("Contributions"); `docs/roadmap.md` (`## Deferred`,
+protocolo PyPI); `docs/design_decisions.md` §25 (empaquetado); entradas del
+10/11/2026 anteriores (sincronizacion de API/seguridad/metodologia/decisiones y
+de documentos de estado).
+
+### 08/11/2026 — Auditoría documental exhaustiva (46 hallazgos)
+
+**Estado**: ✅ Mini-cierre documental ejecutado el 10/11/2026. Solo archivos
+Markdown; sin cambios de código. Suite 607/607 PASSED.
+
+**Contexto**: la auditoría documental del 08/11/2026 dejó 46 hallazgos sobre
+diseños que seguían describiendo el estado anterior a las fases 3.11–7.0. Este
+bloque añade las secciones as-built y las reconciliaciones pendientes, sin
+reescribir el diseño histórico ni convertir aspiraciones en afirmaciones de
+implementación. La fecha del encabezado identifica la auditoría; la ejecución
+material del bloque es del 10/11/2026.
+
+**Verificación previa (ground truth)**:
+- `frontend_v3/main_window.py`: ocho menús reales (File, Edit, View, Format,
+  Analysis, Tree, Window, Help); exportaciones en File; Univariados, Batch,
+  Champion-Challenger y ECL en Analysis; View → Left Panel con toggles
+  granulares; `set_governance_mode` y botón Ver Auditoría operativos.
+- `frontend_v3/icons.py` y `wizard.py`: SVG vía `load_icon`, cero usos de
+  `QStyle.StandardPixmap`; los iconos del wizard fijan `theme="light"`.
+- `frontend_v3/tree_view.py`: nodos QPainter de 220×126, fila
+  `Total (<pct_global>) <n>`, aristas sólidas y zoom sin `QComboBox`.
+- `backend_v3/session_state.py`: `Session.export_to_markdown` sí existe y
+  acepta/reenvía `unseen_policy`; de las acciones de `intervene_node`, solo
+  `prune_branch` está implementada.
+- `mcp_v3/tools.py` y `server.py`: 27 descriptores/tools. Conteo por archivo:
+  `test_mcp_tools.py` = 12, `test_mcp_server.py` = 3, `test_mcp_parity.py` = 5,
+  `test_mcp_scoring.py` = 2 y `test_mcp_ecl.py` = 1.
+- Historial de Git: la sección "Qualitative Literature Comparison" se recuperó
+  a partir de `e622bdd:docs/validation_results_3.6.md`, sin modificar la tabla
+  cuantitativa vigente.
+- `docs/audit_log.md`, entrada del 02/11/2026 (líneas 7243 y 7247 en el working
+  tree previo): contenía dos `TODO(zona_gris)` porque `docs/scripts_design.md`
+  y `docs/gui_i18n_governance_design.md` aún no existían. **Ambos archivos ya
+  existen y contienen sus secciones as-built**, por lo que esos TODOs
+  documentales quedan resueltos; no se trata de placeholders vigentes.
+
+**Artefactos (por ruta exacta)**:
+- `docs/3.11_gui_design_system.md`: cabecera Verificado 08/11/2026 y Suite
+  607/607; §3.1 con menús y submenú granular reales; §3.2 con SVG `load_icon`
+  y wizard light fijo; §3.5 con Ver Auditoría habilitado y
+  `set_governance_mode`; §4.1 y §6 con DataViewer, Univariate, ManualOverride,
+  Champion-Challenger y ECL bajo Ctrl+C → TSV; §5.1 con formato exacto de Total.
+- `docs/3.11_design_interactive_tree.md`: Status cerrado con 3.11.e
+  (31/10/2026) y nueva §10 as-built: zoom sin combo, nodos QPainter 220×126,
+  ausencia de líneas punteadas, matriz de costos fuera del fingerprint y alcance
+  real de la interactividad.
+- `docs/3.11.c_design_univariate_cost_matrix.md`: estado Completada
+  (25/10/2026) y §6 as-built con DTO univariado, diálogo TSV/CSV, matriz N×N
+  inmutable, exclusión del fingerprint y divergencia de exposición en reportes.
+- `docs/3.11.d_design_context_menu_interactivity.md`: estado Completada en su
+  alcance implementado y §7 as-built; deja explícito que solo `prune_branch`
+  tiene backend y que grow/select/define están diferidos.
+- `docs/3.6.e_design_non_banking.md`: estado Completada (25/10/2026) y §7
+  as-built con `tr_term`, consumidores reales, alcance del E2E y divergencias
+  visibles del Wizard/Reports; `MetricsPanel` no se describe falsamente como
+  render activo de `tr_term`.
+- `docs/5.0_design_mcp.md`: cabecera Completada (01/11/2026) y §9 as-built con
+  estructura, 27 tools y tests reales (12 + 3 + 5 de 5.0, más 2 + 1 de scoring
+  y ECL; 23 tests MCP en total).
+- `docs/4.0.1_design_categorical_exporters.md`: D1 corregida; eliminada la
+  afirmación falsa "`Session.export_to_markdown()` no existe hoy" y documentado
+  que existe, reenvía el kwarg y no requiere imputer. Referencia MCP actualizada
+  a 27 tools.
+- `docs/gui_i18n_governance_design.md`: notas de reconciliación en §0, §1 y §3
+  que apuntan a §7: `_report_dto`, ausencia de `_render_result`, `_detach_bus`
+  real, `menu_tree_prune_confirm_title` y `menu_tree_prune_confirm_body`;
+  aclarados `_mode_name`, propagación de modo y alcance del test RESEARCH.
+- `docs/validation_results_3.6.md`: restaurada "Qualitative Literature
+  Comparison" desde Git y unificado todo el documento a inglés; tabla y
+  fingerprints vigentes intactos. La cabecera distingue el contenido generado
+  de la sección editorial restaurada para preservarla en futuras regeneraciones.
+- `docs/audit_log.md`: esta entrada.
+
+**Hallazgos**:
+- El sistema de diseño normativo aún decía 449/449, iconos
+  `QStyle.StandardPixmap`, Ver Auditoría deshabilitado y solo dos tablas TSV;
+  ahora refleja 607/607, SVG, HUD operativo y siete tablas de datos cubiertas.
+- El diseño estructural de 3.11 mezclaba diseño y as-built: el zoom no usa
+  combo, los nodos no son HTML y cabecera/footer no van fuera de la caja; las
+  líneas punteadas surrogate no se implementaron y la matriz de costos no entra
+  en el fingerprint.
+- "Fase 3.11.d completada" no significa grow/select/define completados: el
+  único camino backend operativo es `prune_branch`; las demás acciones lanzan
+  `NotImplementedError` y permanecen en `docs/roadmap.md` (Deferred).
+- `Session.export_to_markdown` existe en `backend_v3/session_state.py`; la
+  frase de D1 era falsa y contradecía tanto la API como las tools MCP.
+- La Fase 5.0 entregó 24 tools, pero el inventario vigente es 27 tras scoring y
+  ECL. Los 12/3/5 tests originales se conservan y se suman 2/1 posteriores.
+- Los nombres propuestos en `gui_i18n_governance_design.md` no eran todos los
+  nombres implementados. Las notas nuevas evitan renombrar globalmente claves
+  correctas: `menu_tree_prune_branch` sigue siendo la acción, mientras la
+  confirmación usa las dos claves `menu_tree_prune_confirm_*`.
+- La terminología RESEARCH tiene consumidores reales pero no una cobertura
+  integral de todos los literales visibles; el as-built distingue gains/HTML,
+  tooltips, Wizard, resumen visible y `MetricsPanel` en lugar de sobredeclarar
+  la fase como traducción total.
+- **Cierre de deuda documental del 02/11/2026**: `docs/scripts_design.md` y
+  `docs/gui_i18n_governance_design.md` ya están creados. Los TODOs que los
+  marcaban como placeholders inexistentes quedan resueltos y esta entrada deja
+  la trazabilidad explícita; no se elimina el texto histórico de la entrada
+  original.
+
+**Tests**: `python -m pytest tests -q` → `607 passed`. Cero archivos `.py`
+modificados; verificación final adicional con `git status` y comprobación de
+contenido/line endings por script.
+
+**Referencias cruzadas**: `docs/3.11_gui_design_system.md` §3–§6;
+`docs/3.11_design_interactive_tree.md` §10;
+`docs/3.11.c_design_univariate_cost_matrix.md` §6;
+`docs/3.11.d_design_context_menu_interactivity.md` §7;
+`docs/3.6.e_design_non_banking.md` §7; `docs/5.0_design_mcp.md` §9;
+`docs/4.0.1_design_categorical_exporters.md` D1;
+`docs/gui_i18n_governance_design.md` §0, §1, §3 y §7;
+`docs/validation_results_3.6.md`; `docs/design_decisions.md` §18.8;
+`docs/roadmap.md` (`## Deferred`); entrada del 02/11/2026 del propio
+`docs/audit_log.md` y commit histórico `e622bdd`.
+
+### 10/11/2026 - Mini-cierre: resolucion de dos pendientes documentales opcionales
+
+**Estado**: Completado. Solo documentacion, sin cambios de codigo. Suite 607/607 PASSED.
+
+**Contexto**: antes del commit final quedaban dos pendientes de sincronizacion
+detectados en los bloques documentales anteriores: la tabla para perfiles no
+bancarios de `docs/design_decisions.md` seguia negando capacidades ya cerradas
+y `docs/prompt_para_asistente.md` conservaba tres "proximo paso" de sub-fases
+terminadas el 15/10/2026.
+
+**Artefactos (por ruta exacta)**:
+- `docs/design_decisions.md` §0.2 (Biologist / social scientist):
+  "Multiclass targets" ❌ Phase 3.1 -> ✅ Phase 3.1/3.4;
+  "Class-imbalanced samples" ❌ Phase 3.2 -> ✅ Phase 3.2 (weighting);
+  "Neutral vocabulary" ❌ Phase 3.6.e -> ✅ Phase 3.6.e. El veredicto se
+  reformulo para no contradecir la tabla: RESEARCH permite clasificacion
+  multiclase, ponderacion y vocabulario neutro en las superficies cubiertas;
+  las limitaciones restantes son targets continuos/metricas de regresion y
+  ejemplos/documentacion especifica de dominio.
+- `docs/prompt_para_asistente.md` §5: eliminadas las frases residuales
+  "Proximo paso: Fase 3.5.b", "Proximo paso: Fase 3.5.c" y
+  "Proximo paso: Fase 3.5.d". Se conserva la narrativa historica de las
+  sub-fases 3.5.a-c; solo desaparecen las transiciones obsoletas.
+- `docs/audit_log.md`: esta entrada.
+
+**Hallazgos**: las tres filas de §0.2 describian el diseno previo a las fases
+3.1/3.2/3.4/3.6.e, no el producto actual. El veredicto tambien afirmaba que el
+builder seguia bloqueado para multiclase y que el vocabulario era siempre
+bancario; se corrigio junto con la tabla para evitar una contradiccion interna.
+La actualizacion no declara cobertura integral de regresion ni neutralizacion
+de todos los literales de la UI: remite al alcance as-built de 3.6.e.
+
+**Tests**: `python -m pytest tests -q` -> `607 passed`. Cero archivos `.py`
+modificados; verificacion con `git status`, grep de las cadenas retiradas y
+comprobacion de line endings.
+
+**Referencias cruzadas**: `docs/design_decisions.md` §0.2;
+`docs/3.6.e_design_non_banking.md` §7; `docs/prompt_para_asistente.md` §5;
+mini-cierres anteriores del 10/11/2026 y entrada del 08/11/2026 (auditoria
+documental exhaustiva).

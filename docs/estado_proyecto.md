@@ -287,7 +287,7 @@ el código y en `docs/methodology.md` §6.3.
 
 **Suite:** 460/460 PASSED.
 
-### Fase 3.11 — Rediseño Interactivo y Topología Visual 🟡 En progreso
+### Fase 3.11 — Rediseño Interactivo y Topología Visual ✅ Completada
 
 **3.11.a — Rediseño Base** ✅ Completada (24/10/2026). Implementados el
 Tema Colab (paleta light/dark con tokens QSS), las pestañas tipo Excel
@@ -489,8 +489,6 @@ Data Viewer en lugar del toggle global del panel); texto del wizard de
 Validación Cruzada sin referencias a fases internas. Decisión:
 `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md`
 entrada del 25/10/2026. Suite 477/477. Ampliación (25/10/2026, mini-cierre #3): conectores ortogonales con codo (`QGraphicsPathItem`, token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (visibles a cualquier zoom). Suite 478/478. Ampliación (25/10/2026, bloque de iteración #4-#8): Tree Map reescrito con layout abstracto desacoplado (cajas 48×30), navegación por `node_id` (`TreePanel.center_on_node`) y colores del prototipo previo (fondo oscuro fijo). Sustituye el diseño de coordenadas compartidas. Suite 478/478. Deuda diferida: paleta propia del minimapa para el tema claro (`roadmap.md` Deferred).
-**Próximo paso: recogida de feedback para la v1.0.0 estable o inicio de
-la Fase 4.0**.
 
 ### Cierre intermedio 16/10/2026
 
@@ -519,8 +517,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). Completada (23/10/2026).
 - **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
 - **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). Completada (24/10/2026).
-- **Fase 3.6.e** — Modo no-bancario extensivo: fuera del alcance de 1.0.0rc1, planificada para 1.1.0 o posterior.
-- **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática)
+- **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática). Completada (01/11/2026, fases 4.0 y 4.0.1).
 - **Fase 5** — Capa MCP. Completada (01/11/2026).
 - **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
 - **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD). Completada (02/11/2026).
@@ -626,7 +623,8 @@ habilitadas con `has_tree`; `frontend_v3/i18n.py` contiene las claves bilingües
 La tabla comparativa cumple Ctrl+C → TSV y la UI no contiene lógica analítica.
 
 **6.0.d — MCP y hardening.** `mcp_v3/tools.py` y `mcp_v3/server.py` exponen
-`score_batch` y `compare_champion_challenger`, para un total de 26 tools. El
+`score_batch` y `compare_champion_challenger`, para un total de 26 tools
+(27 desde la Fase 7.0, con `calculate_ecl`). El
 batch exige `output_path`, escribe localmente y devuelve solo resumen JSON; la
 comparación no escribe archivos. `docs/security_audit.md` §6 y el hotfix de
 `docs/audit_log.md` dejan trazada la excepción I-7 y la protección
@@ -671,32 +669,64 @@ Pendiente formal antes de 1.0.0: decisión de distribución (PyPI solo
 TreeGov/
 ├── backend_v3/ # Capa analítica pura
 ├── frontend_v3/ # Capa de presentación PySide6
-│ # (app, main_window, wizard, tree_view,
-│ # metrics_panel, reports_panel, theme, i18n)
+│ # (app, main_window, wizard, tree_view, tree_map,
+│ # data_viewer, metrics_panel, reports_panel, prune_dialog,
+│ # univariate_dialog, manual_override_dialog,
+│ # scoring_dialogs, ecl_dialog, icons, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
-├── tests/ # Suite de tests (603 tests)
+├── scripts/ # Herramientas operativas del repo (NO van en el wheel)
+│ ├── fetch_datasets.py # Descarga UCI + verificación SHA256 → data/uci
+│ ├── fetch_icons.py # Bootstrap Icons (MIT) → frontend_v3/resources/icons
+│ ├── update_readme_date.py # Sincroniza la fecha de los README (--check)
+│ └── validate_uci.py # Benchmark de 14 pares (dataset, motor) → informe
+├── tests/ # Suite de tests (607 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
-│ ├── 3.1_design_multiclass.md
-│ ├── 3.2_decisions_consolidated.md
-│ ├── 3.3_design_population_categories.md
-│ ├── 3.4_design_multiclass_crt_quest.md
-│ ├── 3.6_design_public_datasets.md
-│ ├── validation_results_3.6.md
 │ ├── api.md
 │ ├── roadmap.md
+│ ├── playbook.md
+│ ├── security_audit.md
+│ ├── scripts_design.md
+│ ├── gui_i18n_governance_design.md
 │ ├── philosophy.md
 │ ├── philosophy.es.md
 │ ├── estado_proyecto.md
 │ ├── contexto_para_nueva_sesion.md
 │ ├── prompt_para_asistente.md
+│ ├── 3.1_design_multiclass.md
+│ ├── 3.2_decisions_consolidated.md
+│ ├── 3.3_design_population_categories.md
+│ ├── 3.4_design_multiclass_crt_quest.md
+│ ├── 3.5_design_multiclass_weighted_reports.md
+│ ├── 3.6_design_public_datasets.md
+│ ├── 3.6.e_design_non_banking.md
+│ ├── 3.7_design_pre_release_fixes.md
+│ ├── 3.8_design_regulatory_attribution.md
+│ ├── 3.9_design_interactive_weighted_pruning.md
+│ ├── 3.10.a_design_ux_ui_redesign.md
+│ ├── 3.10.b_design_chaid_binning.md
+│ ├── 3.11_design_interactive_tree.md
+│ ├── 3.11_classic_tree_ui_reference.md
+│ ├── 3.11_gui_design_system.md
+│ ├── 3.11.a_design_colab_theme.md
+│ ├── 3.11.b_design_treemap_dataviewer.md
+│ ├── 3.11.c_design_univariate_cost_matrix.md
+│ ├── 3.11.d_design_context_menu_interactivity.md
+│ ├── 3.11.e_design_treemap_rewrite.md
+│ ├── 4.0_design_exports.md
+│ ├── 4.0.1_design_categorical_exporters.md
+│ ├── 5.0_design_mcp.md
+│ ├── 6.0_design_batch_scoring.md
+│ ├── 7.0_design_ifrs9.md
+│ ├── validation_results_3.6.md
 │ └── audit_log.md
 ├── archive/ # Documentos y código históricos
 ├── data/ # Datasets (solo lectura, excluido de Git)
 ├── logs/ # Logs por corrida (excluido de Git)
 ├── treegov.py # Orquestador headless
 ├── treegov_gui.py # Entry point de la GUI (Fase 2)
+├── treegov_mcp.py # Entry point del servidor MCP (console script treegov-mcp)
 ├── pyproject.toml # Empaquetado (fuente oficial de dependencias)
 ├── requirements.txt # Mínimos de trabajo (transitorio)
 ├── opencode.json # Configuración del proyecto OpenCode
@@ -800,7 +830,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 14 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 99 |
+| session_state.py | 102 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
@@ -828,12 +858,14 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | mcp_parity (backend) | 5 |
 | scoring.py (backend) | 5 |
 | champion_challenger.py (backend) | 5 |
-| scoring_dialogs.py (frontend) | 4 |
+| scoring_dialogs.py (frontend) | 10 |
 | mcp_scoring.py (backend/MCP) | 2 |
 | ecl.py (backend) | 4 |
-| ecl_dialog.py (frontend) | 3 |
+| ecl_dialog.py (frontend) | 5 |
 | mcp_ecl.py (backend/MCP) | 1 |
-| **Total** | **603** |
+| scripts (infraestructura) | 6 |
+| packaging | 4 |
+| **Total** | **607** |
 
 **Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 607/607 PASSED
 
@@ -897,16 +929,16 @@ firma digital) y publicación de 1.0.0 estable.
 - [x] **Fase 2.1.b** — CV scheme + guardrail runtime de imports backend. **Completada el 03/11/2026**: `stratified_kfold` (`backend_v3/splitting.py`), `Session.partition(scheme="cv", k=...)`, `Session.get_cv_report`, wizard con selector k, y guardrail de imports instalado en `frontend_v3/__init__.py` (B2a + B2b).
 - [x] **Publicar `treegov 1.0.0a1` en PyPI** — completado el 03/10/2026. URL: https://pypi.org/project/treegov/1.0.0a1/
 - [x] *Datasets* públicos para validación multi-dominio (Fase 3) — **Completado en Fase 3.6** con 6 datasets UCI: German Credit, Car Evaluation, Balance Scale, Breast Cancer WDBC, Iris, Blood Transfusion.
-- [ ] `requirements.txt` vs `pyproject.toml` — decidir fuente oficial.
+- [x] `requirements.txt` vs `pyproject.toml` — **Resuelto**: `pyproject.toml` es la fuente oficial de dependencias y `requirements.txt` queda como mínimos de trabajo. Los README lo declaran explícitamente ("pyproject.toml is source of truth").
 
 ### Pendientes diferidos / estructurales
 
 - [ ] `CONTRIBUTING.md` en el repo (bloqueado por revisión legal).
 - [ ] `docs/i18n/` para centralizar traducciones (cuando haya 5+ docs bilingües).
-- [ ] Mnemonics `&` en menús GUI (Fase 2.3).
-- [ ] QSettings persistencia de parámetros de gobernanza (Fase 2.1.b).
-- [ ] QThread para entrenamiento largo (Fase 2.3+).
-- [ ] Firma digital + instalador PyInstaller/Inno Setup (Fase 4).
+- [x] Mnemonics `&` en menús GUI (Fase 2.3). **Cerrado como diferido explícito**: `frontend_v3/main_window.py` documenta "Keyboard mnemonics ("&") deferred". La navegación por teclado queda fuera del alcance de 1.0.0.
+- [x] QSettings persistencia de parámetros de gobernanza (Fase 2.1.b). **Cerrado como diferido explícito**: `QSettings` solo persiste el idioma (`language`); la gobernanza vive congelada en el `params_fingerprint` del modelo y no se restaura entre sesiones.
+- [x] QThread para entrenamiento largo (Fase 2.3+). **Resuelto parcialmente por diseño**: los workers `QThread` existen para las operaciones largas de scoring (`BatchWorker`, `CCWorker` en `frontend_v3/scoring_dialogs.py`) y ECL (`ECLWorker` en `frontend_v3/ecl_dialog.py`); el entrenamiento del árbol sigue en el hilo principal.
+- [x] Firma digital + instalador PyInstaller/Inno Setup (Fase 4). **Absorbido por la decisión C1** (método de distribución), todavía abierta: ver el bloque inicial de §10.
 - [ ] Licencia comercial paralela (análisis legal si se considera).
 - [x] Sub-fase de rediseño UX del asistente, visor del árbol y panel de reportes. 8 hallazgos H1 a H8 — **Resueltos entre Fases 3.7.e y 3.10.a**: H1-H2 en 3.7.e, H3-H8 en 3.10.a, H9-H13 en 3.10.a.1.
 - [x] **Cierre de pendientes cosméticos de READMEs y philosophy** — commit 7334f65 (18/10/2026). Los tres ajustes cosméticos detectados el 17/10/2026 (mención CHAID Exhaustive, tabla solo en español, comillas tipográficas y título corregido) están cerrados. Sin cambios en backend_v3/ ni frontend_v3/; suite 422/422. Ver docs/audit_log.md entrada del 18/10/2026.

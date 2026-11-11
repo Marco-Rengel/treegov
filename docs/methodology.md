@@ -837,6 +837,63 @@ J. (1984). *Classification and Regression Trees*, Chapter 3. Wadsworth.
 > See `docs/design_decisions.md` §8.1, §8.2, §8.3 and §8.4 for the full
 > rationale of each decision.
 
+### 7.2 Stratified k-fold cross-validation (Phase 2.1.b)
+
+`backend_v3.splitting.stratified_kfold(y, k, seed)` returns `k` disjoint
+`(train_idx, val_idx)` pairs. The stratification is the same Largest
+Remainder idea as §7, applied **inside each class across the `k` folds**
+(henceforth "Hamilton-Hare in k folds"):
+
+1. Each class `c` with `n_c` rows is permuted deterministically with
+   `np.random.default_rng(seed)`.
+2. The permuted rows of class `c` are dealt round-robin into folds
+   `0, 1, …, k−1`, so fold `f` receives `⌊n_c / k⌋` or `⌈n_c / k⌉`
+   rows of that class. This deal is exactly the Hamilton-Hare allocation
+   of §7: base quota `⌊n_c / k⌋` per fold plus the `R = n_c mod k`
+   leftover rows assigned one each to folds `0..R−1` (the largest-remainder
+   tie is broken by fold index, hence deterministic).
+3. `val_idx` of fold `f` is the union of its class shares; `train_idx`
+   is its complement over `0..N−1`.
+
+Consequences, all required for a valid CV report:
+
+- **Exact coverage and disjointness.** Every row appears in exactly one
+  validation fold; `val_idx` ∪ `train_idx` = `0..N−1` per fold. No row is
+  validated twice and none is left out.
+- **Proportion preservation.** Each fold reproduces the global event rate
+  to within one row per class, which is the Hamilton-Hare guarantee of
+  §7 extended to `k` quotas instead of two.
+- **Determinism.** Same `seed` ⇒ bit-identical folds. No fold depends on
+  the order of the previous folds.
+- **Validity floor.** `k ∈ [2, 20]` and every class must have at least
+  `k` rows; otherwise `stratified_kfold` raises `ValueError` instead of
+  silently producing an empty validation fold.
+
+**Aggregation.** `Session.evaluate_oos` trains one temporary model per
+fold on `train_idx`, scores `val_idx`, and reports
+`metrics_per_fold` together with the arithmetic mean and the standard
+deviation across folds (population form, `ddof=0`, matching
+`np.std`):
+
+    metrics_mean[m] = (1/k) · Σ_f metric_f(m)
+    metrics_std[m]  = sqrt( (1/k) · Σ_f (metric_f(m) − metrics_mean[m])² )
+
+The std is the dispersion the reviewer needs to judge stability; a good
+mean with a large std is not evidence of a robust model. Only finite
+numeric fields enter the aggregate; non-numeric or non-finite fields are
+omitted from `metrics_mean` / `metrics_std` and remain visible per fold.
+
+**Final model.** The deployed tree is **not** one of the fold models: after
+CV, `Session` trains it on **100 %** of the rows (`_X_train` = all data,
+`_X_test = None`). Fold models exist only to estimate the metric
+distribution. The fingerprint records `validation_scheme="cv"` and `cv_k`,
+so a CV-trained model is never confused with a holdout one.
+
+**Citation:** Kohavi, R. (1995). A study of cross-validation and bootstrap
+for accuracy estimation and model selection. *IJCAI*, 1137–1143 (stratified
+k-fold). Hamilton-Hare per §7. See `docs/design_decisions.md` §6.1 and
+`docs/api.md` (`Session.partition(scheme="cv")`, `Session.get_cv_report`).
+
 ---
 
 ## 8. Validation metrics
@@ -958,7 +1015,7 @@ ignoring the OOT cohort bias).
 
 > See `docs/design_decisions.md` §13.10 for the full decision rationale.
 
-### 8.6. Asymmetric cut optimization (IFRS 9)
+### 8.6 Asymmetric decision threshold (Business decision, not IFRS 9 provision)
 
 Expected loss function:
 
@@ -969,6 +1026,23 @@ where:
 - C_FP = NIM (false-positive cost).
 
 Search for θ* = argmin_θ E[Loss](θ) via grid search.
+
+**Scope: this is a cost optimisation, not an IFRS 9 prescription.** θ*
+minimises the institution's own misclassification cost; it is **not** a
+provision, an ECL measurement, nor a threshold that IFRS 9 requires. IFRS 9
+prescribes how to measure expected credit losses (see §9 below); it does not
+prescribe the cut-off at which a model classifies an exposure as bad. The
+cost matrix (`C_FN`, `C_FP`) is an input of the business owner, not a
+regulatory constant, and any θ* is only as defensible as those two values.
+
+Consequences:
+- Changing `C_FP` (for example a new NIM assumption) moves θ* without
+  touching the model, the data or the ECL calculation. θ* is not part of
+  the model fingerprint.
+- θ* must be documented with its cost matrix and re-approved whenever the
+  business inputs change; an MRM reviewer will ask for both.
+- Do not report θ* as "the IFRS 9 threshold". The correct label is
+  "cost-optimal threshold under the declared cost matrix".
 
 ### 8.7 PSI with clip ε=1e-4 and no renormalization
 
@@ -1098,17 +1172,11 @@ is documented here.
       A_ji = P(score_j of a random class-j member > score_j of a random class-i member) + 0.5 * P(tie)
       pair_contribution(i, j) = (A_ij + A_ji) / 2
 
-    M = mean of pair_contribution(i, j) over all K*(K-1)/2 pairs
+    M = (1 / (K*(K-1)/2)) * sum_{i<j} (A_ij + A_ji) / 2
     auc = M
     gini = 2*M - 1
 
-    M = (1 / (K*(K-1)/2)) * sum_{i<j} (A_ij + A_ji) / 2
-    Gini = 2*M - 1
-
-    where:
-      K  = number of classes
-      A_ij = P(score_i of class i > score_i of class j) + 0.5 * P(tie)
-      A_ji = P(score_j of class j > score_j of class i) + 0.5 * P(tie)
+    where K = number of classes.
 
 The per-pair AUCs use the same direct pair-counting kernel as the
 binary path (concordant = 1, tied = 0.5, discordant = 0; with weights,
@@ -1280,6 +1348,82 @@ untouched.
 **Citation:** Breiman et al. (1984), *Classification and Regression
 Trees* (per-class error decomposition). Decision D2, D3, D13, D19,
 D20; see `docs/3.5_design_multiclass_weighted_reports.md` §3 and §5.
+
+---
+
+## 9. Simplified IFRS 9 / ECL and deterministic staging (Phase 7.0)
+
+`backend_v3.ecl.calculate_ecl` implements a **single-scenario, single-period**
+expected credit loss calculation. It is anchored to IFRS 9, Section 5.5
+(impairment), and is deliberately narrower than a full accounting engine.
+
+**Inputs.** Required columns: `exposure_id`, `ead`, `lgd`, `days_past_due`,
+`pd_initial`, plus the PD column named by `pd_column` (default `pd_current`).
+Optional: `is_default` (booleans or 0/1; absent ⇒ all `False`) and
+`pd_lifetime`. Validation is per exposure and fails loudly: `ead ≥ 0`,
+`lgd ∈ [0, 1]`, `days_past_due ≥ 0`, PD columns finite and in `[0, 1]` with
+no missing values.
+
+**ECL formula.**
+
+    ECL = PD × LGD × EAD                        (generic form)
+
+    ECL_12m      = PD_12m      × LGD × EAD × d
+    ECL_lifetime = PD_lifetime × LGD × EAD × d
+
+    d = 1                       if eir is None
+    d = 1 / (1 + EIR)           if eir is not None   (EIR > −1, finite)
+
+    total_ecl_12m      = Σ_exposures ECL_12m        (math.fsum)
+    total_ecl_lifetime = Σ_exposures ECL_lifetime   (math.fsum)
+
+The discount factor `d` is a **one-period** simplification: it discounts the
+whole horizon with a single factor instead of a multi-period amortised-cost
+schedule. `ECLConfig(eir=None)` disables discounting. `pd_lifetime` absent ⇒
+the 12-month PD is reused and an explicit `UserWarning` is emitted, so a
+reviewer can see that the lifetime figure is an approximation.
+
+**Staging rules (deterministic, evaluated top-down).**
+
+| Order | Stage | Condition |
+|---|---|---|
+| 1 | **Stage 3** | `days_past_due > 90` **or** `is_default` |
+| 2 | **Stage 2** | `days_past_due > 30` **or** `pd_current > 2 × pd_initial` |
+| 3 | **Stage 1** | everything else |
+
+The order matters: an exposure with `days_past_due = 120` and a default flag
+is Stage 3, not Stage 2. There is no fitting, no simulation and no random
+component: the same input CSV always yields the same stages, the same
+per-exposure rows and the same totals. The input DataFrame is never mutated.
+
+**Outputs.** `ECLRow` per exposure (`exposure_id`, `stage`, `pd_12m`,
+`pd_lifetime`, `lgd`, `ead`, `ecl_12m`, `ecl_lifetime`) and an `ECLSummary`
+with `total_ecl_12m`, `total_ecl_lifetime` and `stage_counts` in Stage 1/2/3
+order. The Session facade (`Session.calculate_ecl`) returns only the bounded
+summary: the per-exposure detail is discarded so the MCP channel does not
+leak exposure-level data.
+
+**Scope limits — what this is not.**
+
+- Not a multi-scenario model: no probability-weighted macroeconomic
+  scenarios, no forward-looking overlay.
+- Not a multi-period schedule: one discount factor, no year-by-year
+  amortisation or prepayment modelling.
+- The Stage 2 trigger `pd_current > 2 × pd_initial` is a **documented
+  simplification** of the significant-increase-in-credit-risk test, not the
+  IFRS 9 text.
+- The accounting PD is supplied by the caller and receives **no** regulatory
+  floor: the Basel PD floor of §6.3 is a prudential parameter and must not
+  migrate silently into an accounting provision (see
+  `docs/design_decisions.md` §22.2).
+- Passing these checks does **not** certify IFRS 9 compliance. Calibration,
+  default definition, staging policy and *point-in-time* adequacy remain the
+  institution's responsibility.
+
+**Citation:** IFRS 9 *Financial Instruments* (IASB), Section 5.5 —
+Impairment. See `docs/design_decisions.md` §22.1 and §22.2; `docs/api.md`
+(`backend_v3.ecl`, `Session.calculate_ecl`); `docs/security_audit.md` §0 for
+the sensitivity of the resulting artefacts.
 
 ---
 
