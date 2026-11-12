@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 08/11/2026
+**Última actualización:** 11/11/2026
 
 ---
 
@@ -91,98 +91,94 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 5. Estado actual del proyecto
 
-- **Fases 0 a 3.0:** completadas y cerradas.
-  - 2.3.a/b/c: ✅
-  - 2.3.d Backend (reporting.py + tests): ✅
-  - **2.3.e.1 Normalización de semáforos:** ✅ (27/09/2026)
-  - **2.3.e.2 Claves i18n por estado:** ✅ (29/09/2026)
-  - **2.3.e.3 Tokens QSS semánticos:** ✅ (29/09/2026)
-  - **2.3.e.4 MetricsPanel funcional:** ✅ (29/09/2026)
-  - **2.3.e.5 Cableado MainWindow ↔ MetricsPanel:** ✅ (29/09/2026)
-  - **2.3.f Tests E2E + cierre:** ✅ (29/09/2026)
+**Estado vigente (al 11/11/2026).** Fases 0 a 7 cerradas —la última, la
+7.0 (IFRS 9 / ECL), el 02/11/2026— y backlog post-Fase 7 cerrado salvo la
+decisión de distribución. La suite está en **607/607 PASSED** (08/11/2026)
+y la release vigente es **1.0.0rc6**, publicada en PyPI y verificada con
+hashes e instalación en un *venv* aislado. El registro
+`mcp_v3.tools.TOOLS` expone **27 tools**. Próximo paso: revisión del
+aplicativo en pantalla real (CV con *datasets* grandes, iconos SVG en
+tema oscuro, arranque real en Windows nativo, uso prolongado); después,
+decisión del método de distribución (C1) y publicación de 1.0.0 estable
+en PyPI, ambas pendientes de esa revisión. Herramienta activa: OpenCode
+v2.2.5 con OpenCode Zen (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free),
+Gemini como alternativa y Moonshot Kimi K3.1 Pro como comodín de pago;
+Aider 0.86.2 en `pipx` como respaldo documentado.
+
+**Narrativa histórica de fases cerradas.** El detalle sub-fase por
+sub-fase, con sus conteos de suite y fechas de cierre, vive en
+`docs/audit_log.md`; aquí se conserva solo un resumen de cada fase mayor.
+
 - **Fase 2.3 (panel OOS/OOT):** completa y cerrada (29/09/2026).
-- **Fase 2.4 (Reportes + integración):** completa y cerrada (03/10/2026).
-- **Fase 3.0 (cierre de zona gris documental + 4 parámetros canónicos):**
-  completa y cerrada (04/10/2026).
-- **Fase 3.1 (multiclase):** ✅ completa y cerrada (09/10/2026). Las 6
-  sub-fases (3.1.a a 3.1.f) implementadas y testeadas: capa profunda,
-  sesión, bloqueos downstream, wizard multiclase y badge/botón de
-  reversión en MetricsPanel.
-- **Fase 3.2 (ponderación por muestra):** completada 10/10/2026. 8
-  sub-fases (a-h). Suite 346/346.
-- **Suite de tests:** **607/607 PASSED** (08/11/2026). Fases 4.0, 4.0.1,
-  5.0, 6.0 y 7.0 cerradas. La Fase 6 incorpora batch scoring atómico por
-  chunks, comparación Champion-Challenger sobre población común, dos diálogos
-  GUI y las tools MCP de scoring; la **Fase 7.0** añade el cálculo ECL
-  simplificado (PD × LGD × EAD, descuento 1/(1+EIR) y staging determinista
-  1/2/3) en backend, diálogo GUI y la tool MCP `calculate_ecl`. El registro
-  `mcp_v3.tools.TOOLS` expone **27 tools**. Diseño as-built:
-  `docs/6.0_design_batch_scoring.md` §6 y `docs/7.0_design_ifrs9.md` §6;
-  contratos: `docs/design_decisions.md` §21 y §22.
-
-**Fase 3.3 (Categorías de población): ✅ completa y cerrada (11/10/2026).**
-Las 5 sub-fases (3.3.a a 3.3.e) implementadas y testeadas: filtro *opt-in*
-declarado en `fix_spec`, propagación por toda la *pipeline*, wizard con
-combo y tabla de valores OK, tests E2E. Invariante C1: sin
-`population_col`, comportamiento idéntico al pre-3.3. Suite 384/384.
-
-**Fase 3.4 (multiclass C&RT y QUEST): ✅ cerrada 12/10/2026.** 3.4.b abrió QUEST a K ≥ 3 con F de K grupos + barrido de Gini para Etapa 2. Diseño aprobado en `docs/3.4_design_multiclass_crt_quest.md`. Las seis decisiones de diseño auditadas: Etapa 1 QUEST con F-test de K grupos; Etapa 2 QUEST con barrido de Gini (coherente con C&RT); Brown-Forsythe con K grupos; retirada completa del bloqueo al cerrar 3.4.b; nueva subsección §3.8 en `methodology.md`.
-
-**Fase 3.5.a (multiclase en validation.py): ✅ cerrada 15/10/2026.**
-Primera sub-fase de la Fase 3.5. Abre compute_oos_metrics a K ≥ 2 y
-compone con el modo ponderado de la Fase 3.2. Tres decisiones nuevas
-(D15 contrato de entrada 1D/2D, D16 HL Optional + validaciones
-saltadas, D17 campos ks_pairs / auc_pairs / roc_per_class). Suite
-416/416.
-
-**Fase 3.5.b (multiclase en reporting.py): ✅ cerrada 15/10/2026.**
-Segunda sub-fase de la Fase 3.5. Abre build_gains_table y
-build_classification_matrix a K ≥ 2 con dispatch por K. Tres decisiones
-nuevas (D18 _validated_routed con n_classes, D19 import directo +
-DTO ClassificationMatrix superset, D20 n_groups adaptativo con guarda
-n<15). Suite 416/416.
-
-**Fase 3.5.c (Session multiclase): ✅ cerrada 15/10/2026.** Tercera
-sub-fase de la Fase 3.5. Desbloquea evaluate_oos, evaluate_oot y
-get_classification_matrix a nivel Session. Traducción de etiquetas al
-orden interno dentro de Session (helper privado
-_translate_y_to_internal). stability.py no se toca. Suite 416/416.
-
-**Fase 3.5.d (cierre de la familia 3.5): ✅ cerrada 15/10/2026.**
-Última sub-fase de la Fase 3.5. Auditoría de los cuatro archivos de
-frontend (cero cambios obligatorios; tres cosméticos diferidos a H4),
-subsecciones §8.11-§8.14 en methodology.md, cierre documental.
-Fase 3.5 completa: *pipeline* de validación/reporte/monitoreo admite
-K ≥ 2 con ponderación. Suite 416/416. Próximo paso: Fase 3.6
-(validación con *datasets* públicos).
-
-**Cierre intermedio 16/10/2026.** Cerrados los tres cosméticos del ReportsPanel que la Fase 3.5.d había diferido a H4 (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente Aider/build/twine duplicado en el .venv del proyecto (ver audit_log). Sin cambios de código analítico. Próximo paso: diseño de Fase 3.6.
-
-
-**Fase 3.8 (Corrección regulatoria): ✅ Cerrada (19/10/2026).**
-Se corrigió la atribución del PD floor: la referencia es BCBS CRE 32.4
-(0.05% para corporativos, bancos y retail) y no CRE 20.39 / Basel II
-(0.03%). El default de `pd_floor` pasó a `0.0005`. Los umbrales de PSI/CSI
-fueron reatribuidos a Siddiqi (2006). El informe UCI se regeneró con
-14 pares (dataset, motor). Suite: 435/435. Release `1.0.0rc2` publicada.
-
-- **Herramienta:** OpenCode v2.2.5 + OpenCode Zen (principal), Gemini (alternativa), Moonshot Kimi K3.1 Pro (comodín de pago)
-  Aider 0.86.2 como respaldo documentado.
-- **Anomalía de consumo de tokens:** resuelta el 10/10/2026 (causa
-  raíz: typo `moonshot` → *fallback* caro; agravantes: plugins fantasma
-  y TTL de caché de 5 min). Fase 3.2 cerrada el 10/10/2026
-  (ponderación por muestra, 8 sub-fases). Ver `docs/audit_log.md`
-  entrada del 10/10/2026.
-- **GUI verificada end-to-end (13/10/2026):** primera apertura en pantalla real con dataset sintético. Flujo completo funcional (cargar, asistente, entrenar, evaluar OOS, reportes, export HTML, tema oscuro). 8 hallazgos UX diferidos en `docs/roadmap.md`.
-
-**Estado al 08/11/2026:** Fases 0 a 7 cerradas. Backlog post-Fase 7
-cerrado. Suite 607/607 PASSED. Release 1.0.0rc6 publicada en PyPI
-(verificada con hashes e instalación en venv aislado).
-Próximo paso: revisión del aplicativo en pantalla real (CV con
-datasets grandes, iconos SVG en tema oscuro, arranque real en
-Windows nativo, uso prolongado). La decisión de distribución (C1) y
-la publicación de 1.0.0 estable en PyPI quedan pendientes de esa
-revisión.
+  Semáforos normalizados, claves i18n por estado, tokens QSS semánticos y
+  MetricsPanel funcional cableado a MainWindow, con tests E2E.
+- **Fase 2.4 (reportes e integración):** completa y cerrada (03/10/2026).
+  Backend `GainsTable` + `ClassificationMatrix`, métodos de Session, panel
+  funcional, cableado en MainWindow y export HTML.
+- **Fase 3.0 (cierre de zona gris documental):** completa y cerrada
+  (04/10/2026), con los 4 parámetros canónicos.
+- **Fase 3.1 (multiclase):** completa y cerrada (09/10/2026). Seis
+  sub-fases: capa profunda, sesión, bloqueos downstream, wizard multiclase
+  y badge/botón de reversión en MetricsPanel.
+- **Fase 3.2 (ponderación por muestra):** cerrada el 10/10/2026 en 8
+  sub-fases. La anomalía de consumo de tokens de esa sesión se resolvió el
+  mismo día (ver `docs/audit_log.md`, entrada del 10/10/2026).
+- **Fase 3.3 (categorías de población):** completa y cerrada (11/10/2026).
+  Filtro *opt-in* declarado en `fix_spec` y propagado por toda la
+  *pipeline*, wizard con combo y tabla de valores OK; invariante C1
+  preservado (sin `population_col`, comportamiento idéntico al pre-3.3).
+- **Fase 3.4 (multiclass C&RT y QUEST):** cerrada (12/10/2026). QUEST
+  abierto a K ≥ 3 con F de K grupos y barrido de Gini en Etapa 2, y
+  retirada completa del bloqueo al cierre.
+- **Fase 3.5 (reportes multiclase y ponderados):** cerrada (15/10/2026) en
+  cuatro sub-fases. `compute_oos_metrics`, `build_gains_table`,
+  `build_classification_matrix` y la capa Session admiten K ≥ 2 con
+  ponderación; el cierre intermedio del 16/10/2026 resolvió tres cosméticos
+  del ReportsPanel.
+- **Fase 3.6 (validación con *datasets* públicos):** cerrada (16/10/2026).
+  Seis *datasets* UCI en cuatro dominios, script de descarga con SHA256,
+  fixtures versionadas y tests de integración.
+- **Fase 3.6.e (modo no-bancario):** completada (25/10/2026). Terminología
+  neutral dinámica vía `tr_term`; la validación multi-dominio extensiva
+  (marketing, ecología) quedó diferida y fuera del alcance de 1.0.0.
+- **Fase 3.7 (cierre de la Fase 3 + `1.0.0rc1`):** cerrada (18/10/2026).
+  Auditoría de seguridad y privacidad, simetrización del KS por pares en
+  multiclase, exposición pública de `min_child_weight`, ampliación de tests
+  UCI con CHAID y QUEST y correcciones pre-release.
+- **Fase 3.8 (corrección regulatoria):** cerrada (19/10/2026). Atribución
+  del PD floor a BCBS CRE 32.4 (0,05 %), default `pd_floor = 0.0005` y
+  umbrales PSI/CSI reatribuidos a Siddiqi (2006); release `1.0.0rc2`.
+- **Fase 3.9 (poda interactiva y ponderada):** cerrada (20/10/2026). Poda
+  coste-complejidad ponderada en `pruning.py` (`w_events`),
+  `Session.get_prune_sequence()` y `PruneDialog` cableado en el menú Model.
+- **Fase 3.10 (rediseño UI y CHAID continuas):** cerrada en dos sub-fases.
+  3.10.a resolvió los hallazgos UX H3-H8 (22/10/2026); 3.10.b alineó CHAID
+  con predictores continuos mediante binning automático por deciles y
+  `bin_edges` en `SplitConfig` (23/10/2026), con la interactividad visual
+  diferida a la Fase 3.11.
+- **Fase 3.11 (rediseño interactivo y topología visual):** cerrada
+  (25/10/2026) en cuatro sub-fases más hotfix visual: tema Colab, layout
+  tipo Excel, wizard redimensionado, nodos HTML, Tree Map con Data Viewer,
+  árboles univariados, matriz de costos y menú contextual con prune branch.
+  La reescritura Clean Room del Tree Map llegó con 3.11.e (31/10/2026).
+- **Fase 4.0 (exportación a producción SQL / Python / Markdown):** cerrada
+  (01/11/2026). Exportadores `sql`, `python` y `markdown`, wrappers en
+  Session y tres acciones en el menú Archivo.
+- **Fase 4.0.1 (política de categorías no vistas):** cerrada (02/11/2026).
+  Los tres exportadores implementan `"error"`, `"exclude"` (default) y
+  `"majority"` con paridad SQL/Python/Markdown.
+- **Fase 5.0 (capa MCP):** cerrada (01/11/2026) en cuatro sub-fases:
+  esqueleto *headless*, servidor stdio, paridad E2E y cierre de la capa.
+- **Fase 6.0 (batch scoring y Champion-Challenger):** cerrada (02/11/2026).
+  Scoring por *chunks* con escritura atómica, comparación Champion-Challenger
+  sobre población común, dos diálogos GUI y las tools MCP de scoring.
+- **Fase 7.0 (IFRS 9 / ECL):** cerrada (02/11/2026). ECL simplificado
+  PD × LGD × EAD con descuento 1/(1+EIR), staging determinista 1/2/3,
+  `ECLDialog` y la tool MCP `calculate_ecl` (27 tools en total).
+- **Verificación GUI (13/10/2026):** primera apertura en pantalla real con
+  *dataset* sintético; flujo completo funcional (cargar, asistente,
+  entrenar, evaluar OOS, reportes, export HTML, tema oscuro). Los 8
+  hallazgos UX se planificaron en `docs/roadmap.md`.
 
 ---
 

@@ -8151,3 +8151,92 @@ comprobacion de line endings.
 `docs/3.6.e_design_non_banking.md` §7; `docs/prompt_para_asistente.md` §5;
 mini-cierres anteriores del 10/11/2026 y entrada del 08/11/2026 (auditoria
 documental exhaustiva).
+
+### 11/11/2026 — Mini-cierre documental: cierre de zonas grises de auditoría (Bloque A)
+
+**Estado**: ✅ Cerrada. Suite 607/607 PASSED (sin cambios de código; solo
+documentación).
+
+**Modelo**: sesión estratégica de auditoría documental; edición manual y
+vía OpenCode según disponibilidad.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: auditoría cruzada de los documentos canónicos tras el cierre
+de la Fase 7.0 y la publicación de 1.0.0rc6, para detectar zonas grises
+documentales residuales antes de una nueva sesión de trabajo. Inventario
+inicial de 19 candidatas; verificación empírica contra el working tree y
+los archivos adjuntos por el autor; 13 confirmadas, 1 falsa
+(`.treegovrules` no truncado, verificado con `Get-Content | Select-Object
+-Last 15`), 4 ya resueltas o descartadas por convención documentada, 1
+opcional cosmética.
+
+**Zonas grises cerradas en este bloque**:
+
+- ZG-1: fecha de cabecera de `estado_proyecto.md`,
+  `contexto_para_nueva_sesion.md` y `prompt_para_asistente.md`
+  (08/11 → 11/11). Los tres documentos citaban el 08/11 como última
+  actualización pese a los cuatro mini-cierres del 10/11/2026.
+- ZG-2: `prompt_para_asistente.md` §5 mezclaba "Suite 346/346", "Suite
+  416/416" y "Suite 607/607" sin jerarquía. Reestructurada en "Estado
+  vigente (al 11/11/2026)" + "Narrativa histórica de fases cerradas", con
+  remisión al `audit_log` para el detalle sub-fase por sub-fase.
+- ZG-4: dos deudas huérfanas en `contexto_para_nueva_sesion.md`
+  ("Fase 2.4.e screenshot", "Fase 3.10.b Cortes candidatos") no
+  registradas en `roadmap.md` §Deferred. Añadidas al roadmap; el bloque de
+  "Deudas diferidas" del documento de contexto ahora remite explícitamente
+  al roadmap.
+- ZG-5: las líneas surrogate punteadas
+  (`3.11.a_design_colab_theme.md` §7 punto 3) se difirieron a 3.11.b/d y
+  nunca se implementaron; no estaban registradas. Añadidas a `roadmap.md`
+  §Deferred.
+- ZG-14: `.treegovrules` regla #4 listaba siete documentos de cierre
+  mientras que la checklist (a)-(h) lista ocho. Añadido
+  `docs/design_decisions.md` a la regla #4. También añadida una
+  verificación mecánica previa al commit con scope acotado: un
+  `rg`/`Select-String` sobre los documentos de estado vigente
+  (`contexto_para_nueva_sesion`, `prompt_para_asistente`, READMEs,
+  `AGENTS.md`, `CONVENTIONS.md`, `.treegovrules`) no debe devolver hits de
+  cadenas obsoletas del bloque, salvo en notas históricas explícitamente
+  etiquetadas. Los documentos históricos y de diseño (`audit_log`,
+  `estado_proyecto`, `roadmap`, y todos los `docs/X.Y_*design*.md` /
+  `docs/X.Y_*decisions*.md`) conservan sus conteos de época como registro
+  append-only y quedan exentos. Un hit residual fuera de una nota histórica
+  etiquetada bloquea el commit.
+- ZG-15: `estado_proyecto.md` §10 marcaba `[x]` "OpenCode 1.19.0 + Kimi
+  K3" como herramienta activa, contradiciendo §1 del mismo documento
+  ("OpenCode v2.2.5 + OpenCode Zen"). Casillas actualizadas.
+- ZG-19 (opcional, cosmética): `.treegovrules` item 1 de excepciones
+  conservaba el paréntesis final "(cuando se escriba)" ausente en
+  `AGENTS.md`. Sincronizado.
+
+**Zonas grises diferidas al Bloque B** (Media) y **Bloque C** (Baja):
+ZG-8 (`roadmap §Releases` omite rc3/rc4), ZG-10 (PDF de referencia en
+`3.11_design_interactive_tree.md` §8 sin remitir al documento neutro),
+ZG-11 (`prompt_para_asistente` §6 conserva pasajes de OpenCode 1.18.35 sin
+nota de actualización), ZG-12 (título "Deferred" stale en
+`design_decisions.md` §13.7), ZG-16 (ítems sin marcar RESUELTO en
+`3.11.a_design_colab_theme.md` §7), ZG-17 (`.gitignore` duplica
+`.venv_3.14_backup/`), ZG-18 (`package.json`/`package-lock.json`
+residuales en el working tree). Se abordan en el siguiente bloque
+documental, sin fase asignada.
+
+**Archivos tocados (por ruta exacta)**:
+
+- `.treegovrules`
+- `docs/estado_proyecto.md`
+- `docs/contexto_para_nueva_sesion.md`
+- `docs/prompt_para_asistente.md`
+- `docs/roadmap.md`
+- `docs/audit_log.md` (esta entrada)
+
+**Tests**: `python -m pytest tests -q` → `607 passed` (documentación pura;
+sin cambios de código en `backend_v3/`, `frontend_v3/` ni `mcp_v3/`).
+
+**Referencias cruzadas**: `.treegovrules` (regla #4 y #7, checklist de 8
+documentos, verificación rg previa al commit); `AGENTS.md` (sincronización
+de protocolos, mini-cierre); `docs/playbook.md` Skill 2 (`/cierre_fase`) y
+Skill 5 (`/rafaga_estricta`); `docs/audit_log.md` entradas del 10/11/2026
+(mini-cierres previos que motivaron este bloque);
+`docs/contexto_para_nueva_sesion.md` (bloque "Deudas diferidas"
+reestructurado).

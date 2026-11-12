@@ -788,6 +788,35 @@ falle ante imports de PySide6/Qt. Impacto: bajo (la capa es headless por
 diseño y el paquete no arrastra Qt), pero una regresión futura solo la
 detectaría la revisión manual.
 
+### ⏳ Screenshot automatizado de la GUI
+
+Deuda detectada en el cierre de la Fase 2.4 (03/10/2026) y nunca
+registrada en este roadmap. La captura del panel de reportes en pantalla
+real se difirió a una sub-fase 2.4.e que no llegó a planificarse.
+Impacto: bajo (los tests E2E cubren el flujo; falta solo evidencia visual
+automatizada para el informe de release). Cierre propuesto: script
+*headless* con `QT_QPA_PLATFORM=offscreen` que capture el panel principal
+a PNG; se puede ejecutar en el bloque de release de la 1.0.0 estable.
+
+### ⏳ Panel inferior de cortes candidatos (WOE / IV / Odds)
+
+Diseño original en `docs/3.10.a_design_ux_ui_redesign.md` §0.2. Requiere
+extender `TreeNode` para almacenar el historial de splits candidatos
+(top-N por nodo) y un panel inferior en la GUI que los renderice. Detalle
+en la referencia citada. Impacto: medio (mejora la interpretabilidad del
+modelo para auditoría MRM, pero no bloquea ninguna fase cerrada). Sin
+fase asignada.
+
+### ⏳ Líneas surrogate punteadas en el canvas
+
+`docs/3.11.a_design_colab_theme.md` §7 punto 3 registra que las líneas de
+surrogate se difirieron a 3.11.b/d y nunca se implementaron (3.11.b y
+3.11.d se cerraron el 25/10/2026; 3.11.e reescribió el TreeMap sin
+abordarlas). Los surrogates existen en backend
+(`backend_v3/crt_engine.py`), pero el canvas dibuja todas las aristas con
+pen sólido `BORDER`. Impacto: bajo (visual; los surrogates siguen siendo
+consultables vía `Session`). Sin fase asignada.
+
 ## Recorded architectural decisions
 
 - **GUI**: PySide6 (not Streamlit). Reason: banking data confidentiality

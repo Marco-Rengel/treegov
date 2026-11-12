@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 08/11/2026
+**Fecha de última actualización:** 11/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -299,9 +299,11 @@ SVG incorporados. Próxima decisión: método de distribución (C1), y
 después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc6
 queda vigente hasta esa decisión.
 
-**Deudas diferidas:**
+**Deudas diferidas (registradas en `docs/roadmap.md` §Deferred):**
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
-- Fase 3.10.b (Cortes candidatos en panel inferior, requiere backend). Ver `docs/roadmap.md`.
+- Fase 3.10.b — panel inferior de cortes candidatos (WOE/IV/Odds), requiere backend nuevo.
+- Líneas surrogate punteadas en el canvas (3.11.a §7 punto 3, no implementadas en 3.11.b/d/e).
+- Paleta propia del Tree Map para el tema claro (bloque de iteración #4-#8, sustituido por 3.11.e; el minimapa actual sigue `PALETTES`).
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.

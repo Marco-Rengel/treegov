@@ -50,8 +50,9 @@
    closes (commit pushed, suite green), the update of
    docs/audit_log.md, docs/roadmap.md, docs/estado_proyecto.md,
    docs/contexto_para_nueva_sesion.md, docs/prompt_para_asistente.md,
-   the README pair (README.md / README.es.md), and docs/api.md
-   happens IN THE SAME work block, never in a later session.
+   the README pair (README.md / README.es.md), docs/api.md, and
+   docs/design_decisions.md happens IN THE SAME work block, never in a
+   later session.
    Exceptions: provider outage (504/timeout, documented on return)
    or a one-line trivial change consolidated into the block entry.
 5. **Audit consumers before changing public function signatures.** When a function gains mandatory parameters, every consumer of that function must be found and adapted in the SAME work block. Not in the next sub-phase. Rationale: the 15 avoidable failures of Phase 3.3.d came from not auditing the `_cfg()` helpers of the E2E tests before changing `_train_pipeline`.
@@ -72,6 +73,21 @@ expanded to 8 documents on 20/10/2026 to enforce narrative depth and API sync):
 (g) docs/api.md: public API surface.
 (h) docs/design_decisions.md: new entry if the change introduced a new default or altered an API contract.
 Any sub-phase whose closure leaves any of the eight out of sync is not considered closed.
+
+Verificación mecánica previa al commit: un `rg` (o `Select-String`) sobre
+los documentos de estado vigente —`docs/contexto_para_nueva_sesion.md`,
+`docs/prompt_para_asistente.md`, `README.md`, `README.es.md`,
+`AGENTS.md`, `CONVENTIONS.md`, `.treegovrules`— de las cadenas obsoletas
+del bloque (fecha anterior, conteo de suite anterior, versión anterior,
+nombre de herramienta anterior) no debe devolver hits, salvo en notas
+históricas explícitamente etiquetadas como tales (párrafos con
+"Histórico:", "combinación previa", "anterior a"). Los documentos
+históricos y de diseño (`docs/audit_log.md`, `docs/estado_proyecto.md`,
+`docs/roadmap.md`, y todos los `docs/X.Y_*design*.md` /
+`docs/X.Y_*decisions*.md`) conservan sus conteos de época como registro
+append-only y quedan exentos del `rg`. Un hit residual en los documentos de
+estado vigente, fuera de una nota histórica etiquetada, indica
+sincronización incompleta y bloquea el commit.
 
 El flujo de trabajo está estandarizado en `docs/playbook.md`. Es de lectura obligatoria antes de iniciar una fase o generar prompts de código.
 
@@ -156,7 +172,7 @@ No basta con mencionar el cambio en la conversación, en el mensaje de commit o 
 4. **Verificación en una sola dirección.** La regla "verificación empírica sobre obediencia ciega" aplica en ambas direcciones: el humano verifica al agente con `pytest`, `git status` y `git diff`; el agente (y el asistente estratégico) verifica al humano contra el working tree, `git log` y los documentos. Ninguno de los dos lados del par humano-IA es infalible; el árbitro es el ground truth, no la autoridad de quien escribe.
 5. **Correcciones post-cierre sin entrada.** El cierre de una sub-fase está cubierto por la regla "Phase closure documentation: never deferred". Las correcciones que ocurren FUERA de un cierre de sub-fase (post-cierre, resolución de deuda diferida, saneamiento documental) no estaban cubiertas hasta la fecha. Esta regla las cubre.
 
-**Excepciones.** Solo dos, y ambas deben quedar registradas en la propia entrada (cuando se escriba):
+**Excepciones.** Solo dos, y ambas deben quedar registradas en la propia entrada:
 
 1. Indisponibilidad del proveedor de IA (504/timeout/quota) que impida redactar la entrada en el mismo bloque. La entrada se redacta en cuanto el servicio vuelva, con nota explícita de la excepción.
 2. Cambio trivial de una línea consolidado en una entrada de bloque mayor. La entrada consolidada debe nombrar el cambio trivial y su archivo.

@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 08/11/2026 (backlog post-Fase 7 cerrado; suite 607/607; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 11/11/2026 (mini-cierre documental del 10/11/2026 consolidado; suite 607/607; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -919,8 +919,8 @@ firma digital) y publicación de 1.0.0 estable.
 
 ### Pendientes técnicos
 
-- [x] **Decisión de proveedor de IA** — migrado a Moonshot AI directo el 03/10/2026. Ver `audit_log.md`.
-- [x] **Herramienta activa de desarrollo** — OpenCode 1.19.0 + Kimi K3 vía Moonshot AI desde el 09/10/2026 (con Aider como respaldo en pipx). Ver `audit_log.md`.
+- [x] **Decisión de proveedor de IA** — vigente OpenCode v2.2.5 + OpenCode Zen (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Histórico: NVIDIA NIM → Moonshot AI directo (03/10/2026) → OpenCode Zen (01/11/2026). Ver `audit_log.md`.
+- [x] **Herramienta activa de desarrollo** — OpenCode v2.2.5 + OpenCode Zen (multi-proveedor) desde el 01/11/2026 (Aider 0.86.2 como respaldo en pipx). Ver `audit_log.md`.
 - [x] **Fase 2.4** — Reportes + integración. Completada el 03/10/2026.
 - [x] **Fase 3.0** — Cierre de zona gris documental + 4 parámetros canónicos. Completada el 04/10/2026.
 - [x] **Fase 3.1** — Multiclase (6 sub-fases a-f). Completada el 09/10/2026.
