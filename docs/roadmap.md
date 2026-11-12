@@ -882,6 +882,17 @@ consultables vía `Session`). Sin fase asignada.
   junto con el modo `"exclude"` y el forwarding de `unseen_policy` en los
   wrappers. Commit `ab8849a`; tag `v1.0.0rc5`. Suite: 537/537.
   URL: https://pypi.org/project/treegov/1.0.0rc5/
+- **v1.0.0rc3** (21/10/2026) — Release candidate. Subida con los cambios de
+  D13 (ponderación de métricas en la Gains Table binaria); sigue disponible
+  en PyPI y no fue yanked, y un intento posterior de sobreescribirla falló
+  por inmutabilidad, por lo que el siguiente contenido se publicó como
+  `rc4`. (fechas divergentes entre fuentes; ver audit_log)
+- **v1.0.0rc4** (20/10/2026) — Release candidate. Publica el cierre de la
+  Fase 3.9 (poda interactiva y ponderada): `PruneDialog` con la secuencia
+  de poda, cableado en el menú Model, corrección del bug latente de i18n
+  `tree_leaf_reason_podado` y test E2E del flujo. Suite: 438/438. El
+  contenido salió como `rc4` por el conflicto de inmutabilidad con `rc3`.
+  Tag `v1.0.0rc4`.
 - **v1.0.0rc2** (19/10/2026) — Release candidate. Corrección de la
   atribución regulatoria del PD floor: referencia y valor. Default
   `pd_floor` pasa de 0.0003 a 0.0005 (BCBS CRE 32.4, no soberano).

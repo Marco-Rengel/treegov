@@ -8240,3 +8240,96 @@ Skill 5 (`/rafaga_estricta`); `docs/audit_log.md` entradas del 10/11/2026
 (mini-cierres previos que motivaron este bloque);
 `docs/contexto_para_nueva_sesion.md` (bloque "Deudas diferidas"
 reestructurado).
+
+### 11/11/2026 — Mini-cierre documental: cierre de zonas grises de auditoría (Bloque B+C)
+
+**Estado**: ✅ Cerrada. Suite 607/607 PASSED (sin cambios de código; solo
+documentación). Working tree limpio salvo `package.json` y
+`package-lock.json`, que se eliminan antes del commit.
+
+**Modelo**: sesión estratégica de auditoría documental; edición vía
+OpenCode y borrado de residuales en PS.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: continuación del mini-cierre documental del 11/11/2026
+(Bloque A, commit `beb4d19`). El Bloque A cerró 7 zonas grises; quedaron
+diferidas 6 cosméticas para este bloque. Durante la ráfaga de corrección,
+la ejecución del prompt de ZG-11 verificó empíricamente que esa zona gris
+era un falso positivo: los tres pasajes de §6 con menciones a herramientas
+de IA retiradas ya estaban dentro de subsecciones etiquetadas como
+históricas. Esta entrada también corrige retrospectivamente ese punto del
+recuento del Bloque A.
+
+**Zonas grises cerradas en este bloque**:
+
+- ZG-8: `roadmap.md` §Releases omitía `v1.0.0rc3` y `v1.0.0rc4` entre
+  `rc5` y `rc2`. Añadidas ambas filas, ordenadas por fecha de publicación
+  descendente (rc3 el 21/10/2026; rc4 el 20/10/2026). rc3 lleva la nota
+  "(fechas divergentes entre fuentes; ver audit_log)" porque el `audit_log`
+  fecha el bump el 20/10/2026 y `contexto_para_nueva_sesion` fecha la subida
+  a PyPI el 21/10/2026; rc3 sigue disponible en PyPI sin yanked y sin tag,
+  mientras rc4 sí tiene tag. Sin URLs inventadas.
+- ZG-10: `docs/3.11_design_interactive_tree.md` §8 citaba un "PDF de
+  referencia de estación de árboles clásica (topología de nodos, circa
+  2001)" sin remitir al documento neutro. Eliminada la viñeta; la
+  referencia `docs/3.11_classic_tree_ui_reference.md` que ya existía en la
+  sección cubre la misma necesidad.
+- ZG-12: `docs/design_decisions.md` §13.7 conservaba el título "Deferred:
+  KS / AUC / Gini of the gains table are not weighted" pese a que los dos
+  updates del 20/10/2026 cierran la deuda. Título reemplazado por "Resolved
+  (20/10/2026): KS / AUC / Gini of the gains table are weighted". Cuerpo
+  intacto.
+- ZG-16: `docs/3.11.a_design_colab_theme.md` §7 conservaba los ítems 1, 2 y
+  6 como pendientes pese a resolverse después. Añadida una línea
+  `*RESUELTO (fecha, fase): …*` al final de cada ítem, con texto original
+  conservado por trazabilidad (incluidos los `TODO(zona_gris)` inline).
+  Ítems 3, 4 y 5 intactos. Resoluciones: ítem 1 en bloque B1 del 03/11/2026
+  (iconos SVG); ítem 2 en 3.11.b.5 del 25/10/2026 (`pct_global`); ítem 6 en
+  3.11.b del 25/10/2026 (Tree Map / Data Viewer / Project Explorer).
+- ZG-17: `.gitignore` declaraba `.venv_3.14_backup/` en dos bloques
+  (entornos virtuales y backups temporales). Eliminada la segunda, que era
+  redundante.
+- ZG-18: `package.json` y `package-lock.json` residuales del plugin
+  `@jimmyyen/opencode-context-cache` (retirado con OpenCode v2) permanecían
+  en el working tree pese a estar gitignored. Eliminados antes del commit.
+
+**Corrección retrospectiva al mini-cierre del 11/11/2026 (Bloque A)**:
+
+- ZG-11: el Bloque A la había registrado como pendiente de resolver en
+  Bloque B+C ("`prompt_para_asistente` §6 conserva pasajes de OpenCode
+  1.18.35 sin nota de actualización"). La ejecución del prompt
+  correspondiente en este bloque verificó empíricamente que los tres
+  pasajes con menciones a `OpenCode 1.18.35` / `1.19.0` / `Aider 0.86.2`
+  ya estaban dentro de ámbitos históricos etiquetados (párrafo "Histórico:"
+  dentro de la subsección activa; subencabezado `#### Atributos de la
+  configuración antigua (Histórico - Kimi K3)`; y párrafo de Aider como
+  respaldo vigente, no como herramienta activa). No se aplicó modificación
+  alguna y ZG-11 queda retirada del inventario como falso positivo.
+- Recuento revisado: 19 candidatas iniciales, 12 confirmadas, 2 falsas
+  (ZG-11 y ZG-13), 4 ya resueltas o descartadas por convención documental,
+  1 opcional cosmética.
+
+**Archivos tocados (por ruta exacta)**:
+
+- `.gitignore`
+- `docs/roadmap.md`
+- `docs/3.11_design_interactive_tree.md`
+- `docs/design_decisions.md`
+- `docs/3.11.a_design_colab_theme.md`
+- `docs/audit_log.md` (esta entrada)
+
+**Borrados en el working tree (no versionados)**: `package.json`,
+`package-lock.json`.
+
+**Tests**: `python -m pytest tests -q` → `607 passed` (documentación pura;
+sin cambios de código en `backend_v3/`, `frontend_v3/` ni `mcp_v3/`).
+
+**Referencias cruzadas**: `docs/audit_log.md` entrada del 11/11/2026
+(Bloque A, commit `beb4d19`); `.treegovrules` (regla #7, mini-cierre,
+verificación rg con scope acotado); `docs/playbook.md` Skill 2 y Skill 5;
+`docs/roadmap.md` §Releases; `docs/contexto_para_nueva_sesion.md` §Estado
+de release; `docs/design_decisions.md` §13.7;
+`docs/3.11.b_design_treemap_dataviewer.md` §D5;
+`docs/3.11.e_design_treemap_rewrite.md`; `docs/audit_log.md` entrada del
+03/11/2026 (B1, iconos SVG).

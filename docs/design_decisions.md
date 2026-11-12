@@ -1808,7 +1808,7 @@ in training) and produces degenerate failures.
 
 ---
 
-### 13.7 Deferred: KS / AUC / Gini of the gains table are not weighted
+### 13.7 Resolved (20/10/2026): KS / AUC / Gini of the gains table are weighted
 
 **Context.** `build_gains_table` in `backend_v3/reporting.py` returns
 `ks`, `auc` and `gini` computed over per-row PD of the routable
