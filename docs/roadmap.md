@@ -902,6 +902,7 @@ consultables vía `Session`). Sin fase asignada.
 
 ## Releases
 
+- **v1.0.0rc7** (14/11/2026) — Release candidate. Cierra la Fase 3.12 (Espacio de Análisis). Incluye las pestañas Reglas y Resumen, visor de casos por nodo, curvas de ganancias y 53 pruebas nuevas. Suite: 660/660. URL: https://pypi.org/project/treegov/1.0.0rc7/
 - **v1.0.0rc6** (08/11/2026) — Release candidate. Cierra el backlog
   post-Fase 7 (52 deudas) e incorpora: Fase 1 (scripts de
   infraestructura), Fase 2 (i18n y gobernanza GUI), B1 (iconos SVG

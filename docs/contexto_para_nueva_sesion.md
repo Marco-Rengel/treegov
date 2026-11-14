@@ -266,10 +266,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc6` en PyPI (08/11/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc6/
+**Última versión publicada:** `treegov 1.0.0rc7` en PyPI (08/11/2026).
+URL: https://pypi.org/project/treegov/1.0.0rc7/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4, v1.0.0rc5 y v1.0.0rc6 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026; rc6 verificado el 08/11/2026). El tag git v1.0.0rc3 no existe (nunca se creó), pero la release `1.0.0rc3` sí está en PyPI (subida el 21/10/2026, no yanked); un intento de sobreescribirla con los cambios de D13 falló por inmutabilidad y se publicó rc4 como siguiente release.
+**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4, v1.0.0rc5 y v1.0.0rc7 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026; rc6 verificado el 08/11/2026). El tag git v1.0.0rc3 no existe (nunca se creó), pero la release `1.0.0rc3` sí está en PyPI (subida el 21/10/2026, no yanked); un intento de sobreescribirla con los cambios de D13 falló por inmutabilidad y se publicó rc4 como siguiente release.
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -288,7 +288,7 @@ sigue disponible en PyPI (no yanked); un intento posterior de sobreescribirla
 con los cambios de D13 falló por inmutabilidad, y se publicó `1.0.0rc4` como
 siguiente release. Tras el
 cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
-publicada es `1.0.0rc6`. Su README en PyPI conserva el estado de esa
+publicada es `1.0.0rc7`. Su README en PyPI conserva el estado de esa
 release (607/607 tests). Tras el cierre de la Fase 3.12, el repositorio
 está en 660/660; la página de PyPI queda congelada hasta la próxima
 release material, conforme al protocolo vigente.
@@ -300,7 +300,7 @@ funcionales; el Data Viewer filtra casos por nodo y partición; la pestaña
 Gains dibuja tres curvas nativas. Backend ganó `get_rules`, `get_summary`
 y `get_node_cases`. Suite 660/660 PASSED. Próxima decisión: método de
 distribución (C1), y después publicación de 1.0.0 estable en PyPI. La
-release 1.0.0rc6 queda vigente hasta esa decisión.
+release 1.0.0rc7 queda vigente hasta esa decisión.
 
 **Deudas diferidas (registradas en `docs/roadmap.md` §Deferred):**
 - Fase 2.4.e — *screenshot* automatizado de la GUI.

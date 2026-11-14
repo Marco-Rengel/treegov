@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 14/11/2026 (cierre de la Fase 3.12; suite 660/660; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 14/11/2026 (cierre de la Fase 3.12; suite 660/660; release 1.0.0rc7 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc6 (release candidate) |
+| Versión | 1.0.0rc7 (release candidate) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc6/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc7/ |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -933,7 +933,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc6/ |
+| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc7/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
 | Demo headless | `.\.venv\Scripts\python treegov.py` |
@@ -943,7 +943,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Fase 3.12 cerrada (14/11/2026); release 1.0.0rc6 vigente en PyPI.**
+**Fase 3.12 cerrada (14/11/2026); release 1.0.0rc7 vigente en PyPI.**
 Suite 660/660. Rules, Summary, Data Viewer por nodo y tres curvas de
 ganancias implementados sobre los nuevos contratos de consulta de `Session`.
 Próximo paso: revisión del aplicativo en pantalla real (CV con datasets
