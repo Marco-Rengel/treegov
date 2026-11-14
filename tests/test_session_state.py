@@ -2094,6 +2094,503 @@ def test_get_cv_report_returns_dto_after_evaluate():
         assert report == expected
 
 
+# ---------------------------------------------------------------------------
+# Fase 3.12.a: Session.get_rules (fachada de los exportadores)
+# ---------------------------------------------------------------------------
+
+
+def _csv_deep(tmp: Path) -> Path:
+    """480 filas con y = 1_{edad >= 40 AND importe >= 50}.
+
+    La interaccion fuerza un arbol de profundidad 2: la raiz parte por
+    ``importe`` y un hijo INTERNO parte por ``edad``. Ese hijo interno es
+    el nodo que usan las pruebas de filtrado por nodo. Fixture
+    determinista, sin RNG: 40 edades x 4 niveles de importe x 3 repes.
+    """
+    edad = np.repeat(np.arange(20, 60), 12)
+    importe = np.tile(np.repeat([10, 30, 60, 90], 3), 40)
+    y = ((edad >= 40) & (importe >= 50)).astype(int)
+    df = pd.DataFrame({"edad": edad, "importe": importe, "default": y})
+    p = tmp / "deep.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def _deep_trained(tmp: Path) -> Session:
+    s = Session(logger=_quiet_logger())
+    s.load_dataset(str(_csv_deep(tmp)))
+    s.fix_spec("default", target_class=1,
+               class_labels={0: "Bueno", 1: "Malo"})
+    s.partition(train_frac=0.7, seed=42)
+    s.train(CrtEngine(), max_depth=4, min_child_size=5)
+    assert s.state.tree is not None
+    return s
+
+
+def test_get_rules_returns_none_without_model():
+    s = Session(logger=_quiet_logger())
+    assert s.get_rules() is None
+    assert s.get_rules("markdown") is None
+    assert s.get_rules("sql") is None
+    assert s.get_rules("python") is None
+
+
+def test_get_rules_without_node_matches_exporters():
+    with tempfile.TemporaryDirectory() as td:
+        s = _deep_trained(Path(td))
+        assert s.get_rules() == s.export_to_markdown()
+        assert s.get_rules("markdown") == s.export_to_markdown()
+        assert s.get_rules("sql") == s.export_to_sql()
+        assert s.get_rules("python") == s.export_to_python()
+
+
+def test_get_rules_node_filter_is_shorter_and_distinct():
+    with tempfile.TemporaryDirectory() as td:
+        s = _deep_trained(Path(td))
+        tree = s.state.tree
+        assert tree is not None
+        internos = [
+            nd for nd in tree.nodes
+            if not nd.is_leaf and nd.node_id != tree.root_id
+        ]
+        assert internos, "el fixture debe producir un nodo interno no raiz"
+        nid = internos[0].node_id
+
+        for fmt in ("markdown", "sql", "python"):
+            full = s.get_rules(fmt)
+            sub = s.get_rules(fmt, node_id=nid)
+            assert full is not None and sub is not None
+            assert sub != full
+            assert len(sub) < len(full)
+
+        md_sub = s.get_rules("markdown", node_id=nid)
+        assert md_sub is not None
+        assert f"- **Node {nid}** (Split on" in md_sub
+        assert "- **Node 0**" not in md_sub
+
+
+def test_get_rules_forwards_unseen_policy():
+    with tempfile.TemporaryDirectory() as td:
+        s = _deep_trained(Path(td))
+        for fmt in ("markdown", "sql", "python"):
+            assert s.get_rules(fmt, unseen_policy="error") != s.get_rules(fmt)
+
+
+def test_get_rules_invalid_format_raises():
+    with tempfile.TemporaryDirectory() as td:
+        s = _deep_trained(Path(td))
+        _assert_raises(ValueError, s.get_rules, "xml")
+        _assert_raises(KeyError, s.get_rules, "markdown", 99)
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.12.b: Session.get_summary (acta del modelo)
+# ---------------------------------------------------------------------------
+
+
+def _assert_native_summary(obj, path="summary"):
+    """Falla si el DTO contiene cualquier escalar/array de numpy o pandas."""
+    assert not isinstance(
+        obj, (np.generic, np.ndarray, pd.DataFrame, pd.Series)
+    ), f"{path} es {type(obj)}"
+    assert not type(obj).__module__.startswith(("numpy", "pandas")), (
+        f"{path} es {type(obj)}"
+    )
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            assert isinstance(k, str), f"{path}: clave no str {k!r}"
+            _assert_native_summary(v, f"{path}.{k}")
+    elif isinstance(obj, (list, tuple)):
+        for i, v in enumerate(obj):
+            _assert_native_summary(v, f"{path}[{i}]")
+
+
+def _summary_trained(tmp: Path, **train_kwargs) -> Session:
+    s = Session(logger=_quiet_logger())
+    s.load_dataset(str(_csv(tmp)))
+    s.fix_spec("default", target_class=1,
+               class_labels={0: "Bueno", 1: "Malo"})
+    s.partition(train_frac=0.7, seed=42)
+    params = {"max_depth": 4, "min_child_size": 5}
+    params.update(train_kwargs)
+    s.train(CrtEngine(), **params)
+    return s
+
+
+def test_get_summary_returns_none_without_tree():
+    s = Session(logger=_quiet_logger())
+    assert s.get_summary() is None
+
+
+def test_get_summary_structure_matches_contract():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = _summary_trained(Path(td))
+        s.evaluate_oos(n_groups=3)
+        summary = s.get_summary()
+        st = s.state
+        tree = st.tree
+        assert isinstance(summary, dict)
+        assert tree is not None
+
+        assert set(summary) == {
+            "model", "dataset", "partition", "governance",
+            "validation", "manual_overrides", "event_log",
+        }
+
+        model = summary["model"]
+        assert set(model) == {
+            "method", "fingerprint", "n_nodes", "n_terminal",
+            "max_depth", "class_labels", "target_class", "governance_mode",
+        }
+        assert model["method"] == "CRT"
+        assert model["fingerprint"] == tree.params_fingerprint
+        assert model["n_nodes"] == len(tree.nodes)
+        assert model["n_terminal"] == sum(
+            1 for nd in tree.nodes if nd.is_leaf
+        )
+        assert model["max_depth"] == max(nd.depth for nd in tree.nodes)
+        assert model["class_labels"] == list(tree.class_labels)
+        assert model["target_class"] == 1
+        assert model["governance_mode"] == "BANKING"
+
+        dataset = summary["dataset"]
+        assert set(dataset) == {
+            "path", "n_rows", "n_cols", "target", "predictors",
+            "weights_col", "population_col", "population_ok_values",
+            "cost_matrix",
+        }
+        assert dataset["path"] == str(csv_path)
+        assert dataset["n_rows"] == 120
+        assert dataset["n_cols"] == 3
+        assert dataset["target"] == "default"
+        assert dataset["predictors"] == ["edad", "seg"]
+        assert dataset["weights_col"] is None
+        assert dataset["population_col"] is None
+        assert dataset["population_ok_values"] == []
+        assert dataset["cost_matrix"] == []
+
+        partition = summary["partition"]
+        assert set(partition) == {
+            "scheme", "train_frac", "seed", "cv_k", "n_train",
+            "n_test", "n_oot", "n_excluded_population",
+        }
+        assert partition["scheme"] == "holdout"
+        assert partition["train_frac"] == 0.7
+        assert partition["seed"] == 42
+        assert partition["cv_k"] is None
+        assert partition["n_train"] == 84
+        assert partition["n_test"] == 36
+        assert partition["n_oot"] is None
+        assert partition["n_excluded_population"] == 0
+
+        governance = summary["governance"]
+        assert set(governance) == {
+            "apply_jeffreys", "pd_floor", "min_child_size",
+            "min_child_weight", "max_depth_param",
+        }
+        assert governance["apply_jeffreys"] is True
+        assert governance["pd_floor"] == 0.0005
+        assert governance["min_child_size"] == 5
+        assert governance["min_child_weight"] is None
+        assert governance["max_depth_param"] == 4
+
+        report = s.get_oos_oot_report()
+        assert report is not None
+        validation = summary["validation"]
+        assert set(validation) == {"oos_metrics", "oot_report", "cv_report"}
+        assert validation["oos_metrics"] == report["oos"]
+        assert validation["oot_report"] is None
+        assert validation["cv_report"] is None
+
+        assert summary["manual_overrides"] == list(st.manual_overrides)
+        assert summary["manual_overrides"] == []
+        assert summary["event_log"] == list(st.event_log)
+        assert summary["event_log"][-1].startswith("evaluate_oos:")
+
+
+def test_get_summary_research_mode_has_no_pd_floor():
+    with tempfile.TemporaryDirectory() as td:
+        s = _summary_trained(
+            Path(td), apply_jeffreys=False, pd_floor=None
+        )
+        summary = s.get_summary()
+        assert summary is not None
+        assert summary["model"]["governance_mode"] == "RESEARCH"
+        assert summary["governance"]["apply_jeffreys"] is False
+        assert summary["governance"]["pd_floor"] is None
+
+
+def test_get_summary_returns_only_native_types():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_seg_driven(tmp)))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        s.evaluate_oos(n_groups=3)
+        s.load_oot(str(_csv_oot(tmp, temporal=False, con_nueva_cat=True)))
+        s.evaluate_oot(n_groups=3)
+
+        summary = s.get_summary()
+        assert summary is not None
+        assert summary["validation"]["oos_metrics"] is not None
+        assert summary["validation"]["oot_report"] is not None
+        _assert_native_summary(summary)
+
+        s_cv = _cv_session(tmp, k=3)
+        s_cv.train(CrtEngine(), max_depth=4, min_child_size=5)
+        s_cv.evaluate_oos(n_groups=3)
+        summary_cv = s_cv.get_summary()
+        assert summary_cv is not None
+        assert summary_cv["partition"]["scheme"] == "cv"
+        assert summary_cv["partition"]["n_train"] == 120
+        assert summary_cv["partition"]["n_test"] == 0
+        assert summary_cv["validation"]["cv_report"] is not None
+        _assert_native_summary(summary_cv)
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.12.c: Session.get_node_cases (casos crudos por nodo)
+# ---------------------------------------------------------------------------
+
+
+def _node_cases_trained(tmp: Path) -> Session:
+    s = Session(logger=_quiet_logger())
+    s.load_dataset(str(_csv(tmp)))
+    s.fix_spec("default", target_class=1,
+               class_labels={0: "Bueno", 1: "Malo"})
+    s.partition(train_frac=0.7, seed=42)
+    s.train(CrtEngine(), max_depth=4, min_child_size=5)
+    assert s.state.tree is not None
+    return s
+
+
+def _csv_nan(tmp: Path) -> Path:
+    """120 filas con y = 1_{edad >= 40} y 12 edades NaN (una de cada 10).
+
+    El target se calcula ANTES de enmascarar la edad: las filas con NaN
+    conservan su clase, de modo que el arbol se entrena igual y solo
+    cambia la representacion CRUDA de la celda (NaN -> None).
+    """
+    base = np.tile(np.arange(20, 60), 3)
+    edad = base.astype(float)
+    edad[::10] = np.nan
+    seg = np.tile(["a", "b", "c"], 40)
+    df = pd.DataFrame(
+        {"edad": edad, "seg": seg, "default": (base >= 40).astype(int)}
+    )
+    p = tmp / "mini_nan.csv"
+    df.to_csv(p, index=False)
+    return p
+
+
+def test_get_node_cases_requires_trained_model():
+    s = Session(logger=_quiet_logger())
+    _assert_raises(ValueError, s.get_node_cases, 0)
+
+
+def test_get_node_cases_rejects_unknown_node_and_partition():
+    with tempfile.TemporaryDirectory() as td:
+        s = _node_cases_trained(Path(td))
+        tree = s.state.tree
+        assert tree is not None
+        _assert_raises(ValueError, s.get_node_cases, len(tree.nodes))
+        _assert_raises(ValueError, s.get_node_cases, -1)
+        _assert_raises(
+            ValueError, s.get_node_cases, 0, partition="validation"
+        )
+
+
+def test_get_node_cases_root_matches_partition_total():
+    with tempfile.TemporaryDirectory() as td:
+        s = _node_cases_trained(Path(td))
+        st = s.state
+        assert st.tree is not None
+        root = st.tree.root_id
+
+        train = s.get_node_cases(root, partition="train", n_rows=10**6)
+        assert set(train) == {"columns", "rows", "n_total", "truncated"}
+        assert train["columns"] == ["edad", "seg", "default"]
+        assert train["n_total"] == len(st.train_idx or ())
+        assert len(train["rows"]) == train["n_total"]
+        assert train["truncated"] is False
+
+        oos = s.get_node_cases(root, partition="oos", n_rows=10**6)
+        assert oos["n_total"] == len(st.test_idx or ())
+        assert oos["truncated"] is False
+
+        todos = s.get_node_cases(root, partition="all", n_rows=10**6)
+        assert todos["n_total"] == st.n_rows
+        assert len(todos["rows"]) == st.n_rows
+        assert todos["truncated"] is False
+
+
+def test_get_node_cases_leaf_sum_matches_partition():
+    with tempfile.TemporaryDirectory() as td:
+        s = _node_cases_trained(Path(td))
+        tree = s.state.tree
+        st = s.state
+        assert tree is not None
+        hojas = [nd.node_id for nd in tree.nodes if nd.is_leaf]
+        assert len(hojas) >= 2
+        total = sum(
+            s.get_node_cases(nid, n_rows=10**6)["n_total"] for nid in hojas
+        )
+        assert total == len(st.train_idx or ())
+        for nid in hojas:
+            dto = s.get_node_cases(nid, n_rows=10**6)
+            assert dto["n_total"] == tree.nodes[nid].n
+
+
+def test_get_node_cases_internal_node_matches_children_sum():
+    with tempfile.TemporaryDirectory() as td:
+        s = _deep_trained(Path(td))
+        tree = s.state.tree
+        assert tree is not None
+        internos = [nd for nd in tree.nodes if not nd.is_leaf]
+        assert internos
+        assert any(nd.node_id != tree.root_id for nd in internos), (
+            "el fixture debe tener un nodo interno que no sea la raiz"
+        )
+        for nd in internos:
+            padre = s.get_node_cases(nd.node_id, n_rows=10**6)["n_total"]
+            hijos = sum(
+                s.get_node_cases(cid, n_rows=10**6)["n_total"]
+                for cid in nd.child_ids
+            )
+            assert padre == hijos
+
+
+def test_get_node_cases_returns_native_types_and_truncates():
+    with tempfile.TemporaryDirectory() as td:
+        s = _node_cases_trained(Path(td))
+        assert s.state.tree is not None
+        root = s.state.tree.root_id
+
+        dto = s.get_node_cases(root, n_rows=5)
+        assert set(dto) == {"columns", "rows", "n_total", "truncated"}
+        assert type(dto["n_total"]) is int
+        assert type(dto["truncated"]) is bool
+        assert dto["n_total"] == len(s.state.train_idx or ())
+        assert dto["truncated"] is True
+        assert len(dto["rows"]) == 5
+        assert all(type(c) is str for c in dto["columns"])
+        assert all(isinstance(r, tuple) for r in dto["rows"])
+        _assert_native_summary(dto)
+
+
+def test_get_node_cases_nan_raw_cell_becomes_none():
+    with tempfile.TemporaryDirectory() as td:
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_nan(Path(td))))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st = s.state
+        assert st.tree is not None
+
+        dto = s.get_node_cases(
+            st.tree.root_id, partition="train", n_rows=10**6
+        )
+        assert dto["n_total"] == len(st.train_idx or ())
+        assert len(dto["rows"]) == dto["n_total"]
+        pos = dto["columns"].index("edad")
+        assert any(fila[pos] is None for fila in dto["rows"]), (
+            "el fixture debe dejar al menos un NaN crudo en train"
+        )
+        assert all(
+            not (isinstance(fila[pos], float) and math.isnan(fila[pos]))
+            for fila in dto["rows"]
+        )
+        _assert_native_summary(dto)
+
+
+def test_get_node_cases_oot_before_and_after_load():
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(_csv_seg_driven(tmp)))
+        s.fix_spec("default", target_class=1,
+                   class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st = s.state
+        assert st.tree is not None
+        root = st.tree.root_id
+
+        antes = s.get_node_cases(root, partition="oot")
+        assert antes == {
+            "columns": ["edad", "seg", "default"],
+            "rows": [], "n_total": 0, "truncated": False,
+        }
+
+        s.load_oot(str(_csv_oot(tmp, temporal=False, con_nueva_cat=True)))
+        despues = s.get_node_cases(root, partition="oot", n_rows=10**6)
+        assert despues["n_total"] == 40  # 60 filas OOT - 20 con 'd'
+        assert len(despues["rows"]) == 40
+        pos_seg = despues["columns"].index("seg")
+        assert all(fila[pos_seg] in ("a", "b") for fila in despues["rows"])
+        hojas = [nd.node_id for nd in s.state.tree.nodes if nd.is_leaf]
+        assert sum(
+            s.get_node_cases(nid, partition="oot", n_rows=10**6)["n_total"]
+            for nid in hojas
+        ) == 40
+        _assert_native_summary(despues)
+
+
+def test_get_node_cases_cv_train_and_empty_oos():
+    with tempfile.TemporaryDirectory() as td:
+        s = _cv_session(Path(td), k=3)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st = s.state
+        assert st.tree is not None
+        root = st.tree.root_id
+
+        train = s.get_node_cases(root, partition="train", n_rows=10**6)
+        assert train["n_total"] == st.n_rows
+        hojas = [nd.node_id for nd in st.tree.nodes if nd.is_leaf]
+        assert sum(
+            s.get_node_cases(nid, partition="train", n_rows=10**6)["n_total"]
+            for nid in hojas
+        ) == st.n_rows
+
+        oos = s.get_node_cases(root, partition="oos")
+        assert oos == {
+            "columns": ["edad", "seg", "default"],
+            "rows": [], "n_total": 0, "truncated": False,
+        }
+
+
+def test_get_node_cases_cv_respects_population_filter():
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv_population(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _pop_fix_spec(s, population_col="pop",
+                      population_ok_values=("OK",))
+        s.partition(seed=42, scheme="cv", k=3)
+        s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        st = s.state
+        assert st.tree is not None
+
+        dto = s.get_node_cases(
+            st.tree.root_id, partition="train", n_rows=10**6
+        )
+        assert dto["n_total"] == 70  # solo las filas OK de la poblacion
+        assert len(dto["rows"]) == 70
+        pos_pop = dto["columns"].index("pop")
+        assert all(fila[pos_pop] == "OK" for fila in dto["rows"])
+        hojas = [nd.node_id for nd in st.tree.nodes if nd.is_leaf]
+        assert sum(
+            s.get_node_cases(nid, partition="train", n_rows=10**6)["n_total"]
+            for nid in hojas
+        ) == 70
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

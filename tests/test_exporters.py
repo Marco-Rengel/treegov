@@ -671,3 +671,166 @@ def test_export_unseen_policy_majority_markdown() -> None:
     assert "- Else (unseen category → routed to majority leaf pd=" in md
     assert "; policy = majority):" in md
     assert "pd=0.8000" in md
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.12.a: filtro por nodo (node_id) en los tres exportadores
+# ---------------------------------------------------------------------------
+
+
+def _deep_case() -> ExportCase:
+    """Build a three-level tree so node 1 is an INTERNAL node.
+
+    Node 0 splits ``edad`` at 40.0. Its left child (node 1, internal)
+    splits ``importe`` at 10.0 into leaves 3 (pd 0.2) and 4 (pd 0.7);
+    the right child (node 2) is the leaf with pd 0.8. Filtering by node 1
+    therefore drops the root split and leaf 2, which is exactly the
+    sub-tree export contract of Phase 3.12.a.
+    """
+    root_split = SplitConfig(
+        predictor="edad",
+        method="CRT",
+        statistic=0.05,
+        statistic_name="gini_gain",
+        df=(),
+        parent_n=100,
+        child_ns=(60, 40),
+        threshold=40.0,
+        impurity_gain=0.05,
+    )
+    left_split = SplitConfig(
+        predictor="importe",
+        method="CRT",
+        statistic=0.04,
+        statistic_name="gini_gain",
+        df=(),
+        parent_n=60,
+        child_ns=(30, 30),
+        threshold=10.0,
+        impurity_gain=0.04,
+    )
+
+    def _node(node_id: int, depth: int, parent_id: int | None, n: int,
+              pd: tuple[float, float], *, split=None, child_ids=(),
+              leaf_reason=None) -> TreeNode:
+        return TreeNode(
+            node_id=node_id,
+            depth=depth,
+            parent_id=parent_id,
+            n=n,
+            n_events=(int(round(n * pd[0])), n - int(round(n * pd[0]))),
+            pd_jeffreys=pd,
+            pd_final=pd,
+            class_labels=CLASS_LABELS,
+            is_leaf=split is None,
+            split=split,
+            child_ids=tuple(child_ids),
+            leaf_reason=leaf_reason,
+        )
+
+    root = _node(0, 0, None, 100, (0.38, 0.62),
+                 split=root_split, child_ids=(1, 2))
+    left = _node(1, 1, 0, 60, (0.30, 0.70),
+                 split=left_split, child_ids=(3, 4))
+    right = _node(2, 1, 0, 40, (0.80, 0.20), leaf_reason="max_depth")
+    leaf_a = _node(3, 2, 1, 30, (0.20, 0.80), leaf_reason="max_depth")
+    leaf_b = _node(4, 2, 1, 30, (0.70, 0.30), leaf_reason="max_depth")
+
+    model = TreeModel(
+        root_id=0,
+        nodes=(root, left, right, leaf_a, leaf_b),
+        method="CRT",
+        params_fingerprint="fp-deep-case",
+        class_labels=CLASS_LABELS,
+        target_class=1,
+        target_class_index=0,
+    )
+    imputer = ImputationSpec(
+        means={"edad": 35.5, "importe": 12.0},
+        modes={"seg": "A"},
+        fitted_n=100,
+    )
+    return ExportCase(model=model, imputer=imputer)
+
+
+def test_export_node_id_none_is_byte_identical(export_case: ExportCase) -> None:
+    """Default ``node_id=None`` and explicit ``root_id`` match the 4.0 output."""
+    model, imputer = export_case.model, export_case.imputer
+
+    assert export_to_sql(model, imputer) == export_to_sql(
+        model, imputer, node_id=None
+    )
+    assert export_to_python(model, imputer) == export_to_python(
+        model, imputer, node_id=None
+    )
+    assert export_to_markdown(model) == export_to_markdown(model, node_id=None)
+
+    assert export_to_sql(model, imputer) == export_to_sql(
+        model, imputer, node_id=model.root_id
+    )
+    assert export_to_python(model, imputer) == export_to_python(
+        model, imputer, node_id=model.root_id
+    )
+    assert export_to_markdown(model) == export_to_markdown(
+        model, node_id=model.root_id
+    )
+
+
+def test_export_sql_node_filter_renders_subtree_only() -> None:
+    """Filtering by internal node 1 drops the root split and leaf 2."""
+    case = _deep_case()
+    full = export_to_sql(case.model, case.imputer)
+    sub = export_to_sql(case.model, case.imputer, node_id=1)
+
+    assert len(sub) < len(full)
+    assert "COALESCE(importe, 12.0) <= 10.0" in sub
+    assert "COALESCE(edad" not in sub
+    assert "40.0" not in sub
+    assert "0.2" in sub and "0.7" in sub
+    assert sub.startswith("-- TreeGov Model Fingerprint: fp-deep-case")
+    assert sub.strip().endswith("AS prediction_score;")
+
+
+def test_export_python_node_filter_scores_subtree() -> None:
+    """The sub-tree module ignores the path that reaches the new root."""
+    case = _deep_case()
+    full = export_to_python(case.model, case.imputer)
+    sub = export_to_python(case.model, case.imputer, node_id=1)
+
+    assert len(sub) < len(full)
+    assert "edad" not in sub
+    assert "row.get('importe', 12.0)" in sub
+
+    predict = _load_python_export(sub)["predict"]
+    assert predict({"importe": 5}) == 0.2
+    assert predict({"importe": 20}) == 0.7
+    # A row that never reaches node 1 in the full model is still scored:
+    # the exported rule treats node 1 as root by contract (3.12.a).
+    assert predict({"importe": 5, "edad": 99}) == 0.2
+
+
+def test_export_markdown_node_filter_renders_subtree_only() -> None:
+    """The Markdown report starts at node 1 and omits nodes 0 and 2."""
+    case = _deep_case()
+    full = export_to_markdown(case.model)
+    sub = export_to_markdown(case.model, node_id=1)
+
+    assert len(sub) < len(full)
+    assert sub.startswith("# TreeGov Decision Tree")
+    assert "## Decision Rules" in sub
+    assert "- **Node 1** (Split on `importe`):" in sub
+    assert "Node 0" not in sub
+    assert "Leaf 2" not in sub
+    assert "Leaf 3" in sub and "Leaf 4" in sub
+    assert "If <= 10.0" in sub
+
+
+def test_export_unknown_node_id_raises_keyerror() -> None:
+    """A missing node aborts the export instead of silently using the root."""
+    case = _deep_case()
+    with pytest.raises(KeyError):
+        export_to_sql(case.model, case.imputer, node_id=99)
+    with pytest.raises(KeyError):
+        export_to_python(case.model, case.imputer, node_id=99)
+    with pytest.raises(KeyError):
+        export_to_markdown(case.model, node_id=99)

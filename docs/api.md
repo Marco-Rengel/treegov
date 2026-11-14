@@ -74,17 +74,23 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.exporters
 
-- `export_to_sql(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude") -> str` —
+- `export_to_sql(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude", node_id: int | None = None) -> str` —
   ANSI SQL with nested `CASE WHEN` and `COALESCE` for training-time
   imputation; the fingerprint rides as a leading comment. (Phase
   4.0.a, 31/10/2026.)
-- `export_to_python(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude") -> str` —
+- `export_to_python(model: TreeModel, imputer: ImputationSpec, *, unseen_policy: str = "exclude", node_id: int | None = None) -> str` —
   dependency-free Python module (`predict(row: dict) -> float | None`),
   same fingerprint header. (Phase 4.0.a, 31/10/2026.)
-- `export_to_markdown(model: TreeModel, *, unseen_policy: str = "exclude") -> str` — human-readable
+- `export_to_markdown(model: TreeModel, *, unseen_policy: str = "exclude", node_id: int | None = None) -> str` — human-readable
   Markdown report (fingerprint + method + nested decision rules).
   Takes only the model: no imputation is needed because the
   artefact is descriptive, not scoring. (Phase 4.0.b, 01/11/2026.)
+
+Since Phase 3.12.a, all three accept the additive keyword-only `node_id`.
+`None` (default) preserves the previous whole-tree output. An explicit id
+exports that node and its descendants as a new root, without prepending the
+path from the original root; an unknown id raises `KeyError`. The global
+`unseen_policy` contract is unchanged.
 
 Since Phase 4.0.1.a, `unseen_policy="exclude"` leaves unseen categorical
 rows unscored (`NULL` in SQL, `None` in Python).
@@ -166,6 +172,30 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   instead of raising `RuntimeError` — conscious divergence from the
   `describe_*` family, see `docs/design_decisions.md` §18.7. (Phase
   3.11.b.1).
+- `Session.get_rules(format="markdown", node_id=None,
+  unseen_policy="exclude") -> str | None` — read-only rules facade (Phase
+  3.12.a). `format` accepts `"markdown"`, `"sql"` or `"python"`; other
+  values raise `ValueError`. Returns `None` without a trained model.
+  `node_id=None` is byte-equivalent to the corresponding exporter; an
+  explicit id exports only that node and its descendants as a new root.
+  SQL/Python require the training imputer cache.
+- `Session.get_summary() -> dict | None` — read-only model-act DTO (Phase
+  3.12.b), `None` without a trained model. Top-level keys are `model`,
+  `dataset`, `partition`, `governance`, `validation`, `manual_overrides`
+  and `event_log`; all values are native Python types. Validation reuses
+  the existing OOS/OOT and CV reports. `model.governance_mode` records the
+  effective `BANKING`/`RESEARCH`/`CUSTOM` mode. In CV, `partition.n_train`
+  is the population-approved row count and `partition.n_test` is 0.
+- `Session.get_node_cases(node_id, *, partition="train", n_rows=50) -> dict`
+  — read-only raw cases routed to the requested node or any descendant
+  (Phase 3.12.c). Returns the same native DTO shape as `get_data_preview`.
+  `partition` accepts `"train"`, `"oos"`, `"oot"` and `"all"`. Displayed
+  cells come from the raw CSV (`None` for missing values), while routing
+  uses the partition's imputed matrix so missing predictors do not silently
+  discard train/OOS/OOT rows. `"all"` routes the raw development frame with
+  `unseen_policy="exclude"`. An empty/unloaded partition returns columns,
+  no rows, `n_total=0` and `truncated=False`. No model or an unknown node
+  raises `ValueError`; an unknown partition also raises `ValueError`.
 - `Session.fix_spec(target, spec=None, *, predictors=None, target_class,
   class_labels, weight_col=None, population_col=None,
   population_ok_values=None)` — optional predictor subset filter applied
@@ -472,6 +502,12 @@ Nota (Fase 3.11.a.1, 24/10/2026): fase puramente visual (frontend: layout clási
 Nota (saneamiento post-auditoría externa, 25/10/2026): sin cambios de firma pública. Tres correcciones de coherencia interna con reflejo en este documento: (a) el sufijo del fingerprint de `Session.intervene_node` pasa de `-pN` a `-iN` (ver arriba); (b) el routing por `bin_edges` (`TreeBuilder._partition`, `predict_leaf_assignment`) y el binning de `ChaidEngine` usan `np.digitize(..., right=True)` — convención `(a, b]` ya documentada en `methodology.md`; (c) la pestaña Costs del wizard (interna, fuera de la API pública) es ahora N×N dinámica (`AdvancedOptionsDialog(n_classes=...)`), alineada con la validación N = nº de clases de `Session.fix_spec(cost_matrix=...)`.
 
 Nota (Fase 3.6.e, 25/10/2026): terminología dinámica por modo de gobernanza. El frontend gana el resolvedor `tr_term(concept: str, mode: str) -> str` en `frontend_v3/i18n.py` (mapea `concept` a la clave `term_{banking|research}_{concept}`; paridad EN/ES). Es interno de la GUI (no forma parte de la API pública del backend, que sigue emitiendo los mismos campos de DTO: `pd`, `bad_rate`, `n_bad`, …). Los paneles `ReportsPanel`, `MetricsPanel` y `TreePanel` exponen `set_governance_mode(mode)`; el modo visible queda atado al `GovernanceMode` congelado en el `params_fingerprint` del modelo entrenado (sin toggle en caliente). En BANKING las etiquetas visibles son bit a bit idénticas a las anteriores a la fase (diseño `docs/3.6.e_design_non_banking.md` §5).
+
+Nota (Fase 3.12, 14/11/2026): la API pública de consulta gana `get_rules`,
+`get_summary` y `get_node_cases`; los exportadores ganan el filtro aditivo
+`node_id=None`. Los nuevos contratos de partición, subárbol y DTO nativo se
+documentan en `backend_v3.session_state` y su justificación en
+`docs/design_decisions.md` §26.
 
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.

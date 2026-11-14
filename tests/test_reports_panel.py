@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from frontend_v3.app import create_app  # noqa: E402
+from frontend_v3.gains_charts import GainsCharts  # noqa: E402
 from frontend_v3.i18n import get_language, set_language, tr, _STRINGS  # noqa: E402
 from frontend_v3.reports_panel import ReportsPanel  # noqa: E402
 
@@ -322,6 +323,47 @@ def test_export_html_banking_keeps_bad_capture_rate():
         panel.close()
         panel.deleteLater()
         set_language(previous)
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.12.g: curvas de ganancias
+# ---------------------------------------------------------------------------
+
+
+def test_gains_charts_construct_empty_and_hidden():
+    _get_app()
+    panel = ReportsPanel()
+    charts = panel._gains_charts
+    assert isinstance(charts, GainsCharts)
+    assert set(charts._charts) == {"cumulative", "response", "lift"}
+    assert not charts._empty_label.isHidden()
+    assert charts._empty_label.text() == tr("gains_chart_empty")
+    assert all(chart.isHidden() for chart in charts._charts.values())
+    panel.close()
+    panel.deleteLater()
+
+
+def test_gains_charts_update_series_render_and_clear():
+    _get_app()
+    panel = ReportsPanel()
+    panel.set_gains_table(_sample_gains_dto())
+    charts = panel._gains_charts
+    assert charts._series["cumulative"] == [(0.5, 5.0 / 30.0)]
+    assert charts._series["response"] == [(0.5, 0.1)]
+    assert charts._series["lift"] == [(0.5, 0.3333)]
+    assert charts._references["response"] == 0.3
+    assert charts._empty_label.isHidden()
+    for kind, chart in charts._charts.items():
+        assert not chart.isHidden(), kind
+        # Fuerza paintEvent: QPainter dibuja ejes, referencia y curva.
+        assert not chart.grab().isNull(), kind
+
+    panel.set_gains_table(None)
+    assert all(not points for points in charts._series.values())
+    assert all(chart.isHidden() for chart in charts._charts.values())
+    assert not charts._empty_label.isHidden()
+    panel.close()
+    panel.deleteLater()
 
 
 # ---------------------------------------------------------------------------

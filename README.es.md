@@ -5,7 +5,7 @@
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 607/607 passing
+**Suite de tests**: 660/660 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -56,7 +56,7 @@ flowchart TB
     BE -.->|Session| FE
     BE -.->|Session| MC
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 completas<br/>📦 v1.0.0rc6 publicada en PyPI<br/>🧪 607 / 607 tests PASSED<br/>📅 8 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 + 3.12 completas<br/>📦 v1.0.0rc6 publicada en PyPI<br/>🧪 660 / 660 tests PASSED<br/>📅 14 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -171,6 +171,7 @@ TreeGov/
 │   ├── 3.11.c_design_univariate_cost_matrix.md  # Diseño + as-built Fase 3.11.c (ES)
 │   ├── 3.11.d_design_context_menu_interactivity.md  # Diseño + as-built Fase 3.11.d (ES)
 │   ├── 3.11.e_design_treemap_rewrite.md  # As-built Fase 3.11.e (ES)
+│   ├── 3.12_design_analysis_workspace.md  # Diseño + as-built Fase 3.12 (ES)
 │   ├── 3.11_gui_design_system.md  # Sistema de Diseño GUI normativo (ES)
 │   ├── 3.11_classic_tree_ui_reference.md  # Referencia visual de estación de árboles clásica, circa 2001 (ES)
 │   ├── 4.0_design_exports.md  # Diseño Fase 4.0 (ES)
@@ -295,13 +296,14 @@ TreeGov/
 | **3.11.c.3** | Matriz de costos N×N: `SessionState.cost_matrix` inmutable, `fix_spec(cost_matrix=...)` endurecido, pestaña "Costs" en el diálogo de Opciones Avanzadas; NO entra en `params_fingerprint` aún (§18.8) | Completada |
 | **3.11.d** | Menú contextual e interactividad: `Session.intervene_node` (poda manual de rama), re-indexado BFS, log inmutable `manual_overrides`, menú contextual del nodo con confirmación BANKING, `ManualOverrideDialog` + botón "Ver Auditoría" del HUD (§18.9) | Completada |
 | **3.11.e** | Reescritura del Tree Map desde cero (Clean Room): layout tidy top-down estilo Reingold-Tilford, conectores ortogonales en 3 tramos, etiquetas `node_id` de tamaño constante en pantalla, colores 100% desde `PALETTES`, navegación bidireccional vía `center_on_node`, estado vacío sin branding | Completada |
+| **3.12** | Consulta del modelo: pestañas Rules y Summary, Data Viewer por nodo/partición, tres curvas nativas de ganancias; `Session.get_rules`, `get_summary` y `get_node_cases` | Completada |
 | **4.0** | Exportación a producción (SQL/Python/Markdown + integración GUI) | Completada |
 | **4.0.1** | Exporters: categorical unseen_policy | Completada |
 | **5** | Capa MCP para agentes LLM | Completada |
 | **6** | Batch scoring + champion-challenger | Completada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completada |
 
-**Suite de tests: 607/607 passing.**
+**Suite de tests: 660/660 passing.**
 
 ---
 

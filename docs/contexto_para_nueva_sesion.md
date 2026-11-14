@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 11/11/2026
+**Fecha de última actualización:** 14/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -122,6 +122,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | **3.11.b** | Tree Map (minimapa pasivo), Data Viewer, Project Explorer, `pct_global` en fila Total del nodo | ✅ |
 | **3.11.c** | Árboles Univariados en lote + Matriz de Costos N×N | ✅ |
 | **3.11.d** | Menú Contextual + Manual Override Log | ✅ |
+| **3.12** | Pestañas Rules/Summary, Data Viewer por nodo y 3 curvas de ganancias; API `get_rules`/`get_summary`/`get_node_cases` | ✅ Cerrada (14/11/2026) |
 | **3.6.e** | Modo No-Bancario: terminología dinámica vía `tr_term` (BANKING bit-idéntica, RESEARCH neutra) | ✅ |
 | 4.0.a | Exportadores SQL y Python (`backend_v3/exporters.py`) | ✅ |
 | 4.0.b | Exportador Markdown (`export_to_markdown`) | ✅ |
@@ -143,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 
-**Suite de tests:** 607/607 PASSED
+**Suite de tests:** 660/660 PASSED
 
 ## Entorno de desarrollo
 
@@ -287,17 +288,19 @@ sigue disponible en PyPI (no yanked); un intento posterior de sobreescribirla
 con los cambios de D13 falló por inmutabilidad, y se publicó `1.0.0rc4` como
 siguiente release. Tras el
 cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
-publicada es `1.0.0rc6`, cuyo README refleja el estado actual del
-repositorio (Fases 0 a 7 cerradas, backlog cerrado, 607/607 tests). La
-página de PyPI queda sincronizada hasta la próxima release material.
+publicada es `1.0.0rc6`. Su README en PyPI conserva el estado de esa
+release (607/607 tests). Tras el cierre de la Fase 3.12, el repositorio
+está en 660/660; la página de PyPI queda congelada hasta la próxima
+release material, conforme al protocolo vigente.
 
 ## Próximos pasos
 
-**Backlog post-Fase 7 cerrado salvo distribución (03/11/2026).**
-Suite 607/607 PASSED. CV k-fold, guardrail de imports en GUI e iconos
-SVG incorporados. Próxima decisión: método de distribución (C1), y
-después publicación de 1.0.0 estable en PyPI. La release 1.0.0rc6
-queda vigente hasta esa decisión.
+**Fase 3.12 cerrada (14/11/2026).** Rules y Summary son pestañas
+funcionales; el Data Viewer filtra casos por nodo y partición; la pestaña
+Gains dibuja tres curvas nativas. Backend ganó `get_rules`, `get_summary`
+y `get_node_cases`. Suite 660/660 PASSED. Próxima decisión: método de
+distribución (C1), y después publicación de 1.0.0 estable en PyPI. La
+release 1.0.0rc6 queda vigente hasta esa decisión.
 
 **Deudas diferidas (registradas en `docs/roadmap.md` §Deferred):**
 - Fase 2.4.e — *screenshot* automatizado de la GUI.

@@ -68,6 +68,8 @@ from frontend_v3.ecl_dialog import ECLDialog
 from frontend_v3.tree_map import TreeMap
 from frontend_v3.prune_dialog import PruneDialog
 from frontend_v3.reports_panel import ReportsPanel
+from frontend_v3.rules_panel import RulesPanel
+from frontend_v3.summary_panel import SummaryPanel
 from frontend_v3.scoring_dialogs import (
     BatchScoringDialog,
     ChampionChallengerDialog,
@@ -139,6 +141,8 @@ class MainWindow(QMainWindow):
             self._hud_lbl_bad_rate_cap.setText(tr("hud_lbl_bad_rate"))
         self._reports_panel.set_governance_mode(mode)
         self._metrics_panel.set_governance_mode(mode)
+        self._rules_panel.set_governance_mode(mode)
+        self._summary_panel.set_governance_mode(mode)
 
     def retranslate_ui(self) -> None:
         """Re-apply tr() to every visible string (called on language
@@ -592,6 +596,13 @@ class MainWindow(QMainWindow):
         self._tree_panel.selection_cleared.connect(
             lambda: self._tree_map.set_selected_node(None)
         )
+        # Fase 3.12.f: el Data Viewer sigue el nodo seleccionado.
+        self._tree_panel.node_selected.connect(
+            self._on_data_viewer_node_selected
+        )
+        self._tree_panel.selection_cleared.connect(
+            self._on_data_viewer_selection_cleared
+        )
 
         # Phase 2.3: OOS/OOT metrics panel (main "Risks" tab)
         self._metrics_panel = MetricsPanel()
@@ -618,18 +629,40 @@ class MainWindow(QMainWindow):
         # Main tab widget fills the WHOLE central area (Phase 3.11.a.1
         # correction): the tab bar is anchored at the BOTTOM of the
         # window (TabPosition.South), Excel-sheet style. Sheets: Tree
-        # (the canvas) / Gains / Risks / Rules / Summary. Rules and
-        # Summary are placeholders until sub-phases 3.11.b-d fill them.
+        # (the canvas) / Gains / Risks / Rules / Summary.
         self._main_tabs = QTabWidget()
         self._main_tabs.setObjectName("centralTabs")
         self._main_tabs.setTabPosition(QTabWidget.TabPosition.South)
         self._main_tabs.addTab(self._tree_panel, "")
         self._main_tabs.addTab(self._reports_panel, "")
         self._main_tabs.addTab(self._metrics_panel, "")
-        self._tab_rules = self._make_placeholder_tab("tabRules")
-        self._main_tabs.addTab(self._tab_rules, "")
-        self._tab_summary = self._make_placeholder_tab("tabSummary")
-        self._main_tabs.addTab(self._tab_summary, "")
+        # Fase 3.12.d: pestana Reglas funcional (sustituye al placeholder).
+        self._rules_panel = RulesPanel()
+        self._rules_panel.setObjectName("rulesPanel")
+        # Alias de compatibilidad con el atributo del placeholder previo.
+        self._tab_rules = self._rules_panel
+        self._main_tabs.addTab(self._rules_panel, "")
+        # Fase 3.12.d: unica suscripcion al bus para retraducir la pestana
+        # (MainWindow la desconecta en closeEvent).
+        language_bus.language_changed.connect(
+            self._rules_panel.retranslate_ui
+        )
+        # Fase 3.12.d: la pestana sigue la seleccion del canvas. Sin
+        # seleccion vuelve a la regla del arbol completo (node_id=None).
+        self._tree_panel.node_selected.connect(self._on_rules_node_selected)
+        self._tree_panel.selection_cleared.connect(
+            self._on_rules_selection_cleared
+        )
+        # Fase 3.12.e: pestana Resumen funcional (sustituye al placeholder).
+        self._summary_panel = SummaryPanel()
+        self._summary_panel.setObjectName("summaryPanel")
+        # Alias de compatibilidad con el atributo del placeholder previo.
+        self._tab_summary = self._summary_panel
+        self._main_tabs.addTab(self._summary_panel, "")
+        # Unica suscripcion del Resumen al bus; se desconecta al cerrar.
+        language_bus.language_changed.connect(
+            self._summary_panel.retranslate_ui
+        )
 
         splitter.addWidget(self._left_panel)
         splitter.addWidget(self._main_tabs)
@@ -832,6 +865,8 @@ class MainWindow(QMainWindow):
         self._dataset_info = (columns, types)
         # Phase 3.11.b.2: preview crudo del CSV en el Data Viewer
         # (contrato D3; dict de tipos puros, nunca lanza sin dataset).
+        # Fase 3.12.f: la misma sesion alimenta los casos por nodo.
+        self._data_viewer.set_session(self._session)
         self._data_viewer.set_preview(self._session.get_data_preview())
         self._current_dataset_path = path
         self._act_new_wizard.setEnabled(True)
@@ -862,6 +897,8 @@ class MainWindow(QMainWindow):
             self._reports_panel.set_gains_table(None)
             self._reports_panel.set_classification_matrix(None)
             self._data_viewer.set_preview(None)
+            self._rules_panel.refresh(self._session, None)
+            self._summary_panel.refresh(self._session)
             # Phase 3.11.b.4: Project Explorer vuelve al estado vacío
             self._lbl_explorer_model.setText("—")
             self._hud_lbl_gov_fp.setText("—")
@@ -913,6 +950,8 @@ class MainWindow(QMainWindow):
             # not keep a tree the session state no longer holds
             self._tree_panel.clear_model()
             self._tree_map.set_model(None)
+            self._rules_panel.refresh(self._session, None)
+            self._summary_panel.refresh(self._session)
             self._hud_reset()
             return
         st = self._session.state
@@ -953,6 +992,11 @@ class MainWindow(QMainWindow):
         # Phase 2.3.e.5: refresh OOS/OOT panel with current report
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
+        # Fase 3.12.d: reglas del arbol recien entrenado.
+        self._rules_panel.refresh(self._session, None)
+        self._summary_panel.refresh(self._session)
+        # Fase 3.12.f: el visor ya puede resolver casos por nodo.
+        self._data_viewer.set_session(self._session)
 
     def _on_inversion_requested(self) -> None:
         """Invert the class of interest and retrain with the same cfg (3.1.f).
@@ -1014,6 +1058,8 @@ class MainWindow(QMainWindow):
         self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
         self._refresh_session_indicator()
+        self._rules_panel.refresh(self._session, None)
+        self._summary_panel.refresh(self._session)
         if self._logger is not None:
             self._logger.info(
                 tr("inversion_log_narrative").format(
@@ -1154,6 +1200,22 @@ class MainWindow(QMainWindow):
         self._update_hud_node(node)
         self.statusBar().showMessage(f"{tr('tree_prop_node')} #{node_id}", 5000)
 
+    def _on_rules_node_selected(self, node_id: int) -> None:
+        """Fase 3.12.d: pestana Reglas = regla del nodo seleccionado."""
+        self._rules_panel.refresh(self._session, node_id)
+
+    def _on_rules_selection_cleared(self) -> None:
+        """Fase 3.12.d: sin seleccion, Reglas vuelve al arbol completo."""
+        self._rules_panel.refresh(self._session, None)
+
+    def _on_data_viewer_node_selected(self, node_id: int) -> None:
+        """Fase 3.12.f: muestra los casos del nodo en la particion activa."""
+        self._data_viewer.refresh_cases(node_id)
+
+    def _on_data_viewer_selection_cleared(self) -> None:
+        """Fase 3.12.f: sin seleccion, vuelve al preview completo del CSV."""
+        self._data_viewer.refresh_cases(None)
+
     def _execute_prune_branch(self, node_id: int) -> None:
         """A1: prune_branch via backend + refresh of canvas, map and HUD.
 
@@ -1178,6 +1240,8 @@ class MainWindow(QMainWindow):
         self._tree_map.set_model(new_tree)
         self._hud_lbl_gov_fp.setText(new_tree.params_fingerprint)
         self._refresh_session_indicator()
+        self._rules_panel.refresh(self._session, None)
+        self._summary_panel.refresh(self._session)
         if self._logger is not None:
             self._logger.info(
                 "[gui] intervene prune_branch: node=%d | nodos=%d",
@@ -1274,6 +1338,7 @@ class MainWindow(QMainWindow):
         self._refresh_reports_panel()
         self._main_tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
+        self._summary_panel.refresh(self._session)
         if self._logger is not None:
             self._logger.info("[gui] OOS evaluation done")
 
@@ -1319,6 +1384,7 @@ class MainWindow(QMainWindow):
         self._refresh_reports_panel()
         self._main_tabs.setCurrentWidget(self._metrics_panel)
         self._refresh_session_indicator()
+        self._summary_panel.refresh(self._session)
         if self._logger is not None:
             self._logger.info("[gui] OOT loaded and evaluated: %s", path)
 
@@ -1434,6 +1500,8 @@ class MainWindow(QMainWindow):
         self._metrics_panel.refresh()
         self._refresh_reports_panel()
         self._refresh_session_indicator()
+        self._rules_panel.refresh(self._session, None)
+        self._summary_panel.refresh(self._session)
         if self._logger is not None:
             self._logger.info(
                 "[gui] pruning applied: alpha=%s | nodos=%d",
@@ -1621,6 +1689,15 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         # Nothing to release manually (Qt parentage owns the widgets and
         # log_config owns the log handlers); just leave an audit trail.
+        # Fases 3.12.d/e: desconexion defensiva de Reglas y Resumen del
+        # bus i18n (bound methods vivos tras cerrar la ventana).
+        for panel in (self._rules_panel, self._summary_panel):
+            try:
+                language_bus.language_changed.disconnect(
+                    panel.retranslate_ui
+                )
+            except (RuntimeError, TypeError):
+                pass
         if self._logger is not None:
             self._logger.info("GUI closed cleanly")
         super().closeEvent(event)

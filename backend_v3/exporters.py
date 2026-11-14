@@ -147,6 +147,11 @@ def _majority_leaf_pd(model: "TreeModel") -> float:
     Exact replica of ``validation.predict_leaf_assignment``: select the leaf
     with maximum PHYSICAL ``n`` (not weighted), break ties by minimum
     ``node_id``, and return ``pd_final[0]`` (class of interest, index 0).
+
+    The choice is model-wide on purpose: a sub-tree export (``node_id``) keeps
+    the same fallback constant as the full export (Phase 3.12.a). Redefining
+    the majority leaf per segment would silently change the governed
+    ``unseen_policy`` semantics.
     """
     hojas = [nd for nd in model.nodes if nd.is_leaf]
     destino = max(hojas, key=lambda h: (-h.n, h.node_id))
@@ -222,6 +227,7 @@ def export_to_sql(
     imputer: ImputationSpec,
     *,
     unseen_policy: str = "exclude",
+    node_id: int | None = None,
 ) -> str:
     """Export ``model`` as an ANSI SQL expression against ``imputer``.
 
@@ -261,6 +267,12 @@ def export_to_sql(
             on strict databases, subject to the portability caveat above.
             ``"majority"`` returns the PD of the leaf with maximum physical
             ``n``, breaking ties by minimum ``node_id``.
+        node_id: Node that becomes the root of the exported rule. ``None``
+            (default) exports the whole tree from ``model.root_id``, keeping
+            the Phase 4.0 output byte-for-byte. Any other value exports only
+            that node and its descendants. The emitted ``CASE`` block does
+            **not** carry the path condition that reaches the node, so the
+            caller is responsible for applying that filter upstream.
 
     Returns:
         A ready-to-paste SQL statement terminated with a semicolon.
@@ -268,7 +280,8 @@ def export_to_sql(
     Raises:
         ValueError: if a split cannot be expressed in ANSI SQL or the tree is
             structurally inconsistent.
-        KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
+        KeyError: if a child references a ``node_id`` absent from
+            ``model.nodes``, or if ``node_id`` itself is not present.
     """
     _ensure_unseen_policy(unseen_policy)
     majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
@@ -352,7 +365,7 @@ def export_to_sql(
         lines.append(f"{pad}END")
         return "\n".join(lines)
 
-    body = _sql_node(model.root_id, 0)
+    body = _sql_node(model.root_id if node_id is None else node_id, 0)
     if unseen_policy == "error":
         policy_header = (
             "-- Unseen policy: error (unseen categories abort the scoring)\n"
@@ -689,6 +702,7 @@ def export_to_python(
     imputer: ImputationSpec,
     *,
     unseen_policy: str = "exclude",
+    node_id: int | None = None,
 ) -> str:
     """Export ``model`` as a self-contained, dependency-free Python script.
 
@@ -722,6 +736,13 @@ def export_to_python(
             fallback. ``"error"`` aborts the row with ``ValueError`` naming
             the predictor and value. ``"majority"`` returns the PD of the leaf
             with maximum physical ``n``, breaking ties by minimum ``node_id``.
+        node_id: Node that becomes the root of the exported rule. ``None``
+            (default) exports the whole tree from ``model.root_id``, keeping
+            the Phase 4.0 output byte-for-byte. Any other value exports only
+            that node and its descendants: only the predictors used inside
+            that sub-tree get imputation lines. The emitted ``if`` chain does
+            **not** carry the path condition that reaches the node, so the
+            caller is responsible for applying that filter upstream.
 
     Returns:
         The source of a Python module, terminated by a newline. Under
@@ -731,11 +752,13 @@ def export_to_python(
     Raises:
         ValueError: if a split cannot be expressed as an ``if`` chain, or the
             tree is structurally inconsistent.
-        KeyError: if a child references a ``node_id`` absent from ``model.nodes``.
+        KeyError: if a child references a ``node_id`` absent from
+            ``model.nodes``, or if ``node_id`` itself is not present.
     """
     _ensure_unseen_policy(unseen_policy)
     nodes_by_id = _index_nodes(model)
-    predictors = _python_predictors(model.root_id, nodes_by_id)
+    root = model.root_id if node_id is None else node_id
+    predictors = _python_predictors(root, nodes_by_id)
 
     variables = {}
     for predictor in predictors:
@@ -781,7 +804,7 @@ def export_to_python(
 
     lines.extend(
         _python_node(
-            model.root_id,
+            root,
             1,
             nodes_by_id,
             unseen_policy=unseen_policy,
@@ -801,6 +824,7 @@ def export_to_markdown(
     model: TreeModel,
     *,
     unseen_policy: str = "exclude",
+    node_id: int | None = None,
 ) -> str:
     """Export ``model`` as a human-readable Markdown report.
 
@@ -830,6 +854,12 @@ def export_to_markdown(
             bullet as "not scored"; ``"error"`` labels the raised
             ``ValueError``; ``"majority"`` labels routing to the majority leaf
             and includes its PD with four decimals.
+        node_id: Node that becomes the root of the rendered sub-tree. ``None``
+            (default) renders the whole tree from ``model.root_id``, keeping
+            the Phase 4.0 output byte-for-byte. Any other value renders only
+            that node and its descendants. The rendered section does **not**
+            carry the path condition that reaches the node, so a reader must
+            be told which segment the report covers.
 
     Returns:
         A Markdown document terminated by a newline.
@@ -839,7 +869,7 @@ def export_to_markdown(
             without ``SplitConfig``, fewer than two children, or a branch count
             that does not match the split encoding).
         KeyError: if a child references a ``node_id`` absent from
-            ``model.nodes``.
+            ``model.nodes``, or if ``node_id`` itself is not present.
     """
     _ensure_unseen_policy(unseen_policy)
     majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
@@ -1000,4 +1030,6 @@ def export_to_markdown(
         f"{policy_header}\n\n"
         "## Decision Rules\n\n"
     )
-    return header + _md_node(model.root_id, 0)
+    return header + _md_node(
+        model.root_id if node_id is None else node_id, 0
+    )

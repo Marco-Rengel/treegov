@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 11/11/2026
+**Última actualización:** 14/11/2026
 
 ---
 
@@ -91,11 +91,12 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 5. Estado actual del proyecto
 
-**Estado vigente (al 11/11/2026).** Fases 0 a 7 cerradas —la última, la
-7.0 (IFRS 9 / ECL), el 02/11/2026— y backlog post-Fase 7 cerrado salvo la
-decisión de distribución. La suite está en **607/607 PASSED** (08/11/2026)
-y la release vigente es **1.0.0rc6**, publicada en PyPI y verificada con
-hashes e instalación en un *venv* aislado. El registro
+**Estado vigente (al 14/11/2026).** Fases 0 a 7 y Fase 3.12 cerradas. La
+última incorporación deja funcionales las pestañas Rules y Summary, el Data
+Viewer por nodo/partición y tres curvas de ganancias; `Session` expone
+`get_rules`, `get_summary` y `get_node_cases`. La suite está en
+**660/660 PASSED** y la release vigente es **1.0.0rc6**, publicada en PyPI y
+verificada con hashes e instalación en un *venv* aislado. El registro
 `mcp_v3.tools.TOOLS` expone **27 tools**. Próximo paso: revisión del
 aplicativo en pantalla real (CV con *datasets* grandes, iconos SVG en
 tema oscuro, arranque real en Windows nativo, uso prolongado); después,
@@ -161,6 +162,10 @@ sub-fase, con sus conteos de suite y fechas de cierre, vive en
   tipo Excel, wizard redimensionado, nodos HTML, Tree Map con Data Viewer,
   árboles univariados, matriz de costos y menú contextual con prune branch.
   La reescritura Clean Room del Tree Map llegó con 3.11.e (31/10/2026).
+- **Fase 3.12 (pestañas de consulta del modelo):** cerrada (14/11/2026).
+  Tres contratos nuevos (`get_rules`, `get_summary`, `get_node_cases`),
+  Rules y Summary funcionales, Data Viewer por nodo/partición y tres curvas
+  QPainter de ganancias. Suite 660/660.
 - **Fase 4.0 (exportación a producción SQL / Python / Markdown):** cerrada
   (01/11/2026). Exportadores `sql`, `python` y `markdown`, wrappers en
   Session y tres acciones en el menú Archivo.
@@ -408,10 +413,12 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 08/11/2026: Fases 0 a
-> 7.0 cerradas, incluidas 3.6.e, 4.0.1 y 5.0. La Fase 7 entrega backend
+> "Retomamos TreeGov. Soy Marco. Estado al 14/11/2026: Fases 0 a
+> 7.0 y Fase 3.12 cerradas. Rules y Summary son funcionales, el Data Viewer
+> filtra por nodo/partición y Gains dibuja tres curvas; backend expone
+> `get_rules`, `get_summary` y `get_node_cases`. La Fase 7 entrega backend
 > IFRS 9 / ECL, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total).
-> Suite 607/607. Release 1.0.0rc6 publicada en PyPI (verificada). Backlog post-Fase 7
+> Suite 660/660. Release 1.0.0rc6 publicada en PyPI (verificada). Backlog post-Fase 7
 > cerrado. Próximo paso: revisión del aplicativo en pantalla real (CV
 > con datasets grandes, iconos SVG en tema oscuro, arranque en Windows
 > nativo, uso prolongado). Herramienta activa: OpenCode v2.2.5 +

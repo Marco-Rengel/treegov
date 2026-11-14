@@ -153,7 +153,7 @@ Los tres deben imprimir `OK`. Cualquier `MISS` bloquea el upload.
 ## Entorno
 
 - **Plataforma principal:** Windows nativo.
-- **Python de desarrollo y tests:** 3.11.9 (verificado 08/11/2026: 607/607 tests).
+- **Python de desarrollo y tests:** 3.11.9 (verificado 14/11/2026: 660/660 tests).
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).

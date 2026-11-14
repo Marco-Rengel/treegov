@@ -166,6 +166,9 @@ class Session:
         self._imputer: TrainOnlyImputer | None = None  # fit solo-train (1.3 OOT)
         self._X_oot = None
         self._y_oot = None
+        # Fase 3.12.c: filas crudas del CSV OOT (post-filtro de poblacion,
+        # mismo orden que _X_oot/_y_oot) para get_node_cases.
+        self._df_oot: pd.DataFrame | None = None
         # Caches de ponderacion por muestra (Fase 3.2)
         self._w_train: np.ndarray | None = None
         self._w_test: np.ndarray | None = None
@@ -568,6 +571,7 @@ class Session:
         self._y_train = self._y_test = None
         self._imputer = None
         self._X_oot = self._y_oot = None
+        self._df_oot = None
         self._w_train = self._w_test = self._w_oot = None
         self._w_col = None
         self._pop_col = None
@@ -1280,6 +1284,270 @@ class Session:
             return None
         return self._cv_report
 
+    def get_summary(self) -> dict | None:
+        """Acta del modelo activo como DTO plano (Fase 3.12.b).
+
+        Contrato exacto: docs/3.12_design_analysis_workspace.md §3.4.
+        Devuelve None si no hay modelo entrenado. Todas las claves son
+        tipos nativos de Python (sin dataclasses, sin numpy/pandas) para
+        que GUI y MCP lo consuman sin tocar el backend.
+
+        ``validation`` reutiliza get_oos_oot_report() (claves ``oos`` y
+        ``oot``) y get_cv_report(). ``manual_overrides`` y ``event_log``
+        se copian de SessionState sin reformatear sus tuplas. Los
+        parametros de gobernanza salen de ``_last_train_params``,
+        persistido por train(); si el invariante se rompe, RuntimeError.
+
+        ``governance_mode`` es el modo EFECTIVO (misma logica que el
+        fingerprint del modelo): ``"BANKING"``, ``"RESEARCH"`` o
+        ``"CUSTOM"`` (combinacion intermedia, alcanzable solo por API; la
+        GUI emite BANKING/RESEARCH). En CV, ``partition.n_train`` es el
+        100% de filas OK y ``partition.n_test`` es 0: no hay holdout.
+        """
+        st = self._state
+        if st.tree is None:
+            return None
+        params = self._last_train_params
+        if params is None:
+            raise RuntimeError(
+                "[session] get_summary sin parametros de train en cache "
+                "(train() no ejecutado)"
+            )
+        tree = st.tree
+
+        apply_jeffreys = bool(params["apply_jeffreys"])
+        pd_floor = params["pd_floor"]
+        if apply_jeffreys and pd_floor is not None:
+            governance_mode = "BANKING"
+        elif not apply_jeffreys and pd_floor is None:
+            governance_mode = "RESEARCH"
+        else:
+            governance_mode = "CUSTOM"
+
+        if st.validation_scheme == "cv":
+            n_train = int((st.n_rows or 0) - st.n_excluded_population)
+            n_test = 0
+        else:
+            n_train = len(st.train_idx or ())
+            n_test = len(st.test_idx or ())
+
+        oos_oot = self.get_oos_oot_report() or {}
+        target_class = tree.target_class
+        if isinstance(target_class, str):
+            target_class = str(target_class)
+        else:
+            target_class = self._cell_native(target_class)
+        summary = {
+            "model": {
+                "method": tree.method,
+                "fingerprint": tree.params_fingerprint,
+                "n_nodes": len(tree.nodes),
+                "n_terminal": sum(1 for nd in tree.nodes if nd.is_leaf),
+                "max_depth": max(
+                    (int(nd.depth) for nd in tree.nodes), default=0
+                ),
+                "class_labels": [str(label) for label in tree.class_labels],
+                "target_class": target_class,
+                "governance_mode": governance_mode,
+            },
+            "dataset": {
+                "path": st.csv_path,
+                "n_rows": int(st.n_rows or 0),
+                "n_cols": int(st.n_cols or 0),
+                "target": st.target,
+                "predictors": [str(p) for p, _ in (st.spec or ())],
+                "weights_col": self._w_col,
+                "population_col": st.population_col,
+                "population_ok_values": [
+                    str(v) for v in st.population_ok_values
+                ],
+                "cost_matrix": [
+                    [float(v) for v in fila] for fila in st.cost_matrix
+                ],
+            },
+            "partition": {
+                "scheme": st.validation_scheme,
+                "train_frac": st.train_frac,
+                "seed": st.seed,
+                "cv_k": st.cv_k,
+                "n_train": n_train,
+                "n_test": n_test,
+                "n_oot": st.n_oot,
+                "n_excluded_population": int(st.n_excluded_population),
+            },
+            "governance": {
+                "apply_jeffreys": apply_jeffreys,
+                "pd_floor": None if pd_floor is None else float(pd_floor),
+                "min_child_size": int(params["min_child_size"]),
+                "min_child_weight": (
+                    None if params["min_child_weight"] is None
+                    else float(params["min_child_weight"])
+                ),
+                "max_depth_param": int(params["max_depth"]),
+            },
+            "validation": {
+                "oos_metrics": oos_oot.get("oos"),
+                "oot_report": oos_oot.get("oot"),
+                "cv_report": self.get_cv_report(),
+            },
+            "manual_overrides": list(st.manual_overrides),
+            "event_log": list(st.event_log),
+        }
+        self._log.info(
+            "[session] get_summary: nodos=%d|oot=%s|cv=%s",
+            len(tree.nodes),
+            summary["validation"]["oot_report"] is not None,
+            summary["validation"]["cv_report"] is not None,
+        )
+        return summary
+
+    def _population_ok_indices(self) -> np.ndarray:
+        """Indices de fila que pasan el filtro de poblacion (todos si no
+        hay)."""
+        assert self._df is not None
+        if self._pop_col is None:
+            return np.arange(len(self._df))
+        mask = (
+            self._df[self._pop_col]
+            .isin(self._pop_ok_values or ())
+            .to_numpy()
+        )
+        return np.flatnonzero(mask)
+
+    def _node_cases_source(
+        self, partition: str,
+    ) -> tuple[pd.DataFrame, pd.DataFrame | None, str]:
+        """Frame CRUDO + X enrutado + unseen_policy para get_node_cases.
+
+        Fase 3.12.c. Las filas que se muestran son las del CSV original
+        (sin imputar); el enrutado usa la matriz imputada de la particion
+        para que un NaN no haga desaparecer la fila del conteo. "all" no
+        tiene cache imputada (puede incluir filas fuera de la poblacion
+        declarada), asi que enruta el frame crudo con "exclude". Una
+        particion aun no materializada devuelve un frame vacio y X=None.
+        """
+        st = self._state
+        assert st.tree is not None and self._df is not None
+        if partition == "train":
+            if st.validation_scheme == "cv":
+                return (
+                    self._df.iloc[self._population_ok_indices()],
+                    self._X_train,
+                    "error",
+                )
+            return (
+                self._df.iloc[list(st.train_idx or ())],
+                self._X_train,
+                "error",
+            )
+        if partition == "oos":
+            if st.validation_scheme == "cv" or st.test_idx is None:
+                return self._df.iloc[0:0], None, "exclude"
+            return (
+                self._df.iloc[list(st.test_idx)],
+                self._X_test,
+                "exclude",
+            )
+        if partition == "oot":
+            if self._df_oot is None or self._X_oot is None:
+                return self._df.iloc[0:0], None, "exclude"
+            return self._df_oot, self._X_oot, "exclude"
+        return self._df, self._df, "exclude"  # partition == "all"
+
+    def get_node_cases(
+        self,
+        node_id: int,
+        *,
+        partition: str = "train",
+        n_rows: int = 50,
+    ) -> dict:
+        """Casos crudos que caen en un nodo (o su subarbol), Fase 3.12.c.
+
+        Contrato: docs/3.12_design_analysis_workspace.md §4.4. Devuelve el
+        MISMO DTO plano que get_data_preview:
+
+            {"columns": list[str], "rows": list[tuple],
+             "n_total": int, "truncated": bool}
+
+        con celdas en tipos nativos de Python (NaN del CSV -> None).
+        ``partition`` admite "train", "oos", "oot" y "all". El conteo
+        incluye el nodo y todos sus descendientes, de modo que la suma de
+        hojas coincide con el total de la particion y cada nodo interno
+        con la suma de sus hijos.
+
+        ValueError sin modelo entrenado, con ``partition`` desconocida o
+        con ``node_id`` inexistente. Una particion aun no materializada
+        (OOT sin load_oot, OOS en CV) devuelve el DTO vacio con las
+        columnas del dataset.
+        """
+        st = self._state
+        if st.tree is None:
+            raise ValueError(
+                "[session] get_node_cases requiere un modelo entrenado"
+            )
+        if partition not in ("train", "oos", "oot", "all"):
+            raise ValueError(
+                f"[session] partition invalida: {partition!r} "
+                f"(validas: ['train', 'oos', 'oot', 'all'])"
+            )
+        tree = st.tree
+        n_nodes = len(tree.nodes)
+        if (
+            not isinstance(node_id, (int, np.integer))
+            or node_id < 0
+            or node_id >= n_nodes
+        ):
+            raise ValueError(
+                f"[session] node_id inexistente: {node_id!r} "
+                f"(validos: 0..{n_nodes - 1})"
+            )
+        node_id = int(node_id)
+
+        frame, X_routed, unseen_policy = self._node_cases_source(partition)
+        columns = [str(c) for c in frame.columns]
+        if X_routed is None or len(frame) == 0:
+            self._log.info(
+                "[session] get_node_cases: node=%d partition=%s n=0/0",
+                node_id, partition,
+            )
+            return {"columns": columns, "rows": [], "n_total": 0,
+                    "truncated": False}
+        if len(X_routed) != len(frame):
+            raise RuntimeError(
+                f"[session] get_node_cases: desalineacion en "
+                f"partition={partition!r} ({len(frame)} filas crudas vs "
+                f"{len(X_routed)} filas enrutadas)"
+            )
+
+        subtree: list[int] = []
+        pila = [node_id]
+        while pila:
+            nid = pila.pop()
+            subtree.append(nid)
+            pila.extend(tree.nodes[nid].child_ids)
+
+        asign = predict_leaf_assignment(
+            tree, X_routed, unseen_policy=unseen_policy
+        )
+        mask = np.isin(asign, subtree)
+        n_total = int(mask.sum())
+        rows = [
+            tuple(self._cell_native(v) for v in fila)
+            for fila in frame.loc[mask].iloc[:n_rows].itertuples(
+                index=False, name=None
+            )
+        ]
+        self._log.info(
+            "[session] get_node_cases: node=%d partition=%s n=%d/%d",
+            node_id, partition, len(rows), n_total,
+        )
+        return {
+            "columns": columns,
+            "rows": rows,
+            "n_total": n_total,
+            "truncated": n_total > len(rows),
+        }
+
     def prune(self, alpha: float) -> SessionState:
         """TRAINED -> TRAINED con pruned_tree (poda coste-complejidad).
 
@@ -1641,6 +1909,69 @@ class Session:
             self._state.tree, unseen_policy=unseen_policy
         )
 
+    def get_rules(
+        self,
+        format: str = "markdown",
+        node_id: int | None = None,
+        unseen_policy: str = "exclude",
+    ) -> str | None:
+        """Texto de las reglas del modelo activo (Fase 3.12.a).
+
+        Fachada de lectura (sin transicion) sobre los exportadores de la
+        Fase 4.0: ``"markdown"`` -> export_to_markdown (descriptivo, no
+        requiere imputador), ``"sql"`` -> export_to_sql y ``"python"`` ->
+        export_to_python (ambos requieren el imputador cacheado por
+        ``partition()``).
+
+        ``node_id=None`` exporta el arbol completo, identico al de los
+        metodos ``export_to_*``. Un ``node_id`` explicito exporta SOLO
+        ese nodo y sus descendientes, tratandolo como nueva raiz: el
+        texto devuelto no incluye la ruta que llega hasta el nodo.
+
+        Devuelve None si no hay modelo entrenado (paridad con
+        export_to_*). El vocabulario de ``unseen_policy`` y la existencia
+        de ``node_id`` los valida el exportador. ValueError si ``format``
+        no es uno de los tres valores admitidos.
+        """
+        if self._state.tree is None:
+            return None
+        if format == "markdown":
+            text = export_to_markdown(
+                self._state.tree,
+                unseen_policy=unseen_policy,
+                node_id=node_id,
+            )
+        elif format in ("sql", "python"):
+            if self._imputer is None:
+                raise RuntimeError(
+                    f"[session] get_rules({format!r}) sin imputer en cache "
+                    "(partition() no ejecutado)"
+                )
+            if format == "sql":
+                text = export_to_sql(
+                    self._state.tree,
+                    self._imputer.spec,
+                    unseen_policy=unseen_policy,
+                    node_id=node_id,
+                )
+            else:
+                text = export_to_python(
+                    self._state.tree,
+                    self._imputer.spec,
+                    unseen_policy=unseen_policy,
+                    node_id=node_id,
+                )
+        else:
+            raise ValueError(
+                f"[session] get_rules: formato invalido {format!r} "
+                "(valores admitidos: 'markdown', 'sql', 'python')"
+            )
+        self._log.info(
+            "[session] get_rules: format=%s node_id=%s n_chars=%d",
+            format, node_id, len(text),
+        )
+        return text
+
     def load_oot(self, csv_path: str, *, time_col: str | None = None) -> SessionState:
         """TRAINED -> OOT_LOADED: ingesta de la cohorte temporal posterior.
 
@@ -1716,6 +2047,9 @@ class Session:
         X_oot = df_oot[spec_order]
         self._X_oot = self._imputer.transform(X_oot)
         self._y_oot = df_oot[st.target].astype(int).to_numpy()
+        # Fase 3.12.c: filas CRUDAS (post-filtro de poblacion) en el mismo
+        # orden que _X_oot/_y_oot; get_node_cases las muestra tal cual.
+        self._df_oot = df_oot
 
         if self._w_col is not None:
             w_oot = df_oot[self._w_col].to_numpy(dtype=float)

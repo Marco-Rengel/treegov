@@ -2620,6 +2620,51 @@ en `scripts/`.
 del bug); `AGENTS.md` sección "Verificación del wheel antes de release";
 `tests/test_packaging.py`.
 
+## §26. Consulta del modelo: reglas, acta y casos por nodo (Phase 3.12)
+
+**Contexto.** Rules y Summary eran placeholders, el Data Viewer solo mostraba
+el CSV completo y Gains no dibujaba las series ya presentes en su DTO. La
+solución debía exponer consultas sin trasladar routing, conteos ni composición
+del acta al frontend y sin alterar el modelo entrenado.
+
+**Decisiones.**
+
+1. **Filtro de exportadores aditivo.** `export_to_sql`, `export_to_python` y
+   `export_to_markdown` aceptan `node_id: int | None = None` keyword-only.
+   `None` preserva la salida anterior; un id exporta ese nodo y sus
+   descendientes como nueva raíz, sin la ruta desde la raíz original. Un id
+   inexistente produce `KeyError`. `unseen_policy` permanece global.
+2. **Acta como DTO nativo.** `Session.get_summary()` devuelve `None` sin
+   modelo o un dict con siete bloques: modelo, dataset, partición,
+   gobernanza, validación, intervenciones y bitácora. Reutiliza los DTO
+   OOS/OOT/CV, no dataclasses ni escalares numpy/pandas. La gobernanza es la
+   efectiva (`BANKING`, `RESEARCH` o `CUSTOM`), no una etiqueta forzada. En
+   CV, `n_train` cuenta las filas OK de población y `n_test = 0`.
+3. **Filas crudas, enrutado imputado.** `Session.get_node_cases()` devuelve
+   el mismo DTO que `get_data_preview`, pero limitado al nodo y su subárbol.
+   Las celdas mostradas provienen del CSV crudo (`None` para ausentes); la
+   asignación de hojas usa `_X_train`/`_X_test`/`_X_oot` imputadas para no
+   perder filas por NaN. Train enruta con `"error"`; oos/oot/all con
+   `"exclude"`. `"all"` usa el frame crudo completo. La caché `_df_oot`
+   conserva las filas OOT crudas post-filtro de población, alineadas con
+   `_X_oot`; reset la invalida. Particiones no materializadas devuelven el
+   DTO vacío, nunca una excepción de routing.
+4. **Presentación nativa y acotada.** Rules, Summary y Data Viewer consumen
+   esos contratos sin analítica propia. `GainsCharts` solo calcula ratios de
+   presentación ya definidos por el DTO (`n_cum/n_total`,
+   `n_bad_cum/n_bad_total`, `bad_rate`, `lift_cum`) y dibuja tres curvas con
+   QPainter/QGraphicsView. Beneficio y ROI quedan diferidos: requieren una
+   pantalla de ingresos/gastos por clase inexistente.
+
+**Consecuencias.** No cambian crecimiento, scoring, métricas, estado
+transaccional ni `params_fingerprint`. La API pública solo gana métodos de
+lectura y un parámetro opcional; los consumidores anteriores conservan su
+comportamiento. La suite final es 660/660.
+
+**Referencias.** `docs/3.12_design_analysis_workspace.md` §2–§5;
+`docs/api.md` (`backend_v3.exporters`, `backend_v3.session_state`);
+`docs/audit_log.md`, cierre de la Fase 3.12 del 14/11/2026.
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2659,6 +2704,7 @@ rebuilds the TreeModel with BFS reindex and logs overrides in
 fingerprint, BANKING labels bit-identical, on 25/10/2026 to add §18.11
 — Hotfix Visual post-3.6.e (granular View menu toggles per left-panel
 block; bidirectional Tree Map selection map->canvas; scoped relaxation
-of D2).)
+of D2); on 14/11/2026 to add §26 — Phase 3.12, native read-only model
+inspection contracts and three gains charts.)
 
 ---

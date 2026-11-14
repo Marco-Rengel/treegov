@@ -8333,3 +8333,89 @@ de release; `docs/design_decisions.md` §13.7;
 `docs/3.11.b_design_treemap_dataviewer.md` §D5;
 `docs/3.11.e_design_treemap_rewrite.md`; `docs/audit_log.md` entrada del
 03/11/2026 (B1, iconos SVG).
+
+### 14/11/2026 — Fase 3.12: pestañas de consulta del modelo (Rules, Summary, Data Viewer y Gains)
+
+**Estado**: ✅ Cerrada. Suite 660/660 PASSED.
+
+**Modelo**: OpenCode v2.2.5 + Kimi K3.1 Pro, reasoning=high.
+
+**Revisor**: Marco Rengel.
+
+**Contexto**: implementación y cierre de las ocho sub-fases previstas en
+`docs/3.12_design_analysis_workspace.md`. Las pestañas Rules y Summary dejan
+de ser placeholders; el Data Viewer muestra casos por nodo y partición; la
+pestaña Gains dibuja las tres curvas sustentadas por su DTO. Backend concentra
+routing y composición de DTOs; frontend solo presenta.
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/exporters.py` — parámetro keyword-only `node_id=None` en los
+  tres exportadores; subárbol como nueva raíz, sin prefijo de ruta.
+- `backend_v3/session_state.py` — nuevos `get_rules`, `get_summary` y
+  `get_node_cases`; caché `_df_oot` para filas OOT crudas y su invalidación.
+- `frontend_v3/i18n.py` — claves EN/ES de Rules, Summary, Data Viewer y
+  Gains, con paridad estricta.
+- `frontend_v3/main_window.py` — sustitución de placeholders, propagación de
+  gobernanza, selección/desselección de nodos, language bus y refrescos tras
+  entrenar, invertir, validar, podar y resetear.
+- `frontend_v3/rules_panel.py` — nuevo: formatos Markdown/SQL/Python, nodo,
+  copia y exportación.
+- `frontend_v3/summary_panel.py` — nuevo: acta HTML con siete secciones,
+  DTO anidado, terminología por gobernanza y exportación HTML/TXT.
+- `frontend_v3/data_viewer.py` — selector train/oos/oot/all, `set_session`,
+  `refresh_cases` y avisos específicos de nodo; Ctrl+C → TSV intacto.
+- `frontend_v3/gains_charts.py` — nuevo: tres vistas QGraphicsView dibujadas
+  con QPainter, referencias y estado vacío.
+- `frontend_v3/reports_panel.py` — curvas bajo la tabla y actualización con
+  cada nuevo DTO de ganancias.
+- `tests/test_exporters.py`, `tests/test_session_state.py` — contratos de
+  reglas, acta y casos por nodo, filtros, particiones y tipos nativos.
+- `tests/test_rules_panel.py`, `tests/test_summary_panel.py` — nuevos, 12 y
+  11 tests respectivamente, incluida integración con MainWindow.
+- `tests/test_data_viewer.py` — 4 tests nuevos de combo, nodo, partición,
+  vacío y selección desde MainWindow.
+- `tests/test_reports_panel.py` — 2 tests nuevos de series y render QPainter.
+- `docs/roadmap.md`, `docs/estado_proyecto.md`,
+  `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`,
+  `README.md`, `README.es.md`, `docs/api.md`,
+  `docs/design_decisions.md`, `docs/3.12_design_analysis_workspace.md` y
+  `docs/audit_log.md` — checklist de cierre y estado as-built del diseño.
+
+**Hallazgos**:
+
+1. `get_rules` es una fachada de lectura sobre los exportadores existentes.
+   `node_id=None` conserva la salida previa; un nodo explícito se trata como
+   nueva raíz. No cambian fingerprints ni scoring.
+2. `get_summary` devuelve siete bloques nativos y reutiliza los reportes
+   OOS/OOT/CV. Registra la gobernanza efectiva BANKING/RESEARCH/CUSTOM; en CV
+   `n_train` son las filas OK y `n_test=0`.
+3. `get_node_cases` separa representación y routing: devuelve filas crudas
+   del CSV (NaN → `None`) pero enruta con matrices imputadas, de modo que NaN
+   no reste casos. Incluye el nodo y sus descendientes; la suma de hojas
+   coincide con la partición y cada interno con la suma de sus hijos.
+4. La caché `_df_oot` conserva las filas OOT crudas post-filtro de población,
+   alineadas con `_X_oot`. OOT sin cargar y OOS en CV devuelven el DTO vacío.
+5. Rules y Summary se refrescan tras las transiciones que cambian su
+   contenido; el modo RESEARCH cambia las etiquetas PD/Probabilidad sin
+   modificar datos. MainWindow posee una única suscripción por panel al bus.
+6. Data Viewer mantiene el preview original al deseleccionar y las reglas del
+   Design System, incluida la copia TSV. El combo usa códigos canónicos, no
+   textos traducidos, para llamar al backend.
+7. Gains dibuja ganancias acumuladas (`n_bad_cum/n_bad_total`), respuesta
+   (`bad_rate`) y lift (`lift_cum`) contra `n_cum/n_total`. Beneficio y ROI
+   quedan diferidos en `roadmap.md`: requieren la pantalla de ingresos/gastos
+   por clase inexistente, sin introducir supuestos económicos implícitos.
+8. La tabla de tests de `estado_proyecto.md` se actualizó mediante
+   `pytest --collect-only`: session_state 121, exporters 27, data_viewer 8,
+   reports_panel 17, rules_panel 12, summary_panel 11; total exacto 660.
+
+**Tests**: progresión verificada por sub-fases: 617/617 (3.12.a), 621/621
+(3.12.b), 631/631 (3.12.c), 643/643 (3.12.d), 654/654 (3.12.e), 658/658
+(3.12.f) y 660/660 (3.12.g). Cierre documental 3.12.h:
+`python -m pytest tests -q` → **660 passed**. No hay regresiones.
+
+**Referencias cruzadas**: `docs/3.12_design_analysis_workspace.md` §2–§10;
+`docs/design_decisions.md` §26; `docs/api.md` (`backend_v3.exporters` y
+`backend_v3.session_state`); `docs/roadmap.md` (Fase 3.12 y Deferred de
+beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).

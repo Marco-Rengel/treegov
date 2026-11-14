@@ -28,6 +28,7 @@ from frontend_v3.i18n import (  # noqa: E402
     set_language,
     tr,
 )
+from frontend_v3.main_window import MainWindow  # noqa: E402
 from frontend_v3.reports_panel import ReportsPanel  # noqa: E402
 
 
@@ -146,6 +147,132 @@ def test_data_viewer_set_preview_none_and_empty_dict_clear():
     assert not viewer._lbl_notice.isHidden()
     viewer.close()
     viewer.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Fase 3.12.f: casos por nodo y selector de particion
+# ---------------------------------------------------------------------------
+
+
+class _FakeSession:
+    def __init__(self) -> None:
+        self.preview_calls = 0
+        self.case_calls: list[tuple[int, str, int]] = []
+
+    def get_data_preview(self) -> dict:
+        self.preview_calls += 1
+        return _dto(truncated=False)
+
+    def get_node_cases(
+        self, node_id: int, *, partition: str = "train", n_rows: int = 50
+    ) -> dict:
+        self.case_calls.append((node_id, partition, n_rows))
+        if node_id == 99:
+            return {
+                "columns": ["node", "partition", "value"],
+                "rows": [], "n_total": 0, "truncated": False,
+            }
+        return {
+            "columns": ["node", "partition", "value"],
+            "rows": [(node_id, partition, None)],
+            "n_total": 1,
+            "truncated": False,
+        }
+
+
+def test_data_viewer_partition_combo_builds_and_retranslates():
+    _get_app()
+    viewer = DataViewer()
+    assert viewer._partition_combo.count() == 4
+    assert [
+        viewer._partition_combo.itemData(i) for i in range(4)
+    ] == ["train", "oos", "oot", "all"]
+    assert viewer.current_partition() == "train"
+    assert viewer._lbl_partition.text() == tr("data_viewer_partition_label")
+    prev = get_language()
+    try:
+        set_language("es")
+        language_bus.language_changed.emit("es")
+        assert viewer._lbl_partition.text() == tr(
+            "data_viewer_partition_label", "es"
+        )
+        assert viewer._partition_combo.itemText(0) == tr(
+            "data_viewer_partition_train", "es"
+        )
+        assert viewer._partition_combo.itemText(3) == tr(
+            "data_viewer_partition_all", "es"
+        )
+    finally:
+        set_language(prev)
+        language_bus.language_changed.emit(prev)
+    viewer.close()
+    viewer.deleteLater()
+
+
+def test_data_viewer_node_and_partition_refresh_table():
+    _get_app()
+    viewer = DataViewer()
+    session = _FakeSession()
+    viewer.set_session(session)
+    assert viewer._session is session
+
+    viewer.refresh_cases(2)
+    assert session.case_calls == [(2, "train", 50)]
+    assert viewer._table.rowCount() == 1
+    assert viewer._table.item(0, 0).text() == "2"
+    assert viewer._table.item(0, 1).text() == "train"
+    assert viewer._table.item(0, 2).text() == ""  # None -> celda vacia
+    assert tr("data_viewer_node_hint").format(node_id=2) in (
+        viewer._lbl_notice.text()
+    )
+
+    viewer._partition_combo.setCurrentIndex(1)  # oos
+    assert session.case_calls[-1] == (2, "oos", 50)
+    assert viewer._table.rowCount() == 1
+    assert viewer._table.item(0, 1).text() == "oos"
+
+    viewer._partition_combo.setCurrentIndex(3)  # all
+    assert session.case_calls[-1] == (2, "all", 50)
+    assert viewer._table.item(0, 1).text() == "all"
+
+    # Deseleccionar vuelve al preview completo, como antes de 3.12.f.
+    viewer.refresh_cases(None)
+    assert session.preview_calls == 1
+    assert viewer._table.rowCount() == 3
+    assert viewer._table.item(0, 0).text() == "20"
+    assert viewer._lbl_notice.isHidden()
+    viewer.close()
+    viewer.deleteLater()
+
+
+def test_data_viewer_empty_node_uses_specific_notice():
+    _get_app()
+    viewer = DataViewer()
+    viewer.set_session(_FakeSession())
+    viewer.refresh_cases(99)
+    assert viewer._table.rowCount() == 0
+    assert viewer._lbl_notice.text() == tr("data_viewer_node_empty")
+    assert not viewer._lbl_notice.isHidden()
+    viewer.close()
+    viewer.deleteLater()
+
+
+def test_main_window_tree_selection_refreshes_data_viewer():
+    _get_app()
+    window = MainWindow()
+    try:
+        seen: list[int | None] = []
+
+        def _record(node_id):
+            seen.append(node_id)
+
+        window._data_viewer.refresh_cases = _record
+        window._tree_panel.node_selected.emit(5)
+        window._tree_panel.selection_cleared.emit()
+        assert seen == [5, None]
+    finally:
+        window.close()
+        window.deleteLater()
 
 
 # ---------------------------------------------------------------------------

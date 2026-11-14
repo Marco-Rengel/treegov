@@ -3,8 +3,9 @@
 Widget de solo lectura que muestra el preview crudo del CSV cargado,
 consumiendo el DTO de `Session.get_data_preview()` (contrato D3 del
 diseno 3.11.b: `{"columns", "rows", "n_total", "truncated"}`, tipos
-nativos Python, ausentes como None). El visor responde a "que cargue?",
-no a "que vio el modelo?" (sin imputacion, sin split).
+nativos Python, ausentes como None). Fase 3.12.f: al seleccionar un nodo
+consume `Session.get_node_cases()` con la particion elegida; al
+deseleccionar vuelve al preview completo, sin cambiar el contrato D3.
 
 Sala limpia: cero logica analitica; el widget pinta el DTO, no calcula.
 
@@ -20,9 +21,13 @@ traducen).
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
     QLabel,
     QTableWidget,
     QTableWidgetItem,
@@ -33,7 +38,12 @@ from PySide6.QtWidgets import (
 from frontend_v3.i18n import language_bus, tr
 from frontend_v3.reports_panel import ReportsPanel
 
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from backend_v3.session_state import Session
+
 __all__ = ["DataViewer"]
+
+_PARTITIONS = ("train", "oos", "oot", "all")
 
 
 class DataViewer(QWidget):
@@ -46,9 +56,24 @@ class DataViewer(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._dto: dict | None = None
+        self._session: Session | None = None
+        self._node_id: int | None = None
         layout = QVBoxLayout(self)
+
+        partition_row = QHBoxLayout()
+        self._lbl_partition = QLabel(self)
+        partition_row.addWidget(self._lbl_partition)
+        self._partition_combo = QComboBox(self)
+        self._partition_combo.setObjectName("dataViewerPartition")
+        for code in _PARTITIONS:
+            self._partition_combo.addItem("", userData=code)
+        partition_row.addWidget(self._partition_combo)
+        partition_row.addStretch(1)
+        layout.addLayout(partition_row)
+
         self._lbl_notice = QLabel(self)
         self._lbl_notice.setObjectName("dataViewerNotice")
+        self._lbl_notice.setWordWrap(True)
         layout.addWidget(self._lbl_notice)
         self._table = QTableWidget(self)
         self._table.setObjectName("dataViewerTable")
@@ -64,22 +89,64 @@ class DataViewer(QWidget):
             lambda: ReportsPanel._copy_selection_to_clipboard(self._table)
         )
         layout.addWidget(self._table, 1)
+        self._partition_combo.currentIndexChanged.connect(
+            self._on_partition_changed
+        )
         language_bus.language_changed.connect(self.retranslate_ui)
-        self._refresh()
+        self.retranslate_ui()
 
     # ---------------------------------------------------------- Public API
+
+    def set_session(self, session: Session | None) -> None:
+        """Guarda la sesion usada por `refresh_cases` (sin repintar)."""
+        self._session = session
 
     def set_preview(self, dto: dict | None) -> None:
         """Recibe el DTO de `Session.get_data_preview()` y repinta.
 
         None o el dict vacio del backend (sin dataset cargado) muestran
-        el estado vacio (`tr("data_viewer_empty")`).
+        el estado vacio (`tr("data_viewer_empty")`). Es la entrada del
+        preview completo, por lo que tambien limpia el nodo seleccionado.
         """
-        self._dto = dto
-        self._refresh()
+        self._node_id = None
+        self._set_dto(dto)
+
+    def refresh_cases(self, node_id: int | None) -> None:
+        """Muestra los casos del nodo o vuelve al preview completo.
+
+        Con nodo, llama a `get_node_cases(node_id, partition=...,
+        n_rows=50)`. Sin nodo, conserva el comportamiento previo y llama
+        a `get_data_preview()`. Sin sesion no hay consulta posible: solo
+        se repinta el DTO cacheado (o se limpia si se pidio un nodo).
+        """
+        self._node_id = None if node_id is None else int(node_id)
+        if self._session is None:
+            if self._node_id is not None:
+                self._set_dto(None)
+            else:
+                self._refresh()
+            return
+        if self._node_id is None:
+            self._set_dto(self._session.get_data_preview())
+        else:
+            self._set_dto(self._session.get_node_cases(
+                self._node_id,
+                partition=self.current_partition(),
+                n_rows=50,
+            ))
+
+    def current_partition(self) -> str:
+        """Codigo de particion activo: train, oos, oot o all."""
+        data = self._partition_combo.currentData()
+        return str(data) if data is not None else "train"
 
     def retranslate_ui(self) -> None:
-        """Retraduccion en caliente: repinta desde el DTO cacheado."""
+        """Retraduce selector y avisos; repinta desde el DTO cacheado."""
+        self._lbl_partition.setText(tr("data_viewer_partition_label"))
+        for index, code in enumerate(_PARTITIONS):
+            self._partition_combo.setItemText(
+                index, tr(f"data_viewer_partition_{code}")
+            )
         self._refresh()
 
     def closeEvent(self, event):
@@ -93,13 +160,25 @@ class DataViewer(QWidget):
 
     # ------------------------------------------------------------ Internals
 
+    def _set_dto(self, dto: dict | None) -> None:
+        self._dto = dto
+        self._refresh()
+
+    def _on_partition_changed(self, _index: int) -> None:
+        self.refresh_cases(self._node_id)
+
     def _refresh(self) -> None:
         self._table.clear()
         self._table.setRowCount(0)
         self._table.setColumnCount(0)
         dto = self._dto
         if not dto or dto.get("n_total", 0) == 0:
-            self._lbl_notice.setText(tr("data_viewer_empty"))
+            empty_key = (
+                "data_viewer_node_empty"
+                if self._node_id is not None
+                else "data_viewer_empty"
+            )
+            self._lbl_notice.setText(tr(empty_key))
             self._lbl_notice.setVisible(True)
             return
         columns = [str(c) for c in dto["columns"]]
@@ -114,12 +193,16 @@ class DataViewer(QWidget):
                 self._table.setItem(
                     i, j, QTableWidgetItem("" if val is None else str(val))
                 )
+        notices: list[str] = []
+        if self._node_id is not None:
+            notices.append(
+                tr("data_viewer_node_hint").format(node_id=self._node_id)
+            )
         if dto.get("truncated"):
-            self._lbl_notice.setText(
+            notices.append(
                 tr("data_viewer_truncated").format(
                     shown=len(rows), total=dto["n_total"]
                 )
             )
-            self._lbl_notice.setVisible(True)
-        else:
-            self._lbl_notice.setVisible(False)
+        self._lbl_notice.setText(" ".join(notices))
+        self._lbl_notice.setVisible(bool(notices))

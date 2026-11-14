@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 11/11/2026 (mini-cierre documental del 10/11/2026 consolidado; suite 607/607; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 14/11/2026 (cierre de la Fase 3.12; suite 660/660; release 1.0.0rc6 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -490,6 +490,44 @@ Validación Cruzada sin referencias a fases internas. Decisión:
 `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md`
 entrada del 25/10/2026. Suite 477/477. Ampliación (25/10/2026, mini-cierre #3): conectores ortogonales con codo (`QGraphicsPathItem`, token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (visibles a cualquier zoom). Suite 478/478. Ampliación (25/10/2026, bloque de iteración #4-#8): Tree Map reescrito con layout abstracto desacoplado (cajas 48×30), navegación por `node_id` (`TreePanel.center_on_node`) y colores del prototipo previo (fondo oscuro fijo). Sustituye el diseño de coordenadas compartidas. Suite 478/478. Deuda diferida: paleta propia del minimapa para el tema claro (`roadmap.md` Deferred).
 
+### Fase 3.12 — Pestañas de consulta del modelo ✅ Completada (14/11/2026)
+
+Implementadas las cuatro zonas funcionales del diseño
+`docs/3.12_design_analysis_workspace.md`, conservando la sala limpia:
+`Session` produce DTOs de tipos nativos y el frontend solo presenta.
+
+- **3.12.a — Reglas en backend.** `Session.get_rules(format="markdown",
+  node_id=None, unseen_policy="exclude")` fachada de los exportadores;
+  `node_id` keyword-only opcional también en SQL/Python/Markdown. Sin nodo,
+  salida previa idéntica; con nodo, el subárbol se exporta como nueva raíz.
+  Suite 617/617.
+- **3.12.b — Acta en backend.** `Session.get_summary()` compone modelo,
+  dataset, partición, gobernanza, validación OOS/OOT/CV, intervenciones y
+  bitácora. El modo efectivo distingue BANKING/RESEARCH/CUSTOM; en CV,
+  `n_train` = filas OK y `n_test` = 0. Suite 621/621.
+- **3.12.c — Casos por nodo.** `Session.get_node_cases(node_id, *,
+  partition="train", n_rows=50)` devuelve el DTO de preview con filas crudas
+  del CSV. El enrutado usa matrices imputadas (NaN no pierde casos), incluye
+  el subárbol completo y admite train/oos/oot/all; `_df_oot` conserva las
+  filas OOT crudas post-población. Particiones no materializadas → DTO vacío.
+  Suite 631/631.
+- **3.12.d — RulesPanel.** Nueva pestaña con selector Markdown/SQL/Python,
+  filtro por nodo seleccionado, copiar/exportar y refresco tras las
+  transiciones del modelo. 12 tests. Suite 643/643.
+- **3.12.e — SummaryPanel.** Acta HTML con siete secciones, validación
+  anidada, terminología BANKING/RESEARCH, copia en texto plano y exportación
+  HTML/TXT. 11 tests. Suite 654/654.
+- **3.12.f — DataViewer por nodo.** Selector train/oos/oot/all y refresco
+  desde la selección del árbol; al deseleccionar vuelve el CSV completo.
+  Ctrl+C → TSV intacto. 4 tests nuevos. Suite 658/658.
+- **3.12.g — GainsCharts.** Tres mini-gráficos QPainter/QGraphicsView bajo
+  la tabla: ganancias acumuladas (`n_bad_cum/n_bad_total`), respuesta
+  (`bad_rate`) y elevación (`lift_cum`), contra percentil `n_cum/n_total`.
+  Sin dependencias nuevas; beneficio y ROI quedan diferidos por requerir la
+  pantalla de ingresos/gastos. 2 tests nuevos. Suite 660/660.
+- **3.12.h — Cierre documental.** Checklist de 8 documentos, API pública y
+  decisión §26 sincronizados. Suite final 660/660.
+
 ### Cierre intermedio 16/10/2026
 
 Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d (fila accuracy, fila "n por clase", título multiclase K>2). Añadidos 5 tests. Suite 416/416. Resuelto también el pendiente de herramientas CLI duplicadas en el .venv del proyecto (aider-chat, build, twine; ver docs/audit_log.md entrada del 16/10/2026). Sin cambios de código analítico.
@@ -517,6 +555,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 3.10.b** — Alineación CHAID con predictores continuos: binning automático por deciles, campo `bin_edges` en `SplitConfig` y routing por `np.digitize` en train y OOS/OOT. Incluye el hotfix visual 3.10.a.1 (H9, H11, H12, H13). Completada (23/10/2026).
 - **Fase 3.11.a** — Rediseño Base: Tema Colab, Layout Excel (pestañas a página completa), Wizard redimensionado, Nodos HTML estación clásica. Completada (24/10/2026). As-built: `docs/3.11.a_design_colab_theme.md`.
 - **Fase 3.11.a.1** — Hotfix Visual: layout clásico (8 menús, toolbar compacta IconOnly, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos reescritos a QPainter puro ("hoja de auditoría" 220×126), tema oscuro forzado en ventanas nativas vía QPalette, aristas con cortes numéricos, copia TSV (Ctrl+C) en tablas, Design System (`docs/3.11_gui_design_system.md`). Completada (24/10/2026).
+- **Fase 3.12** — Pestañas Rules y Summary funcionales, Data Viewer por nodo/partición y tres curvas de ganancias; métodos `get_rules`, `get_summary` y `get_node_cases`. Completada (14/11/2026), suite 660/660.
 - **Fase 4** — Reportes avanzados + export (SQL anidado, Python puro, reglas MD/JSON, doc automática). Completada (01/11/2026, fases 4.0 y 4.0.1).
 - **Fase 5** — Capa MCP. Completada (01/11/2026).
 - **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
@@ -671,15 +710,16 @@ TreeGov/
 ├── frontend_v3/ # Capa de presentación PySide6
 │ # (app, main_window, wizard, tree_view, tree_map,
 │ # data_viewer, metrics_panel, reports_panel, prune_dialog,
-│ # univariate_dialog, manual_override_dialog,
-│ # scoring_dialogs, ecl_dialog, icons, theme, i18n)
+│ # univariate_dialog, manual_override_dialog, rules_panel,
+│ # summary_panel, gains_charts, scoring_dialogs, ecl_dialog,
+│ # icons, theme, i18n)
 ├── mcp_v3/ # Capa MCP headless (Fase 5)
 ├── scripts/ # Herramientas operativas del repo (NO van en el wheel)
 │ ├── fetch_datasets.py # Descarga UCI + verificación SHA256 → data/uci
 │ ├── fetch_icons.py # Bootstrap Icons (MIT) → frontend_v3/resources/icons
 │ ├── update_readme_date.py # Sincroniza la fecha de los README (--check)
 │ └── validate_uci.py # Benchmark de 14 pares (dataset, motor) → informe
-├── tests/ # Suite de tests (607 tests)
+├── tests/ # Suite de tests (660 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -714,6 +754,7 @@ TreeGov/
 │ ├── 3.11.c_design_univariate_cost_matrix.md
 │ ├── 3.11.d_design_context_menu_interactivity.md
 │ ├── 3.11.e_design_treemap_rewrite.md
+│ ├── 3.12_design_analysis_workspace.md
 │ ├── 4.0_design_exports.md
 │ ├── 4.0.1_design_categorical_exporters.md
 │ ├── 5.0_design_mcp.md
@@ -830,7 +871,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | splitting.py | 14 |
 | profiling.py | 3 |
 | tree_builder.py | 39 |
-| session_state.py | 102 |
+| session_state.py | 121 |
 | validation.py | 31 |
 | pruning.py | 7 |
 | stability.py | 18 |
@@ -841,16 +882,16 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | tree_view (frontend) | 16 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 12 |
-| reports_panel (frontend) | 15 |
+| reports_panel (frontend) | 17 |
 | prune_dialog (frontend) | 1 |
-| data_viewer (frontend) | 4 |
+| data_viewer (frontend) | 8 |
 | tree_map (frontend) | 7 |
 | e2e_reports (frontend) | 4 |
 | e2e_non_banking (frontend) | 1 |
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| exporters.py | 22 |
+| exporters.py | 27 |
 | session_exporters (backend) | 8 |
 | e2e_exporters_gui (frontend) | 4 |
 | mcp_tools (backend) | 12 |
@@ -865,9 +906,11 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | mcp_ecl.py (backend/MCP) | 1 |
 | scripts (infraestructura) | 6 |
 | packaging | 4 |
-| **Total** | **607** |
+| rules_panel (frontend) | 12 |
+| summary_panel (frontend) | 11 |
+| **Total** | **660** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 607/607 PASSED
+**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 660/660 PASSED
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -900,13 +943,14 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Backlog post-Fase 7 cerrado; release 1.0.0rc6 publicada (08/11/2026).**
-Suite 607/607. CV k-fold, guardrail de imports en GUI e iconos SVG
-incorporados. Próximo paso: revisión del aplicativo en pantalla real
-(CV con datasets grandes, iconos SVG en tema oscuro, arranque real en
-Windows nativo, uso prolongado). Después de esa revisión: decisión de
-distribución (C1: PyPI solo / + PyInstaller / + Inno Setup / + MSI /
-firma digital) y publicación de 1.0.0 estable.
+**Fase 3.12 cerrada (14/11/2026); release 1.0.0rc6 vigente en PyPI.**
+Suite 660/660. Rules, Summary, Data Viewer por nodo y tres curvas de
+ganancias implementados sobre los nuevos contratos de consulta de `Session`.
+Próximo paso: revisión del aplicativo en pantalla real (CV con datasets
+grandes, iconos SVG en tema oscuro, arranque real en Windows nativo, uso
+prolongado). Después de esa revisión: decisión de distribución (C1: PyPI
+solo / + PyInstaller / + Inno Setup / + MSI / firma digital) y publicación
+de 1.0.0 estable.
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
@@ -984,7 +1028,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0 a 7 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 607/607. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
+> "Retomamos TreeGov. Fases 0 a 7 y Fase 3.12 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 660/660. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
 
 ---
 

@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from frontend_v3.i18n import language_bus, tr, tr_term
+from frontend_v3.gains_charts import GainsCharts
 
 
 def _fmt(value, digits: int = 4) -> str:
@@ -184,9 +185,12 @@ class ReportsPanel(QWidget):
         self._empty_label.setWordWrap(True)
         main_layout.addWidget(self._empty_label)
 
-        # Splitter: gains table on top, summary + matrix below.
+        # Splitter: tabla + curvas arriba; resumen + matriz abajo.
         splitter = QSplitter(Qt.Orientation.Vertical, self)
-        self._table = QTableWidget(self)
+        top_section = QWidget(self)
+        top_layout = QVBoxLayout(top_section)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        self._table = QTableWidget(top_section)
         self._table.setObjectName("reportsGainsTable")
         self._table.setColumnCount(len(self._HEADER_KEYS))
         self._table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -208,7 +212,12 @@ class ReportsPanel(QWidget):
         self._copy_shortcut.activated.connect(
             lambda: self._copy_selection_to_clipboard(self._table)
         )
-        splitter.addWidget(self._table)
+        top_layout.addWidget(self._table, 3)
+        # Fase 3.12.g: tres curvas nativas debajo de la tabla.
+        self._gains_charts = GainsCharts(top_section)
+        self._gains_charts.setObjectName("gainsCharts")
+        top_layout.addWidget(self._gains_charts, 2)
+        splitter.addWidget(top_section)
         splitter.addWidget(self._build_bottom_section())
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
@@ -390,6 +399,7 @@ class ReportsPanel(QWidget):
     def set_gains_table(self, dto: dict | None) -> None:
         """Store the gains-table payload and repaint."""
         self._gains = dto
+        self._gains_charts.set_data(dto)
         self.refresh()
 
     def set_classification_matrix(self, dto: dict | None) -> None:
@@ -624,6 +634,7 @@ class ReportsPanel(QWidget):
         self._table.setHorizontalHeaderLabels(
             [self._term_header(key) for key in self._HEADER_KEYS]
         )
+        self._gains_charts.retranslate_ui()
         self.refresh()
 
     # ------------------------------------------------------------ Painting

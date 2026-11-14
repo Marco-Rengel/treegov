@@ -371,6 +371,27 @@ Implementación de la poda coste-complejidad interactiva y ponderada.
 
 **Nota (25/10/2026):** se ha aplicado un **Hotfix Visual** post-cierre (tras la Fase 3.6.e) que pule el Tree Map (conectores padre-hijo, etiquetas de `node_id`, selección bidireccional con el canvas principal y hit-test corregido) y el Menú Ver (submenú granular por bloque del panel izquierdo en lugar del toggle global), además del texto de Validación Cruzada del wizard (sin referencias a fases internas). Suite 477/477. Decisión: `docs/design_decisions.md` §18.11; mini-cierre: `docs/audit_log.md` entrada del 25/10/2026. Ampliación (25/10/2026, mini-cierre #3): conectores del minimapa reescritos como `QGraphicsPathItem` ortogonal idéntico al canvas principal (3 segmentos con codo, pluma token `BORDER`) y etiquetas `node_id` con `ItemIgnoresTransformations` (tamaño constante de pantalla visible a cualquier zoom). Suite 478/478. **Nota (25/10/2026, iteración #4-#8):** Tree Map reescrito con layout abstracto desacoplado (cajas 48×30, orientación vertical, colores del prototipo previo) y navegación por `node_id` (`TreePanel.center_on_node`). Sustituye el diseño de coordenadas compartidas que dejaba los números ilegibles en árboles anchos. Suite 478/478. Decisión: `design_decisions.md` §18.11 (actualización). Deuda diferida: paleta propia del minimapa.
 
+### ✅ Phase 3.12 — Model inspection tabs (Rules / Summary / Node cases / Gains)
+**Status**: ✅ Completed (14/11/2026, suite 660/660). Diseño:
+`docs/3.12_design_analysis_workspace.md`.
+
+| Sub-fase | Estado | Alcance as-built |
+|---|---|---|
+| 3.12.a | ✅ (617/617) | `Session.get_rules(format, node_id, unseen_policy)` y filtro `node_id` keyword-only en los tres exportadores; `None` preserva la salida previa. |
+| 3.12.b | ✅ (621/621) | `Session.get_summary()`: acta DTO nativa con modelo, dataset, partición, gobernanza, validación, intervenciones y bitácora. |
+| 3.12.c | ✅ (631/631) | `Session.get_node_cases(node_id, *, partition="train", n_rows=50)`: filas crudas por subárbol y partición, enrutado con matrices imputadas y caché `_df_oot`. |
+| 3.12.d | ✅ (643/643) | Pestaña Rules: `RulesPanel`, formatos Markdown/SQL/Python, selección de nodo, copiar/exportar, i18n y refresco desde MainWindow. |
+| 3.12.e | ✅ (654/654) | Pestaña Summary: `SummaryPanel` HTML con siete secciones, validación anidada, modo BANKING/RESEARCH, copiar/exportar y refresco transaccional. |
+| 3.12.f | ✅ (658/658) | Data Viewer por nodo: selector train/oos/oot/all, `set_session`, `refresh_cases`, restauración del preview al deseleccionar y Ctrl+C → TSV intacto. |
+| 3.12.g | ✅ (660/660) | `GainsCharts`: tres curvas QPainter/QGraphicsView (ganancias acumuladas, respuesta y lift) bajo la tabla, con referencias y estado vacío. |
+| 3.12.h | ✅ (660/660) | Cierre documental de los 8 artefactos canónicos y verificación final. |
+
+**Cierre as-built.** Las cuatro zonas de consulta son adaptadores de `Session`:
+ninguna contiene lógica analítica. Los métodos nuevos devuelven tipos nativos;
+el filtro de exportadores es aditivo y no altera fingerprints ni resultados del
+modelo. Las curvas de beneficio acumulado y ROI quedan diferidas por requerir la
+pantalla de ingresos/gastos por clase (ver `## Deferred`).
+
 ### ✅ Phase 4.0 — Export to production (SQL / Python / Markdown)
 
 **Priority: MEDIUM** · **Cerrada el 01/11/2026.**
@@ -428,11 +449,20 @@ entrada del 01/11/2026.
 
 ## Upcoming phases
 
-No hay fases abiertas: las fases 0 a 7.0 están cerradas. El trabajo
-pendiente vive en `## Deferred (no blocking current work)` y en
-`## Pending decisions`.
+No hay fases abiertas: las fases 0 a 7.0 y la Fase 3.12 están cerradas.
+El trabajo pendiente vive en `## Deferred (no blocking current work)` y
+en `## Pending decisions`.
 
 ## Deferred (no blocking current work)
+
+### Gains benefit and ROI curves (deferred from Phase 3.12, 14/11/2026)
+
+Las curvas de beneficio acumulado y retorno sobre la inversión requieren una
+pantalla para declarar ingresos y gastos por clase, que no existe en TreeGov.
+La Fase 3.12 implementó únicamente las tres curvas sustentadas por el DTO
+actual (ganancias acumuladas, tasa de respuesta y elevación). Referencia:
+`docs/3.12_design_analysis_workspace.md` §5.1–§5.3. No se implementará una
+aproximación con supuestos económicos implícitos.
 
 ### ✅ PyPI synchronization (Resolved: 1.0.0rc5, 02/11/2026)
 
@@ -445,6 +475,8 @@ La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actua
 **Desincronización posterior a la Fase 7 (02/11/2026):** los READMEs del repositorio reflejan ahora las Fases 0–7 y 561/561 tests; la página de PyPI permanece congelada en el README de `1.0.0rc5` (537/537). Este cierre documental no publica una nueva versión: la sincronización se difiere a la próxima decisión de release conforme al protocolo PyPI.
 
 **Desincronización registrada (10/11/2026, post-`1.0.0rc6`):** el bloque de sincronización documental de los READMEs es cosmético (árbol de directorios con `exporters.py`/`scoring.py`/`ecl.py`, `mcp_v3/` y `treegov_mcp.py`, documentos de diseño 3.6.e a 7.0, nodo `mcp_v3` en el diagrama Mermaid, filas 3.11.e y 2.1.b de la tabla de fases, "over 600 tests", y traducción al inglés de tres bloques que seguían en español). No se publica una nueva versión: la página de PyPI queda congelada en el README de `1.0.0rc6` hasta la próxima release material, conforme a la regla del 20/10/2026. **Pendiente para la próxima release:** verificar el wheel con el comando de `.treegovrules` §"Wheel verification before release" antes del `twine upload`.
+
+**Desincronización registrada (14/11/2026, Fase 3.12):** los READMEs del repositorio incorporan la Fase 3.12 y la suite 660/660. Son cambios cosméticos de estado; no se publica una nueva versión. PyPI permanece congelado en `1.0.0rc6` hasta la próxima release material, conforme al protocolo PyPI.
 
 ### ✅ Phase 2.1.b — Hardening extras — RESUELTO 03/11/2026 (B2a + B2b)
 **Priority: LOW (deferred; resuelto en el bloque del backlog post-Fase 7)**
