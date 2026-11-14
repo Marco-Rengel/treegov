@@ -168,6 +168,8 @@ class DataViewer(QWidget):
         self.refresh_cases(self._node_id)
 
     def _refresh(self) -> None:
+        # La particion solo es seleccionable cuando hay un nodo activo.
+        self._partition_combo.setEnabled(self._node_id is not None)
         self._table.clear()
         self._table.setRowCount(0)
         self._table.setColumnCount(0)

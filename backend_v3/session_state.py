@@ -1296,7 +1296,8 @@ class Session:
         ``oot``) y get_cv_report(). ``manual_overrides`` y ``event_log``
         se copian de SessionState sin reformatear sus tuplas. Los
         parametros de gobernanza salen de ``_last_train_params``,
-        persistido por train(); si el invariante se rompe, RuntimeError.
+        persistido por train(); si falta esa cache, se devuelven como
+        None y el modo queda CUSTOM en lugar de abortar el acta.
 
         ``governance_mode`` es el modo EFECTIVO (misma logica que el
         fingerprint del modelo): ``"BANKING"``, ``"RESEARCH"`` o
@@ -1308,21 +1309,26 @@ class Session:
         if st.tree is None:
             return None
         params = self._last_train_params
-        if params is None:
-            raise RuntimeError(
-                "[session] get_summary sin parametros de train en cache "
-                "(train() no ejecutado)"
-            )
         tree = st.tree
 
-        apply_jeffreys = bool(params["apply_jeffreys"])
-        pd_floor = params["pd_floor"]
-        if apply_jeffreys and pd_floor is not None:
-            governance_mode = "BANKING"
-        elif not apply_jeffreys and pd_floor is None:
-            governance_mode = "RESEARCH"
-        else:
+        if params is None:
+            self._log.warning(
+                "[session] get_summary sin parametros de train en cache; "
+                "gobernanza desconocida"
+            )
+            params = {}
+            apply_jeffreys = None
+            pd_floor = None
             governance_mode = "CUSTOM"
+        else:
+            apply_jeffreys = bool(params["apply_jeffreys"])
+            pd_floor = params["pd_floor"]
+            if apply_jeffreys and pd_floor is not None:
+                governance_mode = "BANKING"
+            elif not apply_jeffreys and pd_floor is None:
+                governance_mode = "RESEARCH"
+            else:
+                governance_mode = "CUSTOM"
 
         if st.validation_scheme == "cv":
             n_train = int((st.n_rows or 0) - st.n_excluded_population)
@@ -1378,12 +1384,18 @@ class Session:
             "governance": {
                 "apply_jeffreys": apply_jeffreys,
                 "pd_floor": None if pd_floor is None else float(pd_floor),
-                "min_child_size": int(params["min_child_size"]),
+                "min_child_size": (
+                    None if params.get("min_child_size") is None
+                    else int(params["min_child_size"])
+                ),
                 "min_child_weight": (
-                    None if params["min_child_weight"] is None
+                    None if params.get("min_child_weight") is None
                     else float(params["min_child_weight"])
                 ),
-                "max_depth_param": int(params["max_depth"]),
+                "max_depth_param": (
+                    None if params.get("max_depth") is None
+                    else int(params["max_depth"])
+                ),
             },
             "validation": {
                 "oos_metrics": oos_oot.get("oos"),
@@ -1513,11 +1525,29 @@ class Session:
             return {"columns": columns, "rows": [], "n_total": 0,
                     "truncated": False}
         if len(X_routed) != len(frame):
-            raise RuntimeError(
-                f"[session] get_node_cases: desalineacion en "
-                f"partition={partition!r} ({len(frame)} filas crudas vs "
-                f"{len(X_routed)} filas enrutadas)"
-            )
+            if partition == "all":
+                # Filas con nulos ya descartadas por el origen enrutado:
+                # alinea por indice y conserva solo las que si pueden
+                # evaluarse, en lugar de abortar toda la consulta.
+                common = frame.index.intersection(
+                    X_routed.index, sort=False
+                )
+                self._log.warning(
+                    "[session] get_node_cases: alineacion parcial en all "
+                    "(%d de %d filas crudas)",
+                    len(common), len(frame),
+                )
+                frame = frame.loc[common]
+                X_routed = X_routed.loc[common]
+                if len(frame) == 0:
+                    return {"columns": columns, "rows": [], "n_total": 0,
+                            "truncated": False}
+            else:
+                raise RuntimeError(
+                    f"[session] get_node_cases: desalineacion en "
+                    f"partition={partition!r} ({len(frame)} filas crudas vs "
+                    f"{len(X_routed)} filas enrutadas)"
+                )
 
         subtree: list[int] = []
         pila = [node_id]

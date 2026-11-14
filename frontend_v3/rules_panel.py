@@ -17,6 +17,7 @@ y no se traduce (mismo contrato que Archivo > Exportar).
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
@@ -185,9 +186,15 @@ class RulesPanel(QWidget):
         self._update_node_label()
         text = None
         if self._session is not None:
-            text = self._session.get_rules(
-                self.current_format(), node_id=self._node_id
-            )
+            try:
+                text = self._session.get_rules(
+                    self.current_format(), node_id=self._node_id
+                )
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "[rules_panel] fallo al obtener las reglas"
+                )
+                text = None
         # El contrato del backend es str | None; cualquier otro tipo se
         # trata como estado vacio (defensa de presentacion).
         if not isinstance(text, str) or not text:

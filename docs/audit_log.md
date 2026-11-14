@@ -8419,3 +8419,5 @@ routing y composición de DTOs; frontend solo presenta.
 `docs/design_decisions.md` §26; `docs/api.md` (`backend_v3.exporters` y
 `backend_v3.session_state`); `docs/roadmap.md` (Fase 3.12 y Deferred de
 beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
+
+**Retrospectiva pre-release.** Antes de publicar `1.0.0rc7`, se auditó el código y se resolvieron 5 zonas grises: (1) combo de partición deshabilitado sin nodo en el visor; (2) curvas de ganancias ocultas si no hay eventos; (3) `RulesPanel` y `SummaryPanel` capturan errores del backend sin caerse; (4) `get_node_cases("all")` tolera desalineación por nulos; (5) `get_summary()` devuelve valores seguros (None/CUSTOM) si faltan parámetros de entrenamiento.

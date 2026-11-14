@@ -14,6 +14,7 @@ el panel tras las transiciones que cambian el acta.
 from __future__ import annotations
 
 import html
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -107,7 +108,13 @@ class SummaryPanel(QWidget):
     def refresh(self, session: Session | None) -> None:
         """Lee `session.get_summary()` y reconstruye el HTML."""
         self._session = session
-        summary = session.get_summary() if session is not None else None
+        try:
+            summary = session.get_summary() if session is not None else None
+        except Exception:
+            logging.getLogger(__name__).exception(
+                "[summary_panel] fallo al obtener el resumen"
+            )
+            summary = None
         self._summary = summary if isinstance(summary, dict) else None
         self._repaint()
 

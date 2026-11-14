@@ -207,6 +207,11 @@ class GainsCharts(QWidget):
             return
         n_total = _finite(gains_dto.get("n_total"))
         n_bad_total = _finite(gains_dto.get("n_bad"))
+        # Sin eventos no hay curva de ganancias: evita cualquier division
+        # por cero y muestra el mismo estado vacio que una tabla ausente.
+        if n_bad_total is None or n_bad_total <= 0.0:
+            self._set_empty()
+            return
         global_rate = _finite(gains_dto.get("bad_rate_global")) or 0.0
         series: dict[str, list[tuple[float, float]]] = {
             kind: [] for kind in _KINDS

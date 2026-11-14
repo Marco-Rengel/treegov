@@ -2665,6 +2665,13 @@ comportamiento. La suite final es 660/660.
 `docs/api.md` (`backend_v3.exporters`, `backend_v3.session_state`);
 `docs/audit_log.md`, cierre de la Fase 3.12 del 14/11/2026.
 
+### 26.5 Resolución de zonas grises pre-release (14/11/2026)
+- **Visor de casos**: El selector de partición exige un nodo seleccionado. Al deseleccionar, vuelve al preview del CSV.
+- **Curvas de ganancias**: Si no hay eventos (`n_bad <= 0`), se ocultan las curvas y se muestra el estado vacío.
+- **UI Resiliente**: `RulesPanel` y `SummaryPanel` atrapan excepciones del backend y muestran estado vacío sin colapsar.
+- **Nulos en "All"**: `get_node_cases("all")` alinea por índice y omite filas no enrutables, sin `RuntimeError`.
+- **Resumen seguro**: `get_summary()` devuelve `governance_mode="CUSTOM"` y params `None` si falta `_last_train_params`.
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
