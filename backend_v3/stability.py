@@ -13,11 +13,14 @@ log; ver nota en psi_index):
     Gini Drop = (Gini_train - Gini_X) / Gini_train   (X in {OOS, OOT},
                  solo definido cuando Gini_train > 0)
 
-Umbrales de monitoreo de TreeGov (convencion de la industria, no prescripcion
-regulatoria): PSI/CSI < 0.10 -> STABLE; [0.10, 0.25) -> MODERATE;
->= 0.25 -> UNSTABLE. Gini Drop: > 0.20 -> WARNING; > 0.40 -> CRITICAL.
-Los umbrales de PSI/CSI son la convencion de Siddiqi (2006) para scorecards;
-no son un umbral prescrito por Basilea ni por EBA.
+Umbrales de monitoreo de TreeGov:
+  - PSI/CSI (convencion de la industria, Siddiqi 2006; NO prescritos por
+    Basilea ni EBA): < 0.10 -> STABLE; [0.10, 0.25) -> MODERATE;
+    >= 0.25 -> UNSTABLE.
+  - Gini Drop (politica operativa de monitoreo MRM propia de TreeGov — NO es
+    un umbral de Siddiqi 2006 ni una prescripcion de Basilea/EBA):
+    > 0.20 -> WARNING; > 0.40 -> CRITICAL; <= 0.20 -> NONE;
+    None/NaN -> UNDETERMINED.
 
 La referencia ("expected") es SIEMPRE la particion train (la poblacion de
 desarrollo, por definicion). Los bins de CSI de variables continuas son los
@@ -137,7 +140,9 @@ def gini_drop_alert(drop: float | None) -> str:
     reporta como 'NONE': una degradacion indefinida no es ausencia de
     alerta, es ausencia de confianza).
 
-    Umbrales: drop > 0.40 -> "CRITICAL"; drop > 0.20 -> "WARNING";
+    Umbrales (politica operativa de monitoreo MRM de TreeGov — NO son un
+    umbral de Siddiqi 2006 ni una prescripcion de Basilea/EBA):
+    drop > 0.40 -> "CRITICAL"; drop > 0.20 -> "WARNING";
     en caso contrario -> "NONE".
     """
     if drop is None or drop != drop:  # None o NaN

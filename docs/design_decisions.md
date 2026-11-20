@@ -1249,8 +1249,8 @@ docstring. Calling with `tie="random"` and no seed raises
 **Rationale.** `0.5` is neutral: it is the boundary where predicted
 "bad" becomes more likely than not. It is also the default in almost
 every textbook and library, so it does not surprise a reader. Users
-who need a business-optimal threshold (IFRS 9, §8.6 of
-`methodology.md`) set it explicitly through the API.
+who need a business-optimal threshold (business decision threshold, §8.6 of
+`methodology.md` — not an IFRS 9 requirement) set it explicitly through the API.
 
 **Consequences.** The default matrix reflects a symmetric 50/50
 decision boundary. This is rarely the operational threshold in credit

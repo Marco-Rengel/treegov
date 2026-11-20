@@ -1,5 +1,14 @@
 """Imputacion anti-leakage (train-only) - (TreeGov, backend_v3, Paso 8).
 
+Anclaje regulatorio y metodologico:
+  - SR 11-7 / OCC 2011-12: separacion estricta entre desarrollo y validacion
+    (anti-leakage train-only).
+  - docs/methodology.md §5 (regla anti-leakage y determinismo en empates) y
+    §5.4 (politica de atipicos: la media aritmetica es sensible a valores
+    extremos finitos; TreeGov no realiza winsorizing silencioso y exige
+    rechazo fail-fast de +/-inf mientras el analista gestiona el capping de
+    dominio aguas arriba).
+
 Regla MRM de oro: la imputacion (media/moda) se calcula EXCLUSIVAMENTE sobre
 el fold de entrenamiento y se aplica tal cual a cualquier otro fold (test /
 OOS / OOT). Jamas se calculan estadisticos con datos fuera de train.

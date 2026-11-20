@@ -29,9 +29,13 @@ Cita canonica:
   Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984).
   "Classification and Regression Trees". Wadsworth & Brooks/Cole,
   Monterey, CA. (Impurezas: caps. 2-4; surrogates: §5.3.)
+  Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). "Algorithms for Computing
+    the Sample Variance: Analysis and Recommendations". The American
+    Statistician 37(3), 242-247.
   Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
-    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (estadisticos con
-    conteos ponderados; proporciones y varianzas ponderadas).
+    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (ponderacion directa por
+    masa de pesos para proporciones y varianzas; sin correccion de diseno
+    complejo Rao-Scott ni reescalado DEFF).
 
 Ponderacion por muestra (Fase 3.2.c): evaluate() y best_split() admiten un
 parametro keyword-only `weights` (vector paralelo a x e y, estrictamente
@@ -99,6 +103,7 @@ class SurrogateSplit:
 def _gini_impurity_from_probs(p: np.ndarray) -> np.ndarray:
     """Impureza de Gini 1 - sum_k p_k^2 sin cancelacion catastrofica.
 
+    Cita: Breiman, Friedman, Olshen & Stone (1984), caps. 2 y 4.
     Usa la identidad exacta (con m = argmax_k p_k y q = sum_{k != m} p_k):
         1 - sum_k p_k^2 = q * (2 - q) - sum_{k != m} p_k^2
     que conserva precision completa incluso cuando p_m ≈ 1 - 1e-17.
@@ -115,6 +120,9 @@ def _gini_dI(
     c_l: np.ndarray, c_r: np.ndarray, i_parent: float, n_total: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """dI(corte) = I_padre - (nL/N) I_L - (nR/N) I_R con I = 1 - sum p_k^2.
+
+    Cita: Breiman, Friedman, Olshen & Stone (1984), caps. 2-4 (reduccion de
+    impureza de Gini en C&RT).
 
     c_l, c_r: (P, K) conteos por clase a cada lado de P cortes candidatos.
     Devuelve (dI, nL, nR) por corte. Normaliza probabilidades p_k = c_k / n
@@ -149,9 +157,10 @@ def _var_dI(
 ) -> np.ndarray:
     """dI de varianza: I = E[y_c^2] - E[y_c]^2 (clip a 0 por redondeo).
 
-    Opera sobre suficientes acumulados con y centrado (y_c = y - media_global;
-    Chan, Golub & LeVeque 1983, The American Statistician 37(3):242-247) para
-    evitar cancelacion catastrofica cuando |media| >> sigma. Cortes con
+    Citas: Breiman, Friedman, Olshen & Stone (1984), cap. 8 (reduccion de
+    varianza en arboles de regresion C&RT); Chan, Golub & LeVeque (1983),
+    The American Statistician 37(3):242-247 (centrado previo y_c = y - media_global
+    para evitar cancelacion catastrofica cuando |media| >> sigma). Cortes con
     n_l <= 0 o n_r <= 0 devuelven -inf (nunca NaN).
     """
     valid = (n_l > 0.0) & (n_r > 0.0) & np.isfinite(n_l) & np.isfinite(n_r)
@@ -247,7 +256,8 @@ class CrtEngine:
         `x` e `y`; array 1D de la misma longitud, valores finitos y
         estrictamente positivos. Con weights=None el motor usa un vector
         local de unos y el comportamiento es identico al pre-3.2.
-        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3 (masa ponderada
+        directa sin correccion de Rao-Scott ni DEFF).
         """
         if not isinstance(predictor_type, PredictorType):
             raise TypeError(f"predictor_type invalido: {predictor_type!r}")
@@ -430,7 +440,8 @@ class CrtEngine:
         las filas de X / y. El agreement NO se pondera (es coincidencia
         pura de etiquetas binarias izquierda/derecha); solo la ganancia de
         impureza del SplitConfig embebido se calcula con pesos.
-        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3 (masa ponderada
+        directa sin correccion de Rao-Scott ni DEFF).
         """
         if primary.predictor not in X.columns:
             raise ValueError(
@@ -963,7 +974,8 @@ class CrtEngine:
         varianzas y proporciones ponderadas); `child_ns` sigue siendo el
         conteo FISICO de filas a cada lado. Con weights=None el
         comportamiento es identico al pre-3.2.
-        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+        Cita: Heeringa, West & Berglund (2010), sec. 5.3 (masa ponderada
+        directa sin correccion de Rao-Scott ni DEFF).
         """
         ys = y if isinstance(y, pd.Series) else pd.Series(y)
         mask = (cand.notna() & ys.notna()).to_numpy()

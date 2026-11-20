@@ -106,7 +106,7 @@ concretas y auditables en el código.
   dominios no bancarios (salud, ciencias sociales) sin sacrificar el
   rigor MRM donde importa.
 
-**Estado actual:** Fases 0 a 7, 3.12, Higiene del Repositorio y Remediación de Auditoría MRM completadas (16/16 hallazgos críticos cerrados, v1.0.0rc8). 752/752 tests PASSED.
+**Estado actual:** Fases 0 a 7, 3.12, Higiene del Repositorio y Remediación de Auditoría MRM completadas (16/16 hallazgos críticos + MEN-05 cerrados, v1.0.0rc9). 752/752 tests PASSED.
 
 ---
 *[Read in English](philosophy.md)*

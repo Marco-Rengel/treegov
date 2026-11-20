@@ -28,10 +28,12 @@ Kass (1980), replicada por implementaciones clásicas de CHAID.
 El multiplicador de Kass se aplica DESPUES de la fusion, sobre el p-valor
 GLOBAL de la particion (c categorias originales -> r grupos); en Exhaustive
 CHAID se evalua en CADA paso del historial y se retiene el paso con MENOR
-p-valor ajustado (incluido el paso 0 sin fusiones, M=1). Esto corrige el
-riesgo ALG-01 documentado en docs/model_risk_assessment.md.
+p-valor ajustado (incluido el paso 0 sin fusiones, M=1). Ver
+docs/methodology.md §1.4 y docs/design_decisions.md (multiplicadores
+combinatorios de Kass 1980).
 
-Regla de frecuencias esperadas de Cochran (1954) integrada (riesgo ALG-03):
+Regla de frecuencias esperadas de Cochran (1954) integrada (ver
+docs/methodology.md §1.6-§1.7 y docs/design_decisions.md §2.2):
 fusion forzosa ACTIVA de la categoria de menor total cuando la tabla viola
 la regla; si es irreductible (r=2), se reporta cochran_ok=False + WARNING.
 Las fusiones forzadas CUENTAN dentro de c -> r para el multiplicador.
@@ -42,12 +44,20 @@ positivo y finito). Con pesos, las celdas de la tabla c x K y los
 suficientes (n, sum, sumsq) se pueblan sumando pesos en lugar de contar
 filas; chi2, F, merging y Cochran operan sobre la matriz ponderada sin
 cambios estructurales (sus formulas son identicas con sumas de pesos).
-Los grados de libertad residuales siguen la convencion de muestras
-complejas (N_filas - k, filas fisicas) y SplitConfig.child_ns reporta
-siempre el CONTEO FISICO de filas por rama. Con weights=None el
+Aclaracion MRM de alcance: TreeGov aplica ponderacion directa por masa de
+pesos SIN correcciones de diseno complejo de encuestas (sin ajuste de
+Rao-Scott ni reescalado por efecto de diseno DEFF); los grados de libertad
+residuales se mantienen en filas fisicas (N_filas - k) y SplitConfig.child_ns
+reporta siempre el CONTEO FISICO de filas por rama. Con weights=None el
 comportamiento es identico bit a bit al pre-3.2.
 
 Citas bibliograficas:
+  Pearson, K. (1900). "On the criterion that a given system of deviations
+    from the probable in the case of a correlated system of variables is
+    such that it can be reasonably supposed to have arisen from random
+    sampling". Philosophical Magazine, Ser. 5, 50(302), 157-175.
+  Fisher, R.A. (1925). Statistical Methods for Research Workers.
+    Oliver & Boyd, Edinburgh.
   Kass, G.V. (1980). "An Exploratory Technique for Investigating Large
     Quantities of Categorical Data". Applied Statistics 29(2), 119-127.
   Biggs, D., de Ville, B. & Suen, E. (1991). "A Method of Choosing Multiway
@@ -55,9 +65,12 @@ Citas bibliograficas:
     Statistics 18(1), 49-62.
   Cochran, W.G. (1954). "Some Methods for Strengthening the Common Chi-2
     Tests". Biometrics 10(4), 417-451.
+  Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). "Algorithms for Computing
+    the Sample Variance: Analysis and Recommendations". The American
+    Statistician 37(3), 242-247.
   Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
-    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (estadisticos con
-    conteos ponderados; df residual basado en filas fisicas).
+    Data Analysis. Chapman & Hall/CRC, §§5.3-5.4 (tablas y momentos con
+    masa ponderada directa; sin correccion de Rao-Scott ni DEFF).
 
 Dependencias permitidas: numpy, pandas, scipy.stats (y log_config/statistics/
 types de backend_v3). Datos crudos tocados UNA sola vez O(N) (crosstab /
@@ -181,7 +194,8 @@ class ChaidEngine:
         estrictamente positivos. Con pesos, las celdas de las tablas y los
         suficientes se pueblan sumando pesos (ver docstring del modulo).
         Con weights=None el comportamiento es identico al pre-3.2.
-        Cita: Heeringa, West & Berglund (2010), sec. 5.3.
+        Cita: Heeringa, West & Berglund (2010), §§5.3-5.4 (masa ponderada
+        directa sin correccion de Rao-Scott ni DEFF).
 
         Fase 3.10.b (H14): predictor_type=CONTINUOUS se admite via
         binning automatico por deciles (ver _reduce_continuous_predictor).
@@ -769,7 +783,8 @@ class ChaidEngine:
     def _pair_pvalues_chi2(
         self, matrix: np.ndarray, groups: list[tuple[int, ...]]
     ) -> np.ndarray:
-        """p del par (i, j) = chi2 de la subtabla 2xK del par, gl = K - 1.
+        """p del par (i, j) = chi2 de Pearson (Pearson 1900) de la subtabla
+        2xK del par, gl = K - 1 (convencion Kass 1980).
 
         Vectorizado por triu_indices: todas las subtablas a la vez.
         Celdas con E = 0 (clase ausente en AMBAS categorias del par)
@@ -798,7 +813,8 @@ class ChaidEngine:
         self, matrix: np.ndarray, groups: list[tuple[int, ...]],
         counts: np.ndarray | None = None,
     ) -> np.ndarray:
-        """p del par (i, j) = F-test entre las DOS submuestras (F = t^2).
+        """p del par (i, j) = F-test de Fisher (Fisher 1925) entre las DOS
+        submuestras (F = t^2).
 
         Formas cerradas sobre suficientes (n, sum, sumsq):
             SSB = n_i n_j (media_i - media_j)^2 / (n_i + n_j)       (>= 0)
@@ -809,8 +825,9 @@ class ChaidEngine:
         n_par < 3 (df2 < 1): p = 1  (sin evidencia: el par es infusionable).
 
         Con `counts` (camino ponderado): n_i/n_j de las formulas son sumas
-        de pesos (W_i, W_j), pero df2 usa el conteo FISICO de filas del
-        par (convencion de muestras complejas, Heeringa et al. 2010).
+        de pesos (W_i, W_j) por masa directa sin correccion Rao-Scott/DEFF
+        (Heeringa, West & Berglund 2010, §5.3), mientras df2 usa el conteo
+        FISICO de filas del par.
         """
         st = self._groups_stats(matrix, groups)
         r = st.shape[0]
@@ -881,7 +898,7 @@ class ChaidEngine:
         matrix: np.ndarray, groups: list[tuple[int, ...]],
         counts: np.ndarray | None = None,
     ) -> TestResult:
-        """F global one-way desde suficientes (n, sum, sumsq) por grupo.
+        """F global one-way (Fisher 1925) desde suficientes (n, sum, sumsq).
 
             SSB = sum_g s_g^2/n_g - (sum s_g)^2/N        (clip a 0)
             SSW = sum_g (q_g - s_g^2/n_g)                (clip a 0)
@@ -891,8 +908,9 @@ class ChaidEngine:
         (df2 = N-r > 0 garantizado por la guarda N > c de evaluate().)
 
         Con `counts` (camino ponderado): n_g/N de las formulas son sumas
-        de pesos (W_g, W_total), pero df2 sigue la convencion de muestras
-        complejas: N_filas - r, con N_filas = suma de conteos fisicos.
+        de pesos (W_g, W_total) por masa directa sin correccion
+        Rao-Scott/DEFF (Heeringa, West & Berglund 2010, §5.3), con
+        df2 = N_filas - r (suma de conteos fisicos).
         """
         st = ChaidEngine._groups_stats(matrix, groups)
         n_g, s_g, q_g = st[:, 0], st[:, 1], st[:, 2]
@@ -1019,8 +1037,9 @@ def _cochran_status(expected: np.ndarray) -> tuple[bool, int, float]:
         violada  <=>  existe E_ij < 1   O   frac(E_ij < 5) > 0.20
 
     Cita: Cochran, W.G. (1954). "Some Methods for Strengthening the Common
-    Chi-2 Tests". Biometrics 10(4), 417-451. Riesgo ALG-03 de
-    docs/model_risk_assessment.md.
+    Chi-2 Tests". Biometrics 10(4), 417-451. Ver docs/methodology.md §1.4-§1.7
+    y docs/design_decisions.md §2.2 (multiplicadores de Kass 1980 y regla de
+    Cochran).
     """
     n_lt1 = int((expected < _COCHRAN_MIN_E).sum())
     frac_lt5 = float((expected < 5.0).mean())

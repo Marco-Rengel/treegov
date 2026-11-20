@@ -8,10 +8,13 @@ White-box (numpy only) and deterministic. Two report families:
 
 KS / AUC / Gini delegate to ``backend_v3.validation``: the binary
 header metrics come from ``validation._pair_auc_ks`` (weighted pair
-kernel; Gini = 2*AUC - 1), and the multiclass header metrics from
-``validation.compute_oos_metrics``. The Hosmer-Lemeshow ``n_groups``
-logic of ``compute_oos_metrics`` does not apply to gains tables, which
-is why the binary path uses the pair kernel directly.
+kernel; ``Gini = 2*AUC - 1`` per Hanley & McNeil 1982; KS per Massey 1951),
+and the multiclass header metrics from ``validation.compute_oos_metrics``
+(multiclass AUC/Gini per Hand & Till 2001). Gains/lift tables and the
+classification matrix follow credit-scoring conventions (Siddiqi 2006).
+The Hosmer-Lemeshow ``n_groups`` logic of ``compute_oos_metrics`` does not
+apply to gains tables, which is why the binary path uses the pair kernel
+directly.
 
 Phase 3.5.b (multiclass reports, D13/D18/D19/D20):
 ``build_gains_table`` dispatches on K = len(model.class_labels). The
@@ -28,9 +31,10 @@ K x K matrix is served by ``build_classification_matrix_multiclass``
 
 Phase 3.2.g (sample weighting): both report builders accept a
 keyword-only ``weights`` vector and expose parallel ``w_*`` columns
-with weighted mass (Heeringa, West & Berglund 2010, §5.3). With
-``weights=None`` the ``w_*`` values match their integer counterparts
-exactly (parity invariant).
+with direct weighted mass (Heeringa, West & Berglund 2010, §5.3 — direct
+weight-mass sums/rates without complex-survey Rao-Scott or DEFF
+corrections). With ``weights=None`` the ``w_*`` values match their integer
+counterparts exactly (parity invariant).
 """
 
 from __future__ import annotations
@@ -333,7 +337,7 @@ def build_gains_table(
     seed: int | None = None,
     weights: np.ndarray | None = None,
 ) -> GainsTableResult:
-    """Build a gains table by leaf or by PD bucket (deterministic).
+    """Build a gains table by leaf or by PD bucket (deterministic; Siddiqi 2006).
 
     Ordering convention: ascending PD (best first, bureau convention).
 
@@ -351,11 +355,13 @@ def build_gains_table(
     ``n_excluded``. Raises ``ValueError`` when no row is routed.
 
     Phase 3.2.g: ``weights`` (keyword-only, default None) adds the
-    parallel ``w_*`` columns with weighted mass per row
-    (Heeringa, West & Berglund 2010, §5.3). With ``weights=None`` the
+    parallel ``w_*`` columns with direct weighted mass per row
+    (Heeringa, West & Berglund 2010, §5.3 — direct weight-mass sums/rates
+    without Rao-Scott/DEFF corrections). With ``weights=None`` the
     ``w_*`` columns match their integer counterparts exactly (parity).
     The header ``ks`` / ``auc`` / ``gini`` are computed by
-    ``validation._pair_auc_ks`` over the routed weights (D13 resolved:
+    ``validation._pair_auc_ks`` over the routed weights (Hanley & McNeil
+    1982 for ``Gini = 2*AUC - 1``; Massey 1951 for KS; D13 resolved:
     they are weighted; with uniform weights they match the unweighted
     values exactly, and ``None`` when a class mass is zero).
 
@@ -365,10 +371,10 @@ def build_gains_table(
     cumulative/decumulative and ``w_*`` counterparts, in canonical
     class order); the "bad" semantics maps to the class of interest
     (index 0); and the header metrics come from
-    ``validation.compute_oos_metrics`` (Hand & Till AUC/Gini,
-    worst-case pairwise KS) with the adaptive ``n_groups`` rule of D20:
-    n_groups = min(10, max(3, n_routed // 5)), and
-    ks = auc = gini = None (without calling compute_oos_metrics) when
+    ``validation.compute_oos_metrics`` (Hand & Till 2001 AUC/Gini,
+    worst-case pairwise KS based on Massey 1951) with the adaptive
+    ``n_groups`` rule of D20: n_groups = min(10, max(3, n_routed // 5)),
+    and ks = auc = gini = None (without calling compute_oos_metrics) when
     fewer than 15 rows are routed.
     """
     if by not in ("leaf", "bucket"):
@@ -629,7 +635,7 @@ def build_classification_matrix(
     threshold: float = 0.5,
     weights: np.ndarray | None = None,
 ) -> ClassificationMatrix:
-    """Confusion matrix at a fixed PD threshold (deterministic).
+    """Confusion matrix at a fixed PD threshold (deterministic; Siddiqi 2006).
 
     A routed row is predicted "bad" iff ``pd_per_leaf[leaf_id] >= threshold``,
     "good" otherwise. Unrouted rows (``leaf_assignment == -1``) join no cell;
@@ -637,12 +643,14 @@ def build_classification_matrix(
 
     tp = pred bad & real bad; tn = pred good & real good;
     fp = pred bad & real good; fn = pred good & real bad.
-    ``bad_capture_rate`` mirrors ``recall`` with credit-scoring naming.
+    ``bad_capture_rate`` mirrors ``recall`` with credit-scoring naming
+    (Siddiqi 2006).
 
     Phase 3.2.g: ``weights`` (keyword-only, default None) adds the
-    parallel ``w_*`` cells and ratios with weighted mass
-    (Heeringa, West & Berglund 2010, §5.3). With ``weights=None`` the
-    ``w_*`` values match their integer counterparts exactly (parity).
+    parallel ``w_*`` cells and ratios with direct weighted mass
+    (Heeringa, West & Berglund 2010, §5.3 — without Rao-Scott/DEFF
+    corrections). With ``weights=None`` the ``w_*`` values match their
+    integer counterparts exactly (parity).
 
     Raises ``ValueError`` when ``threshold`` lies outside [0, 1].
     """
@@ -775,7 +783,9 @@ def build_classification_matrix_multiclass(
     aplica en el path multiclase (la asignacion es argmax).
 
     En modo ponderado, las celdas de la matriz y los ratios por clase
-    usan sumas de pesos (paridad con conteos si ``weights=None``).
+    usan sumas directas de masa de pesos (Heeringa, West & Berglund 2010,
+    §5.3, sin correccion Rao-Scott/DEFF; paridad con conteos si
+    ``weights=None``). Convencion de matriz de clasificacion: Siddiqi (2006).
     """
     who = "classification_matrix_multiclass"
     if not pd_per_leaf:

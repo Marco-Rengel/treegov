@@ -1,5 +1,15 @@
 """Tests de backend_v3/statistics.py (Fase 0, Paso 5).
 
+Referencias bibliograficas de los calculos manuales de verificacion:
+  - Pearson, K. (1900), Philosophical Magazine Ser. 5, 50(302), 157-175.
+  - Fisher, R.A. (1925), Statistical Methods for Research Workers.
+  - Brown, M.B. & Forsythe, A.B. (1974), JASA 69(346), 364-367;
+    Levene, H. (1960), Contributions to Probability and Statistics, 278-292.
+  - Kass, G.V. (1980), Applied Statistics 29(2), 119-127 (multiplicadores
+    combinatorios de Bonferroni; docs/methodology.md §1.4).
+  - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010), Applied Survey Data
+    Analysis, §5.3 (masa ponderada directa sin correccion Rao-Scott/DEFF).
+
 Valores de referencia verificados a mano desde primeros principios
 (aprobados en la auditoria del diseno), utilizando exclusivamente las
 funciones de supervivencia .sf() de scipy.stats (politica Clean Room).
@@ -60,7 +70,7 @@ def test_stirling_hand():
     assert stirling_second_kind(5, 1) == 1
     assert stirling_second_kind(5, 5) == 1
     assert stirling_second_kind(5, 6) == 0  # r > c -> 0
-    # Magnitud del riesgo ALG-01 (model_risk_assessment.md):
+    # Multiplicador nominal de alta cardinalidad (Kass 1980 / docs/methodology.md §1.4):
     # S(20,3) = (3^20 - 3*2^20 + 3)/6 = 3483638676/6
     assert stirling_second_kind(20, 3) == 580_606_446
 
@@ -118,7 +128,7 @@ def test_bonferroni_adjust():
 
 
 def test_pearson_hand():
-    # Tabla [[20,10],[10,20]]: marginales 30/30, E_ij = 15 en toda celda ->
+    # Pearson (1900) — Tabla [[20,10],[10,20]]: marginales 30/30, E_ij = 15 en toda celda ->
     # chi2 = 4 * (5^2)/15 = 20/3 ; gl = 1
     tabla = [[20, 10], [10, 20]]
     res = pearson_chi2(tabla)
@@ -152,7 +162,7 @@ def test_pearson_guards():
 
 
 def test_anova_hand():
-    # [1,2,3],[4,5,6],[7,8,9]: medias 2/5/8, gran media 5
+    # Fisher (1925) — [1,2,3],[4,5,6],[7,8,9]: medias 2/5/8, gran media 5
     # SSB = 3*9 + 0 + 3*9 = 54 ; SSW = 2 + 2 + 2 = 6 ; F = 27/1 = 27
     res = f_oneway([1, 2, 3], [4, 5, 6], [7, 8, 9])
     assert res.df == (2, 6)
@@ -161,6 +171,7 @@ def test_anova_hand():
 
 
 def test_brown_forsythe_hand():
+    # Brown & Forsythe (1974) / Levene (1960):
     # [1,2,3] vs [4,5,6]: z identicos [1,0,1] -> W = 0 y p = 1 exactos
     res_id = brown_forsythe([1, 2, 3], [4, 5, 6])
     assert res_id.df == (1, 4)

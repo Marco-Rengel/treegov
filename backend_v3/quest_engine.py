@@ -9,18 +9,20 @@ Dos etapas:
         (que usan alpha/J): se controla el FWER sobre DOS familias de pruebas
         (medias y varianzas) -> criterio deliberadamente mas conservador.
       * Desempate robusto: si ningun p de medias/asociacion supera el umbral,
-        se ejecuta Brown-Forsythe (Levene con mediana, via statistics.py) so-
-        bre las variables ordinales/continuas (deteccion de discriminacion por
-        VARIANZA); gana si su p < alpha/(2J). Las categoricas no participan.
+        se ejecuta Brown-Forsythe (Brown & Forsythe 1974; Levene 1960 con
+        mediana, via statistics.py) sobre las variables ordinales/continuas
+        (deteccion de discriminacion por VARIANZA); gana si su p < alpha/(2J).
+        Las categoricas no participan.
   ETAPA 2 - Punto de corte sobre la variable seleccionada:
       * continua/ordinal -> QDA UNIVARIANTE (raiz de las log-verosimilitudes
-        condicionales gaussianas con priors empiricos pi_k = n_k/N), con
-        fallback al punto medio PONDERADO x_bar = (n0 m0 + n1 m1)/N si no hay
-        raiz real unica en el rango entre medias (forma operativa, no optima;
-        documentado).
-      * nominal -> particion binaria por ganancia de Gini, EXACTAMENTE como
-        C&RT: exhaustiva 2^(K-1)-1 si K <= max_exhaustive_cardinality; orden
-        por tasa supervisada si K > 10.
+        condicionales gaussianas con priors empiricos pi_k = n_k/N, resuelta
+        via Citardauq estable: Press et al. 2007, §5.6), con fallback al punto
+        medio PONDERADO x_bar = (n0 m0 + n1 m1)/N si no hay raiz real unica en
+        el rango entre medias (forma operativa, no optima; documentado).
+      * nominal -> particion binaria por ganancia de Gini (Breiman, Friedman,
+        Olshen & Stone 1984, caps. 2-4), EXACTAMENTE como C&RT: exhaustiva
+        2^(K-1)-1 si K <= max_exhaustive_cardinality; orden por tasa
+        supervisada si K > 10 (Breiman et al. 1984, §4).
       Con K > 2 se sustituye la QDA univariante por un barrido de Gini
       sobre el predictor seleccionado (extension documentada en
       methodology.md §3.8, coherente con C&RT). K=2 conserva el camino
@@ -46,15 +48,29 @@ NOTA de acoplamiento (deuda conocida): reutiliza los kernels _gini_dI y
 _masks_exhaustivas de backend_v3.crt_engine (mismo paquete). Si un tercer
 motor los necesitara, extraerlos a backend_v3/tree_kernels.py.
 
-Cita canonica:
+Citas canonicas:
   Loh, W.-Y. & Shih, Y.-S. (1997). "Split Selection Methods for
-  Classification Trees". Statistica Sinica 7(4), 815-840.
+    Classification Trees". Statistica Sinica 7(4), 815-840.
+  Brown, M.B. & Forsythe, A.B. (1974). "Robust Tests for the Equality of
+    Variances". JASA 69(346), 364-367.
+  Levene, H. (1960). "Robust tests for equality of variances". In
+    Contributions to Probability and Statistics, Stanford Univ. Press, 278-292.
+  Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984).
+    Classification and Regression Trees. Wadsworth (corte nominal por tasa
+    y barrido de Gini multiclase).
+  Kish, L. (1965). Survey Sampling. Wiley (varianza ponderada de confiabilidad).
+  Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007).
+    Numerical Recipes (3rd ed.), §5.6. Cambridge Univ. Press (raices
+    cuadraticas estables de Citardauq).
+  Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey Data
+    Analysis. Chapman & Hall/CRC, §§5.3-5.4 (tablas y momentos con masa
+    ponderada directa; SIN correccion de diseno complejo Rao-Scott ni DEFF).
 
 Pesos por muestra (Fase 3.2.d): `evaluate`/`best_split` aceptan
 `weights` keyword-only (1D, finitos, >0). Con pesos, las "cuentas" del
-ANOVA, la chi-cuadrado y el QDA pasan a ser sumas de pesos:
-  * ANOVA ponderado: Heeringa, West & Berglund (2010), "Applied Survey
-    Data Analysis", §5.3.
+ANOVA, la chi-cuadrado y el QDA pasan a ser sumas directas de masa de pesos
+(sin ajuste de Rao-Scott ni reescalado por efecto de diseno DEFF):
+  * ANOVA ponderado: Heeringa, West & Berglund (2010), §5.3 (masa directa).
   * chi2 de Pearson es sensible a la escala de la masa total de pesos
     (ibid., §5.4): comportamiento correcto, NO se normaliza.
   * varianza ponderada de confiabilidad de Kish (Kish 1965, "Survey Sampling";
@@ -211,14 +227,16 @@ class QuestEngine:
         INTENTARON, no solo los computados).
 
         weights (keyword-only, Fase 3.2.d): pesos por muestra 1D, finitos,
-        estrictamente positivos, longitud = len(X). Con pesos, el ANOVA es
-        ponderado (Heeringa, West & Berglund 2010, §5.3) y la chi2 de
-        Pearson recibe una tabla con sumas de pesos (sensible a la escala,
-        ibid. §5.4: comportamiento correcto, no se normaliza). La varianza
-        ponderada del QDA usa el divisor insesgado de pesos de confiabilidad
-        de Kish W_k - sum(w_i^2)/W_k (Kish 1965, Survey Sampling), invariante
-        a escala y seguro para pesos normalizados. Con weights=None, el
-        comportamiento es identico bit a bit al previo.
+        estrictamente positivos, longitud = len(X). Con pesos, el ANOVA y el
+        desempate de varianzas (Brown & Forsythe 1974; Levene 1960) aplican
+        masa ponderada directa sin correccion Rao-Scott/DEFF (Heeringa, West
+        & Berglund 2010, §5.3) y la chi2 de Pearson recibe una tabla con sumas
+        de pesos (sensible a la escala, ibid. §5.4: comportamiento correcto,
+        no se normaliza). La varianza ponderada del QDA usa el divisor
+        insesgado de pesos de confiabilidad de Kish W_k - sum(w_i^2)/W_k
+        (Kish 1965, Survey Sampling), invariante a escala y seguro para pesos
+        normalizados. Con weights=None, el comportamiento es identico bit a
+        bit al previo.
         """
         if not spec:
             raise ValueError("[QUEST] spec vacio: nada que evaluar")
@@ -300,7 +318,7 @@ class QuestEngine:
             _, nombre, source, res = mejor_media
             seleccion = self._mk_selection(nombre, source, res, j_total)
         else:
-            # --- Etapa 1, familia 2: desempate robusto Levene/Brown-Forsythe ---
+            # --- Etapa 1, familia 2: desempate robusto (Brown & Forsythe 1974; Levene 1960) ---
             mejor_var: tuple[float, str, TestResult] | None = None
             mejor_var_inf: tuple[float, str, TestResult] | None = None
             for nombre, ptype in spec.items():
@@ -535,8 +553,8 @@ class QuestEngine:
             C = m0^2/s0^2 - m1^2/s1^2 + 2 ln(pi1/pi0) - ln(s1^2/s0^2)
 
         La cuadratica se resuelve con la formula numericamente estable de
-        Citardauq (Press et al., Numerical Recipes §5.6) para evitar
-        cancelacion catastrofica cuando s0^2 ≈ s1^2:
+        Citardauq (Press et al. 2007, Numerical Recipes, 3rd ed., §5.6) para
+        evitar cancelacion catastrofica cuando s0^2 ≈ s1^2:
             q = -0.5 * (B + sign(B) * sqrt(B^2 - 4AC)),  r1 = q/A,  r2 = C/q.
 
         Root-selection modes (self.qda_root_restriction):
@@ -559,7 +577,8 @@ class QuestEngine:
         con `weights`, las medias son medias ponderadas, los priors empiricos
         son pi_k = W_k / (W0 + W1) y las varianzas usan el estimador insesgado
         de pesos de confiabilidad de Kish (Kish 1965, Survey Sampling;
-        Heeringa, West & Berglund 2010):
+        Heeringa, West & Berglund 2010, §5.3, masa ponderada directa sin
+        correccion Rao-Scott ni DEFF):
 
             v_k = sum_{i in k} w_i (x_i - m_k)^2 / (W_k - sum_{i in k} w_i^2 / W_k)
 
@@ -782,13 +801,15 @@ class QuestEngine:
         *,
         weights: np.ndarray | None = None,
     ) -> tuple[tuple, tuple[int, int]] | None:
-        """Particion binaria por ganancia de Gini (K<=10 exhaustiva; K>10 por
-        tasa supervisada). NOTA: la via K>10 es estilo Breiman/C&RT, no el
-        trato de dummies+LDA de Loh & Shih 1997 (decision documentada).
+        """Particion binaria por ganancia de Gini (Breiman, Friedman, Olshen &
+        Stone 1984, caps. 2-4: K<=10 exhaustiva; K>10 por tasa supervisada,
+        §4). NOTA: la via K>10 es estilo Breiman et al. (1984) / C&RT, no el
+        trato de dummies+LDA de Loh & Shih (1997) (decision documentada).
 
         Con `weights` (Fase 3.2.d) la matriz categoria x clase acumula
-        SUMAS DE PESOS, pero `child_ns` devuelto sigue siendo el CONTEO
-        FISICO de filas por lado.
+        SUMAS DE PESOS (masa directa sin correccion Rao-Scott/DEFF; Heeringa,
+        West & Berglund 2010, §5.3), pero `child_ns` devuelto sigue siendo el
+        CONTEO FISICO de filas por lado.
         """
         # defense in depth: __init__ already rejects values != "rate", but
         # the public attribute could be mutated at runtime

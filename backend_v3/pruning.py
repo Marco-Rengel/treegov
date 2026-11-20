@@ -1,7 +1,7 @@
 """Poda coste-complejidad (TreeGov, backend_v3, Fase 1.2).
 
 Breiman, Friedman, Olshen & Stone (1984), "Classification and Regression
-Trees", cap. 3: para cada nodo interno t con subarbol vivo T_t,
+Trees", §3.3 & §10.2: para cada nodo interno t con subarbol vivo T_t,
 
     g(t) = (r(t) - R(T_t)) / (|T_t| - 1)
     r(t)   = min(k_t, n_t - k_t)          # errores por regla de mayoria
@@ -9,13 +9,14 @@ Trees", cap. 3: para cada nodo interno t con subarbol vivo T_t,
     |T_t|  = nº de hojas vivas del subarbol
 
 NOTA de convencion: r(t) se usa en forma de CONTEO (no la forma ponderada
-p(t) * r(t) de Breiman). Como el factor de escala es comun a todos los
-nodos en un mismo arbol, la secuencia de poda (el orden de g) es identica;
-solo cambian las unidades de alpha (aqui: errores enteros).
+p(t) * r(t) de Breiman et al. 1984, §3.3). Como el factor de escala es comun
+a todos los nodos en un mismo arbol, la secuencia de poda (el orden de g) es
+identica; solo cambian las unidades de alpha (aqui: errores enteros o masa
+ponderada).
 
 Reglas:
   * En cada paso se podan TODOS los nodos cuyo g empata con el minimo
-    (convencion de Breiman; empates simultaneos).
+    (convencion de Breiman et al. 1984, §10.2; empates simultaneos).
   * La secuencia termina cuando queda solo la raiz; el ultimo PruneStep
     corresponde a la poda final de la raiz.
   * prune(alpha): devuelve T(alpha) = el ultimo arbol cuyos pasos aplicados
@@ -37,7 +38,10 @@ number of rows that do not belong to the modal class. For K=2 this
 reduces exactly to min(k, n-k). See docs/3.1_design_multiclass.md §1.
 
 Fase 3.9 (weighted pruning): if ``TreeNode.w_events`` is populated,
-r(t) uses the weighted mass, r_w(t) = sum(w_events) - max(w_events),
+r(t) uses the direct weighted mass, r_w(t) = sum(w_events) - max(w_events)
+(Breiman, Friedman, Olshen & Stone 1984, §3.3 & §10.2; Heeringa, West &
+Berglund 2010, §5.3 — direct weight-mass weighting without Rao-Scott/DEFF
+corrections; see docs/3.9_design_interactive_weighted_pruning.md),
 coherent with the weighted-Gini growth (Phase 3.2). If ``w_events``
 is empty (hand-built nodes), the original count form applies. With
 unit weights both forms coincide numerically (parity).
@@ -85,14 +89,17 @@ class Pruner:
 
     @staticmethod
     def _errores_nodo(nd: TreeNode) -> float:
-        """Errores del nodo como hoja (regla de mayoria).
+        """Errores del nodo como hoja (regla de mayoria; Breiman, Friedman,
+        Olshen & Stone 1984, §3.3 & §10.2).
 
-        Fase 3.9: si ``w_events`` esta poblado, usa la masa ponderada
-        r_w(t) = sum(w_events) - max(w_events) (coherente con el
-        crecimiento ponderado del arbol). Si esta vacio (nodos
-        construidos a mano en tests), usa el conteo fisico original
-        r(t) = n - max(n_events). Con pesos unitarios ambas formas
-        coinciden numericamente (paridad pre-3.9).
+        Fase 3.9: si ``w_events`` esta poblado, usa la masa ponderada directa
+        r_w(t) = sum(w_events) - max(w_events) (Heeringa, West & Berglund
+        2010, §5.3, sin correccion Rao-Scott/DEFF; ver
+        docs/3.9_design_interactive_weighted_pruning.md), coherente con el
+        crecimiento ponderado del arbol. Si esta vacio (nodos construidos a
+        mano en tests), usa el conteo fisico original r(t) = n - max(n_events).
+        Con pesos unitarios ambas formas coinciden numericamente (paridad
+        pre-3.9).
         """
         if nd.w_events:
             return float(sum(nd.w_events) - max(nd.w_events))

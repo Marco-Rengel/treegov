@@ -8712,3 +8712,28 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`–`CRIT-16`, `MAY-01`–`MAY-10`, `MEN-01`–`MEN-08`); `AGENTS.md` (checklist de 8 documentos, Regla #7, Verificación del wheel); `docs/design_decisions.md` §27–§33; `docs/security_audit.md` §7; `docs/roadmap.md`.
 
+---
+
+### 20/11/2026 — Bloque 2I (`v1.0.0rc9`): Saneamiento bibliográfico total (`MEN-05` cerrado, 24 referencias simétricas, cero zonas grises de atribución) (rama `release/phase2-biblio-1.0.0rc9`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-biblio-1.0.0rc9`, pendiente de revisión humana, merge a `main`, tag `v1.0.0rc9`, verificación de wheel y publicación en PyPI; `main` intacto en `bff317c` y tag histórico `v1.0.0rc8` intacto en GitHub sin subida a PyPI; sin `git push`, tags, build ni `twine upload`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `README.md`, `README.es.md` y `docs/methodology.md` — paridad bibliográfica exacta de **24 referencias académicas** en orden alfabético estricto (`Hand & Till 2001` antes de `Hanley & McNeil 1982`, incorporando `Kohavi 1995`, `Massey 1951` y `Press et al. 2007 §5.6` en READMEs y completando `Brier 1950`, `Brown & Forsythe 1974`, `Hanley & McNeil 1982`, `Hosmer & Lemeshow 1980`, `Kohavi 1995`, `Levene 1960` y `Massey 1951` en `docs/methodology.md`) más las **4 normas regulatorias** (`BCBS CRE 32.4`, `EBA/GL/2017/16`, `IFRS 9 / NIIF 9`, `SR 11-7 / OCC 2011-12`); bloques `**Citation:**` añadidos en `docs/methodology.md` (`§3.1`, `§3.7bis`, `§3.8`, `§8.1`, `§8.2`, `§8.3`, `§8.4`); y aclaración MRM explícita en `§1.9bis`, `§2.10`, `§3.7bis` y `§8.9bis` (masa ponderada directa sin corrección Rao-Scott ni reescalado DEFF).
+- `docs/design_decisions.md` — corregida `§9.3` sustituyendo `(IFRS 9, §8.6 of methodology.md)` por `(business decision threshold, §8.6 of methodology.md — not an IFRS 9 requirement)`.
+- `backend_v3/chaid_engine.py`, `backend_v3/crt_engine.py`, `backend_v3/quest_engine.py`, `backend_v3/tree_builder.py`, `backend_v3/pruning.py`, `backend_v3/splitting.py`, `backend_v3/imputation.py`, `backend_v3/profiling.py`, `backend_v3/types.py`, `backend_v3/statistics.py`, `backend_v3/validation.py`, `backend_v3/stability.py`, `backend_v3/ecl.py`, `backend_v3/reporting.py` — cierre integral de **`MEN-05`** y eliminación de los 4 enlaces muertos a `docs/model_risk_assessment.md` en `backend_v3/` (SOLO docstrings y comentarios; CERO cambios de lógica ejecutables): citas completas de `Pearson (1900)`, `Fisher (1925)`, `Breiman et al. (1984)`, `Brown & Forsythe (1974)`, `Levene (1960)`, `Press et al. (2007) §5.6`, `Kohavi (1995)`, `Massey (1951)`, `Siddiqi (2006)`, `Hanley & McNeil (1982)`, `Hand & Till (2001)`, `BCBS CRE 32.4`, `SR 11-7 / OCC 2011-12` y párrafos exactos de `IFRS 9` (`§5.5.3`, `§5.5.5`, `§5.5.9`, `§5.5.11`, `§5.5.17`, `Apéndice A`); aclaración MRM de masa ponderada directa sin Rao-Scott/DEFF junto a `Heeringa, West & Berglund (2010)`; documentación explícita de convenciones operativas de TreeGov (`MAX_ORDINAL_CATS = 20`, umbrales de `Gini Drop` `> 0.20 / > 0.40`, gatillo `pd_current > 2 * pd_initial`, descuento `1 / (1 + EIR)`, `_weighted_median`); corrección matemática en `splitting.py` sobre Hamilton-Hare con repartos extremos y motivo de Check B2; y normalización de `backend_v3/pruning.py` a LF.
+- `tests/test_crt_engine.py`, `tests/test_quest_engine.py`, `tests/test_pruning.py`, `tests/test_stability.py`, `tests/test_statistics.py`, `tests/test_ecl.py` — citas bibliográficas completas en cabeceras y comentarios de cálculos manuales de referencia y eliminación del 5.º enlace muerto a `model_risk_assessment.md` en `tests/test_statistics.py`, sin modificar ninguna aserción ni fixture (`tests/test_pruning.py` normalizado a LF).
+- `pyproject.toml` y `frontend_v3/__init__.py` — bump coordinado `1.0.0rc8` → `1.0.0rc9`.
+- `docs/philosophy.md`, `docs/philosophy.es.md`, `docs/roadmap.md`, `docs/estado_proyecto.md`, `docs/contexto_para_nueva_sesion.md`, `docs/prompt_para_asistente.md`, `docs/api.md`, `docs/audit_log.md` — sincronización documental a **`1.0.0rc9`**, cierre formal de **`MEN-05`** y actualización parcial de **`MAY-10`**, preservando el registro histórico de `v1.0.0rc8` como tag previo en GitHub.
+
+**Hallazgos y verificaciones**:
+
+1. **Cierre integral de `MEN-05` + cierre parcial de `MAY-10`:** 0 referencias muertas a `model_risk_assessment` en `backend_v3/` y `tests/`; 0 ocurrencias de `(IFRS 9, §8.6` en `docs/design_decisions.md`; paridad verificada 24/24 referencias académicas en orden alfabético + 4 normas regulatorias en `README.md`, `README.es.md` y `docs/methodology.md`.
+2. **Invariante estricto AST de cero cambios de lógica:** verificado mediante `ast.parse` (eliminando docstrings de módulo/clase/función) que el AST ejecutable de los 20 archivos `.py` de `backend_v3/` y `tests/` es 100 % idéntico respecto a `HEAD` (`bff317c`), siendo `__version__ = "1.0.0rc9"` en `frontend_v3/__init__.py` la única diferencia ejecutable en todo el commit.
+3. **Higiene de codificación:** todos los archivos modificados verificados en UTF-8 sin BOM y saltos de línea LF (0 CRLF, 0 mojibake).
+
+**Tests**: `pytest tests/test_packaging.py tests/test_gui_smoke.py -v` (**26/26 PASSED**) y `pytest tests -q` (**752/752 PASSED**) en el entorno limpio `%LOCALAPPDATA%\venvs\treegov-311` (Python 3.11.9).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`MEN-05`, `MAY-10`); `docs/methodology.md`; `docs/design_decisions.md` §9.3; `docs/roadmap.md`.
+

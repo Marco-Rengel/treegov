@@ -1,5 +1,13 @@
 """Tests de backend_v3/pruning.py (Fase 1.2). Dual: pytest o python directo.
 
+Referencias bibliograficas de los calculos manuales de verificacion:
+  - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984).
+    Classification and Regression Trees, §3.3 & §10.2 (poda coste-complejidad
+    weakest-link y secuencia alpha).
+  - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey Data
+    Analysis, §5.3 (masa ponderada directa en r_w(t), sin Rao-Scott/DEFF;
+    ver docs/3.9_design_interactive_weighted_pruning.md).
+
 Secuencia de poda VERIFICADA A MANO sobre el fixture aprobado:
   y = [0]*6 + [1,0] + [1]*4  (12 filas), x = 1..12
 Arbol real de CRT (min_child_size=1):
@@ -115,6 +123,10 @@ def test_guards():
 
 def test_weighted_pruning_sequence():
     """Fase 3.9: la secuencia usa r_w(t) = sum(w_events) - max(w_events).
+
+    Citas: Breiman, Friedman, Olshen & Stone (1984), §3.3 & §10.2;
+    Heeringa, West & Berglund (2010), §5.3 (masa ponderada directa sin
+    correccion Rao-Scott/DEFF).
 
     Dos partes:
     (a) Estructura fijada a mano (el fixture de _modelo() con w_events

@@ -1,10 +1,22 @@
 """Tests de backend_v3/quest_engine.py (Fase 0, Paso 8).
 
+Referencias bibliograficas de los calculos manuales de verificacion:
+  - Loh, W.-Y. & Shih, Y.-S. (1997). Statistica Sinica 7(4), 815-840 (QUEST).
+  - Fisher, R.A. (1925) (ANOVA F); Pearson, K. (1900) (chi-cuadrado).
+  - Brown, M.B. & Forsythe, A.B. (1974); Levene, H. (1960) (desempate robusto).
+  - Kish, L. (1965), Survey Sampling (varianza ponderada de confiabilidad).
+  - Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007),
+    Numerical Recipes (3rd ed.), §5.6 (raices cuadraticas estables Citardauq).
+  - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984) (barrido
+    de Gini nominal/multiclase).
+  - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010), §§5.3-5.4 (masa
+    ponderada directa sin correccion Rao-Scott ni DEFF).
+
 Valores de referencia verificados a mano (aprobados en la auditoria del
 diseno, con las correcciones de fixture integradas):
 
   Test 1: F = 54 (seleccion por ANOVA; threshold QDA = 5.0).
-  Test 2: Levene W = 72/7 (medianas exactas 5 y 5); ANOVA p = 1.
+  Test 2: Levene/Brown-Forsythe W = 72/7 (medianas exactas 5 y 5); ANOVA p = 1.
   Test 3: QDA varianzas iguales, priores iguales -> t = 0.0 exacto.
   Test 4: QDA priores desiguales -> t = -ln(5/3)/2 = -0.2554128...
   Test 5: QDA varianzas distintas -> t = (2/3)(sqrt(4 + 3 ln 4) - 1).
@@ -453,9 +465,11 @@ def _assert_configs_iguales(a: SplitConfig, b: SplitConfig) -> None:
 
 
 def _qda_ponderado_manual(xv, yc, w, divisor_kish=True):
-    """Replica manual del QDA ponderado (Etapa 2): medias, priors y
-    varianzas ponderadas. divisor_kish=True -> W - sum(w^2)/W (Kish 1965);
-    False -> W (MLE)."""
+    """Replica manual del QDA ponderado (Etapa 2; Loh & Shih 1997): medias,
+    priors y varianzas ponderadas (masa directa sin Rao-Scott/DEFF; Heeringa,
+    West & Berglund 2010, §5.3). divisor_kish=True -> W - sum(w^2)/W
+    (Kish 1965); False -> W (MLE). Raices cuadraticas resueltas con la
+    formula estable de Citardauq (Press et al. 2007, §5.6)."""
     y1 = yc == 1
     x0, x1 = xv[~y1], xv[y1]
     w0, w1 = w[~y1], w[y1]
@@ -827,8 +841,9 @@ def test_quest_qda_normalized_weights_and_unit_class_mass():
 
 def test_quest_qda_nearly_equal_variances_citardauq():
     # v0 = 1.0, v1 = 1.0 + 1e-9 (fuera del umbral isclose rel_tol=1e-12):
-    # la formula de Citardauq (Numerical Recipes §5.6) evita cancelacion catastrofica
-    # y reproduce el limite LDA (m0+m1)/2 = 5.0 con alta precision.
+    # la formula de Citardauq (Press et al. 2007, Numerical Recipes §5.6)
+    # evita cancelacion catastrofica y reproduce el limite LDA (m0+m1)/2 = 5.0
+    # con alta precision.
     eps = 1e-9
     s1 = math.sqrt(1.0 + eps)
     xv = np.array([2.0 - 1.0, 2.0, 2.0 + 1.0, 8.0 - s1, 8.0, 8.0 + s1])

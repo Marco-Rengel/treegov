@@ -53,8 +53,13 @@ class CutKind(Enum):
 class GovernanceMode(Enum):
     """Modo de gobernanza de la PD por hoja (TreeGov, Fase 2.1).
 
-    BANKING (defecto): estimador de Jeffreys + PD Floor (BCBS CRE 32.4);
-        capa MRM/IFRS 9 para modelos bancarios.
+    BANKING (defecto): estimador de Jeffreys (Jeffreys 1946) + PD Floor
+        prudencial IRB (BCBS CRE 32.4: >= 0.0005 / 5 bps para exposiciones
+        no soberanas), trazabilidad MRM bajo SR 11-7 / OCC 2011-12.
+        Nota de separacion contable: el piso prudencial BCBS CRE 32.4 es
+        distinto de las PD puntuales sin sesgo (PIT) exigidas para provisiones
+        bajo IFRS 9 §5.5 / Apendice A (ver backend_v3/ecl.py y
+        docs/methodology.md §6.3 y §9).
     RESEARCH: PD empirica cruda (k/n), sin suavizado bayesiano ni floor,
         para dominios no bancarios (salud, ciencias sociales, marketing)
         donde la restriccion regulatoria no aplica.
@@ -83,6 +88,12 @@ def _fmt(x: float) -> str:
 @dataclass(frozen=True, repr=False)
 class SplitConfig:
     """Particion candidata sobre UN predictor, en UN nodo. Inmutable y hashable.
+
+    Evidencia auditable inmutable conforme a principios MRM (SR 11-7 /
+    OCC 2011-12) sobre el contrato comun de los motores (Kass 1980;
+    Biggs et al. 1991; Breiman et al. 1984; Loh & Shih 1997). Los nodos
+    resultantes se integran con gobernanza prudencial (BCBS CRE 32.4) o
+    separacion contable (IFRS 9 §5.5 / Apendice A) en las capas superiores.
 
     Invariantes verificados en __post_init__ (solo lee y lanza; nunca asigna):
       - exactamente uno de threshold / branches esta definido;

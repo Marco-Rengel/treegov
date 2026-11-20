@@ -1,6 +1,10 @@
 """Inferencia de tipos de predictor (TreeGov, backend_v3, Fase 1).
 
-Heuristica explicita y auditable (constante MAX_ORDINAL_CATS):
+Heuristica operativa explicita y auditable de TreeGov (constante
+``MAX_ORDINAL_CATS = 20``; NO es una constante prescrita por regulacion ni
+por un paper academico unico, sino una convencion de perfilado inicial
+documentada y sobreescribible por el analista; ver ``docs/methodology.md`` y
+``docs/design_decisions.md``):
 
     dtype no numerico            -> NOMINAL
     numerico, n_distinct <= 20   -> ORDINAL
@@ -24,6 +28,8 @@ from .types import PredictorType
 
 __all__ = ["MAX_ORDINAL_CATS", "infer_spec"]
 
+# Heuristica operativa explicita y auditable de TreeGov (no prescrita por
+# regulacion ni paper unico; ver docs/methodology.md y docs/design_decisions.md).
 MAX_ORDINAL_CATS: int = 20
 
 

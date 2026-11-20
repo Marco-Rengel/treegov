@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 20/11/2026 (cierre integral de Fase 1 Higiene y Fase 2 Remediación MRM `2A`–`2H`, **16/16 hallazgos críticos cerrados**; suite **752/752 PASSED**; versión **`1.0.0rc8`** preparada para merge a `main` y publicación en PyPI).
+**Fecha de última actualización:** 20/11/2026 (cierre integral de Fase 1 Higiene y Fase 2 Remediación MRM `2A`–`2I`, **16/16 hallazgos críticos + `MEN-05` cerrados**, 24 referencias académicas simétricas; suite **752/752 PASSED**; versión **`1.0.0rc9`** preparada para merge a `main`, tag `v1.0.0rc9`, verificación de wheel y publicación en PyPI).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,10 +14,10 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc8 (release candidate preparada para publicación en PyPI) |
+| Versión | 1.0.0rc9 (release candidate preparada para publicación en PyPI; tag histórico `v1.0.0rc8` solo en GitHub) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc8/ *(pendiente de upload tras verificación de wheel)* |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc9/ *(pendiente de upload tras verificación de wheel)* |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
@@ -562,7 +562,7 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
 - **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD). Completada (02/11/2026).
 - **Fase 1 (Limpieza de Repositorio)** — Reducción en disco de 3.49 GB → 6.12 MB (entorno limpio externo `%LOCALAPPDATA%\venvs\treegov-311`), compactación `.git/`, `.gitignore`/`.aiderignore` endurecidos, des-rastreo de `archive/legacy_docs/` y anonimización de rutas en `AGENTS.md`. Completada (20/11/2026, commit `3516939`).
-- **Fase 2 (Remediación Integral MRM `2A`–`2H`, `v1.0.0rc8`)** — Cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`) de `audit_reports/F1_Informe_Ejecutivo_Final.md` y sincronización documental completa. Completada (20/11/2026), suite **752/752 PASSED**.
+- **Fase 2 (Remediación Integral MRM `2A`–`2I`, `v1.0.0rc9`)** — Cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`) + **`MEN-05`** (saneamiento bibliográfico total con 24 referencias académicas simétricas y cero zonas grises) de `audit_reports/F1_Informe_Ejecutivo_Final.md`. Completada (20/11/2026), suite **752/752 PASSED**.
 
 ### Verificación manual de la GUI (13/10/2026)
 
@@ -702,9 +702,9 @@ Saneamiento estructural ejecutado en `chore/phase1-repo-cleanup` (integrado en `
 - **Reducción de tamaño en disco:** de **3,569.37 MB (3.49 GB)** a **6.12 MB** (99.83% menos) tras migrar la ejecución al entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311` (Python 3.11.9) y eliminar `.venv/`, `.venv_linux/`, `.venv_3.14_backup/`, cachés `__pycache__/`, 85 logs históricos, residuos de Aider/Node y `archive/legacy_ui_sprint3/`.
 - **Compactación Git y trazabilidad:** `git gc --prune=now` (1,225 objetos sueltos → 1 packfile de 1.69 MiB); des-rastreo de `archive/legacy_docs/` del índice Git; endurecimiento de `.gitignore`/`.aiderignore` (`logs/`, `.env*`, `*.pem`, `*.key`, `.venv*/`, `audit_reports/`, `diff_*.txt`) y anonimización de rutas personales en `AGENTS.md`. Suite verificada: **660/660 PASSED**.
 
-### Fase 2 — Remediación Integral MRM (`2A`–`2H`, 16/16 hallazgos críticos cerrados) ✅ Completada (20/11/2026)
+### Fase 2 — Remediación Integral MRM (`2A`–`2I`, 16/16 hallazgos críticos + `MEN-05` cerrados) ✅ Completada (20/11/2026)
 
-Ejecutada sobre la rama `release/phase2-mrm-fixes` cerrando **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` y preparando la release **`v1.0.0rc8`** (**752/752 PASSED**, `+92` tests de regresión respecto a `1.0.0rc7`):
+Ejecutada sobre las ramas `release/phase2-mrm-fixes` (integrada en `main` como tag histórico `v1.0.0rc8` en GitHub sin subida a PyPI) y `release/phase2-biblio-1.0.0rc9` cerrando **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** más **`MEN-05`** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` y preparando la release objetivo de PyPI **`v1.0.0rc9`** (**752/752 PASSED**, `+92` tests de regresión respecto a `1.0.0rc7`):
 - **Bloque 2A (`CRIT-01`, `CRIT-04`, `CRIT-12` parcial — §27):** fuente única `validation.select_majority_leaf(model)`; paridad exacta `SQL (SQLite) == Python == predict_pd` con identificadores ANSI `"..."`, `None`/`NaN` sin imports en Python, `WHEN >` + `ELSE` en CHAID fusionado, guardas de finitud/ciclos, transparencia multiclase en exportadores y `unseen_policy` en Champion-Challenger. (673/673)
 - **Bloque 2B (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07` — §28):** clasificación estricta Basilea III CRE 32.4 (`BASEL_PD_FLOOR_MIN = 0.0005`, `classify_governance_mode` → `BANKING`/`RESEARCH`/`CUSTOM`, `pd_floor < 0.5`); `Session.active_tree` conectando `pruned_tree` a todos los consumidores y GUI con invalidación de métricas obsoletas; remapeo de `parent_id` en `_reindex_tree`; atomicidad de `fix_spec`/`train`/`load_oot` (exclusión de `weight_col`/`population_col`, rechazo de `NaT`) y propagación de población al `params_fingerprint`. (683/683)
 - **Bloque 2C (`CRIT-02`, `CRIT-15` — §29):** conversión UI `% -> decimal` de EIR en `ECLDialog`, `eir >= 0`, `PD = 1.0` obligatorio en Etapa 3 y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`); confinamiento MCP `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura en `score_batch`, validación fail-fast, `RLock`, `_jsonable` completo con normalización de claves y Caja Blanca en `treegov_mcp.py`. (706/706)
@@ -712,7 +712,8 @@ Ejecutada sobre la rama `release/phase2-mrm-fixes` cerrando **16/16 hallazgos cr
 - **Bloque 2E (`CRIT-09`, `CRIT-10` — §31):** varianza ponderada de confiabilidad de Kish y raíces Citardauq en QUEST (con dominio $[\min(x), \max(x))$ y no secuestro por $F = \infty$), `bonferroni_adjust` logarítmico sin overflow, `_weighted_median` tolerante, rechazo `±inf` en `TrainOnlyImputer`/C&RT/CHAID, Gini normalizado / sumas inversas / varianza centrada (Chan, Golub & LeVeque 1983) y selección Cochran-elegible en Exhaustive CHAID. (735/735)
 - **Bloque 2F (`CRIT-11`, `CRIT-12` — §32):** guardas anti-`NaN`/no-finitos en `TreeBuilder`, `splitting`, `validation` y `reporting`; `w_accuracy` binario; Hosmer-Lemeshow OOS *tie-preserving* invariante al orden con `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6`; `StabilityMonitor` (`eps` conectado/validado, `leaf_psi` invariante a escala, `covariate_csi` `(a, b]` + `<MISSING>` + continuas constantes); `evaluate_oot` compatible con CV y `Gini_train <= 0` → `UNDETERMINED`. (748/748)
 - **Bloque 2G (`CRIT-13`, `CRIT-14` — §33):** sincronización integral SR 11-7 (`docs/methodology.md` con §5.4 Atípicos y §8.9bis, `3.10.b_design_chaid_binning.md`, `design_decisions.md`, `api.md`); `TreeNode.gini_impurity` con etiqueta `Impurity (I_G)`; precalculo backend en `GainsRow` y `oot["csi_worst_flag"]`; guardia Caja Blanca ampliada a 12 raíces auto-instalada; guardrail AST bidireccional de Sala Limpia (`test_frontend_clean_room` + `test_backend_clean_room`); y oráculo matemático manual puro en `test_statistics.py`. (752/752)
-- **Bloque 2H (cierre documental y release `1.0.0rc8`):** bump coordinado de versión (`1.0.0rc7` → `1.0.0rc8`), sincronización de los 12 documentos del proyecto y registro del inventario diferido `MAY-01`–`MAY-10` / `MEN-01`–`MEN-08` para Fase 3 en `docs/roadmap.md`. (752/752)
+- **Bloque 2H (cierre documental y tag histórico `v1.0.0rc8`):** bump coordinado de versión (`1.0.0rc7` → `1.0.0rc8`), sincronización de los 12 documentos del proyecto y registro del inventario diferido `MAY-01`–`MAY-10` / `MEN-01`–`MEN-08` para Fase 3 en `docs/roadmap.md` (tag `v1.0.0rc8` publicado solo en GitHub). (752/752)
+- **Bloque 2I (`MEN-05` cerrado, parcial `MAY-10` y release `1.0.0rc9`):** saneamiento bibliográfico total bajo invariante AST estricto de cero cambios de lógica: paridad exacta de 24 referencias académicas + 4 normas regulatorias en `README.md`, `README.es.md` y `docs/methodology.md`; aclaración MRM sin Rao-Scott/DEFF; eliminación de 5 enlaces muertos a `docs/model_risk_assessment.md` y de la frase residual `IFRS 9` en `design_decisions.md §9.3`; citas completas en docstrings/comentarios de 14 módulos de `backend_v3/` y 6 módulos de `tests/`; bump coordinado `1.0.0rc8` → `1.0.0rc9` (`pyproject.toml`, `frontend_v3/__init__.py`) y sincronización documental. (752/752)
 
 ---
 
@@ -955,7 +956,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión preparada) | https://pypi.org/project/treegov/1.0.0rc8/ |
+| PyPI (versión preparada) | https://pypi.org/project/treegov/1.0.0rc9/ |
 | Instalación | `pip install treegov` |
 | Suite de tests | `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" -m pytest tests -q` |
 | Demo headless | `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" treegov.py` |
@@ -965,9 +966,9 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 ## 10. Pendientes y decisiones abiertas
 
-**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2H`) cerradas (20/11/2026); versión `1.0.0rc8` preparada para publicación en PyPI.**
-Suite **752/752 PASSED** (`16/16` hallazgos críticos `CRIT-01`–`CRIT-16` cerrados y verificados en `%LOCALAPPDATA%\venvs\treegov-311`).
-**Próximo paso:** (1) merge de `release/phase2-mrm-fixes` a `main`, verificación del wheel (`AGENTS.md`), tag `v1.0.0rc8` y publicación de **`1.0.0rc8`** en PyPI por el humano; (2) evaluar y planificar la **Fase 3** para la deuda no crítica (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08`, registrada en `docs/roadmap.md` con referencia a `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable.
+**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2I`, 16/16 `CRIT` + `MEN-05`) cerradas (20/11/2026); versión `1.0.0rc9` preparada para publicación en PyPI.**
+Suite **752/752 PASSED** (`16/16` hallazgos críticos `CRIT-01`–`CRIT-16` + `MEN-05` cerrados y verificados en `%LOCALAPPDATA%\venvs\treegov-311`).
+**Próximo paso:** (1) merge de `release/phase2-biblio-1.0.0rc9` a `main`, tag `v1.0.0rc9`, verificación del wheel (`AGENTS.md`) y publicación de **`1.0.0rc9`** en PyPI por el humano (`v1.0.0rc8` permanece como tag histórico solo en GitHub); (2) evaluar y planificar la **Fase 3** para la deuda no crítica remanente (`MAY-01`–`MAY-10` y `MEN-02`–`MEN-08`, registrada en `docs/roadmap.md` con referencia a `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable.
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
@@ -1045,7 +1046,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0 a 7, Fase 3.12, Fase 1 (Higiene, 3.49 GB → 6.12 MB) y Fase 2 (Remediación Integral MRM `2A`–`2H`, 16/16 hallazgos críticos cerrados) completadas. Suite **752/752 PASSED** en `%LOCALAPPDATA%\venvs\treegov-311`. Versión **`1.0.0rc8`** preparada en `release/phase2-mrm-fixes`. Próximo paso: publicar `1.0.0rc8` en PyPI y evaluar Fase 3 (`MAY-01`–`MAY-10` / `MEN-01`–`MEN-08` en `docs/roadmap.md`) + decisión de distribución (C1) antes de `1.0.0` estable."
+> "Retomamos TreeGov. Fases 0 a 7, Fase 3.12, Fase 1 (Higiene, 3.49 GB → 6.12 MB) y Fase 2 (Remediación Integral MRM `2A`–`2I`, 16/16 hallazgos críticos + `MEN-05` cerrados) completadas. Suite **752/752 PASSED** en `%LOCALAPPDATA%\venvs\treegov-311`. Versión **`1.0.0rc9`** preparada en `release/phase2-biblio-1.0.0rc9` (`v1.0.0rc8` quedó como tag histórico en GitHub sin subida a PyPI). Próximo paso: merge a `main`, tag `v1.0.0rc9`, verificación de wheel y publicación en PyPI, luego evaluar Fase 3 (`MAY-01`–`MAY-10` / `MEN-02`–`MEN-08` en `docs/roadmap.md`) + decisión de distribución (C1) antes de `1.0.0` estable."
 
 ---
 

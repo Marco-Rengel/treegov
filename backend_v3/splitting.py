@@ -1,9 +1,19 @@
-"""Particion train/test estratificada exacta (TreeGov, backend_v3, Fase 1).
+"""Particion train/test estratificada exacta y CV k-fold (TreeGov, backend_v3, Fase 1).
 
-Metodo de Hamilton-Hare (largest remainder) por estrato: cuotas ideales
-Q_k = n_k * train_frac, asignacion base floor(Q_k), y el resto
-R = round(N*frac) - sum(floors) se reparte (+1 por estrato) a las clases
-con mayor fraccion residual (empate -> menor orden de clase: determinista).
+Metodo de asignacion proporcional de Hamilton-Hare (largest remainder) por
+estrato: cuotas ideales Q_k = n_k * train_frac, asignacion base floor(Q_k),
+y el resto R = round(N*frac) - sum(floors) se reparte (+1 por estrato) a las
+clases con mayor fraccion residual (empate -> menor orden de clase:
+determinista).
+
+Referencias metodologicas y regulatorias:
+  - Kohavi, R. (1995). "A study of cross-validation and bootstrap for
+    accuracy estimation and model selection". IJCAI, 1137-1143 (holdout y
+    validacion cruzada k-fold estratificados).
+  - Metodo de asignacion proporcional de Hamilton-Hare (largest remainder);
+    ver docs/methodology.md §7 y §7.2.
+  - SR 11-7 / OCC 2011-12 (separacion estricta train/test sin fugas de
+    informacion para validacion independiente fuera de muestra).
 
 Extraido del orquestador (treegov.py) en la Fase 1 para poder reutilizarlo
 dentro del flujo transaccional (session_state.py). Determinista con
@@ -32,8 +42,11 @@ def stratified_split(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Indices posicionales (train, test) con estratificacion exacta.
 
-    Devuelve arrays de enteros disjuntos que cubren 0..N-1. La tasa de cada
-    clase en train coincide con la global salvo redondeo entero exacto.
+    Implementa holdout estratificado (Kohavi 1995; SR 11-7 / OCC 2011-12)
+    mediante asignacion proporcional de Hamilton-Hare (largest remainder;
+    ver docs/methodology.md §7). Devuelve arrays de enteros disjuntos que
+    cubren 0..N-1. La tasa de cada clase en train coincide con la global
+    salvo redondeo entero exacto.
 
     Modo ponderado (Fase 3.2): si `weights` no es None, el vector se
     VALIDA (1D, longitud = len(y), finito, estrictamente positivo) pero NO
@@ -47,11 +60,13 @@ def stratified_split(
 
     Check B2 (SOLO cuando `weights` no es None): cada clase observada en
     `y` debe quedar con al menos 2 filas fisicas en train Y al menos 2 en
-    test. Es defensa contra fixtures degenerados con pesos declarados. El
-    camino sin pesos NO ejecuta B2: invariante C1 (comportamiento
-    identico al pre-3.2); ademas, con Hamilton-Hare una clase con
-    n_k >= 2 no puede quedar con 0 filas en ninguna particion bajo esta
-    convencion.
+    test. Con repartos extremos (p. ej. clases `[2, 98]` en un split 80/20
+    donde Q_0 = 1.6 y el redondeo puede asignar 2 filas a train y 0 a test,
+    o con `train_frac` cercano a 0 o 1), la asignacion de Hamilton-Hare puede
+    producir 0 filas en un fold incluso con `n_k >= 2`; por ese motivo Check
+    B2 impone fail-fast `>= 2` filas fisicas por fold cuando hay `weights`.
+    El camino sin pesos NO ejecuta B2 para preservar el invariante C1
+    (paridad exacta con pre-3.2; ver docs/methodology.md §7).
     """
     if log is None:
         log = get_logger("splitting")
@@ -159,9 +174,12 @@ def stratified_kfold(
 ) -> list[tuple[np.ndarray, np.ndarray]]:
     """Devuelve k pares (train_idx, val_idx) estratificados y disjuntos.
 
-    Cada clase se permuta con la misma seed y se reparte por turno circular
-    entre los folds. La union de las validaciones cubre 0..N-1 y cada indice
-    aparece en exactamente un fold de validacion.
+    Validacion cruzada k-fold estratificada (Kohavi 1995, IJCAI 1137-1143;
+    SR 11-7 / OCC 2011-12) mediante reparto proporcional equivalente a
+    Hamilton-Hare en k folds (ver docs/methodology.md §7.2). Cada clase se
+    permuta con la misma seed y se reparte por turno circular entre los
+    folds. La union de las validaciones cubre 0..N-1 y cada indice aparece
+    en exactamente un fold de validacion.
     """
     if log is None:
         log = get_logger("splitting")

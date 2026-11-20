@@ -9,9 +9,12 @@ Extension de ponderacion por muestra (Fase 3.2.a): f_oneway y
 brown_forsythe admiten un parametro keyword-only opcional `weights`
 (secuencia paralela de pesos estrictamente positivos por grupo). Con
 `weights=None` el comportamiento es identico bit a bit al original. Con
-pesos, las medias son medias ponderadas, los tamanos de grupo son sumas
-de pesos W_i, y los grados de libertad siguen la convencion de muestras
-complejas: df1 = k - 1 y df2 = N_filas - k (filas fisicas, no pesos).
+pesos, TreeGov sigue ponderacion directa por masa de pesos (Heeringa, West
+& Berglund 2010, §§5.3-5.4) SIN correcciones de diseno complejo de encuestas
+(sin ajuste de Rao-Scott ni reescalado por efecto de diseno DEFF): las medias
+son medias ponderadas, los tamanos de grupo son sumas de pesos W_i, y los
+grados de libertad residuales se mantienen en filas fisicas (df1 = k - 1,
+df2 = N_filas - k).
 
 Politica de caja blanca: las formulas estan escritas explicitamente en el
 cuerpo de cada funcion; scipy.stats se usa SOLO para evaluar las funciones de
@@ -36,9 +39,9 @@ Referencias:
   Kass, G.V. (1980). "An Exploratory Technique for Investigating Large
     Quantities of Categorical Data". Applied Statistics 29(2), 119-127.
   Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey
-    Data Analysis. Chapman & Hall/CRC, seccion 5.3 (ANOVA ponderado en
-    muestras complejas: medias ponderadas, W_i = suma de pesos por
-    grupo, df residual basado en filas fisicas).
+    Data Analysis. Chapman & Hall/CRC, §§5.3-5.4 (tablas y momentos con
+    masa ponderada directa; sin correccion de Rao-Scott ni DEFF; df
+    residual basado en filas fisicas).
 """
 
 from __future__ import annotations
@@ -160,12 +163,17 @@ def _validate_groups(
 
 
 def _weighted_median(a: np.ndarray, w: np.ndarray) -> float:
-    """Mediana ponderada: primera observacion ordenada cuyo peso acumulado
-    alcanza la mitad del peso total del grupo. Si el peso acumulado coincide
-    con la mitad (dentro de tolerancia flotante rel_tol=1e-12, abs_tol=1e-15),
-    se promedian esa observacion y la siguiente (convencion que reproduce
-    exactamente la mediana clasica cuando todos los pesos son iguales,
-    incluidos los grupos de tamano par)."""
+    """Cuantil ponderado al 50 % con promedio de empates exactos en 0.5 * W.
+
+    Calcula la primera observacion ordenada cuyo peso acumulado alcanza
+    0.5 * W (W = suma total de pesos del grupo). Si el peso acumulado
+    coincide exactamente con 0.5 * W (dentro de tolerancia flotante
+    rel_tol=1e-12, abs_tol=1e-15), promedia esa observacion y la siguiente,
+    reproduciendo exactamente la mediana clasica (np.median) cuando todos
+    los pesos son iguales (incluidos grupos de tamano par).
+
+    Referencias: Heeringa, West & Berglund (2010); docs/methodology.md §3.7bis.
+    """
     order = np.argsort(a, kind="stable")
     cum_w = np.cumsum(w[order])
     half = float(w.sum()) / 2.0
@@ -195,7 +203,8 @@ def _anova_summaries(
         SSW = sum_i sum_j (x_ij - media_i)^2           (dentro de grupos)
         df1 = k - 1 ;  df2 = N - k
 
-    Con pesos (muestras complejas; Heeringa, West & Berglund 2010, sec. 5.3):
+    Con pesos (ponderacion directa por masa sin correccion Rao-Scott ni DEFF;
+    Heeringa, West & Berglund 2010, §5.3):
 
         W_i = sum_j w_ij ;  media_i^w = sum_j w_ij x_ij / W_i
         SSB = sum_i W_i (media_i^w - media_global^w)^2
@@ -263,11 +272,15 @@ def pearson_chi2(table: ArrayLike) -> TestResult:
         p    = P(Chi2_gl >= chi2) = scipy.stats.chi2.sf(chi2, gl)
 
     Se aceptan frecuencias reales >= 0: con conteos enteros el calculo es
-    exacto; con pesos reales (tablas ponderadas MRM) es la aproximacion
-    estandar de Pearson. Exige tabla de al menos 2x2 y marginales de fila y
-    columna estrictamente positivos (un marginal nulo produciria E_ij = 0).
+    exacto; con pesos reales (tablas ponderadas MRM) aplica ponderacion
+    directa por masa de pesos sin correcciones de diseno complejo (sin
+    Rao-Scott ni DEFF; Heeringa, West & Berglund 2010, §5.4). Exige tabla
+    de al menos 2x2 y marginales de fila y columna estrictamente positivos
+    (un marginal nulo produciria E_ij = 0).
 
-    Cita: Pearson (1900), Philosophical Magazine Ser. 5, 50(302):157-175.
+    Citas: Pearson (1900), Philosophical Magazine Ser. 5, 50(302):157-175;
+           Heeringa, West & Berglund (2010), §5.4 (masa ponderada directa,
+           sin Rao-Scott/DEFF).
     """
     try:
         obs = np.asarray(table, dtype=float)
@@ -311,9 +324,10 @@ def f_oneway(*groups: ArrayLike, weights: ArrayLike | None = None) -> TestResult
 
     Con el parametro keyword-only `weights` (secuencia paralela a
     `groups`, pesos finitos y estrictamente positivos por observacion),
-    las medias son medias ponderadas, los tamanos de grupo son las sumas
-    de pesos W_i, y los grados de libertad siguen la convencion de
-    muestras complejas: df2 = N_filas - k (filas fisicas, no pesos). Con
+    aplica ponderacion directa por masa sin correccion de diseno complejo
+    (sin Rao-Scott ni DEFF; Heeringa, West & Berglund 2010, §5.3): las
+    medias son medias ponderadas, los tamanos de grupo son las sumas de
+    pesos W_i, y df2 = N_filas - k (filas fisicas, no pesos). Con
     weights=None el calculo es identico al original.
 
     Es la prueba de CHAID con TargetType.CONTINUOUS (ver types.py).
@@ -321,8 +335,8 @@ def f_oneway(*groups: ArrayLike, weights: ArrayLike | None = None) -> TestResult
     todas las observaciones identicas -> (0, p=1). Ver _f_ratio.
 
     Citas: Fisher (1925), Statistical Methods for Research Workers.
-           Heeringa, West & Berglund (2010), Applied Survey Data
-           Analysis, seccion 5.3 (formula ponderada).
+           Heeringa, West & Berglund (2010), Applied Survey Data Analysis,
+           §5.3 (ponderacion directa por masa, sin Rao-Scott ni DEFF).
     """
     arrays = _validate_groups(groups, "f_oneway", weights)
     ss_between, ss_within, df1, df2 = _anova_summaries(arrays, weights)
@@ -342,11 +356,10 @@ def brown_forsythe(*groups: ArrayLike, weights: ArrayLike | None = None) -> Test
         p    = scipy.stats.f.sf(W, k - 1, N - k)
 
     Con el parametro keyword-only `weights`, la mediana de cada grupo es
-    la mediana ponderada (primera observacion ordenada cuyo peso
-    acumulado alcanza la mitad del peso total del grupo) y el ANOVA
-    sobre las desviaciones es el ANOVA ponderado (ver f_oneway), con
-    df2 = N_filas - k. Con weights=None el calculo es identico al
-    original.
+    el cuantil ponderado al 50 % (_weighted_median) y el ANOVA sobre las
+    desviaciones aplica ponderacion directa por masa sin correccion
+    Rao-Scott/DEFF (ver f_oneway), con df2 = N_filas - k. Con weights=None
+    el calculo es identico al original.
 
     Notese que W es exactamente el cociente F de _f_ratio aplicado a los
     z_ij. Robusta ante asimetria y colas pesadas (la mediana, a diferencia
@@ -355,8 +368,8 @@ def brown_forsythe(*groups: ArrayLike, weights: ArrayLike | None = None) -> Test
 
     Citas: Brown & Forsythe (1974), JASA 69(346):364-367;
            Levene (1960), version original con centro en la media;
-           Heeringa, West & Berglund (2010), Applied Survey Data
-           Analysis, seccion 5.3 (formula ponderada).
+           Heeringa, West & Berglund (2010), Applied Survey Data Analysis,
+           §5.3 (ponderacion directa por masa, sin Rao-Scott ni DEFF).
     """
     arrays = _validate_groups(groups, "brown_forsythe", weights)
     if weights is None:
@@ -391,7 +404,7 @@ def stirling_second_kind(c: int, r: int) -> int:
 
         S(c, r) = (1/r!) * sum_{i=0}^{r} (-1)^i C(r, i) (r - i)^c
 
-    documentada en docs/model_risk_assessment.md (ALG-01); la recurrencia se
+    documentada en docs/methodology.md §1.4 (Kass 1980); la recurrencia se
     prefiere como implementacion auditada por evitar la cancelacion de
     signos y la division de la forma cerrada. La forma cerrada se usa como
     referencia cruzada en tests/test_statistics.py.
@@ -426,10 +439,9 @@ def kass_multiplier(c: int, r: int, *, ordinal: bool) -> int:
     Dominio CHAID: 1 <= r <= c. Si r == 1 (la fusion no retuvo ninguna
     particion) M = 1 en ambas escalas: no hay busqueda multiple que corregir.
 
-    Cita: Kass (1980), Applied Statistics 29(2):119-127. Corrige el riesgo
-    ALG-01 de docs/model_risk_assessment.md (p. ej. c=20 -> r=3: el motor
-    heredado usaba C(r,2)=3; el ajuste formal exige C(19,2)=171 en ordinal
-    y S(20,3) = 580606446 en nominal).
+    Cita: Kass (1980), Applied Statistics 29(2):119-127; ver
+    docs/methodology.md §1.4 (p. ej. c=20 -> r=3: el ajuste formal de Kass
+    exige C(19,2)=171 en ordinal y S(20,3) = 580606446 en nominal).
     """
     c = _as_int("c", c)
     r = _as_int("r", r)

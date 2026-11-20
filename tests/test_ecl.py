@@ -1,4 +1,14 @@
-"""Tests for the simplified ECL calculation (Phase 7 / Block 2C)."""
+"""Tests for the simplified ECL calculation (Phase 7 / Block 2C).
+
+Normative and operational reference for manual arithmetic assertions:
+  - IFRS 9 Financial Instruments (IASB), §5.5 (§5.5.3 lifetime ECL, §5.5.5
+    12-month ECL, §5.5.9 SICR, §5.5.11 30-day rebuttable presumption,
+    §5.5.17 unbiased PIT measurement & EIR discounting) and Appendix A
+    (credit-impaired / Stage 3 default forcing PD = 1.0).
+  - TreeGov v1 documented operational simplifications (not normative IFRS 9
+    text): Stage 2 trigger ``pd_current > 2 * pd_initial`` and single-period
+    discount factor ``1 / (1 + EIR)``.
+"""
 
 import sys
 from pathlib import Path
@@ -50,7 +60,16 @@ def test_ecl_stage_2_by_pd():
 
 
 def test_ecl_calculation():
-    """Stage 3 forces PD=1.0 and totals match IFRS 9 staged arithmetic."""
+    """Stage 3 forces PD=1.0 (IFRS 9 Appendix A) and totals match IFRS 9 §5.5 staged arithmetic.
+
+    Manual verification (no discounting, EIR=None):
+      - A (Stage 1, §5.5.5): 0.02 * 0.45 * 1000 = 9.0 (12m, applicable);
+        0.10 * 0.45 * 1000 = 45.0 (lifetime).
+      - B (Stage 2, §5.5.3 / §5.5.11): 0.05 * 0.45 * 2000 = 45.0 (12m);
+        0.20 * 0.45 * 2000 = 180.0 (lifetime, applicable).
+      - C (Stage 3, Appendix A -> PD=1.0): 1.0 * 0.45 * 500 = 225.0 (both).
+      - Totals: 12m = 279.0, lifetime = 450.0, staged = 9 + 180 + 225 = 414.0.
+    """
     summary, rows = calculate_ecl(
         _mock_ecl_df(), pd_column="pd_current", config=ECLConfig()
     )
@@ -82,7 +101,11 @@ def test_ecl_calculation():
 
 
 def test_ecl_discounting_eir():
-    """ECLConfig(eir=0.12) discounts 12m, lifetime and staged totals by 1/1.12."""
+    """ECLConfig(eir=0.12) discounts 12m, lifetime and staged totals by 1/1.12.
+
+    TreeGov v1 single-period discount simplification 1 / (1 + EIR) anchored
+    conceptually to IFRS 9 §5.5.17.
+    """
     summary, rows = calculate_ecl(
         _mock_ecl_df(), pd_column="pd_current", config=ECLConfig(eir=0.12)
     )

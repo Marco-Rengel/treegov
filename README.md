@@ -1,6 +1,6 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc8
+**Version**: 1.0.0rc9
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
@@ -56,7 +56,7 @@ flowchart TB
     BE -.->|Session| FE
     BE -.->|Session| MC
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 + 3.12 · 16/16 critical MRM audit findings closed<br/>📦 v1.0.0rc8 (release candidate)<br/>🧪 752 / 752 tests PASSED<br/>📅 Nov 20, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 + 3.12 · 16/16 critical MRM findings + MEN-05 closed<br/>📦 v1.0.0rc9 (release candidate)<br/>🧪 752 / 752 tests PASSED<br/>📅 Nov 20, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -272,7 +272,7 @@ TreeGov/
 | **6** | Batch scoring + champion-challenger | Completed |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completed |
 | **Repo Hygiene (Phase 1)** | Workspace cleanup from 3.49 GB → ~6 MB (external clean venv), hardened `.gitignore`/`.aiderignore`, untracking of `archive/legacy_docs/`, path sanitization in `AGENTS.md` | Completed |
-| **MRM Audit Remediation (`2A`–`2H`, `v1.0.0rc8`)** | 16/16 critical audit findings closed (`CRIT-01`–`CRIT-16`): exporter parity & majority leaf, strict Basel III governance, active pruning (`active_tree`), IFRS 9 staged ECL/EIR, `TREEGOV_MCP_ROOT` MCP security, end-to-end multiclass K ≥ 3 & hardened Wizard, engine numerical stability, OOS Hosmer-Lemeshow & PSI/CSI, SR 11-7 methodology alignment, and bidirectional Clean-Room/White-Box guardrails | Completed |
+| **MRM Audit Remediation (`2A`–`2I`, `v1.0.0rc9`)** | 16/16 critical audit findings (`CRIT-01`–`CRIT-16`) + `MEN-05` bibliographic parity closed (24 academic + 4 regulatory references, zero attribution gray zones): exporter parity & majority leaf, strict Basel III governance, active pruning (`active_tree`), IFRS 9 staged ECL/EIR, `TREEGOV_MCP_ROOT` MCP security, end-to-end multiclass K ≥ 3 & hardened Wizard, engine numerical stability, OOS Hosmer-Lemeshow & PSI/CSI, SR 11-7 methodology alignment, and bidirectional Clean-Room/White-Box guardrails | Completed |
 
 **Test suite: 752/752 passing.**
 
@@ -289,17 +289,20 @@ TreeGov/
 - Davis, J. & Goadrich, M. (2006). *The relationship between Precision-Recall and ROC curves*. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
 - Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). *Multinomial goodness-of-fit tests for logistic regression models*. Statistics in Medicine, 31(30), 4238-4253.
 - Fisher, R.A. (1925). *Statistical Methods for Research Workers*. Oliver & Boyd, Edinburgh.
-- Hanley, J.A. & McNeil, B.J. (1982). *The meaning and use of the area under a receiver operating characteristic (ROC) curve*. Radiology 143(1), 29-36.
 - Hand, D.J. & Till, R.J. (2001). *A simple generalisation of the area under the ROC curve for multiple class classification problems*. Machine Learning, 45(2), 171-186.
+- Hanley, J.A. & McNeil, B.J. (1982). *The meaning and use of the area under a receiver operating characteristic (ROC) curve*. Radiology 143(1), 29-36.
 - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). *Applied Survey Data Analysis*. Chapman & Hall/CRC.
 - Hosmer, D.W. & Lemeshow, S. (1980). *A goodness-of-fit test for the multiple logistic regression model*. Communications in Statistics A10, 1043-1069.
 - Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied Logistic Regression* (3rd ed.). Wiley.
 - Jeffreys, H. (1946). *An invariant form for the prior probability in estimation problems*. Proceedings of the Royal Society of London A 186(1007), 453-461.
 - Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
 - Kish, L. (1965). *Survey Sampling*. Wiley.
-- Levene, H. (1960). *Robust tests for equality of variances*. In Contributions to Probability and Statistics, Stanford University Press, 278-292.
+- Kohavi, R. (1995). *A study of cross-validation and bootstrap for accuracy estimation and model selection*. Proceedings of the 14th International Joint Conference on Artificial Intelligence (IJCAI), 1137-1143.
+- Levene, H. (1960). *Robust tests for equality of variances*. In *Contributions to Probability and Statistics*, Stanford University Press, 278-292.
 - Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
+- Massey, F.J. (1951). *The Kolmogorov-Smirnov Test for Goodness of Fit*. Journal of the American Statistical Association 46(253), 68-78.
 - Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
+- Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007). *Numerical Recipes: The Art of Scientific Computing* (3rd ed.), §5.6. Cambridge University Press.
 - Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring*. Wiley.
 
 ---

@@ -144,7 +144,7 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
 | **Fase 1 Higiene** | Limpieza de repositorio (3.49 GB → 6.12 MB), entorno virtual externo limpio, `.gitignore`/`.aiderignore`, des-rastreo `archive/legacy_docs/`, anonimización `AGENTS.md` | **✅ Cerrada (20/11/2026)** |
-| **Fase 2 MRM (`2A`–`2H`)** | Remediación integral de auditoría MRM `F1`: cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`), sincronización documental y preparación release **`1.0.0rc8`** | **✅ Cerrada (20/11/2026)** |
+| **Fase 2 MRM (`2A`–`2I`)** | Remediación integral de auditoría MRM `F1`: cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`) + **`MEN-05`** (24 referencias simétricas, cero zonas grises), sincronización documental y preparación release **`1.0.0rc9`** | **✅ Cerrada (20/11/2026)** |
 
 **Suite de tests:** 752/752 PASSED
 
@@ -276,10 +276,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Versión vigente del repositorio:** `treegov 1.0.0rc8` (preparada en rama `release/phase2-mrm-fixes` el 20/11/2026, pendiente de merge a `main`, tag `v1.0.0rc8`, verificación de wheel y subida a PyPI por el humano).
-URL objetivo: https://pypi.org/project/treegov/1.0.0rc8/
+**Versión vigente del repositorio:** `treegov 1.0.0rc9` (preparada en rama `release/phase2-biblio-1.0.0rc9` el 20/11/2026 tras el saneamiento bibliográfico integral de Bloque `2I`, pendiente de merge a `main`, tag `v1.0.0rc9`, verificación de wheel y subida a PyPI por el humano).
+URL objetivo: https://pypi.org/project/treegov/1.0.0rc9/
 
-**Histórico de tags de git verificados (`git show-ref --tags`):** `v1.0.0a1` a `v1.0.0a6`, `v1.0.0rc1`, `v1.0.0rc2`, `v1.0.0rc4`, `v1.0.0rc5`, `v1.0.0rc6` (08/11/2026) y `v1.0.0rc7` (14/11/2026, última subida previa en PyPI antes de `1.0.0rc8`). El tag `v1.0.0rc3` no existe (la release `1.0.0rc3` sí está en PyPI del 21/10/2026, no yanked; el intento posterior de sobrescribirla falló por inmutabilidad y se publicó `rc4`).
+**Histórico de tags de git verificados (`git show-ref --tags`):** `v1.0.0a1` a `v1.0.0a6`, `v1.0.0rc1`, `v1.0.0rc2`, `v1.0.0rc4`, `v1.0.0rc5`, `v1.0.0rc6` (08/11/2026), `v1.0.0rc7` (14/11/2026, última subida previa en PyPI) y `v1.0.0rc8` (20/11/2026, tag histórico publicado en GitHub sobre commit `bff317c` sin subida a PyPI). El tag `v1.0.0rc3` no existe (la release `1.0.0rc3` sí está en PyPI del 21/10/2026, no yanked; el intento posterior de sobrescribirla falló por inmutabilidad y se publicó `rc4`).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -287,17 +287,17 @@ publicación, la página pública queda desincronizada hasta la
 próxima release. Al modificar el README, decidir explícitamente:
 (a) publicar una nueva versión inmediatamente, o (b) esperar a la
 próxima release con cambios de código. Nunca dejar la decisión
-implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, los cambios puramente cosméticos (fechas, typos, diagramas) NO disparan una nueva release en PyPI; se difieren a la próxima release material y se documentan en `roadmap.md`. La remediación de Fase 2 (`2A`–`2H`) es un **cambio material mayor**, por lo que prepara directamente `1.0.0rc8` con los 12 documentos sincronizados y **752/752 tests PASSED**.
+implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, los cambios puramente cosméticos (fechas, typos, diagramas) NO disparan una nueva release en PyPI; se difieren a la próxima release material y se documentan en `roadmap.md`. La remediación de Fase 2 (`2A`–`2I`) es un **cambio material mayor**, por lo que prepara directamente `1.0.0rc9` con paridad bibliográfica total (24 referencias + 4 regulatorias), `MEN-05` cerrado y **752/752 tests PASSED**.
 
 Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI PySide6 + 22 iconos SVG) + `mcp_v3` (capa MCP) + `treegov.py`/`treegov_gui.py`/`treegov_mcp.py`.
 
 ## Próximos pasos
 
-**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2H`) cerradas (20/11/2026).**
-Los **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` están cerrados y verificados con suite **752/752 PASSED**, versión sincronizada en **`1.0.0rc8`** sobre la rama `release/phase2-mrm-fixes`.
+**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2I`, 16/16 `CRIT` + `MEN-05`) cerradas (20/11/2026).**
+Los **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** más **`MEN-05`** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` están cerrados y verificados con suite **752/752 PASSED**, versión sincronizada en **`1.0.0rc9`** sobre la rama `release/phase2-biblio-1.0.0rc9`.
 
-1. **Publicación de `1.0.0rc8` (acción humana):** revisar el diff en `release/phase2-mrm-fixes`, hacer merge a `main`, crear tag `v1.0.0rc8`, construir el wheel (`pyproject-build`), verificar con el script `zipfile` de `AGENTS.md` los 3 archivos raíz y los 22 SVG, ejecutar `twine check` y publicar en PyPI (`twine upload`).
-2. **Fase 3 previa a `1.0.0` estable (backlog diferido):** evaluar y priorizar la deuda técnica no crítica registrada en `docs/roadmap.md` (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08`, referencia `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1).
+1. **Publicación de `1.0.0rc9` (acción humana):** revisar el diff en `release/phase2-biblio-1.0.0rc9`, hacer merge a `main`, crear tag `v1.0.0rc9`, construir el wheel (`pyproject-build`), verificar con el script `zipfile` de `AGENTS.md` los 3 archivos raíz y los 22 SVG, ejecutar `twine check` y publicar en PyPI (`twine upload`). (`v1.0.0rc8` permanece intacto como tag histórico solo en GitHub.)
+2. **Fase 3 previa a `1.0.0` estable (backlog diferido):** evaluar y priorizar la deuda técnica no crítica remanente registrada en `docs/roadmap.md` (`MAY-01`–`MAY-10` y `MEN-02`–`MEN-08`, referencia `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1).
 
 **Deudas diferidas históricas (registradas en `docs/roadmap.md` §Deferred):**
 - Inventario `F1` Fase 3: `MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` (ver tabla detallada en `docs/roadmap.md`).

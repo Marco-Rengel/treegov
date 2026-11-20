@@ -1,5 +1,15 @@
 """Tests de backend_v3/crt_engine.py (Fase 0, Paso 7).
 
+Referencias bibliograficas de los calculos manuales de verificacion:
+  - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984).
+    Classification and Regression Trees. Wadsworth (impureza de Gini y
+    varianza, caps. 2-4 y 8; heuristica nominal por tasa, §4; surrogates,
+    §5.3).
+  - Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). The American
+    Statistician 37(3), 242-247 (varianza centrada ante grandes offsets).
+  - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey Data
+    Analysis, §5.3 (masa ponderada directa sin correccion Rao-Scott/DEFF).
+
 Valores de referencia verificados a mano (aprobados en la auditoria del
 diseno): dI=0.5 (umbral binario), dI=1.0 (varianza), dI=49/225
 (exhaustivo K=3), dI=0.15 (heuristica K>10 con empate m=5/m=6),
@@ -60,6 +70,7 @@ def _assert_raises(exc_type, fn, *args, **kwargs):
 
 
 def test_umbral_continuo_binario_manual():
+    # Breiman et al. (1984), caps. 2-4 — impureza de Gini:
     # x=[1,2,3,4], y=[0,0,1,1]
     # I_padre = 1 - 2*(0.5^2) = 0.5
     # t=1.5 -> dI = 1/6 ; t=2.5 -> dI = 1/2 (max) ; t=3.5 -> dI = 1/6
@@ -82,6 +93,7 @@ def test_umbral_continuo_binario_manual():
 
 
 def test_umbral_continuo_varianza_manual():
+    # Breiman et al. (1984), cap. 8 — reduccion de varianza en regresion:
     # x=[1,2,3,4], y=[1,1,3,3]
     # I_padre = E[y^2]-E[y]^2 = 5 - 4 = 1
     # t=2.5 -> ambos lados constantes -> dI = 1.0
@@ -527,7 +539,11 @@ def test_humo_n200k():
 
 def _gini_dI_manual(izq: np.ndarray, y: np.ndarray, w: np.ndarray,
                     k_cls: int = 2) -> float:
-    """Ganancia de Gini ponderada de una asignacion izq/der (manual)."""
+    """Ganancia de Gini ponderada de una asignacion izq/der (manual).
+
+    Citas: Breiman, Friedman, Olshen & Stone (1984), caps. 2-4;
+    Heeringa, West & Berglund (2010), §5.3 (masa ponderada directa).
+    """
     w_total = float(w.sum())
     counts = np.array([w[y == k].sum() for k in range(k_cls)])
     p = counts / w_total
@@ -852,8 +868,9 @@ def test_crt_extreme_weight_ratio_no_cancellation():
 
 
 def test_crt_regression_large_offset_no_cancellation():
-    # Regresion con 1e9 + noise produce exactamente el mismo corte y ganancia
-    # que noise (centrado y_c = y - media_global evita cancelacion catastrofica).
+    # Chan, Golub & LeVeque (1983): regresion con 1e9 + noise produce el mismo
+    # corte y ganancia que noise (centrado y_c = y - media_global evita
+    # cancelacion catastrofica).
     rng = np.random.default_rng(99)
     n = 100
     x = pd.Series(np.linspace(0.0, 10.0, n))

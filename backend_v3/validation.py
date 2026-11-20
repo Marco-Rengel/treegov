@@ -9,8 +9,10 @@ numpy/pandas/scipy.stats):
         Gini = 2 * AUC - 1
     (Hanley & McNeil 1982; convencion del proyecto.)
 
-  * KS = max_s |F_bad(s) - F_good(s)|  sobre las curvas acumuladas ordenadas
-    por el score.
+  * KS = max_s |F_bad(s) - F_good(s)| sobre las curvas acumuladas ordenadas
+    por el score (Massey 1951, JASA 46(253):68-78). En multiclase (K > 2) se
+    reporta el minimo sobre todos los pares de clases simetrizados como
+    extension conservadora de peor caso (docs/methodology.md §8.2 y §8.11).
 
   * Hosmer-Lemeshow externo OOS/OOT (Hosmer & Lemeshow 1980; Hosmer,
     Lemeshow & Sturdivant 2013, Applied Logistic Regression, 3.a ed.,
@@ -37,25 +39,28 @@ numpy/pandas/scipy.stats):
         AP = sum_i (R_i - R_{i-1}) * P_i     (sin trapezoide)
 
   * Extension ponderada (Fase 3.2.g): compute_oos_metrics acepta `weights`
-    keyword-only. Con pesos, cada formula acumula masa ponderada en lugar
-    de contar filas (Heeringa, West & Berglund 2010, §5.3). El AUC se
-    calcula por formula directa de pares con medio-credito en empates,
-    numericamente equivalente al mid-rank cuando los pesos son uniformes.
-    Con weights=None, resultados identicos al pre-3.2.
+    keyword-only. Con pesos, cada formula acumula masa ponderada directa en
+    lugar de contar filas (Heeringa, West & Berglund 2010, §5.3 — SIN
+    correcciones de diseno complejo de encuestas: sin ajuste Rao-Scott ni
+    reescalado DEFF). El AUC se calcula por formula directa de pares con
+    medio-credito en empates, numericamente equivalente al mid-rank cuando
+    los pesos son uniformes. Con weights=None, resultados identicos al
+    pre-3.2.
 
   * Extension multiclase (Fase 3.5.a): compute_oos_metrics acepta p 2D de
     shape (n, K) segun el contrato D15 (ver el docstring de la funcion).
     Para K > 2 generaliza: AUC/Gini de Hand & Till 2001 (media aritmetica
     de los AUC por par, calculados con la misma formula directa de pares
     del binario; decision D1), KS worst-case por par (minimo de los KS
-    por par; decision D4), Brier multiclase con factor 1/2 (decisiones
-    D6/D12) y BSS frente al climatologico, PR-AUC micro-average sobre el
-    problema pooled (decision D7; Davis & Goadrich 2006), K curvas ROC
-    one-vs-rest expuestas en roc_per_class (decisiones D8/D17), y
-    Hosmer-Lemeshow bloqueado por diseno con WARNING (decisiones D5/D16;
-    Fagerland, Hosmer & Bofin 2012, evaluado y rechazado). La composicion
-    ponderada sigue el patron de la Fase 3.2.g (decision D10; Heeringa,
-    West & Berglund 2010, §5.3).
+    simetrizados por par, basado en Massey 1951; decision D4), Brier
+    multiclase con factor 1/2 (Brier 1950; decisiones D6/D12) y BSS frente al
+    climatologico, PR-AUC micro-average sobre el problema pooled (decision D7;
+    Davis & Goadrich 2006), K curvas ROC one-vs-rest expuestas en
+    roc_per_class (decisiones D8/D17), y Hosmer-Lemeshow bloqueado por diseno
+    con WARNING (decisiones D5/D16; Fagerland, Hosmer & Bofin 2012, evaluado
+    y rechazado). La composicion ponderada sigue ponderacion directa por masa
+    sin correccion Rao-Scott/DEFF (decision D10; Heeringa, West & Berglund
+    2010, §5.3).
 """
 
 from __future__ import annotations
@@ -341,10 +346,10 @@ def _pair_auc_ks(scores: np.ndarray, ind: np.ndarray, w: np.ndarray):
     """(auc, ks) del kernel binario sobre (scores, indicador 0/1, pesos).
 
     AUC por formula directa de pares con medio-credito en empates
-    (concordantes=1, empates=0.5, discordantes=0; normalizado por las
-    masas positiva y negativa). KS = max |F_pos - F_neg| sobre las CDFs
-    empiricas de la acumulacion descendente por bloques de empate.
-    Devuelve (None, None) si alguna de las dos masas es cero.
+    (Hanley & McNeil 1982: concordantes=1, empates=0.5, discordantes=0;
+    normalizado por las masas positiva y negativa). KS = max |F_pos - F_neg|
+    (Massey 1951) sobre las CDFs empiricas de la acumulacion descendente por
+    bloques de empate. Devuelve (None, None) si alguna de las dos masas es cero.
     """
     orden = np.argsort(-scores, kind="mergesort")
     ys = ind[orden]
@@ -471,7 +476,7 @@ def _binary_metrics(
         auc = float(np.sum(contrib) / (w_bad * w_good))
         gini = 2.0 * auc - 1.0
 
-        # KS: sobre la acumulacion descendente (masa ponderada)
+        # KS (Massey 1951): sobre la acumulacion descendente (masa ponderada)
         f_bad = tp_t / w_bad
         f_good = fp_t / w_good
         ks = float(np.max(np.abs(f_bad - f_good)))
@@ -569,12 +574,13 @@ def compute_oos_metrics(
         curvas one-vs-rest; el resto de campos se calcula sobre el
         binario clasico (columna 0, y_bin).
       - Modo 2D con K>2: auc/gini son la media de Hand & Till 2001 sobre
-        los pares (decision D1), ks es el minimo por par (D4), brier usa
-        el factor 1/2 (D6/D12) y bss el climatologico, pr_auc es el
-        micro-average pooled (D7/D14), roc_per_class expone las K curvas
-        one-vs-rest (D8/D17) y hl_stat/hl_df/hl_p son None con WARNING
-        (D5/D16; Fagerland, Hosmer & Bofin 2012). Las validaciones de
-        n_groups (>= 3 y n_groups * 5 <= N) se saltan para K > 2 porque
+        los pares (decision D1), ks es la extension conservadora de peor
+        caso (minimo por par simetrizado basado en Massey 1951; D4), brier
+        usa el factor 1/2 (Brier 1950; D6/D12) y bss el climatologico,
+        pr_auc es el micro-average pooled (D7/D14), roc_per_class expone
+        las K curvas one-vs-rest (D8/D17) y hl_stat/hl_df/hl_p son None con
+        WARNING (D5/D16; Fagerland, Hosmer & Bofin 2012). Las validaciones
+        de n_groups (>= 3 y n_groups * 5 <= N) se saltan para K > 2 porque
         HL no se computa; se mantienen integras para K=2 en ambos modos.
       - roc_points en el modo 2D con K>2 se puebla con la curva
         one-vs-rest de la clase 0 (la clase de interes), para que un
@@ -585,9 +591,10 @@ def compute_oos_metrics(
         (etiqueta 0; en el binario clasico, y == 1).
 
     Fase 3.2.g: `weights` (keyword-only, default None) activa el modo
-    ponderado: cada formula acumula masa ponderada en lugar de contar
-    filas (Heeringa, West & Berglund 2010, §5.5). Con `weights=None`,
-    los resultados son identicos bit a bit al comportamiento pre-3.2.
+    ponderado: cada formula acumula masa ponderada directa en lugar de
+    contar filas (Heeringa, West & Berglund 2010, §5.3 — sin correcciones
+    de diseno complejo Rao-Scott ni DEFF). Con `weights=None`, los
+    resultados son identicos bit a bit al comportamiento pre-3.2.
 
     Nota de paridad K=2 (Fase 3.5.a): para K=2 con weights None o
     uniformes, el resultado es idéntico bit a bit al pre-3.5, salvo por

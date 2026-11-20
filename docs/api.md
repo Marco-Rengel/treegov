@@ -672,7 +672,8 @@ In particular:
   adaptive n_groups): `docs/methodology.md` §8.11 to §8.14.
 
 > **Note:** this list reflects the stable 1.x public API through Phase 7,
-> Phase 3.12, and Phase 2 MRM Audit Remediation (Blocks 2A–2G, `v1.0.0rc8`).
+> Phase 3.12, and Phase 2 MRM Audit Remediation (Blocks 2A–2I, `v1.0.0rc9`,
+> 16/16 `CRIT` + `MEN-05` closed).
 > Later phases (see `docs/roadmap.md`) will add new public modules, which
 > will be documented here once they stabilize.
 

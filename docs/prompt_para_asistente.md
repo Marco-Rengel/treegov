@@ -91,7 +91,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 5. Estado actual del proyecto
 
-**Estado vigente (al 20/11/2026).** Fases 0 a 7, Fase 3.12, **Fase 1 (Limpieza e Higiene del Repositorio)** y **Fase 2 (Remediación Integral MRM `2A`–`2H`)** cerradas. Quedan cerrados **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** de la auditoría integral `audit_reports/F1_Informe_Ejecutivo_Final.md`. La suite está en **752/752 PASSED** (ejecutada en el entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311`, Python 3.11.9) y la versión vigente preparada en la rama `release/phase2-mrm-fixes` es **`1.0.0rc8`** (lista para merge a `main`, verificación de wheel y publicación en PyPI). El registro `mcp_v3.tools.TOOLS` expone **27 tools** (con confinamiento estricto `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura y `RLock`). Próximo paso: publicar **`1.0.0rc8`** en PyPI y planificar la **Fase 3** (backlog no crítico `MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` registrado en `docs/roadmap.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable. Herramientas de asistencia activas: Antigravity IDE / OpenCode v2.2.5 (multi-proveedor); Aider 0.86.2 en `pipx` como respaldo documentado.
+**Estado vigente (al 20/11/2026).** Fases 0 a 7, Fase 3.12, **Fase 1 (Limpieza e Higiene del Repositorio)** y **Fase 2 (Remediación Integral MRM `2A`–`2I`)** cerradas. Quedan cerrados **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** y **`MEN-05`** (saneamiento bibliográfico total: 24 referencias académicas + 4 normas regulatorias simétricas, cero zonas grises de atribución y cero cambios de lógica) de la auditoría integral `audit_reports/F1_Informe_Ejecutivo_Final.md`. La suite está en **752/752 PASSED** (ejecutada en el entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311`, Python 3.11.9) y la versión vigente preparada en la rama `release/phase2-biblio-1.0.0rc9` es **`1.0.0rc9`** (lista para merge a `main`, tag `v1.0.0rc9`, verificación de wheel y publicación en PyPI; `v1.0.0rc8` quedó como tag histórico solo en GitHub). El registro `mcp_v3.tools.TOOLS` expone **27 tools** (con confinamiento estricto `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura y `RLock`). Próximo paso: merge a `main`, tag `v1.0.0rc9`, verificación de wheel y publicación en PyPI, y luego planificar la **Fase 3** (backlog no crítico remanente `MAY-01`–`MAY-10` y `MEN-02`–`MEN-08` registrado en `docs/roadmap.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable. Herramientas de asistencia activas: Antigravity IDE / OpenCode v2.2.5 (multi-proveedor); Aider 0.86.2 en `pipx` como respaldo documentado.
 
 **Narrativa histórica de fases cerradas.** El detalle sub-fase por
 sub-fase, con sus conteos de suite y fechas de cierre, vive en
@@ -157,17 +157,22 @@ sub-fase, con sus conteos de suite y fechas de cierre, vive en
   Reducción en disco de 3.49 GB → 6.12 MB (migración al entorno limpio externo
   `%LOCALAPPDATA%\venvs\treegov-311`), endurecimiento de `.gitignore`/`.aiderignore`,
   des-rastreo de `archive/legacy_docs/` y anonimización de rutas en `AGENTS.md`.
-- **Fase 2 Remediación Integral MRM (`2A`–`2H`, `v1.0.0rc8`):** cerrada
-  (20/11/2026). Cierre 16/16 de hallazgos críticos (`CRIT-01`–`CRIT-16` del
-  informe `F1`): paridad de exportadores y hoja mayoritaria (`select_majority_leaf`),
-  gobernanza estricta Basilea III CRE 32.4, `Session.active_tree` y poda activa,
-  IFRS 9 staged ECL/EIR (`PD = 1.0` Etapa 3), seguridad MCP `TREEGOV_MCP_ROOT`,
-  multiclase $K \ge 3$ extremo a extremo y `ModelWizard` endurecido SR 11-7,
-  estabilidad numérica de motores (Kish, Citardauq, Chan-Golub-LeVeque, Cochran),
-  Hosmer-Lemeshow OOS (`df = G_eff`) / PSI / CSI / `w_accuracy`, coherencia
-  metodológica SR 11-7 y guardrails bidireccionales de Sala Limpia / Caja Blanca
-  (12 raíces bloqueadas). Suite **752/752 PASSED**. Deuda no crítica
-  (`MAY-01`–`MAY-10`, `MEN-01`–`MEN-08`) diferida a Fase 3 en `docs/roadmap.md`.
+- **Fase 2 Remediación Integral MRM (`2A`–`2I`, `v1.0.0rc9`):** cerrada
+  (20/11/2026). Cierre 16/16 de hallazgos críticos (`CRIT-01`–`CRIT-16`) más
+  **`MEN-05`** (paridad de 24 referencias académicas + 4 normas regulatorias,
+  aclaración MRM sin Rao-Scott/DEFF, eliminación de 5 enlaces muertos a
+  `docs/model_risk_assessment.md` y frase residual en `design_decisions.md §9.3`,
+  citas completas en 14 módulos de `backend_v3/` y 6 de `tests/` con cero cambios
+  de lógica AST) del informe `F1`: paridad de exportadores y hoja mayoritaria
+  (`select_majority_leaf`), gobernanza estricta Basilea III CRE 32.4,
+  `Session.active_tree` y poda activa, IFRS 9 staged ECL/EIR (`PD = 1.0` Etapa 3),
+  seguridad MCP `TREEGOV_MCP_ROOT`, multiclase $K \ge 3$ extremo a extremo y
+  `ModelWizard` endurecido SR 11-7, estabilidad numérica de motores (Kish,
+  Citardauq, Chan-Golub-LeVeque, Cochran), Hosmer-Lemeshow OOS (`df = G_eff`) /
+  PSI / CSI / `w_accuracy`, coherencia metodológica SR 11-7 y guardrails
+  bidireccionales de Sala Limpia / Caja Blanca (12 raíces bloqueadas). Suite
+  **752/752 PASSED**. Deuda no crítica remanente (`MAY-01`–`MAY-10`,
+  `MEN-02`–`MEN-08`) diferida a Fase 3 en `docs/roadmap.md`.
 - **Fase 4.0 (exportación a producción SQL / Python / Markdown):** cerrada
   (01/11/2026). Exportadores `sql`, `python` y `markdown`, wrappers en
   Session y tres acciones en el menú Archivo.
@@ -417,15 +422,18 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 > "Retomamos TreeGov. Soy Marco. Estado al 20/11/2026: Fases 0 a 7.0, Fase
 > 3.12, Fase 1 (Higiene del Repositorio, 3.49 GB → 6.12 MB) y Fase 2
-> (Remediación Integral MRM `2A`–`2H`, **16/16 hallazgos críticos**
-> `CRIT-01`–`CRIT-16` cerrados) completadas. Suite **752/752 PASSED** en
-> el entorno limpio externo `%LOCALAPPDATA%\venvs\treegov-311`. Versión
-> **`1.0.0rc8`** preparada en `release/phase2-mrm-fixes` con los 12
-> documentos sincronizados. Backlog de Fase 3 (`MAY-01`–`MAY-10` y
-> `MEN-01`–`MEN-08` de `audit_reports/F1_Informe_Ejecutivo_Final.md`)
-> registrado en `docs/roadmap.md`. Próximo paso: publicar `1.0.0rc8` en
-> PyPI (merge a `main`, verificación de wheel, tag `v1.0.0rc8`) y planificar
-> la Fase 3 y revisión en pantalla real previas a `1.0.0` estable."
+> (Remediación Integral MRM `2A`–`2I`, **16/16 hallazgos críticos**
+> `CRIT-01`–`CRIT-16` + **`MEN-05`** cerrados) completadas. Suite
+> **752/752 PASSED** en el entorno limpio externo
+> `%LOCALAPPDATA%\venvs\treegov-311`. Versión **`1.0.0rc9`** preparada en
+> `release/phase2-biblio-1.0.0rc9` con paridad de 24 referencias académicas
+> + 4 regulatorias y todos los documentos sincronizados (`v1.0.0rc8` quedó
+> como tag histórico en GitHub sin subida a PyPI). Backlog remanente de Fase 3
+> (`MAY-01`–`MAY-10` y `MEN-02`–`MEN-08` de
+> `audit_reports/F1_Informe_Ejecutivo_Final.md`) registrado en
+> `docs/roadmap.md`. Próximo paso: merge a `main`, tag `v1.0.0rc9`,
+> verificación de wheel y publicación en PyPI, luego planificar la Fase 3 y
+> revisión en pantalla real previas a `1.0.0` estable."
 
 ---
 

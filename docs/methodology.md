@@ -175,8 +175,10 @@ n gets the same behavior as with counts; one loading weights that sum to a
 million gets a much larger χ² (smaller p-value) for the same distribution.
 TreeGov does **not** normalize: the decision stays with the analyst.
 
-**Citation:** Pearson (1900); Heeringa, West & Berglund (2010), §5.4
-(weighted tables under complex survey designs).
+**Citation:** Pearson (1900); Heeringa, West & Berglund (2010), §5.4.
+**MRM scope clarification:** TreeGov applies direct weight-mass weighted tables
+and moments **without** complex-survey design corrections (no Rao-Scott
+adjustment and no design-effect DEFF rescaling).
 
 > See `docs/design_decisions.md` §13.2 for the full decision rationale.
 
@@ -388,7 +390,9 @@ J. (1984). *Classification and Regression Trees*. Wadsworth, §5.3.
   `surrogate_splits()` rejects `±inf` in numeric predictors.
 
 **Citation:** Breiman et al. (1984); Chan, Golub & LeVeque (1983); Heeringa,
-West & Berglund (2010), §5.3. See `docs/design_decisions.md` §13.3 and §31.
+West & Berglund (2010), §5.3 (direct weight-mass weighted moments without
+complex-survey design corrections: no Rao-Scott adjustment and no DEFF
+rescaling). See `docs/design_decisions.md` §13.3 and §31.
 
 ---
 
@@ -406,6 +410,8 @@ For each predictor j:
 Bonferroni threshold: α / (2J), where J = number of predictors.
 
 If no test beats the threshold, Brown-Forsythe (Levene with median) is run on the continuous/ordinal variables to detect discrimination by variance.
+
+**Citation:** Loh, W.-Y. & Shih, Y.-S. (1997); Brown, M.B. & Forsythe, A.B. (1974); Levene, H. (1960); Fisher, R.A. (1925); Pearson, K. (1900).
 
 ### 3.2. Stage 2 — Univariate QDA split
 
@@ -604,8 +610,12 @@ divisor `W_k − (Σ w_i²) / W_k` (Kish 1965; Heeringa, West & Berglund 2010):
 returned thresholds (QDA, linear LDA and fallback) are bounded to
 `[min(x), max(x))` so neither child branch can be empty.
 
-**Citation:** Loh & Shih (1997); Kish (1965); Heeringa, West & Berglund
-(2010), §5.3; Press et al. (2007), §5.6.
+**Citation:** Loh & Shih (1997); Brown & Forsythe (1974); Levene (1960);
+Kish (1965); Heeringa, West & Berglund (2010), §5.3–§5.4; Press et al. (2007),
+§5.6.
+**MRM scope clarification:** TreeGov applies direct weight-mass weighted tables
+and moments **without** complex-survey design corrections (no Rao-Scott
+adjustment and no design-effect DEFF rescaling).
 
 > See `docs/design_decisions.md` §13.4 and §31 for the full decision rationale.
 
@@ -671,10 +681,11 @@ one built on K=2, the other on K=3, same CSV and hyperparameters — are
 already distinguishable by their `class_labels` and `n_classes` entries
 (Phase 3.1).
 
-**Citation.** Loh, W.-Y. & Shih, Y.-S. (1997). *Statistica Sinica*
-7(4), 815-840. The Gini sweep is the standard binary-impurity reduction
-of Breiman, L., Friedman, J. H., Olshen, R. A. & Stone, C. J. (1984).
-*Classification and Regression Trees*, chapters 2-4.
+**Citation:** Loh, W.-Y. & Shih, Y.-S. (1997), *Statistica Sinica*
+7(4), 815-840; Brown, M.B. & Forsythe, A.B. (1974) and Levene, H. (1960)
+(Stage 1 K-group variance tie-breaker). The Gini sweep is the standard
+binary-impurity reduction of Breiman, L., Friedman, J. H., Olshen, R. A. &
+Stone, C. J. (1984), *Classification and Regression Trees*, chapters 2-4.
 
 > See docs/design_decisions.md §4.5 for the full decision rationale.
 
@@ -1111,11 +1122,15 @@ Gini = 2 × AUC − 1
 
 where U = R_1 − n_1(n_1 + 1)/2, with R_1 the sum of ranks of the event observations (using mid-ranks for ties).
 
+**Citation:** Hanley, J.A. & McNeil, B.J. (1982).
+
 ### 8.2. Kolmogorov-Smirnov
 
 KS = max_s |F_bad(s) − F_good(s)|
 
-Maximum vertical distance between the cumulative distribution functions of events and non-events.
+Maximum vertical distance between the cumulative distribution functions of events and non-events. For multiclass targets (`K > 2`), TreeGov reports the minimum symmetrized pairwise KS across all class pairs as a conservative worst-case discrimination metric (see §8.11).
+
+**Citation:** Massey, F.J. (1951).
 
 ### 8.3. Hosmer-Lemeshow (external OOS/OOT calibration)
 
@@ -1135,8 +1150,10 @@ reference distribution under H₀ has **external degrees of freedom**:
 If `p > 0.05`, H₀ is not rejected (calibrated model). See §8.9 for extreme-
 probability handling (`_HL_EPS = 1e-6`) and §8.9bis for weighted HL.
 
-**Citation:** Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied
-Logistic Regression* (3rd ed.), §5.2.2. Wiley.
+**Citation:** Hosmer, D.W. & Lemeshow, S. (1980) (original goodness-of-fit
+formulation); Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013), *Applied
+Logistic Regression* (3rd ed.), §5.2.2, Wiley (`df = G_eff` in external OOS/OOT
+validation).
 
 ### 8.4. Brier Score and BSS
 
@@ -1144,6 +1161,8 @@ BS = (1/N) Σᵢ (yᵢ − p̂ᵢ)²
 BSS = 1 − BS / BS_ref
 
 where BS_ref = ȳ(1 − ȳ) is the Brier Score of the null model.
+
+**Citation:** Brier, G.W. (1950).
 
 ### 8.5. PSI, CSI and Gini Drop (Phase 1.3 monitoring, `backend_v3/stability.py`)
 
@@ -1401,7 +1420,10 @@ incorporate `w_i` consistently while preserving exact bit-for-bit parity when
   positive) and enforces `check B2`: every class must retain **at least 2
   physical rows in train and at least 2 physical rows in test** (§7).
 
-**Citation:** Heeringa, West & Berglund (2010), §5.3. See
+**Citation:** Heeringa, West & Berglund (2010), §5.3.
+**MRM scope clarification:** TreeGov applies direct weight-mass weighted tables
+and moments **without** complex-survey design corrections (no Rao-Scott
+adjustment and no design-effect DEFF rescaling). See
 `docs/design_decisions.md` §13.6–§13.8 and §32.
 
 ### 8.10 PR-AUC as step-wise Average Precision
@@ -1721,27 +1743,30 @@ Impairment, and Appendix A. See `docs/design_decisions.md` §22.1, §22.2 and
 
 ## Full bibliographic references
 
-- Biggs, D., de Ville, B. & Suen, E. (1991). A Method of Choosing Multiway Partitions for Classification and Decision Trees. Journal of Applied Statistics, 18(1), 49-62.
-- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
-- Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). Algorithms for Computing the Sample Variance: Analysis and Recommendations. The American Statistician, 37(3), 242-247.
-- Cochran, W.G. (1954). Some Methods for Strengthening the Common Chi-2 Tests. Biometrics, 10(4), 417-451.
-- Davis, J. & Goadrich, M. (2006). The relationship between Precision-Recall and ROC curves. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
-- Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). Multinomial
-  goodness-of-fit tests for logistic regression models. Statistics in
-  Medicine, 31(30), 4238-4253.
-- Fisher, R.A. (1925). Statistical Methods for Research Workers. Oliver & Boyd.
-- Hand, D.J. & Till, R.J. (2001). A simple generalisation of the area
-  under the ROC curve for multiple class classification problems.
-  Machine Learning, 45(2), 171-186.
-- Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey Data Analysis. Chapman & Hall/CRC.
-- Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). Applied Logistic Regression (3rd ed.). Wiley.
-- Jeffreys, H. (1946). An invariant form for the prior probability in estimation problems. Proceedings of the Royal Society of London A, 186(1007), 453-461.
-- Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics, 29(2), 119-127.
-- Kish, L. (1965). Survey Sampling. Wiley.
-- Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica, 7(4), 815-840.
-- Pearson, K. (1900). On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling. Philosophical Magazine, Ser. 5, 50(302), 157-175.
-- Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007). Numerical Recipes: The Art of Scientific Computing (3rd ed.), §5.6. Cambridge University Press.
-- Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring. Wiley.
+- Biggs, D., de Ville, B. & Suen, E. (1991). *A Method of Choosing Multiway Partitions for Classification and Decision Trees*. Journal of Applied Statistics 18(1), 49-62.
+- Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
+- Brier, G.W. (1950). *Verification of forecasts expressed in terms of probability*. Monthly Weather Review 78(1), 1-3.
+- Brown, M.B. & Forsythe, A.B. (1974). *Robust Tests for the Equality of Variances*. Journal of the American Statistical Association 69(346), 364-367.
+- Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). *Algorithms for Computing the Sample Variance: Analysis and Recommendations*. The American Statistician 37(3), 242-247.
+- Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
+- Davis, J. & Goadrich, M. (2006). *The relationship between Precision-Recall and ROC curves*. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
+- Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). *Multinomial goodness-of-fit tests for logistic regression models*. Statistics in Medicine, 31(30), 4238-4253.
+- Fisher, R.A. (1925). *Statistical Methods for Research Workers*. Oliver & Boyd, Edinburgh.
+- Hand, D.J. & Till, R.J. (2001). *A simple generalisation of the area under the ROC curve for multiple class classification problems*. Machine Learning, 45(2), 171-186.
+- Hanley, J.A. & McNeil, B.J. (1982). *The meaning and use of the area under a receiver operating characteristic (ROC) curve*. Radiology 143(1), 29-36.
+- Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). *Applied Survey Data Analysis*. Chapman & Hall/CRC.
+- Hosmer, D.W. & Lemeshow, S. (1980). *A goodness-of-fit test for the multiple logistic regression model*. Communications in Statistics A10, 1043-1069.
+- Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied Logistic Regression* (3rd ed.). Wiley.
+- Jeffreys, H. (1946). *An invariant form for the prior probability in estimation problems*. Proceedings of the Royal Society of London A 186(1007), 453-461.
+- Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
+- Kish, L. (1965). *Survey Sampling*. Wiley.
+- Kohavi, R. (1995). *A study of cross-validation and bootstrap for accuracy estimation and model selection*. Proceedings of the 14th International Joint Conference on Artificial Intelligence (IJCAI), 1137-1143.
+- Levene, H. (1960). *Robust tests for equality of variances*. In *Contributions to Probability and Statistics*, Stanford University Press, 278-292.
+- Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
+- Massey, F.J. (1951). *The Kolmogorov-Smirnov Test for Goodness of Fit*. Journal of the American Statistical Association 46(253), 68-78.
+- Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
+- Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007). *Numerical Recipes: The Art of Scientific Computing* (3rd ed.), §5.6. Cambridge University Press.
+- Siddiqi, N. (2006). *Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring*. Wiley.
 
 ---
 

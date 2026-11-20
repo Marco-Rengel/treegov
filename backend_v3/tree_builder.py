@@ -36,8 +36,11 @@ Hard rules:
     branch, cumulative with `min_child_size`, which still measures
     PHYSICAL ROWS) and `weight_col` (fingerprint traceability only).
     Each node records `w_events` (weighted mass per class), purely
-    informative: it does NOT alter routing nor pruning. The Jeffreys
-    PD uses the weighted mass (Heeringa, West & Berglund 2010, §5.3).
+    informative for routing; it feeds weighted pruning (Phase 3.9) and the
+    Jeffreys PD (Heeringa, West & Berglund 2010, §5.3 — direct weight-mass
+    weighting without complex-survey Rao-Scott or DEFF corrections).
+    Node impurity (`TreeNode.gini_impurity`) follows Breiman, Friedman,
+    Olshen & Stone (1984, §4.3) on raw empirical counts.
     With `weights=None` behavior is bit-identical to pre-3.2.
   - Structural determinism: two build() calls with the same data and
     parameters produce identical TreeModel objects (==). params_fingerprint
@@ -303,10 +306,11 @@ class TreeBuilder:
         weights (Phase 3.2.e, keyword-only): per-row sample weights of
         X_train (1D, finite, strictly positive). The engines receive the
         sub-vector per node and compute weighted splits; the per-class
-        weighted mass is recorded in `TreeNode.w_events` (purely
-        informative: no routing/pruning effect) and feeds the Jeffreys PD
-        (Heeringa, West & Berglund 2010, §5.3). With weights=None the
-        behavior is bit-identical to pre-3.2.
+        weighted mass is recorded in `TreeNode.w_events` (no routing effect;
+        used by weighted pruning in Phase 3.9) and feeds the Jeffreys PD
+        (Jeffreys 1946; BCBS CRE 32.4; Heeringa, West & Berglund 2010, §5.3 —
+        direct weight-mass weighting without Rao-Scott/DEFF corrections).
+        With weights=None the behavior is bit-identical to pre-3.2.
 
         min_child_weight (keyword-only): minimum ACCUMULATED WEIGHT per
         branch; if any branch falls below, the whole split is rejected

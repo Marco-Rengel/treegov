@@ -1,14 +1,22 @@
 """Tests de backend_v3/stability.py (Fase 1.3). Dual: pytest o python directo.
 
+Referencias bibliograficas y politicas de monitoreo:
+  - Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing
+    Intelligent Credit Scoring. Wiley (PSI/CSI y umbrales convencionales
+    < 0.10 STABLE, [0.10, 0.25) MODERATE, >= 0.25 UNSTABLE).
+  - Politica operativa MRM de TreeGov para Gini Drop (> 0.20 WARNING,
+    > 0.40 CRITICAL; politica interna, no umbral de Siddiqi ni Basilea/EBA).
+
 Valores verificados a mano:
   - PSI identidad -> 0.
-  - PSI cambio moderado: (-0.1)*ln(5/6) + 0.1*ln(2) = 0.0182322 + 0.0693147
-    = 0.0875469 -> STABLE.
-  - PSI inestable: 0.4*ln(9/5) + 0.4*ln(5) = 0.2351147 + 0.6437751
-    = 0.8788898 -> UNSTABLE.
-  - PSI bin vacio (clip eps=1e-4): (1e-4 - 1) * ln(1e-4) = 0.9999 * 9.2103404
-    = 9.20972.
-  - Gini alertas: 0.5 CRITICAL, 0.25 WARNING, 0.1 NONE, None UNDETERMINED.
+  - PSI cambio moderado (Siddiqi 2006): (-0.1)*ln(5/6) + 0.1*ln(2) =
+    0.0182322 + 0.0693147 = 0.0875469 -> STABLE.
+  - PSI inestable (Siddiqi 2006): 0.4*ln(9/5) + 0.4*ln(5) =
+    0.2351147 + 0.6437751 = 0.8788898 -> UNSTABLE.
+  - PSI bin vacio (clip eps=1e-4, sin renormalizar):
+    (1e-4 - 1) * ln(1e-4) = 0.9999 * 9.2103404 = 9.20972.
+  - Gini Drop alertas (politica MRM TreeGov): 0.5 CRITICAL, 0.25 WARNING,
+    0.1 NONE, None UNDETERMINED.
 """
 
 import math
@@ -64,6 +72,7 @@ def test_psi_identidad_cero():
 
 
 def test_psi_manual_moderado():
+    # Siddiqi (2006): PSI = sum (p_act - p_exp) * ln(p_act / p_exp)
     psi, _ = psi_index(np.array([0.6, 0.3, 0.1]), np.array([0.5, 0.3, 0.2]))
     esperado = -0.1 * math.log(5.0 / 6.0) + 0.1 * math.log(2.0)
     assert math.isclose(psi, esperado, rel_tol=1e-12)
@@ -102,6 +111,7 @@ def test_semaforos_exactos():
 
 
 def test_gini_drop_alert_manual():
+    # Politica operativa MRM de TreeGov (> 0.20 WARNING, > 0.40 CRITICAL)
     assert gini_drop_alert(0.5) == "CRITICAL"
     assert gini_drop_alert(0.4000001) == "CRITICAL"
     assert gini_drop_alert(0.40) == "WARNING"

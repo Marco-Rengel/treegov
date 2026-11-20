@@ -1,23 +1,37 @@
 """Cálculo simplificado de pérdidas crediticias esperadas (Fase 7).
 
-Referencia normativa base: IFRS Foundation, *IFRS 9 — Financial
-Instruments*, Sección 5.5 (Impairment) y Apéndice A. El producto
-PD × LGD × EAD, las reglas de staging y el descuento de un periodo son
-convenciones explícitas de TreeGov para esta primera versión; no constituyen
-un motor IFRS 9 completo.
+Referencia normativa base: IFRS Foundation, *IFRS 9 — Financial Instruments*,
+Sección 5.5 (Impairment) y Apéndice A:
+  - §5.5.3 / §5.5.5: horizonte de 12 meses (Etapa 1) frente a pérdida
+    esperada durante toda la vida del instrumento (Etapas 2 y 3).
+  - §5.5.9: evaluación del incremento significativo del riesgo crediticio
+    (SICR) desde el reconocimiento inicial.
+  - §5.5.11: presunción refutable de > 30 días de mora para Etapa 2.
+  - §5.5.17: medición insesgada, ponderada por probabilidad (PIT) y valor
+    temporal del dinero (descuento a la tasa de interés efectiva, EIR).
+  - Apéndice A (activo financiero con deterioro crediticio / default):
+    Etapa 3 con ``PD_12m = 1.0`` y ``PD_lifetime = 1.0``.
 
-Fórmulas de TreeGov (IFRS 9, Sección 5.5, como marco conceptual):
-    Etapa 3 (deterioro crediticio / default): PD_12m = 1.0 y PD_lifetime = 1.0
+Simplificaciones operativas documentadas de TreeGov v1 (NO son texto
+normativo de IFRS 9; no certifican cumplimiento IFRS 9 completo):
+  - El gatillo cuantitativo de Etapa 2 ``pd_current > 2 * pd_initial`` es
+    una simplificación operativa explícita de TreeGov v1 para SICR.
+  - El factor de descuento de un periodo ``1 / (1 + EIR)`` es una
+    simplificación operativa de TreeGov v1 frente a flujos multiperiodo.
+  - Escenario macroeconómico único y producto determinista ``PD × LGD × EAD``.
+
+Fórmulas implementadas en TreeGov v1:
+    Etapa 3 (deterioro crediticio / default, Apéndice A): PD_12m = 1.0 y PD_lifetime = 1.0
     ECL_12m = PD_12m × LGD × EAD × factor_descuento
     ECL_lifetime = PD_lifetime × LGD × EAD × factor_descuento
-    ECL_aplicable = ECL_12m (Etapa 1) | ECL_lifetime (Etapas 2 y 3)
+    ECL_aplicable = ECL_12m (Etapa 1, §5.5.5) | ECL_lifetime (Etapas 2 y 3, §5.5.3)
     total_ecl_staged = Σ ECL_aplicable (provisión combinada por etapa IFRS 9)
     factor_descuento = 1 / (1 + EIR), si EIR >= 0 está configurado
-        (simplificación de descuento de un periodo adoptada en v1)
+        (simplificación operativa de un periodo de TreeGov v1)
 
 La PD corriente se recibe ya calculada en escala decimal [0, 1] y sin aplicar
-ningún piso en este módulo. Su calibración externa es responsabilidad del
-usuario.
+ningún piso prudencial (separación respecto a BCBS CRE 32.4; IFRS 9 §5.5.17).
+Su calibración PIT externa es responsabilidad del usuario.
 """
 
 from __future__ import annotations
@@ -147,16 +161,19 @@ def calculate_ecl(
 ) -> tuple[ECLSummary, list[ECLRow]]:
     """Calcula ECL por exposición y totales bajo el contrato IFRS 9 de TreeGov.
 
-    Reglas de staging (IFRS 9, Sección 5.5 y Apéndice A):
-    - Etapa 3: ``days_past_due > 90`` o ``is_default``. Al tratarse de una
-      exposición en incumplimiento / con deterioro crediticio, se fuerza
-      automáticamente ``PD_12m = 1.0`` y ``PD_lifetime = 1.0``.
-    - Etapa 2: ``days_past_due > 30`` o ``pd_current > 2 * pd_initial``.
-    - Etapa 1: en cualquier otro caso.
+    Reglas de staging (anclaje IFRS 9 §5.5.3, §5.5.5, §5.5.9, §5.5.11,
+    §5.5.17 y Apéndice A):
+    - Etapa 3: ``days_past_due > 90`` o ``is_default`` (deterioro crediticio
+      / default, Apéndice A). Se fuerza automáticamente ``PD_12m = 1.0`` y
+      ``PD_lifetime = 1.0``.
+    - Etapa 2: ``days_past_due > 30`` (presunción refutable de IFRS 9
+      §5.5.11) o ``pd_current > 2 * pd_initial`` (simplificación operativa
+      documentada de TreeGov v1 para SICR §5.5.9, no texto normativo).
+    - Etapa 1: en cualquier otro caso (§5.5.5).
 
     Provisión aplicable por etapa:
-    - ``ECLRow.ecl_applicable`` es ``ecl_12m`` para Etapa 1 y ``ecl_lifetime``
-      para Etapas 2 y 3.
+    - ``ECLRow.ecl_applicable`` es ``ecl_12m`` para Etapa 1 (§5.5.5) y
+      ``ecl_lifetime`` para Etapas 2 y 3 (§5.5.3).
     - ``ECLSummary.total_ecl_staged`` acumula ``ecl_applicable`` (Etapa 1 a
       12 meses + Etapas 2 y 3 a vida completa).
 
@@ -164,7 +181,8 @@ def calculate_ecl(
     ``UserWarning``. Si ``pd_lifetime`` está presente, se exige
     ``pd_lifetime >= pd_12m`` (tolerancia ``1e-12``). El DataFrame de entrada
     no se modifica. El factor opcional ``1 / (1 + eir)`` (con ``eir >= 0`` en
-    escala decimal) es la simplificación de descuento de un periodo de v1.
+    escala decimal) es una simplificación operativa de descuento de un
+    periodo de TreeGov v1 (no texto normativo de IFRS 9 §5.5.17).
     """
     if not isinstance(df, pd.DataFrame):
         raise TypeError("[ecl] df debe ser un pandas.DataFrame")

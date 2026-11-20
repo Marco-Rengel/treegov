@@ -104,7 +104,7 @@ decisions that are auditable in the source code.
   TreeGov opens seamlessly to non-banking domains (health, social
   sciences) without sacrificing MRM rigor where it matters.
 
-**Current Status:** Phases 0 through 7, 3.12, Repo Hygiene and MRM Audit Remediation (16/16 critical findings closed, v1.0.0rc8). 752/752 tests passing.
+**Current Status:** Phases 0 through 7, 3.12, Repo Hygiene and MRM Audit Remediation (16/16 critical findings + MEN-05 closed, v1.0.0rc9). 752/752 tests passing.
 
 ---
 *[Leer en español](philosophy.es.md)*
