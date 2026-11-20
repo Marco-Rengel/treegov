@@ -2723,6 +2723,26 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07`); `docs/api.md` (`backend_v3.tree_builder`, `backend_v3.session_state`); `docs/audit_log.md` (cierre del Bloque 2B, 20/11/2026).
 
+---
+
+## §29. Remediación Bloque 2C: provisión IFRS 9 / ECL y endurecimiento de seguridad MCP (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) confirmó dos hallazgos críticos restantes de la Ola 1:
+1. `CRIT-02` (IFRS 9 / ECL): `frontend_v3/ecl_dialog.py` solicitaba la tasa `EIR (%)` en escala porcentual pero la enviaba sin dividir entre 100 a `Session.calculate_ecl` (error de factor 100× que colapsaba la ECL con tasas como `12`), `ECLConfig` permitía tasas negativas hasta `-1` (generando factores de descuento `> 1` por encima de la EAD), `backend_v3/ecl.py` no imponía `PD = 1.0` para exposiciones en Etapa 3 (default / deterioro crediticio conforme a IFRS 9 §5.5 y Apéndice A), no calculaba la provisión contable combinada por etapa (`total_ecl_staged` = Etapa 1 a 12 meses + Etapas 2 y 3 a vida completa), ni rechazaba booleanos, DataFrames vacíos, `pd_lifetime < pd_12m` o colisiones de `pd_column`.
+2. `CRIT-15` (seguridad y validación del servidor MCP): `mcp_v3/server.py` aceptaba rutas arbitrarias sin confinamiento ni restricción de extensión `.csv` (exponiendo path traversal y sobrescritura de archivos en `score_batch`), degradaba silenciosamente errores tipográficos en `governance_mode` y `target_type` dentro de `train()` (duplicando el literal `0.0005`), casteaba ingenuamente claves en `fix_spec()` (`int(k)` / `str.isdigit()` susceptible a fallos con dígitos Unicode `"²"`, enteros negativos `"-1"` y claves texto con ceros a la izquierda `"01"`), omitía cotas numéricas (`NaN`/`Inf`/`bool`) y bloqueo reentrante de la sesión compartida, dejaba 5 herramientas de lectura sin `_jsonable` ni normalización de claves numpy/enum en `mcp_v3/dto.py`, y `treegov_mcp.py` no instalaba la guardia de Caja Blanca (`install_import_guard()`) antes de importar el servidor.
+
+**Decisiones.**
+
+1. **Unidades UI `% -> decimal` y dominio no negativo de `EIR`.** `ECLDialog` mantiene la entrada visible en porcentaje (`EIR (%)`, rango `[0.0, 200.0]`, 4 decimales), exige `pd_column` no vacío y convierte `eir = self._eir_spin.value() / 100.0` al despachar `ECLWorker` (conversión pura de presentación, preservando Sala Limpia). `ECLConfig.__post_init__` rechaza booleanos, valores no finitos y tasas `< 0.0`. Se conserva documentado que el factor `1 / (1 + eir)` es la simplificación de descuento de un periodo de v1.
+2. **Regla obligatoria Etapa 3 (`PD = 1.0`) y provisión combinada por etapa (IFRS 9 §5.5).** En `backend_v3/ecl.py`, toda exposición clasificada en Etapa 3 (`is_default` o `days_past_due > 90`) fuerza automáticamente `pd_12m = 1.0` y `pd_lifetime = 1.0`. `ECLRow` añade el campo `ecl_applicable` (`ecl_12m` en Etapa 1; `ecl_lifetime` en Etapas 2 y 3) y `ECLSummary` añade `total_ecl_staged = math.fsum(row.ecl_applicable for row in rows)`. Además se rechazan DataFrames vacíos, `pd_column` vacío o en colisión con columnas reservadas (`_REQUIRED_COLUMNS` + `"is_default"`), columnas booleanas (nativas u `object`) y `pd_lifetime + 1e-12 < pd_12m`. `ECLDialog` renderiza las 6 métricas ordenadas con `ecl_total_staged` en primera fila (paridad i18n EN/ES).
+3. **Confinamiento de rutas `TREEGOV_MCP_ROOT`, extensión `.csv` y bloqueo de sobrescritura.** `mcp_v3/server.py` introduce `_get_allowed_root()` (`TREEGOV_MCP_ROOT` validado como directorio existente, o `Path.cwd().resolve()` por defecto) y `_resolve_csv_path()` exigiendo `relative_to(allowed_root)` (captura `..` y symlinks fuera de raíz), rechazo de bytes nulos y extensión estricta `.csv` en las 5 herramientas de archivos (`load_dataset`, `load_oot`, `compare_champion_challenger`, `calculate_ecl`, `score_batch`). En `score_batch`, se bloquea explícitamente `output_path == csv_path` y cualquier sobrescritura de un archivo existente (`forbid_existing=True`).
+4. **Validación fail-fast en `train()` y coerción segura por clases observadas en `fix_spec()`.** `train()` importa `BASEL_PD_FLOOR_MIN` desde `backend_v3.tree_builder` y exige valores estrictos (`target_type` en `{"binary", "categorical"}`, `governance_mode` en `{"banking", "research"}`). `fix_spec()` rechaza `population_ok_values=[]`, coacciona claves contra las clases realmente observadas en `describe_target(target)` (soportando `"-1"`, preservando `"01"` cuando el target es texto, evitando fallos con `"²"` y rechazando booleanos y colisiones de claves tras normalización).
+5. **Cotas numéricas, `RLock`, `_jsonable` completo y Caja Blanca en `treegov_mcp.py`.** Helpers `_validate_int`/`_validate_float` rechazan `bool`, `NaN`/`±Inf` y valores fuera de rango en todos los parámetros numéricos expuestos; `_session_lock = threading.RLock()` serializa el acceso a `_session`; `_jsonable` normaliza claves `dict` numpy/enum en `mcp_v3/dto.py` y envuelve todos los retornos dict/list de las 27 herramientas (contrato exacto de 27 herramientas preservado); `treegov_mcp.py` ejecuta `install_import_guard()` antes de importar `mcp_v3.server`.
+
+**Consecuencias.** Se elimina el error de factor 100× en el diálogo ECL, la provisión reportada refleja la contabilidad combinada por etapa de IFRS 9 §5.5 con `PD = 1.0` en incumplimiento, y la superficie MCP queda confinada a un directorio autorizado, protegida frente a sobrescrituras, errores silenciosos de gobernanza y entradas malformadas sin romper el contrato de 27 herramientas ni la paridad I-3.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-02`, `CRIT-15`); `docs/api.md` (`backend_v3.ecl`, `mcp_v3`); `docs/audit_log.md` (cierre del Bloque 2C, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2769,7 +2789,10 @@ ANSI quoting, `NaN` handling, cycle/finiteness guards, and multiclass export
 transparency; on 20/11/2026 to add §28 — Block 2B remediation: strict Basel
 III CRE 32.4 governance classification, `pd_floor < 0.5` guard,
 `Session.active_tree` downstream wiring with metric invalidation,
-`_reindex_tree` `parent_id` remapping, `fix_spec`/`train`/`load_oot`
-atomicity and `NaT` rejection, and `population_col` fingerprint propagation.)
+`_reindex_tree` `parent_id` remapping, `fix_spec`/`train`/`load_oot` atomicity and `NaT` rejection, and
+`population_col` fingerprint propagation; on 20/11/2026 to add §29 — Block 2C
+remediation: IFRS 9 staged ECL/EIR unit parity, Stage 3 `PD = 1.0`,
+`TREEGOV_MCP_ROOT` confinement, fail-fast MCP validation, `RLock`, and
+`treegov_mcp` white-box import guard.)
 
 ---

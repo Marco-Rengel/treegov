@@ -1,17 +1,23 @@
 """Cálculo simplificado de pérdidas crediticias esperadas (Fase 7).
 
 Referencia normativa base: IFRS Foundation, *IFRS 9 — Financial
-Instruments*, Sección 5.5 (Impairment). El producto PD × LGD × EAD, las
-reglas de staging y el descuento de un periodo son convenciones explícitas de
-TreeGov para esta primera versión; no constituyen un motor IFRS 9 completo.
+Instruments*, Sección 5.5 (Impairment) y Apéndice A. El producto
+PD × LGD × EAD, las reglas de staging y el descuento de un periodo son
+convenciones explícitas de TreeGov para esta primera versión; no constituyen
+un motor IFRS 9 completo.
 
 Fórmulas de TreeGov (IFRS 9, Sección 5.5, como marco conceptual):
-    ECL_12m = PD_12m × LGD × EAD
-    ECL_lifetime = PD_lifetime × LGD × EAD
-    factor_descuento = 1 / (1 + EIR), si EIR está configurado
+    Etapa 3 (deterioro crediticio / default): PD_12m = 1.0 y PD_lifetime = 1.0
+    ECL_12m = PD_12m × LGD × EAD × factor_descuento
+    ECL_lifetime = PD_lifetime × LGD × EAD × factor_descuento
+    ECL_aplicable = ECL_12m (Etapa 1) | ECL_lifetime (Etapas 2 y 3)
+    total_ecl_staged = Σ ECL_aplicable (provisión combinada por etapa IFRS 9)
+    factor_descuento = 1 / (1 + EIR), si EIR >= 0 está configurado
+        (simplificación de descuento de un periodo adoptada en v1)
 
-La PD corriente se recibe ya calculada y sin aplicar ningún piso en este
-módulo. Su calibración externa es responsabilidad del usuario.
+La PD corriente se recibe ya calculada en escala decimal [0, 1] y sin aplicar
+ningún piso en este módulo. Su calibración externa es responsabilidad del
+usuario.
 """
 
 from __future__ import annotations
@@ -33,23 +39,35 @@ _REQUIRED_COLUMNS = (
     "pd_initial",
 )
 
+_RESERVED_INPUT_COLUMNS = frozenset((*_REQUIRED_COLUMNS, "is_default"))
+
 
 @dataclass(frozen=True)
 class ECLConfig:
-    """Configuración inmutable del cálculo ECL simplificado."""
+    """Configuración inmutable del cálculo ECL simplificado.
+
+    ``eir`` se expresa en escala decimal anual (p. ej. ``0.12`` para 12 %) y
+    debe ser un número finito mayor o igual que ``0.0`` (o ``None`` para
+    desactivar el descuento). Las tasas negativas quedan prohibidas para
+    impedir factores de descuento mayores que 1.
+    """
 
     eir: float | None = None
 
     def __post_init__(self) -> None:
-        """Exige un EIR finito con denominador de descuento positivo."""
+        """Exige un EIR finito >= 0 (no booleano) o None."""
         if self.eir is None:
             return
+        if isinstance(self.eir, (bool, np.bool_)):
+            raise ValueError("[ecl] eir debe ser un número finito >= 0 o None")
         try:
             eir = float(self.eir)
         except (TypeError, ValueError) as exc:
-            raise ValueError("[ecl] eir debe ser un número finito o None") from exc
-        if not math.isfinite(eir) or eir <= -1.0:
-            raise ValueError("[ecl] eir debe ser finito y estrictamente mayor que -1")
+            raise ValueError(
+                "[ecl] eir debe ser un número finito >= 0 o None"
+            ) from exc
+        if not math.isfinite(eir) or eir < 0.0:
+            raise ValueError("[ecl] eir debe ser un número finito >= 0 o None")
 
 
 @dataclass(frozen=True)
@@ -64,6 +82,7 @@ class ECLRow:
     ead: float
     ecl_12m: float
     ecl_lifetime: float
+    ecl_applicable: float
 
 
 @dataclass(frozen=True)
@@ -73,12 +92,20 @@ class ECLSummary:
     total_ecl_12m: float
     total_ecl_lifetime: float
     stage_counts: tuple[int, int, int]
+    total_ecl_staged: float
 
 
 def _numeric_column(df: pd.DataFrame, column: str) -> np.ndarray:
     """Convierte una columna a float y exige valores numéricos finitos."""
+    series = df[column]
+    if pd.api.types.is_bool_dtype(series):
+        raise ValueError(f"[ecl] columna {column!r} no admite booleanos")
+    if series.dtype == object and any(
+        isinstance(value, (bool, np.bool_)) for value in series.tolist()
+    ):
+        raise ValueError(f"[ecl] columna {column!r} no admite booleanos")
     try:
-        numeric = pd.to_numeric(df[column], errors="raise")
+        numeric = pd.to_numeric(series, errors="raise")
         values = numeric.to_numpy(dtype=float, na_value=float("nan"))
     except (TypeError, ValueError) as exc:
         raise ValueError(f"[ecl] columna {column!r} debe ser numérica") from exc
@@ -118,16 +145,41 @@ def _default_flags(df: pd.DataFrame) -> np.ndarray:
 def calculate_ecl(
     df: pd.DataFrame, pd_column: str, config: ECLConfig
 ) -> tuple[ECLSummary, list[ECLRow]]:
-    """Calcula ECL por exposición y totales bajo el contrato de Fase 7.
+    """Calcula ECL por exposición y totales bajo el contrato IFRS 9 de TreeGov.
 
-    Etapa 3: ``days_past_due > 90`` o ``is_default``. Etapa 2:
-    ``days_past_due > 30`` o ``pd_current > 2 * pd_initial``. En otro caso,
-    Etapa 1. Si falta ``pd_lifetime``, reutiliza la PD a 12 meses con un
-    ``UserWarning``. El DataFrame de entrada no se modifica.
+    Reglas de staging (IFRS 9, Sección 5.5 y Apéndice A):
+    - Etapa 3: ``days_past_due > 90`` o ``is_default``. Al tratarse de una
+      exposición en incumplimiento / con deterioro crediticio, se fuerza
+      automáticamente ``PD_12m = 1.0`` y ``PD_lifetime = 1.0``.
+    - Etapa 2: ``days_past_due > 30`` o ``pd_current > 2 * pd_initial``.
+    - Etapa 1: en cualquier otro caso.
 
-    Referencia: IFRS 9, Sección 5.5. El factor opcional ``1 / (1 + eir)``
-    es una simplificación de descuento de un periodo adoptada por TreeGov.
+    Provisión aplicable por etapa:
+    - ``ECLRow.ecl_applicable`` es ``ecl_12m`` para Etapa 1 y ``ecl_lifetime``
+      para Etapas 2 y 3.
+    - ``ECLSummary.total_ecl_staged`` acumula ``ecl_applicable`` (Etapa 1 a
+      12 meses + Etapas 2 y 3 a vida completa).
+
+    Si falta ``pd_lifetime``, reutiliza la PD a 12 meses con un
+    ``UserWarning``. Si ``pd_lifetime`` está presente, se exige
+    ``pd_lifetime >= pd_12m`` (tolerancia ``1e-12``). El DataFrame de entrada
+    no se modifica. El factor opcional ``1 / (1 + eir)`` (con ``eir >= 0`` en
+    escala decimal) es la simplificación de descuento de un periodo de v1.
     """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("[ecl] df debe ser un pandas.DataFrame")
+    if len(df) == 0:
+        raise ValueError("[ecl] el DataFrame de entrada está vacío")
+    if not isinstance(pd_column, str) or pd_column.strip() == "":
+        raise ValueError("[ecl] pd_column no puede estar vacío")
+    if pd_column in _RESERVED_INPUT_COLUMNS:
+        raise ValueError(
+            f"[ecl] pd_column {pd_column!r} colisiona con una columna "
+            "reservada de entrada"
+        )
+    if not isinstance(config, ECLConfig):
+        raise TypeError("[ecl] config debe ser una instancia de ECLConfig")
+
     required = tuple(dict.fromkeys((*_REQUIRED_COLUMNS, pd_column)))
     missing = [column for column in required if column not in df.columns]
     if missing:
@@ -153,6 +205,10 @@ def calculate_ecl(
     if "pd_lifetime" in df.columns:
         pd_lifetime = _numeric_column(df, "pd_lifetime")
         _validate_probability(pd_lifetime, "pd_lifetime")
+        if (pd_lifetime + 1e-12 < pd_12m).any():
+            raise ValueError(
+                "[ecl] pd_lifetime debe ser mayor o igual que pd_12m"
+            )
     else:
         warnings.warn(
             "[ecl] pd_lifetime no está presente; se utiliza pd_12m como "
@@ -183,8 +239,15 @@ def calculate_ecl(
 
         row_lgd = float(lgd[index])
         row_ead = float(ead[index])
-        row_pd_12m = float(pd_12m[index])
-        row_pd_lifetime = float(pd_lifetime[index])
+        if stage == 3:
+            row_pd_12m = 1.0
+            row_pd_lifetime = 1.0
+        else:
+            row_pd_12m = float(pd_12m[index])
+            row_pd_lifetime = float(pd_lifetime[index])
+        row_ecl_12m = row_pd_12m * row_lgd * row_ead * discount_factor
+        row_ecl_lifetime = row_pd_lifetime * row_lgd * row_ead * discount_factor
+        row_ecl_applicable = row_ecl_12m if stage == 1 else row_ecl_lifetime
         rows.append(
             ECLRow(
                 exposure_id=str(exposure_id),
@@ -193,10 +256,9 @@ def calculate_ecl(
                 pd_lifetime=row_pd_lifetime,
                 lgd=row_lgd,
                 ead=row_ead,
-                ecl_12m=row_pd_12m * row_lgd * row_ead * discount_factor,
-                ecl_lifetime=(
-                    row_pd_lifetime * row_lgd * row_ead * discount_factor
-                ),
+                ecl_12m=row_ecl_12m,
+                ecl_lifetime=row_ecl_lifetime,
+                ecl_applicable=row_ecl_applicable,
             )
         )
 
@@ -204,5 +266,6 @@ def calculate_ecl(
         total_ecl_12m=float(math.fsum(row.ecl_12m for row in rows)),
         total_ecl_lifetime=float(math.fsum(row.ecl_lifetime for row in rows)),
         stage_counts=(stage_counts[0], stage_counts[1], stage_counts[2]),
+        total_ecl_staged=float(math.fsum(row.ecl_applicable for row in rows)),
     )
     return summary, rows

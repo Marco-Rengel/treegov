@@ -78,9 +78,67 @@ def test_ecl_dialog_creation(tmp_path):
         dialog.deleteLater()
 
 
+def test_ecl_dialog_empty_pd_column_disables_calculate(tmp_path):
+    """Clearing the PD column disables calculation even with a valid CSV path."""
+    _get_app()
+    session, csv_path = _setup_session(tmp_path)
+    dialog = ECLDialog(session)
+    try:
+        dialog._csv_edit.setText(str(csv_path))
+        assert dialog._calculate_button.isEnabled()
+
+        dialog._pd_edit.setText("")
+        assert not dialog._calculate_button.isEnabled()
+
+        dialog._pd_edit.setText("   ")
+        assert not dialog._calculate_button.isEnabled()
+
+        dialog._pd_edit.setText("pd_current")
+        assert dialog._calculate_button.isEnabled()
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+
+
+def test_ecl_dialog_eir_percentage_to_decimal_parity(tmp_path):
+    """UI EIR percentage (12.0%) is converted to decimal 0.12 for backend."""
+    app = _get_app()
+    session, csv_path = _setup_session(tmp_path)
+    captured: dict[str, object] = {}
+    original = session.calculate_ecl
+
+    def _spy_calculate_ecl(path, *, pd_column="pd_current", eir=None):
+        captured["path"] = path
+        captured["pd_column"] = pd_column
+        captured["eir"] = eir
+        return original(path, pd_column=pd_column, eir=eir)
+
+    session.calculate_ecl = _spy_calculate_ecl  # type: ignore[method-assign]
+    dialog = ECLDialog(session)
+    try:
+        assert dialog._eir_spin.minimum() == pytest.approx(0.0)
+        assert dialog._eir_spin.maximum() == pytest.approx(200.0)
+
+        dialog._csv_edit.setText(str(csv_path))
+        dialog._discount_check.setChecked(True)
+        dialog._eir_spin.setValue(12.0)
+        dialog._on_calculate()
+
+        assert dialog._worker is not None
+        assert dialog._worker.wait(5000)
+        app.processEvents()
+
+        assert captured["eir"] == pytest.approx(0.12)
+        assert captured["pd_column"] == "pd_current"
+        assert dialog._table.rowCount() == 6
+    finally:
+        dialog.close()
+        dialog.deleteLater()
+
+
 @pytest.mark.parametrize("lang", ["en", "es"])
 def test_ecl_dialog_table_population(tmp_path, lang):
-    """The result slot renders five ordered and formatted summary rows.
+    """The result slot renders six ordered and formatted summary rows.
 
     Las expectativas se leen de ``tr()``: el test deja de congelar literales
     en español (deuda T5) y pasa en los dos idiomas soportados.
@@ -93,26 +151,29 @@ def test_ecl_dialog_table_population(tmp_path, lang):
     try:
         dialog._on_finished(
             {
-                "total_ecl_12m": 99.0,
-                "total_ecl_lifetime": 405.0,
+                "total_ecl_staged": 414.0,
+                "total_ecl_12m": 279.0,
+                "total_ecl_lifetime": 450.0,
                 "stage_counts": (1, 2, 3),
             }
         )
 
-        assert dialog._table.rowCount() == 5
+        assert dialog._table.rowCount() == 6
         assert dialog._table.columnCount() == 2
         assert not dialog._table.isHidden()
         assert dialog._calculate_button.isHidden()
-        assert [dialog._table.item(row, 0).text() for row in range(5)] == [
+        assert [dialog._table.item(row, 0).text() for row in range(6)] == [
+            tr("ecl_total_staged"),
             tr("ecl_total_12m"),
             tr("ecl_total_lifetime"),
             tr("ecl_stage_1"),
             tr("ecl_stage_2"),
             tr("ecl_stage_3"),
         ]
-        assert [dialog._table.item(row, 1).text() for row in range(5)] == [
-            "99.00",
-            "405.00",
+        assert [dialog._table.item(row, 1).text() for row in range(6)] == [
+            "414.00",
+            "279.00",
+            "450.00",
             "1",
             "2",
             "3",
@@ -139,13 +200,15 @@ def test_ecl_dialog_retranslate(tmp_path):
 
         dialog._on_finished(
             {
-                "total_ecl_12m": 99.0,
-                "total_ecl_lifetime": 405.0,
+                "total_ecl_staged": 414.0,
+                "total_ecl_12m": 279.0,
+                "total_ecl_lifetime": 450.0,
                 "stage_counts": (1, 2, 3),
             }
         )
-        labels_en = [dialog._table.item(row, 0).text() for row in range(5)]
+        labels_en = [dialog._table.item(row, 0).text() for row in range(6)]
         assert labels_en == [
+            tr("ecl_total_staged", "en"),
             tr("ecl_total_12m", "en"),
             tr("ecl_total_lifetime", "en"),
             tr("ecl_stage_1", "en"),
@@ -170,10 +233,11 @@ def test_ecl_dialog_retranslate(tmp_path):
             dialog._table.horizontalHeaderItem(col).text() for col in range(2)
         ] == [tr("ecl_col_metric", "es"), tr("ecl_col_value", "es")]
 
-        # Las cinco filas se repintan desde el DTO cacheado: cambian los textos
+        # Las seis filas se repintan desde el DTO cacheado: cambian los textos
         # y los valores siguen intactos.
-        labels_es = [dialog._table.item(row, 0).text() for row in range(5)]
+        labels_es = [dialog._table.item(row, 0).text() for row in range(6)]
         assert labels_es == [
+            tr("ecl_total_staged", "es"),
             tr("ecl_total_12m", "es"),
             tr("ecl_total_lifetime", "es"),
             tr("ecl_stage_1", "es"),
@@ -182,9 +246,10 @@ def test_ecl_dialog_retranslate(tmp_path):
         ]
         assert labels_es != labels_en
         assert dialog._report_dto is not None
-        assert [dialog._table.item(row, 1).text() for row in range(5)] == [
-            "99.00",
-            "405.00",
+        assert [dialog._table.item(row, 1).text() for row in range(6)] == [
+            "414.00",
+            "279.00",
+            "450.00",
             "1",
             "2",
             "3",

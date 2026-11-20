@@ -1,8 +1,4 @@
-"""E2E parity tests for the MCP server (Phase 5.0.c).
-
-Simulates an LLM client orchestrating the full pipeline via the
-server tools, verifying I-3 (JSON-native) and K=2 parity.
-"""
+"""E2E parity tests for the MCP server (Phase 5.0.c)."""
 
 import json
 import tempfile
@@ -16,8 +12,9 @@ from mcp_v3 import server  # noqa: E402
 
 
 @pytest.fixture()
-def csv_path():
+def csv_path(monkeypatch):
     with tempfile.TemporaryDirectory() as td:
+        monkeypatch.setenv("TREEGOV_MCP_ROOT", td)
         path = Path(td) / "parity.csv"
         rng = np.random.default_rng(42)
         edad = rng.integers(20, 60, size=200)

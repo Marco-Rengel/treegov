@@ -1,4 +1,4 @@
-"""End-to-end test for the MCP ECL tool (Phase 7)."""
+"""End-to-end test for the MCP ECL tool (Phase 7 / Block 2C)."""
 
 import json
 from collections.abc import Iterator
@@ -12,8 +12,9 @@ from mcp_v3 import server  # noqa: E402
 
 
 @pytest.fixture
-def csv_path(tmp_path: Path) -> Iterator[Path]:
-    """Create a temporary training and ECL input dataset."""
+def csv_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Create a temporary training and ECL input dataset inside TREEGOV_MCP_ROOT."""
+    monkeypatch.setenv("TREEGOV_MCP_ROOT", str(tmp_path))
     server._session = None
     n_rows = 100
     ages = [20 + (index % 40) for index in range(n_rows)]
@@ -51,6 +52,16 @@ def test_calculate_ecl_tool(csv_path: Path):
     res = server.calculate_ecl(str(csv_path))
 
     assert res["total_ecl_12m"] > 0
+    assert res["total_ecl_lifetime"] > 0
+    assert res["total_ecl_staged"] > 0
     assert "stage_counts" in res
-    assert "total_ecl_lifetime" in res
     json.dumps(res, allow_nan=False)
+
+    res_disc = server.calculate_ecl(str(csv_path), eir=0.12)
+    assert res_disc["total_ecl_staged"] == pytest.approx(
+        res["total_ecl_staged"] / 1.12
+    )
+    json.dumps(res_disc, allow_nan=False)
+
+    with pytest.raises(ValueError, match="eir"):
+        server.calculate_ecl(str(csv_path), eir=-0.05)

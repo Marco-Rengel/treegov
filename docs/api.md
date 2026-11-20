@@ -165,19 +165,35 @@ Phase 6.0 public scoring contracts:
 
 ## backend_v3.ecl
 
-Phase 7.0 public IFRS 9 / ECL contracts:
+Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
 
 - `ECLConfig(eir: float | None = None)` (frozen dataclass) — immutable
   configuration for the simplified ECL calculation. `eir=None` disables
-  discounting; otherwise the value must be finite and strictly greater than
-  `-1`, and defines the one-period factor `1 / (1 + eir)`.
+  discounting; otherwise `eir` must be a non-boolean finite float in annual
+  decimal scale with **`eir >= 0.0`** (negative rates are rejected to prevent
+  discount factors `> 1`), defining the v1 one-period discount factor
+  `1 / (1 + eir)`.
+- `ECLRow` (frozen dataclass) — immutable exposure-level result with fields
+  `exposure_id`, `stage`, `pd_12m`, `pd_lifetime`, `lgd`, `ead`, `ecl_12m`,
+  `ecl_lifetime`, and `ecl_applicable` (`ecl_12m` for Stage 1; `ecl_lifetime`
+  for Stages 2 and 3).
+- `ECLSummary` (frozen dataclass) — immutable portfolio summary with fields
+  `total_ecl_12m`, `total_ecl_lifetime`, `stage_counts` (Stage 1, Stage 2,
+  Stage 3), and `total_ecl_staged` (`math.fsum` of `ecl_applicable` across
+  exposures: Stage 1 at 12-month horizon plus Stages 2 and 3 at lifetime
+  horizon per IFRS 9 §5.5).
 - `calculate_ecl(df, pd_column, config) -> tuple[ECLSummary, list[ECLRow]]` —
-  validates exposure-level inputs, assigns Stages 1/2/3 with deterministic
-  rules and computes PD × LGD × EAD for 12-month and lifetime horizons.
+  validates input types (`pd.DataFrame`, non-empty, `ECLConfig`), non-empty
+  `pd_column` not colliding with reserved input columns (`exposure_id`, `ead`,
+  `lgd`, `days_past_due`, `pd_initial`, `is_default`), rejects boolean numeric
+  columns and `pd_lifetime + 1e-12 < pd_12m`, assigns Stages 1/2/3 with
+  deterministic rules, forces **`pd_12m = 1.0` and `pd_lifetime = 1.0` for
+  Stage 3** (credit-impaired / default per IFRS 9 §5.5 & Appendix A), and
+  computes discounted 12-month, lifetime and staged applicable ECL.
   `pd_lifetime` is optional; when absent, the 12-month PD is reused with an
   explicit `UserWarning`. The input DataFrame is not mutated. This is a
-  single-scenario simplification anchored to IFRS 9, Section 5.5, not a full
-  accounting-compliance engine.
+  single-scenario, single-period simplification anchored to IFRS 9 §5.5, not a
+  full accounting-compliance engine.
 
 ## backend_v3.session_state
 
@@ -306,9 +322,9 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 - `Session.calculate_ecl(csv_path, *, pd_column="pd_current", eir=None) -> dict[str, Any]` —
   Phase 7 facade over `backend_v3.ecl.calculate_ecl`. Requires a trained model,
   reads the exposure CSV and returns only the bounded summary with
-  `total_ecl_12m`, `total_ecl_lifetime` and `stage_counts`. The per-exposure
-  detail is discarded; `FlowState`, the tree and the session event log remain
-  unchanged.
+  `total_ecl_12m`, `total_ecl_lifetime`, `stage_counts` and `total_ecl_staged`
+  (Block 2C, 20/11/2026). The per-exposure detail is discarded; `FlowState`,
+  the tree and the session event log remain unchanged.
 - `Session.export_to_sql(*, unseen_policy: str = "exclude") -> str | None` — wrapper of
   `backend_v3.exporters.export_to_sql` using the trained tree and
   the training-partition imputer. `None` without a trained model;
@@ -478,12 +494,30 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   stability rule above. Invariant I-3: `json.dumps(_jsonable(x),
   allow_nan=False)` never raises (NaN/Inf → None). Enums serialize
   as their `.name` (Phase 5.0.b: `FlowState` rides as `"DATA_LOADED"`
-  etc.).
-- `mcp_v3.server` (Phase 5.0.b) — FastMCP server exposing the 27
-  registered tools against `backend_v3.Session` over stdio; SDK pinned
-  `mcp>=1.0.0,<2.0.0` (v2 renames FastMCP → MCPServer). `evaluate_oos`
-  adapts `n_groups` to the OOS partition size by default (D20 rule);
-  all dict/list outputs go through `_jsonable` (Invariant I-3).
+  etc.). Since Block 2C (20/11/2026), dictionary keys are also normalized
+  (`np.bool_` → `bool`, `np.integer` → `int`, finite `np.floating` → `float`,
+  `enum.Enum` → `.name`).
+- `mcp_v3.server` (Phase 5.0.b; hardened in Block 2C, 20/11/2026) — FastMCP
+  server exposing the exact **27** registered tools against
+  `backend_v3.Session` over stdio; SDK pinned `mcp>=1.0.0,<2.0.0` (v2 renames
+  FastMCP → MCPServer). `evaluate_oos` adapts `n_groups` to the OOS partition
+  size by default (D20 rule); all dict/list outputs go through `_jsonable`
+  (Invariant I-3) and session access is guarded by a module-level
+  `threading.RLock`. Security and validation contract (Block 2C):
+  - **Path confinement (`TREEGOV_MCP_ROOT`):** file-accepting tools
+    (`load_dataset`, `load_oot`, `compare_champion_challenger`,
+    `calculate_ecl`, `score_batch`) confine all paths strictly within the
+    existing directory configured by `TREEGOV_MCP_ROOT` (or `Path.cwd()` if
+    unset), reject null bytes, symlinks/`..` escaping the root, and any
+    non-`.csv` extension. `score_batch` additionally blocks
+    `output_path == csv_path` and forbids overwriting existing output files.
+  - **Fail-fast parameter validation:** `train()` uses `BASEL_PD_FLOOR_MIN`
+    and accepts only `"binary"`/`"categorical"` for `target_type` and
+    `"banking"`/`"research"` for `governance_mode`; `fix_spec()` rejects
+    `population_ok_values=[]` and coerces class keys safely against observed
+    target classes (rejecting booleans and key collisions); all numeric tool
+    arguments enforce explicit bounds, finiteness (`math.isfinite`) and
+    rejection of `bool`.
   Phase 5.0.c verifies the full four-engine flow and strict JSON output
   end to end (`tests/test_mcp_parity.py`); no public symbol was added.
   Since Phase 4.0.1.a, the `export_sql`, `export_python` and
@@ -491,7 +525,9 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   `unseen_policy: str = "exclude"` and forward it to the corresponding
   `Session` wrapper.
 - `treegov_mcp` — root entry point registered as the `treegov-mcp`
-  console script (`treegov_mcp:main`); requires the `[mcp]` extra.
+  console script (`treegov_mcp:main`); installs `install_import_guard()`
+  (white-box guardrail) before importing `mcp_v3.server`; requires the `[mcp]`
+  extra.
 
 > **Stability (Phase 5.0.b, 01/11/2026).** The MCP adapter is a stable 1.x public API. The public surface is: `mcp_v3.tools.TOOLS` (registry of 27 frozen `ToolDescriptor` entries), `mcp_v3.dto._jsonable` (JSON-native converter, Invariant I-3), `mcp_v3.server.app` (FastMCP stdio server) and `treegov_mcp.main` (console script `treegov-mcp`). The SDK dependency is optional (`pip install treegov[mcp]`, pin `mcp>=1.0.0,<2.0.0`). The `_jsonable` name keeps its underscore prefix per the stability rule above (internal helper), but its contract is public and covered by tests.
 

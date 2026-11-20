@@ -13,6 +13,24 @@ import numpy as np
 import pandas as pd
 
 
+def _jsonable_key(key: Any) -> str | int | float | bool | None:
+    """Normalize dict keys to JSON-native types (preserving Invariant I-3)."""
+    if key is None:
+        return None
+    if isinstance(key, enum.Enum):
+        return key.name
+    if isinstance(key, np.bool_):
+        return bool(key)
+    if isinstance(key, (str, int, bool)):
+        return key
+    if isinstance(key, np.integer):
+        return int(key)
+    if isinstance(key, (float, np.floating)):
+        fval = float(key)
+        return fval if math.isfinite(fval) else None
+    return str(key)
+
+
 def _jsonable(obj: Any) -> Any:
     """Recursively convert obj to JSON-native types.
 
@@ -22,7 +40,7 @@ def _jsonable(obj: Any) -> Any:
     - numpy arrays / pandas Series -> list
     - pandas DataFrame -> list of dicts
     - NaN / Inf (float or numpy) -> None
-    - dict / list / tuple / set -> recursively converted
+    - dict / list / tuple / set -> recursively converted (including dict keys)
     - str / int / bool / None -> returned as-is
     """
     if obj is None:
@@ -52,7 +70,7 @@ def _jsonable(obj: Any) -> Any:
     if dataclasses.is_dataclass(obj):
         return _jsonable(dataclasses.asdict(obj))
     if isinstance(obj, dict):
-        return {k: _jsonable(v) for k, v in obj.items()}
+        return {_jsonable_key(k): _jsonable(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple, set)):
         return [_jsonable(x) for x in obj]
 

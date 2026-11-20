@@ -8509,3 +8509,37 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **683/683 PASSED** (anterior: `673`; `+10` pruebas nuevas de regresión + fortalecimiento de `test_multiclass_target_class_inverted` y `test_e2e_mainwindow.py`). Verificados en modo verbose `test_tree_builder.py`, `test_session_state.py`, `test_e2e_mainwindow.py` y `test_gui_smoke.py` (guardias de Caja Blanca y Sala Limpia en verde).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07`); `docs/design_decisions.md` §28; `docs/api.md` (`backend_v3.tree_builder`, `backend_v3.session_state`).
+
+---
+
+### 20/11/2026 — Cierre Bloque 2C: Provisión IFRS 9 / ECL y endurecimiento de seguridad del servidor MCP (rama `release/phase2-mrm-fixes`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-mrm-fixes`, cierre de la Ola 1 de remediación, pendiente de revisión humana; sin `git push` ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/ecl.py` — endurecimiento de `ECLConfig.__post_init__` exigiendo `eir` finito `>= 0.0` (rechazo explícito de booleanos y tasas negativas); nuevo campo `ECLRow.ecl_applicable` (`ecl_12m` en Etapa 1; `ecl_lifetime` en Etapas 2 y 3) y nuevo campo `ECLSummary.total_ecl_staged` (`math.fsum` de `ecl_applicable`); rechazo de columnas booleanas nativas u `object` en `_numeric_column`; validación en `calculate_ecl` de `DataFrame` no vacío, `pd_column` no vacío y sin colisión con columnas reservadas (`_REQUIRED_COLUMNS` + `"is_default"`), instancia `ECLConfig` y `pd_lifetime + 1e-12 >= pd_12m`; regla obligatoria IFRS 9 §5.5 / Apéndice A para Etapa 3 forzando `pd_12m = 1.0` y `pd_lifetime = 1.0`; docstrings actualizados conservando documentada la simplificación de descuento de un periodo `1 / (1 + eir)` de v1.
+- `frontend_v3/i18n.py` — nueva clave bilingüe `"ecl_total_staged"` (`"Total ECL (IFRS 9 Staged)"` en EN / `"ECL Total (IFRS 9 por Etapa)"` en ES) con paridad estricta y conservación de `"ecl_eir"` en escala `%`.
+- `frontend_v3/ecl_dialog.py` — corrección del error de factor 100× en EIR configurando `_eir_spin` en `[0.0, 200.0]` con 4 decimales y convirtiendo `self._eir_spin.value() / 100.0` al invocar `ECLWorker`; validación de `_pd_edit` no vacío en `_sync_calculate_button` y `_on_calculate`; tabla de resultados actualizada a las 6 métricas ordenadas con `ecl_total_staged` en primera fila y retraducción en caliente.
+- `treegov_mcp.py` — instalación de la guardia de Caja Blanca `install_import_guard()` (a nivel de módulo y al inicio de `main()`) antes de importar `mcp_v3.server`, preservando el mensaje de error cuando el SDK `mcp` no está instalado.
+- `mcp_v3/dto.py` — normalización de claves `dict` en `_jsonable()` (`np.bool_` → `bool`, `np.integer` → `int`, `np.floating` finito → `float`, `enum.Enum` → `.name`) blindando Invariante I-3 (`allow_nan=False`).
+- `mcp_v3/server.py` — contrato exacto de 27 herramientas preservado; confinamiento estricto de archivos vía `_get_allowed_root()` (`TREEGOV_MCP_ROOT` o `CWD`) y `_resolve_csv_path()` (rechazo de path traversal `..`/symlinks fuera de raíz, bytes nulos y extensiones distintas de `.csv`) en las 5 herramientas de archivos; bloqueo explícito de `output_path == csv_path` y sobrescritura de archivos existentes en `score_batch`; validación fail-fast de `target_type` (`binary`/`categorical`) y `governance_mode` (`banking`/`research`) con `BASEL_PD_FLOOR_MIN` en `train()`; rechazo de `population_ok_values=[]`, coerción segura de clases observadas (`"-1"`, `"01"`, `"²"` sin crash, rechazo de booleanos y colisiones de claves) en `fix_spec()`; cotas numéricas estrictas (`_validate_int`, `_validate_float`) rechazando `bool` y `NaN`/`±Inf`; protección con `threading.RLock()` (`_session_lock`) y cobertura total de `_jsonable(...)` en todos los retornos dict/list.
+- `tests/test_ecl.py` — actualización de `test_ecl_calculation` a `PD = 1.0` en Etapa 3 (`total_ecl_12m=279.0`, `total_ecl_lifetime=450.0`, `total_ecl_staged=414.0`) y 15 casos nuevos (descuento `eir=0.12`, rechazo de `eir < 0`/bool/NaN/Inf, `pd_lifetime < pd_12m`, columnas booleanas, DataFrame vacío, `pd_column` vacío/reservado, Etapa 3 vía `is_default=True`).
+- `tests/test_ecl_dialog.py` — actualización a 6 filas ordenadas en EN/ES y nuevos tests de paridad EIR `% -> decimal` (`12.0` → `0.12`, rango `[0.0, 200.0]`) y deshabilitación del botón calcular con `_pd_edit` vacío.
+- `tests/test_mcp_ecl.py` — fixture bajo `TREEGOV_MCP_ROOT`, verificación de `total_ecl_staged`, descuento `eir=0.12`, rechazo de `eir=-0.05` y JSON estricto (`allow_nan=False`).
+- `tests/test_mcp_scoring.py` — fixture bajo `TREEGOV_MCP_ROOT` y nuevo test verificando rechazo de `output_path == csv_path` y bloqueo de sobrescritura de archivo existente.
+- `tests/test_mcp_parity.py` — fixture adaptado a `TREEGOV_MCP_ROOT` vía `monkeypatch`.
+- `tests/test_mcp_server.py` — conservación de `len(tools) == 27` y 5 nuevos tests de regresión: confinamiento de rutas/extensiones, rechazo fail-fast de `governance_mode`/`target_type` en `train()`, coerción segura en `fix_spec()` (`population_ok_values=[]`, `"²"`, `"-1"`, `"01"`), rechazo de cotas numéricas/`NaN`/`Inf`/`bool`, y activación de `install_import_guard()` en `treegov_mcp.py`.
+- `docs/design_decisions.md` — añadida sección `§29` documentando las decisiones del Bloque 2C.
+- `docs/api.md` — actualización de los contratos públicos de `backend_v3.ecl`, `Session.calculate_ecl`, `mcp_v3` y `treegov_mcp`.
+- `docs/audit_log.md` — esta entrada de cierre del Bloque 2C.
+
+**Hallazgos resueltos**:
+
+1. **`CRIT-02` (IFRS 9 / ECL y unidades EIR):** eliminada la discrepancia 100× de unidades EIR entre `ECLDialog` y `backend_v3.ecl`, bloqueadas tasas `eir < 0` y entradas booleanas/vacías/inconsistentes, impuesta la regla `PD = 1.0` en Etapa 3 y expuesta la provisión contable combinada por etapa (`ecl_applicable` / `total_ecl_staged`) en backend, GUI (6 filas EN/ES) y MCP.
+2. **`CRIT-15` (seguridad y validación estricta del servidor MCP):** aplicado confinamiento de rutas por `TREEGOV_MCP_ROOT`, extensión estricta `.csv`, bloqueo de sobrescritura en `score_batch`, validación fail-fast en `train()` y `fix_spec()`, cotas numéricas sin `NaN`/`Inf`/`bool`, `RLock`, `_jsonable` completo con normalización de claves y activación de Caja Blanca en `treegov_mcp.py` preservando el contrato exacto de 27 herramientas.
+3. **Protocolo PyPI:** remediación acumulada en `release/phase2-mrm-fixes` sin `git push` ni publicación en PyPI (`main` en `3516939`, `pyproject.toml` en `1.0.0rc7` y `README*.md` intactos).
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **706/706 PASSED** (anterior: `683`; `+23` pruebas nuevas de regresión). Suite dirigida (`test_ecl.py`, `test_ecl_dialog.py`, `test_mcp_ecl.py`, `test_mcp_server.py`, `test_mcp_scoring.py`, `test_mcp_parity.py`, `test_mcp_tools.py`, `test_gui_smoke.py`, `test_packaging.py`) → **79/79 PASSED** (guardias de Caja Blanca, Sala Limpia, paridad i18n y `len(tools) == 27` en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-02`, `CRIT-15`); `docs/design_decisions.md` §29; `docs/api.md` (`backend_v3.ecl`, `mcp_v3`).

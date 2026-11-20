@@ -1,8 +1,8 @@
 """Dialog and worker for the simplified ECL calculation (Phase 7).
 
-Clean-room boundary: widgets only collect parameters and render the flat
-summary returned by ``Session.calculate_ecl``. All validation and analytics
-remain in the backend.
+Clean-room boundary: widgets only collect parameters (converting UI percentage
+EIR to decimal) and render the flat summary returned by
+``Session.calculate_ecl``. All validation and analytics remain in the backend.
 """
 
 from __future__ import annotations
@@ -81,13 +81,13 @@ class ECLDialog(QDialog):
         self._session = session
         self._worker: ECLWorker | None = None
         self._running = False
-        # Cached flat DTO: retranslate_ui repaints the five rows from it so a
+        # Cached flat DTO: retranslate_ui repaints the six rows from it so a
         # language switch never leaves the table in the previous language.
         self._report_dto: dict | None = None
         self._bus_attached = False
         self.setModal(True)
         self.setObjectName("ecl_dialog")
-        self.resize(560, 400)
+        self.resize(560, 420)
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
@@ -110,8 +110,8 @@ class ECLDialog(QDialog):
         form.addRow(self._lbl_pd_col, self._pd_edit)
 
         self._eir_spin = QDoubleSpinBox(self)
-        self._eir_spin.setDecimals(6)
-        self._eir_spin.setRange(-0.999999, 1_000_000.0)
+        self._eir_spin.setDecimals(4)
+        self._eir_spin.setRange(0.0, 200.0)
         self._eir_spin.setValue(0.0)
         self._eir_spin.setEnabled(False)
         self._lbl_eir = QLabel(self)
@@ -152,6 +152,7 @@ class ECLDialog(QDialog):
         layout.addLayout(buttons)
 
         self._csv_edit.textChanged.connect(self._sync_calculate_button)
+        self._pd_edit.textChanged.connect(self._sync_calculate_button)
 
         self.retranslate_ui()
         language_bus.language_changed.connect(self.retranslate_ui)
@@ -189,9 +190,11 @@ class ECLDialog(QDialog):
             self._bus_attached = False
 
     def _sync_calculate_button(self) -> None:
-        """Enable calculation only with a CSV path and no active worker."""
+        """Enable calculation only with CSV path, PD column and no active worker."""
         self._calculate_button.setEnabled(
-            bool(self._csv_edit.text().strip()) and not self._running
+            bool(self._csv_edit.text().strip())
+            and bool(self._pd_edit.text().strip())
+            and not self._running
         )
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
@@ -219,7 +222,8 @@ class ECLDialog(QDialog):
     def _on_calculate(self) -> None:
         """Start one backend calculation with the current form values."""
         csv_path = self._csv_edit.text().strip()
-        if self._running or not csv_path:
+        pd_col = self._pd_edit.text().strip()
+        if self._running or not csv_path or not pd_col:
             return
 
         self._running = True
@@ -228,11 +232,15 @@ class ECLDialog(QDialog):
         self._cancel_button.setEnabled(False)
         self._table.setVisible(False)
 
-        eir = self._eir_spin.value() if self._discount_check.isChecked() else None
+        eir = (
+            (self._eir_spin.value() / 100.0)
+            if self._discount_check.isChecked()
+            else None
+        )
         self._worker = ECLWorker(
             self._session,
             csv_path,
-            self._pd_edit.text().strip(),
+            pd_col,
             eir,
         )
         self._worker.finished_ok.connect(self._on_finished)
@@ -257,6 +265,7 @@ class ECLDialog(QDialog):
 
         stage_counts = result.get("stage_counts", (None, None, None))
         metrics = (
+            (tr("ecl_total_staged"), result.get("total_ecl_staged")),
             (tr("ecl_total_12m"), result.get("total_ecl_12m")),
             (tr("ecl_total_lifetime"), result.get("total_ecl_lifetime")),
             (tr("ecl_stage_1"), stage_counts[0]),
@@ -273,7 +282,7 @@ class ECLDialog(QDialog):
             )
             self._table.setItem(row, 1, value_item)
         # Keep the contractual metric order; interactive sorting would reorder
-        # the five fixed summary rows as soon as it is enabled.
+        # the six fixed summary rows as soon as it is enabled.
         self._table.setVisible(True)
 
     def _on_error(self, error: str) -> None:

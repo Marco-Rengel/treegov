@@ -1,4 +1,4 @@
-"""End-to-end tests for the Phase 6 MCP scoring tools."""
+"""End-to-end tests for the Phase 6 MCP scoring tools (hardened in Block 2C)."""
 
 import json
 
@@ -11,8 +11,9 @@ from mcp_v3 import server  # noqa: E402
 
 
 @pytest.fixture
-def csv_path(tmp_path):
-    """Create a 200-row mixed-predictor CSV and reset the server session."""
+def csv_path(tmp_path, monkeypatch):
+    """Create a 200-row mixed-predictor CSV inside TREEGOV_MCP_ROOT."""
+    monkeypatch.setenv("TREEGOV_MCP_ROOT", str(tmp_path))
     server._session = None
     rng = np.random.default_rng(42)
     edad = rng.integers(20, 61, size=200)
@@ -51,6 +52,21 @@ def test_score_batch_tool(csv_path, tmp_path):
     assert output_path.exists()
     assert "treegov_pd" in pd.read_csv(output_path).columns
     json.dumps(res, allow_nan=False)
+
+
+def test_score_batch_rejects_same_path_and_overwrite(csv_path, tmp_path):
+    """score_batch blocks input==output and overwriting an existing CSV."""
+    _train_model(csv_path)
+
+    with pytest.raises(ValueError, match="output_path no puede ser igual a csv_path"):
+        server.score_batch(str(csv_path), str(csv_path))
+
+    existing_out = tmp_path / "existing.csv"
+    existing_out.write_text("sentinel\n1\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="sobrescritura bloqueada"):
+        server.score_batch(str(csv_path), str(existing_out))
+    assert existing_out.read_text(encoding="utf-8") == "sentinel\n1\n"
 
 
 def test_compare_champion_challenger_tool(csv_path):
