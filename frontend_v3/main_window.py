@@ -1191,9 +1191,13 @@ class MainWindow(QMainWindow):
         self._tree_panel.select_node(node_id)
         self._tree_panel.center_on_node(node_id)
 
+    def _active_model(self):
+        """Return the active TreeModel from Session (pruned if pruned, else tree)."""
+        return self._session.active_tree if self._session is not None else None
+
     def _on_tree_node_selected(self, node_id: int) -> None:
         """Show the selected node card (read-only, from the frozen tree)."""
-        model = self._session.state.tree if self._session is not None else None
+        model = self._active_model()
         if model is None or not (0 <= node_id < len(model.nodes)):
             return
         node = model.nodes[node_id]
@@ -1230,7 +1234,9 @@ class MainWindow(QMainWindow):
         )
         if not ok:
             return
-        new_tree = self._session.state.tree
+        new_tree = self._active_model()
+        if new_tree is None:
+            return
         mode = (
             self._last_train_cfg.get("governance_mode", "BANKING")
             if self._last_train_cfg is not None
@@ -1238,10 +1244,17 @@ class MainWindow(QMainWindow):
         )
         self._tree_panel.set_model(new_tree, mode)
         self._tree_map.set_model(new_tree)
+        self._lbl_explorer_model.setText(
+            f"{new_tree.method} · {new_tree.params_fingerprint[:8]}"
+        )
         self._hud_lbl_gov_fp.setText(new_tree.params_fingerprint)
+        self._hud_reset()
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
+        self._refresh_reports_panel()
         self._refresh_session_indicator()
         self._rules_panel.refresh(self._session, None)
         self._summary_panel.refresh(self._session)
+        self._data_viewer.refresh_cases(None)
         if self._logger is not None:
             self._logger.info(
                 "[gui] intervene prune_branch: node=%d | nodos=%d",
@@ -1263,9 +1276,9 @@ class MainWindow(QMainWindow):
         Toda intervención queda registrada en el Manual Override Log del
         backend (SessionState.manual_overrides) y sufija el fingerprint.
         """
-        if self._session is None or self._session.state.tree is None:
+        tree = self._active_model()
+        if tree is None:
             return
-        tree = self._session.state.tree
         if not (0 <= node_id < len(tree.nodes)):
             return
         node = tree.nodes[node_id]
@@ -1310,7 +1323,7 @@ class MainWindow(QMainWindow):
 
     def _hud_reset(self) -> None:
         """Properties panel default: node detail if selected, else clear."""
-        model = self._session.state.tree if self._session is not None else None
+        model = self._active_model()
         sel = self._tree_panel.selected_node_id()
         if model is not None and (sel is not None and 0 <= sel < len(model.nodes)):
             self._update_hud_node(model.nodes[sel])
@@ -1481,14 +1494,16 @@ class MainWindow(QMainWindow):
         viewer is RE-BOUND to the pruned tree (TreePanel.refresh() alone
         would keep rendering the original model bound by set_model).
         """
-        if self._session is None or self._session.state.tree is None:
+        if self._session is None or self._active_model() is None:
             return
         dlg = PruneDialog(self._session, language_bus, self,
                           logger=self._logger)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         st = self._session.state
-        tree = st.pruned_tree if st.pruned_tree is not None else st.tree
+        tree = self._active_model()
+        if tree is None:
+            return
         mode = (
             self._last_train_cfg.get("governance_mode", "BANKING")
             if self._last_train_cfg is not None
@@ -1496,12 +1511,17 @@ class MainWindow(QMainWindow):
         )
         self._tree_panel.set_model(tree, mode)
         self._tree_map.set_model(tree)
+        self._lbl_explorer_model.setText(
+            f"{tree.method} · {tree.params_fingerprint[:8]}"
+        )
         self._hud_lbl_gov_fp.setText(tree.params_fingerprint)
-        self._metrics_panel.refresh()
+        self._hud_reset()
+        self._metrics_panel.set_report(self._session.get_oos_oot_report())
         self._refresh_reports_panel()
         self._refresh_session_indicator()
         self._rules_panel.refresh(self._session, None)
         self._summary_panel.refresh(self._session)
+        self._data_viewer.refresh_cases(None)
         if self._logger is not None:
             self._logger.info(
                 "[gui] pruning applied: alpha=%s | nodos=%d",

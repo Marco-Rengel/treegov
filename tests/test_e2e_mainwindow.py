@@ -461,8 +461,15 @@ def test_e2e_prune_dialog_flow():
             assert st.prune_alpha == seq[0]["alpha"]
             # el visor queda vinculado al arbol podado (no al original)
             assert w._tree_panel._model is st.pruned_tree
-            # A1: el HUD de gobernanza refleja el fingerprint del arbol podado
+            assert w._active_model() is st.pruned_tree
+            # A1: el HUD de gobernanza y el Explorer reflejan el fingerprint podado
             assert w._hud_lbl_gov_fp.text() == st.pruned_tree.params_fingerprint
+            assert (
+                w._lbl_explorer_model.text()
+                == f"{st.pruned_tree.method} · {st.pruned_tree.params_fingerprint[:8]}"
+            )
+            # Clic en un nodo lee del arbol activo sin errores
+            w._on_tree_node_selected(0)
         finally:
             w.close()
             w.deleteLater()
@@ -486,7 +493,13 @@ def test_e2e_context_menu_prune_updates_hud():
             st = w._session.state
             assert st.tree.params_fingerprint != fp_antes
             assert st.tree.params_fingerprint.endswith("-i1")
+            assert w._active_model() is st.tree
             assert w._hud_lbl_gov_fp.text() == st.tree.params_fingerprint
+            assert (
+                w._lbl_explorer_model.text()
+                == f"{st.tree.method} · {st.tree.params_fingerprint[:8]}"
+            )
+            w._on_tree_node_selected(0)
         finally:
             w.close()
             w.deleteLater()

@@ -27,7 +27,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend_v3.chaid_engine import ChaidEngine  # noqa: E402
 from backend_v3.crt_engine import CrtEngine  # noqa: E402
 from backend_v3.quest_engine import QuestEngine  # noqa: E402
-from backend_v3.tree_builder import TreeBuilder, TreeModel  # noqa: E402
+from backend_v3.tree_builder import (  # noqa: E402
+    BASEL_PD_FLOOR_MIN,
+    TreeBuilder,
+    TreeModel,
+    classify_governance_mode,
+)
 from backend_v3.types import PredictorType, TargetType  # noqa: E402
 
 _BIN = TargetType.BINARY
@@ -491,9 +496,24 @@ def test_multiclass_target_class_inverted():
                         rel_tol=1e-12)
     assert math.isclose(m1.nodes[0].pd_final[1], m2.nodes[0].pd_final[0],
                         rel_tol=1e-12)
-    # symmetric fixture: counts coincide; the inverted-PD asserts are the key
+    # symmetric fixture: root counts coincide (5, 5), so the decisive
+    # inversion check lives on the asymmetric leaves nodes[1] and nodes[2].
     assert m1.nodes[0].n_events == (5, 5)
     assert m2.nodes[0].n_events == (5, 5)
+    assert m1.nodes[1].n_events == (0, 5)
+    assert m2.nodes[1].n_events == (5, 0)
+    assert m1.nodes[2].n_events == (5, 0)
+    assert m2.nodes[2].n_events == (0, 5)
+    for idx in (1, 2):
+        assert not math.isclose(
+            m1.nodes[idx].pd_final[0], m1.nodes[idx].pd_final[1], rel_tol=1e-9
+        )
+        assert math.isclose(
+            m1.nodes[idx].pd_final[0], m2.nodes[idx].pd_final[1], rel_tol=1e-12
+        )
+        assert math.isclose(
+            m1.nodes[idx].pd_final[1], m2.nodes[idx].pd_final[0], rel_tol=1e-12
+        )
 
 
 def test_multiclass_k3_builds():
@@ -863,6 +883,48 @@ def test_routing_bin_edges_chaid_continuous():
     _route(m.root_id, np.arange(len(X)))
     assert (esperado >= 0).all()
     assert (asign == esperado).all()
+
+
+# ---------------------------------------------------------------------------
+# Bloque 2B (CRIT-03): gobernanza Basilea III CRE 32.4 y cotas de pd_floor
+# ---------------------------------------------------------------------------
+
+
+def test_classify_governance_mode_and_builder_label():
+    """BCBS CRE 32.4: BANKING exige Jeffreys + pd_floor >= 0.0005."""
+    assert BASEL_PD_FLOOR_MIN == 0.0005
+    cases = [
+        (True, 0.0005, "BANKING"),
+        (True, 0.01, "BANKING"),
+        (True, 0.0003, "CUSTOM"),   # piso legado Basilea II < 0.0005
+        (True, 0.0, "CUSTOM"),      # floor 0.0 desactiva el piso regulatorio
+        (False, None, "RESEARCH"),
+        (False, 0.0005, "CUSTOM"),
+    ]
+    base = dict(
+        target_type=_BIN,
+        target_class=1,
+        class_labels=("Event", "Non-event"),
+        max_depth=4,
+        min_child_size=2,
+    )
+    for apply_j, floor, expected in cases:
+        assert classify_governance_mode(apply_j, floor) == expected
+        tb = TreeBuilder(
+            _crt(), apply_jeffreys=apply_j, pd_floor=floor, **base
+        )
+        assert tb._governance_label() == expected
+
+
+def test_pd_floor_rejects_impossible_and_nonfinite_values():
+    """TreeBuilder rechaza pd_floor >= 0.5, NaN, inf y bool."""
+    base = dict(
+        target_type=_BIN,
+        target_class=1,
+        class_labels=("Event", "Non-event"),
+    )
+    for bad in (0.5, 0.6, float("nan"), float("inf"), float("-inf"), True):
+        _assert_raises(ValueError, TreeBuilder, _crt(), pd_floor=bad, **base)
 
 
 if __name__ == "__main__":

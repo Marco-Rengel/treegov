@@ -53,6 +53,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import math
 from collections import deque
 from dataclasses import dataclass
 from numbers import Integral
@@ -63,7 +64,38 @@ import pandas as pd
 from .log_config import get_logger
 from .types import GovernanceMode, PredictorType, SplitConfig, TargetType
 
-__all__ = ["TreeNode", "TreeModel", "TreeBuilder"]
+__all__ = [
+    "BASEL_PD_FLOOR_MIN",
+    "classify_governance_mode",
+    "TreeNode",
+    "TreeModel",
+    "TreeBuilder",
+]
+
+BASEL_PD_FLOOR_MIN: float = 0.0005
+
+
+def classify_governance_mode(
+    apply_jeffreys: bool, pd_floor: float | None
+) -> str:
+    """Clasifica el modo de gobernanza efectivo segun BCBS CRE 32.4.
+
+    - BANKING: apply_jeffreys is True y pd_floor >= BASEL_PD_FLOOR_MIN (0.0005).
+    - RESEARCH: apply_jeffreys is False y pd_floor is None.
+    - CUSTOM: cualquier combinacion intermedia (incluyendo pd_floor == 0.0 o
+      0.0 < pd_floor < 0.0005 como el piso legado 0.0003 de Basilea II).
+    """
+    if (
+        apply_jeffreys is True
+        and pd_floor is not None
+        and not isinstance(pd_floor, bool)
+        and math.isfinite(float(pd_floor))
+        and float(pd_floor) >= BASEL_PD_FLOOR_MIN
+    ):
+        return GovernanceMode.BANKING.name
+    if apply_jeffreys is False and pd_floor is None:
+        return GovernanceMode.RESEARCH.name
+    return "CUSTOM"
 
 
 @dataclass(frozen=True)
@@ -313,9 +345,14 @@ class TreeBuilder:
                 f"min_child_size debe ser entero >= 1: {min_child_size!r}"
             )
         if pd_floor is not None and (
-            isinstance(pd_floor, bool) or not (0.0 <= float(pd_floor) < 1.0)
+            isinstance(pd_floor, bool)
+            or not math.isfinite(float(pd_floor))
+            or not (0.0 <= float(pd_floor) < 0.5)
         ):
-            raise ValueError(f"pd_floor fuera de [0, 1) o None: {pd_floor!r}")
+            raise ValueError(
+                f"pd_floor debe ser un float finito en [0, 0.5) o None: "
+                f"{pd_floor!r}"
+            )
         if not isinstance(apply_jeffreys, bool):
             raise ValueError(
                 f"apply_jeffreys debe ser bool: {apply_jeffreys!r}"
@@ -664,15 +701,11 @@ class TreeBuilder:
     def _governance_label(self) -> str:
         """Etiqueta del modo de gobernanza EFECTIVO (para el fingerprint).
 
-        BANKING  = Jeffreys + floor; RESEARCH = cruda + sin floor; CUSTOM =
-        cualquier combinacion intermedia (posible via API; la GUI solo emite
-        BANKING/RESEARCH, el fingerprint registra la verdad computacional).
+        Delega en ``classify_governance_mode`` (BCBS CRE 32.4: BANKING exige
+        Jeffreys + pd_floor >= BASEL_PD_FLOOR_MIN; RESEARCH = cruda sin floor;
+        CUSTOM = cualquier combinacion intermedia).
         """
-        if self.apply_jeffreys and self.pd_floor is not None:
-            return GovernanceMode.BANKING.name
-        if not self.apply_jeffreys and self.pd_floor is None:
-            return GovernanceMode.RESEARCH.name
-        return "CUSTOM"
+        return classify_governance_mode(self.apply_jeffreys, self.pd_floor)
 
     def _fingerprint(
         self, spec: dict[str, PredictorType], class_labels: tuple[str, ...]

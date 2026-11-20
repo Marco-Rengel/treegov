@@ -2591,6 +2591,419 @@ def test_get_node_cases_cv_respects_population_filter():
         ) == 70
 
 
+# ---------------------------------------------------------------------------
+# Bloque 2B (CRIT-05, CRIT-03, CRIT-06, CRIT-07)
+# ---------------------------------------------------------------------------
+
+
+def test_fix_spec_excludes_weight_and_population_inferred_and_rejects_explicit():
+    """CRIT-05: spec inferido excluye weight_col/population_col; explicito falla."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        edad = np.tile(np.arange(20, 60), 3)
+        seg = np.tile(["a", "b", "c"], 40)
+        y = (edad >= 40).astype(int)
+        w = np.full(len(edad), 1.5, dtype=float)
+        pop = np.array(["OK"] * 90 + ["INDET"] * 30)
+        csv_path = tmp / "wpop.csv"
+        pd.DataFrame({
+            "edad": edad, "seg": seg, "w": w, "pop": pop, "default": y,
+        }).to_csv(csv_path, index=False)
+
+        # Inferido (spec=None, predictors=None): excluye w y pop automaticamente
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        st = s.fix_spec(
+            "default",
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+            population_col="pop",
+            population_ok_values=("OK",),
+        )
+        spec_keys = set(dict(st.spec or ()).keys())
+        assert "w" not in spec_keys
+        assert "pop" not in spec_keys
+        assert spec_keys == {"edad", "seg"}
+
+        # Explicito con weight_col en spec -> ValueError
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(csv_path))
+        _assert_raises(
+            ValueError,
+            s2.fix_spec,
+            "default",
+            spec={"edad": PredictorType.CONTINUOUS, "w": PredictorType.CONTINUOUS},
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+        )
+        assert s2.state.state is FlowState.DATA_LOADED
+
+        # Explicito con population_col en spec -> ValueError
+        _assert_raises(
+            ValueError,
+            s2.fix_spec,
+            "default",
+            spec={"edad": PredictorType.CONTINUOUS, "pop": PredictorType.NOMINAL},
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            population_col="pop",
+            population_ok_values=("OK",),
+        )
+        assert s2.state.state is FlowState.DATA_LOADED
+
+        # weight_col == population_col -> ValueError
+        _assert_raises(
+            ValueError,
+            s2.fix_spec,
+            "default",
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+            population_col="w",
+            population_ok_values=("1.5",),
+        )
+
+
+def test_fix_spec_rejects_inf_weight_and_describe_counts_nonfinite():
+    """CRIT-05: +inf en weight_col rechazado en fix_spec y contado en describe."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        edad = np.tile(np.arange(20, 60), 3)
+        y = (edad >= 40).astype(int)
+        w = np.ones(len(edad), dtype=float)
+        w[0] = float("inf")
+        w[1] = float("-inf")
+        csv_path = tmp / "inf_w.csv"
+        pd.DataFrame({"edad": edad, "w": w, "default": y}).to_csv(
+            csv_path, index=False
+        )
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        diag = s.describe_weight_column("w")
+        assert diag["exists"] is True
+        assert diag["n_nonpositive"] == 2
+        _assert_raises(
+            ValueError,
+            s.fix_spec,
+            "default",
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+        )
+        assert s.state.state is FlowState.DATA_LOADED
+        assert s._w_col is None
+
+
+def test_fix_spec_atomicity_on_invalid_cost_matrix():
+    """CRIT-05: fallo en cost_matrix no deja mutados _w_col/_pop_col/_pop_ok_values."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        edad = np.tile(np.arange(20, 60), 3)
+        y = (edad >= 40).astype(int)
+        w = np.ones(len(edad), dtype=float)
+        pop = np.array(["OK"] * 90 + ["INDET"] * 30)
+        csv_path = tmp / "atomic_cost.csv"
+        pd.DataFrame({
+            "edad": edad, "w": w, "pop": pop, "default": y,
+        }).to_csv(csv_path, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        _assert_raises(
+            ValueError,
+            s.fix_spec,
+            "default",
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+            population_col="pop",
+            population_ok_values=("OK",),
+            cost_matrix=((1.0, 2.0), (3.0, 0.0)),  # diagonal != 0
+        )
+        assert s.state.state is FlowState.DATA_LOADED
+        assert s._w_col is None
+        assert s._pop_col is None
+        assert s._pop_ok_values is None
+
+
+def test_load_oot_atomicity_on_temporal_leak_nat_and_invalid_weight():
+    """CRIT-05: load_oot fallido no contamina caches OOT ni lectores."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        edad = np.tile(np.arange(20, 60), 3)
+        seg = np.tile(["a", "b", "c"], 40)
+        y = (edad >= 40).astype(int)
+        w = np.ones(len(edad), dtype=float)
+        fechas_dev = pd.date_range("2025-01-01", periods=len(edad), freq="D")
+
+        dev_csv = tmp / "dev.csv"
+        pd.DataFrame({
+            "edad": edad, "seg": seg, "w": w, "fecha": fechas_dev, "default": y,
+        }).to_csv(dev_csv, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(dev_csv))
+        s.fix_spec(
+            "default",
+            predictors=["edad", "seg"],
+            target_class=1,
+            class_labels={0: "Bueno", 1: "Malo"},
+            weight_col="w",
+        )
+        s.partition(train_frac=0.7, seed=42)
+        s.train(CrtEngine(), max_depth=3, min_child_size=5)
+
+        def _assert_oot_untouched():
+            assert s.state.state is FlowState.TRAINED
+            assert s._X_oot is None
+            assert s._y_oot is None
+            assert s._df_oot is None
+            assert s._w_oot is None
+            _assert_raises(RuntimeError, s.get_gains_table, partition="oot")
+            assert s.get_node_cases(0, partition="oot")["n_total"] == 0
+
+        # 1) Fuga temporal (t_oot_min <= t_train_max)
+        oot_leak = tmp / "oot_leak.csv"
+        pd.DataFrame({
+            "edad": edad[:40],
+            "seg": seg[:40],
+            "w": np.ones(40),
+            "fecha": pd.date_range("2025-02-01", periods=40, freq="D"),
+            "default": y[:40],
+        }).to_csv(oot_leak, index=False)
+        _assert_raises(ValueError, s.load_oot, str(oot_leak), time_col="fecha")
+        _assert_oot_untouched()
+
+        # 2) Fecha NaT en columna temporal OOT
+        oot_nat = tmp / "oot_nat.csv"
+        fechas_nat = list(
+            pd.date_range("2026-01-01", periods=40, freq="D").astype(str)
+        )
+        fechas_nat[5] = ""
+        pd.DataFrame({
+            "edad": edad[:40],
+            "seg": seg[:40],
+            "w": np.ones(40),
+            "fecha": fechas_nat,
+            "default": y[:40],
+        }).to_csv(oot_nat, index=False)
+        _assert_raises(ValueError, s.load_oot, str(oot_nat), time_col="fecha")
+        _assert_oot_untouched()
+
+        # 3) Peso invalido en OOT
+        oot_bad_w = tmp / "oot_bad_w.csv"
+        w_bad = np.ones(40)
+        w_bad[3] = -1.0
+        pd.DataFrame({
+            "edad": edad[:40],
+            "seg": seg[:40],
+            "w": w_bad,
+            "fecha": pd.date_range("2026-01-01", periods=40, freq="D"),
+            "default": y[:40],
+        }).to_csv(oot_bad_w, index=False)
+        _assert_raises(ValueError, s.load_oot, str(oot_bad_w), time_col="fecha")
+        _assert_oot_untouched()
+
+
+def test_fingerprint_distinguishes_population_filter_in_session():
+    """CRIT-03: Session propaga population_col/population_ok_values al fingerprint."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        edad = np.tile(np.arange(20, 60), 6)  # 240 filas
+        seg = np.tile(["a", "b", "c"], 80)
+        y = (edad >= 40).astype(int)
+        pop = np.array(["OK"] * 120 + ["OK2"] * 80 + ["INDET"] * 40)
+        csv_path = tmp / "pop_fp.csv"
+        pd.DataFrame({
+            "edad": edad, "seg": seg, "pop": pop, "default": y,
+        }).to_csv(csv_path, index=False)
+
+        def _fp(pop_col, ok_vals):
+            s = Session(logger=_quiet_logger())
+            s.load_dataset(str(csv_path))
+            s.fix_spec(
+                "default",
+                predictors=["edad", "seg"],
+                target_class=1,
+                class_labels={0: "Bueno", 1: "Malo"},
+                population_col=pop_col,
+                population_ok_values=ok_vals,
+            )
+            s.partition(train_frac=0.7, seed=42)
+            st = s.train(CrtEngine(), max_depth=3, min_child_size=5)
+            assert st.tree is not None
+            return st.tree.params_fingerprint
+
+        fp_none = _fp(None, None)
+        fp_ok = _fp("pop", ("OK",))
+        fp_both = _fp("pop", ("OK", "OK2"))
+        assert len({fp_none, fp_ok, fp_both}) == 3
+
+
+def test_session_governance_banking_vs_research_and_custom_zero_floor():
+    """CRIT-03: contraste numerico real BANKING vs RESEARCH y floor=0.0 -> CUSTOM."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+
+        # 1) BANKING (Jeffreys + pd_floor=0.0005)
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        st_b = s.train(
+            CrtEngine(),
+            max_depth=4,
+            min_child_size=5,
+            apply_jeffreys=True,
+            pd_floor=0.0005,
+        )
+        assert st_b.tree is not None
+        leaves_b = [nd for nd in st_b.tree.nodes if nd.is_leaf]
+        assert len(leaves_b) == 2
+        for leaf in leaves_b:
+            expected_j = (leaf.n_events[0] + 0.5) / (leaf.n + 1.0)
+            assert math.isclose(leaf.pd_jeffreys[0], expected_j, rel_tol=1e-12)
+            assert leaf.pd_final[0] >= 0.0005
+            assert leaf.pd_final[0] <= 1.0 - 0.0005
+        assert s.get_summary()["model"]["governance_mode"] == "BANKING"
+
+        # 2) RESEARCH (sin Jeffreys ni pd_floor): hojas puras = 0.0 y 1.0 exactos
+        s.reset_to_data_loaded()
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        st_r = s.train(
+            CrtEngine(),
+            max_depth=4,
+            min_child_size=5,
+            apply_jeffreys=False,
+            pd_floor=None,
+        )
+        assert st_r.tree is not None
+        leaves_r = sorted(
+            (nd.pd_final[0] for nd in st_r.tree.nodes if nd.is_leaf)
+        )
+        assert leaves_r == [0.0, 1.0]
+        assert s.get_summary()["model"]["governance_mode"] == "RESEARCH"
+
+        # 3) pd_floor=0.0 con apply_jeffreys=True -> CUSTOM (nunca BANKING)
+        s.reset_to_data_loaded()
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train(
+            CrtEngine(),
+            max_depth=4,
+            min_child_size=5,
+            apply_jeffreys=True,
+            pd_floor=0.0,
+        )
+        assert s.get_summary()["model"]["governance_mode"] == "CUSTOM"
+
+
+def test_prune_connects_downstream_consumers_and_invalidates_metrics():
+    """CRIT-06: prune() activa pruned_tree en todo el pipeline e invalida OOS."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        st0 = s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert st0.tree is not None and len(st0.tree.nodes) >= 3
+
+        s.evaluate_oos(n_groups=5)
+        assert s.state.oos_metrics is not None
+
+        st_p = s.prune(999999.0)
+        assert st_p.pruned_tree is not None
+        assert s.active_tree is st_p.pruned_tree
+        assert st_p.oos_metrics is None
+
+        summary = s.get_summary()
+        assert summary is not None
+        assert summary["model"]["n_nodes"] == 1
+        assert summary["model"]["fingerprint"] == st_p.pruned_tree.params_fingerprint
+
+        gains = s.get_gains_table(partition="oos")
+        assert gains is not None and len(gains["rows"]) == 1
+
+        fp_p = st_p.pruned_tree.params_fingerprint
+        assert fp_p in (s.export_to_sql() or "")
+        assert fp_p in (s.export_to_python() or "")
+        assert fp_p in (s.export_to_markdown() or "")
+        assert fp_p in (s.get_rules("markdown") or "")
+        assert fp_p in (s.get_rules("sql") or "")
+        assert fp_p in (s.get_rules("python") or "")
+
+        # Re-evaluar OOS evalua sobre el arbol podado (1 hoja -> Gini == 0.0)
+        st_eval = s.evaluate_oos(n_groups=5)
+        assert st_eval.oos_metrics is not None
+        assert st_eval.oos_metrics.gini is not None
+        assert math.isclose(st_eval.oos_metrics.gini, 0.0, abs_tol=1e-12)
+
+
+def test_intervene_node_depth_ge_3_reindexes_parent_ids_and_invalidates():
+    """CRIT-07: intervene_node en nodo interno no raiz (profundidad >= 3)."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        # 8 celdas deterministas (50 filas c/u = 400 filas) garantizan arbol
+        # binario completo de profundidad 3 (15 nodos) en CRT.
+        cell_events = [
+            (0.0, 0.0, 0.0, 2),
+            (0.0, 0.0, 1.0, 18),
+            (0.0, 1.0, 0.0, 10),
+            (0.0, 1.0, 1.0, 30),
+            (1.0, 0.0, 0.0, 22),
+            (1.0, 0.0, 1.0, 42),
+            (1.0, 1.0, 0.0, 32),
+            (1.0, 1.0, 1.0, 48),
+        ]
+        rows = []
+        for x1, x2, x3, n_ev in cell_events:
+            for i in range(50):
+                rows.append((x1, x2, x3, 1 if i < n_ev else 0))
+        csv_path = tmp / "depth3.csv"
+        pd.DataFrame(rows, columns=["x1", "x2", "x3", "default"]).to_csv(
+            csv_path, index=False
+        )
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        st0 = s.train(CrtEngine(), max_depth=4, min_child_size=5)
+        assert st0.tree is not None
+        assert max(nd.depth for nd in st0.tree.nodes) >= 3
+
+        # Elegir un hijo interno no raiz cuyos hermanos tambien tengan descendientes
+        root_children = st0.tree.nodes[0].child_ids
+        internal_children = [
+            cid for cid in root_children if not st0.tree.nodes[cid].is_leaf
+        ]
+        assert len(internal_children) >= 2
+        target_node = internal_children[0]
+
+        s.prune(0.0)
+        assert s.state.pruned_tree is not None
+        s.evaluate_oos()
+        assert s.state.oos_metrics is not None
+
+        # Rechazar bool en node_id
+        _assert_raises(ValueError, s.intervene_node, True, "prune_branch")
+
+        # Intervenir nodo interno no raiz: no debe fallar por parent_id incoherente
+        st_int = s.intervene_node(target_node, "prune_branch")
+        assert st_int.tree is not None
+        assert st_int.oos_metrics is None
+        assert st_int.pruned_tree is None
+        assert s.active_tree is st_int.tree
+        for nd in st_int.tree.nodes:
+            for cid in nd.child_ids:
+                assert st_int.tree.nodes[cid].parent_id == nd.node_id
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

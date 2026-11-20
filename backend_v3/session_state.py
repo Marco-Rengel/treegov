@@ -61,7 +61,7 @@ from .scoring import (
 )
 from .splitting import stratified_kfold, stratified_split
 from .stability import OOTReport
-from .tree_builder import TreeBuilder, TreeModel
+from .tree_builder import TreeBuilder, TreeModel, classify_governance_mode
 from .types import PredictorType, TargetType
 from .validation import (
     OOSMetrics, compute_oos_metrics, predict_leaf_assignment, predict_pd,
@@ -188,6 +188,12 @@ class Session:
         return self._state
 
     @property
+    def active_tree(self) -> TreeModel | None:
+        """Arbol activo de la sesion: pruned_tree si hay poda, sino tree."""
+        st = self._state
+        return st.pruned_tree if st.pruned_tree is not None else st.tree
+
+    @property
     def class_labels_dict(self) -> dict[int | str, str]:
         """Vista dict del mapping clase -> etiqueta humana
         (conveniencia para GUI/MCP). Vacío antes de fix_spec."""
@@ -289,7 +295,7 @@ class Session:
         n_nan = int(serie.isna().sum())
         if pd.api.types.is_numeric_dtype(serie):
             vals = serie.dropna().to_numpy(dtype=float)
-            n_nonpositive = int((~(vals > 0)).sum())
+            n_nonpositive = int((~(np.isfinite(vals) & (vals > 0))).sum())
         else:
             # no numerica: todo valor no-NaN es invalido como peso
             n_nonpositive = int(serie.notna().sum())
@@ -408,13 +414,19 @@ class Session:
         model is trained or the partition name is unknown; RuntimeError if
         the chosen partition cache has not been populated yet.
         """
-        if self._state.tree is None:
+        if self.active_tree is None:
             raise ValueError("[session] partition requiere un modelo entrenado")
         if partition == "train":
             X, y, unseen_policy = self._X_train, self._y_train, "error"
         elif partition == "oos":
             X, y, unseen_policy = self._X_test, self._y_test, "exclude"
         elif partition == "oot":
+            if self._state.state not in (
+                FlowState.OOT_LOADED, FlowState.OOT_EVALUATED
+            ):
+                raise RuntimeError(
+                    f"[session] partition={partition!r} sin datos en cache"
+                )
             X, y, unseen_policy = self._X_oot, self._y_oot, "exclude"
         else:
             raise ValueError(
@@ -492,14 +504,15 @@ class Session:
         Fase 3.2.g: si la sesion es ponderada, propaga el vector de pesos
         de la particion solicitada (longitud completa, sin filtrar).
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         X, y, unseen_policy = self._routed_partition(partition)
         leaf_assignment = predict_leaf_assignment(
-            self._state.tree, X, unseen_policy=unseen_policy
+            tree, X, unseen_policy=unseen_policy
         )
         result = build_gains_table(
-            self._state.tree, leaf_assignment, y,
+            tree, leaf_assignment, y,
             by=by, n_buckets=n_buckets, tie=tie, seed=seed,
             weights=self._partition_weights(partition),
         )
@@ -523,18 +536,19 @@ class Session:
         de la particion solicitada (longitud completa; el filtrado por
         filas enrutables lo hace `_validated_routed` internamente).
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
-        K = len(self._state.tree.class_labels)
+        K = len(tree.class_labels)
         X, y, unseen_policy = self._routed_partition(partition)
         leaf_assignment = predict_leaf_assignment(
-            self._state.tree, X, unseen_policy=unseen_policy
+            tree, X, unseen_policy=unseen_policy
         )
         if K == 2:
             # Phase 3.1: pd_final is a per-class tuple; index 0 is the class of interest.
             pd_per_leaf = {
                 nd.node_id: nd.pd_final[0]
-                for nd in self._state.tree.nodes if nd.is_leaf
+                for nd in tree.nodes if nd.is_leaf
             }
             result = build_classification_matrix(
                 leaf_assignment, y, pd_per_leaf, threshold=threshold,
@@ -543,7 +557,7 @@ class Session:
         else:
             pd_per_leaf = {
                 nd.node_id: tuple(nd.pd_final)
-                for nd in self._state.tree.nodes if nd.is_leaf
+                for nd in tree.nodes if nd.is_leaf
             }
             y_interno = self._translate_y_to_internal(y)
             result = build_classification_matrix_multiclass(
@@ -667,8 +681,11 @@ class Session:
             self._log.warning(
                 "[session] class_labels con etiquetas duplicadas: %r", labels
             )
+        spec_was_inferred = spec is None
         if spec is None:
             spec = infer_spec(self._df, target, self._log)
+        else:
+            spec = dict(spec)
         if predictors is not None:
             sel = {str(p) for p in predictors}
             if target in sel:
@@ -683,7 +700,17 @@ class Session:
             spec = {k: v for k, v in spec.items() if k in sel}
         if not spec:
             raise ValueError("[session] spec vacio")
+        if (
+            weight_col is not None
+            and population_col is not None
+            and weight_col == population_col
+        ):
+            raise ValueError(
+                f"[session] weight_col y population_col no pueden ser la "
+                f"misma columna: {weight_col!r}"
+            )
         # --- Ponderacion por muestra (Fase 3.2): validacion atomica ---
+        new_w_col: str | None = None
         if weight_col is not None:
             if weight_col not in self._df.columns:
                 raise ValueError(
@@ -695,11 +722,20 @@ class Session:
                     f"[session] weight_col {weight_col!r} no puede ser "
                     f"el target"
                 )
-            if predictors is not None and weight_col in {str(p) for p in predictors}:
-                raise ValueError(
-                    f"[session] weight_col {weight_col!r}: la columna de "
-                    f"pesos no puede ser predictor"
-                )
+            if predictors is not None:
+                if weight_col in {str(p) for p in predictors}:
+                    raise ValueError(
+                        f"[session] weight_col {weight_col!r}: la columna de "
+                        f"pesos no puede ser predictor"
+                    )
+            else:
+                if not spec_was_inferred and weight_col in spec:
+                    raise ValueError(
+                        f"[session] weight_col {weight_col!r}: la columna de "
+                        f"pesos no puede ser predictor"
+                    )
+                if spec_was_inferred:
+                    spec.pop(weight_col, None)
             col_w = self._df[weight_col]
             if pd.api.types.is_bool_dtype(col_w) or not pd.api.types.is_numeric_dtype(col_w):
                 raise ValueError(
@@ -711,6 +747,11 @@ class Session:
                     f"[session] weight_col {weight_col!r} contiene NaN"
                 )
             wvals = col_w.to_numpy(dtype=float)
+            if not np.isfinite(wvals).all():
+                raise ValueError(
+                    f"[session] weight_col {weight_col!r} contiene valores "
+                    f"no finitos"
+                )
             if not (wvals > 0).all():
                 n_bad = int((wvals <= 0).sum())
                 first_bad = int(np.flatnonzero(wvals <= 0)[0])
@@ -719,18 +760,16 @@ class Session:
                     f"<= 0 (primero en la fila {first_bad}); los pesos "
                     f"deben ser estrictamente positivos"
                 )
-            self._w_col = weight_col
-        else:
-            self._w_col = None
+            new_w_col = weight_col
         # --- Fase 3.3: categorias de poblacion ---
+        new_pop_col: str | None = None
+        new_pop_ok_values: tuple[str, ...] | None = None
         if population_col is None:
             if population_ok_values:
                 raise ValueError(
                     "[session] population_ok_values requiere population_col "
                     "(no se puede declarar whitelist sin columna)"
                 )
-            self._pop_col = None
-            self._pop_ok_values = None
         else:
             if population_col not in self._df.columns:
                 raise ValueError(
@@ -742,11 +781,20 @@ class Session:
                     f"[session] population_col {population_col!r} no puede "
                     f"ser el target"
                 )
-            if predictors is not None and population_col in {str(p) for p in predictors}:
-                raise ValueError(
-                    f"[session] population_col {population_col!r}: la "
-                    f"columna de poblacion no puede ser predictor"
-                )
+            if predictors is not None:
+                if population_col in {str(p) for p in predictors}:
+                    raise ValueError(
+                        f"[session] population_col {population_col!r}: la "
+                        f"columna de poblacion no puede ser predictor"
+                    )
+            else:
+                if not spec_was_inferred and population_col in spec:
+                    raise ValueError(
+                        f"[session] population_col {population_col!r}: la "
+                        f"columna de poblacion no puede ser predictor"
+                    )
+                if spec_was_inferred:
+                    spec.pop(population_col, None)
             if population_ok_values is None or len(population_ok_values) == 0:
                 raise ValueError(
                     "[session] population_col declarado pero "
@@ -789,8 +837,10 @@ class Session:
                     f"clases del target (dataset completo: K={K_full}); se "
                     f"exigen >= 2 clases para entrenar"
                 )
-            self._pop_col = population_col
-            self._pop_ok_values = tuple(population_ok_values)
+            new_pop_col = population_col
+            new_pop_ok_values = tuple(population_ok_values)
+        if not spec:
+            raise ValueError("[session] spec vacio")
         # Fase 3.11.c.3: endurecimiento de la matriz de costos (misma
         # filosofia que weight_col/population: validar ANTES de la
         # transicion, atomicidad). N x N con N = nº de clases, diagonal
@@ -828,6 +878,9 @@ class Session:
             cost_matrix = tuple(
                 tuple(float(v) for v in fila) for fila in cost_matrix
             )
+        self._w_col = new_w_col
+        self._pop_col = new_pop_col
+        self._pop_ok_values = new_pop_ok_values
         evento = f"fix_spec:{target}|predictores={len(spec)}"
         if self._w_col is not None:
             evento += f"|weight_col={self._w_col}"
@@ -1106,9 +1159,9 @@ class Session:
             for c in sorted(c for c in labels_map if c != target_class)
         )
         class_labels_canonical = (target_label,) + resto
-        # ZG-3: persistir los parametros de gobernanza de este train() para
-        # que get_univariate_trees replique la configuracion del modelo.
-        self._last_train_params = {
+        # ZG-3: preparar los parametros de gobernanza (se persisten SOLO tras
+        # build() exitoso para preservar atomicidad).
+        new_params = {
             "target_type": target_type,
             "max_depth": max_depth,
             "min_child_size": min_child_size,
@@ -1127,11 +1180,14 @@ class Session:
             apply_jeffreys=apply_jeffreys,
             weights=self._w_train, weight_col=self._w_col,
             min_child_weight=min_child_weight,
+            population_col=st.population_col,
+            population_ok_values=st.population_ok_values,
             seed=st.seed, logger=get_logger("builder"),
             validation_scheme=st.validation_scheme,
             cv_k=st.cv_k,
         )
         modelo = builder.build(self._X_train, self._y_train, dict(st.spec))
+        self._last_train_params = new_params
         self._cv_report = None
         self._cv_engine = cv_engine
         evento = (f"train:{modelo.method}|nodos={len(modelo.nodes)}"
@@ -1158,12 +1214,13 @@ class Session:
         """
         self._require(FlowState.TRAINED, "evaluate_oos")
         st = self._state
-        assert st.tree is not None
+        tree = self.active_tree
+        assert tree is not None
         if st.validation_scheme == "cv":
             return self._evaluate_oos_cv(n_groups=n_groups)
         assert self._X_test is not None and self._y_test is not None
-        K = len(st.tree.class_labels)
-        p_2d = predict_pd(st.tree, self._X_test)
+        K = len(tree.class_labels)
+        p_2d = predict_pd(tree, self._X_test)
         if K == 2:
             p = p_2d[:, 0]  # Phase 3.1.d: binary consumers read column 0
             y_eval = self._y_test
@@ -1187,7 +1244,8 @@ class Session:
     def _evaluate_oos_cv(self, *, n_groups: int) -> dict:
         """Entrena un modelo temporal por fold y agrega sus metricas OOS."""
         st = self._state
-        assert st.tree is not None and st.spec is not None
+        tree = self.active_tree
+        assert tree is not None and st.spec is not None
         assert self._df is not None and st.target is not None
         if self._cv_engine is None or self._last_train_params is None:
             raise RuntimeError("[session] CV sin configuracion de entrenamiento")
@@ -1218,7 +1276,7 @@ class Session:
                 copy.deepcopy(self._cv_engine),
                 target_type=params["target_type"],
                 target_class=st.target_class,
-                class_labels=st.tree.class_labels,
+                class_labels=tree.class_labels,
                 max_depth=params["max_depth"],
                 min_child_size=params["min_child_size"],
                 min_child_weight=params["min_child_weight"],
@@ -1226,6 +1284,8 @@ class Session:
                 apply_jeffreys=params["apply_jeffreys"],
                 weights=w_tr,
                 weight_col=self._w_col,
+                population_col=st.population_col,
+                population_ok_values=st.population_ok_values,
                 seed=st.seed,
                 logger=get_logger("builder"),
                 validation_scheme="cv",
@@ -1306,10 +1366,10 @@ class Session:
         100% de filas OK y ``partition.n_test`` es 0: no hay holdout.
         """
         st = self._state
-        if st.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         params = self._last_train_params
-        tree = st.tree
 
         if params is None:
             self._log.warning(
@@ -1323,12 +1383,9 @@ class Session:
         else:
             apply_jeffreys = bool(params["apply_jeffreys"])
             pd_floor = params["pd_floor"]
-            if apply_jeffreys and pd_floor is not None:
-                governance_mode = "BANKING"
-            elif not apply_jeffreys and pd_floor is None:
-                governance_mode = "RESEARCH"
-            else:
-                governance_mode = "CUSTOM"
+            governance_mode = classify_governance_mode(
+                apply_jeffreys, pd_floor
+            )
 
         if st.validation_scheme == "cv":
             n_train = int((st.n_rows or 0) - st.n_excluded_population)
@@ -1439,7 +1496,7 @@ class Session:
         particion aun no materializada devuelve un frame vacio y X=None.
         """
         st = self._state
-        assert st.tree is not None and self._df is not None
+        assert self.active_tree is not None and self._df is not None
         if partition == "train":
             if st.validation_scheme == "cv":
                 return (
@@ -1461,7 +1518,11 @@ class Session:
                 "exclude",
             )
         if partition == "oot":
-            if self._df_oot is None or self._X_oot is None:
+            if (
+                st.state not in (FlowState.OOT_LOADED, FlowState.OOT_EVALUATED)
+                or self._df_oot is None
+                or self._X_oot is None
+            ):
                 return self._df.iloc[0:0], None, "exclude"
             return self._df_oot, self._X_oot, "exclude"
         return self._df, self._df, "exclude"  # partition == "all"
@@ -1492,8 +1553,8 @@ class Session:
         (OOT sin load_oot, OOS en CV) devuelve el DTO vacio con las
         columnas del dataset.
         """
-        st = self._state
-        if st.tree is None:
+        tree = self.active_tree
+        if tree is None:
             raise ValueError(
                 "[session] get_node_cases requiere un modelo entrenado"
             )
@@ -1502,10 +1563,10 @@ class Session:
                 f"[session] partition invalida: {partition!r} "
                 f"(validas: ['train', 'oos', 'oot', 'all'])"
             )
-        tree = st.tree
         n_nodes = len(tree.nodes)
         if (
-            not isinstance(node_id, (int, np.integer))
+            isinstance(node_id, bool)
+            or not isinstance(node_id, (int, np.integer))
             or node_id < 0
             or node_id >= n_nodes
         ):
@@ -1587,11 +1648,13 @@ class Session:
         st = self._state
         assert st.tree is not None
         pruned = Pruner(logger=get_logger("pruning")).prune(st.tree, alpha)
+        self._cv_report = None
         return self._commit(
             st.state,
             evento=f"prune:alpha={alpha:.6g}|nodos={len(st.tree.nodes)}"
                    f"->{len(pruned.nodes)}",
             pruned_tree=pruned, prune_alpha=float(alpha),
+            oos_metrics=None, oot_report=None,
         )
 
     def get_prune_sequence(self) -> list[dict[str, Any]]:
@@ -1629,7 +1692,8 @@ class Session:
         unseen_policy="error") queda registrado con metricas 0.0 y sin
         cortes, con WARNING en el log.
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             raise ValueError(
                 "[session] get_univariate_trees requiere un modelo entrenado"
             )
@@ -1639,7 +1703,7 @@ class Session:
         assert self._X_test is not None and self._y_test is not None
         # Mismo motor que el modelo principal (factoria unica del modulo,
         # fuente de verdad de la Fase 2.1); fallback CRT defensivo.
-        factory = _ENGINE_FACTORIES.get(st.tree.method, CrtEngine)
+        factory = _ENGINE_FACTORIES.get(tree.method, CrtEngine)
         results: list[dict] = []
         for predictor, ptype in dict(st.spec).items():
             params = self._last_train_params or {
@@ -1651,7 +1715,7 @@ class Session:
                 factory(),
                 target_type=params["target_type"],
                 target_class=st.target_class,
-                class_labels=self.state.tree.class_labels,
+                class_labels=tree.class_labels,
                 max_depth=max_depth,
                 min_child_size=params["min_child_size"],
                 min_child_weight=params["min_child_weight"],
@@ -1712,13 +1776,14 @@ class Session:
         include_rules: bool = True,
     ) -> dict[str, Any]:
         """Puntua un CSV nuevo con el modelo activo, sin transicion de estado."""
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             raise ValueError("[session] score_batch requiere un modelo entrenado")
         if self._imputer is None:
             raise RuntimeError("[session] score_batch sin imputer en cache")
 
         bundle = ScoringBundle(
-            model=self._state.tree,
+            model=tree,
             imputation=self._imputer.spec,
             predictor_spec=self._state.spec,
             target_classes=self._state.target_classes,
@@ -1756,7 +1821,7 @@ class Session:
         Los detalles por exposicion se descartan deliberadamente para no
         saturar la sesion; su persistencia queda para una sub-fase posterior.
         """
-        if self._state.tree is None:
+        if self.active_tree is None:
             raise ValueError("[session] calculate_ecl requiere un modelo entrenado")
         df = pd.read_csv(csv_path)
         summary: ECLSummary
@@ -1778,7 +1843,8 @@ class Session:
     ) -> dict[str, Any]:
         """Compara el modelo activo con un retador entrenado de forma aislada."""
         st = self._state
-        if st.tree is None:
+        tree = self.active_tree
+        if tree is None:
             raise ValueError(
                 "[session] compare_champion_challenger requiere un modelo entrenado"
             )
@@ -1793,7 +1859,7 @@ class Session:
         assert st.spec is not None
 
         champion = ScoringBundle(
-            model=st.tree,
+            model=tree,
             imputation=self._imputer.spec,
             predictor_spec=st.spec,
             target_classes=st.target_classes,
@@ -1803,7 +1869,7 @@ class Session:
         params = dict(self._last_train_params or {})
         if challenger_params:
             params.update(challenger_params)
-        engine_name = challenger_engine or st.tree.method
+        engine_name = challenger_engine or tree.method
         try:
             engine = _ENGINE_FACTORIES[engine_name]()
         except KeyError:
@@ -1816,7 +1882,7 @@ class Session:
             engine,
             target_type=params.get("target_type", TargetType.BINARY),
             target_class=st.target_class,
-            class_labels=st.tree.class_labels,
+            class_labels=tree.class_labels,
             max_depth=params.get("max_depth", 4),
             min_child_size=params.get("min_child_size", 50),
             min_child_weight=params.get("min_child_weight"),
@@ -1824,6 +1890,8 @@ class Session:
             apply_jeffreys=params.get("apply_jeffreys", True),
             weights=self._w_train,
             weight_col=self._w_col,
+            population_col=st.population_col,
+            population_ok_values=st.population_ok_values,
             seed=st.seed,
             logger=get_logger("builder"),
         )
@@ -1878,7 +1946,8 @@ class Session:
         a defensive guard for a broken invariant. The value itself is
         validated by the exporter (`_ensure_unseen_policy`).
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         if self._imputer is None:
             raise RuntimeError(
@@ -1886,7 +1955,7 @@ class Session:
                 "(partition() no ejecutado)"
             )
         return export_to_sql(
-            self._state.tree, self._imputer.spec, unseen_policy=unseen_policy
+            tree, self._imputer.spec, unseen_policy=unseen_policy
         )
 
     def export_to_python(
@@ -1905,7 +1974,8 @@ class Session:
         a broken imputer invariant (see export_to_sql). The value
         itself is validated by the exporter (`_ensure_unseen_policy`).
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         if self._imputer is None:
             raise RuntimeError(
@@ -1913,7 +1983,7 @@ class Session:
                 "(partition() no ejecutado)"
             )
         return export_to_python(
-            self._state.tree, self._imputer.spec, unseen_policy=unseen_policy
+            tree, self._imputer.spec, unseen_policy=unseen_policy
         )
 
     def export_to_markdown(
@@ -1933,10 +2003,11 @@ class Session:
         value itself is validated by the exporter
         (`_ensure_unseen_policy`).
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         return export_to_markdown(
-            self._state.tree, unseen_policy=unseen_policy
+            tree, unseen_policy=unseen_policy
         )
 
     def get_rules(
@@ -1963,11 +2034,12 @@ class Session:
         de ``node_id`` los valida el exportador. ValueError si ``format``
         no es uno de los tres valores admitidos.
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             return None
         if format == "markdown":
             text = export_to_markdown(
-                self._state.tree,
+                tree,
                 unseen_policy=unseen_policy,
                 node_id=node_id,
             )
@@ -1979,14 +2051,14 @@ class Session:
                 )
             if format == "sql":
                 text = export_to_sql(
-                    self._state.tree,
+                    tree,
                     self._imputer.spec,
                     unseen_policy=unseen_policy,
                     node_id=node_id,
                 )
             else:
                 text = export_to_python(
-                    self._state.tree,
+                    tree,
                     self._imputer.spec,
                     unseen_policy=unseen_policy,
                     node_id=node_id,
@@ -2068,42 +2140,51 @@ class Session:
                 )
             )
             df_oot = df_oot.loc[pop_ok_mask].reset_index(drop=True)
+            if len(df_oot) == 0:
+                raise ValueError(
+                    "[session] cohorte OOT vacia tras el filtro de poblacion"
+                )
         else:
             n_excl_oot = 0
             breakdown_oot = ()
         # time_col es metadato temporal, NUNCA predictor: el X de OOT lleva
         # exactamente las columnas del spec (orden del spec, no alfabetico).
+        # Atomicidad: calcular y validar TODO en locales antes de mutar caches.
         spec_order = list(dict(st.spec).keys())
         X_oot = df_oot[spec_order]
-        self._X_oot = self._imputer.transform(X_oot)
-        self._y_oot = df_oot[st.target].astype(int).to_numpy()
-        # Fase 3.12.c: filas CRUDAS (post-filtro de poblacion) en el mismo
-        # orden que _X_oot/_y_oot; get_node_cases las muestra tal cual.
-        self._df_oot = df_oot
+        X_oot_imp = self._imputer.transform(X_oot)
+        y_oot_arr = df_oot[st.target].astype(int).to_numpy()
 
+        w_oot_arr: np.ndarray | None = None
         if self._w_col is not None:
-            w_oot = df_oot[self._w_col].to_numpy(dtype=float)
-            if not np.isfinite(w_oot).all():
+            w_oot_arr = df_oot[self._w_col].to_numpy(dtype=float)
+            if not np.isfinite(w_oot_arr).all():
                 raise ValueError(
                     f"[session] weight_col OOT {self._w_col!r} contiene "
                     f"valores no finitos"
                 )
-            if not (w_oot > 0).all():
-                n_bad = int((w_oot <= 0).sum())
-                first_bad = int(np.flatnonzero(w_oot <= 0)[0])
+            if not (w_oot_arr > 0).all():
+                n_bad = int((w_oot_arr <= 0).sum())
+                first_bad = int(np.flatnonzero(w_oot_arr <= 0)[0])
                 raise ValueError(
                     f"[session] weight_col OOT {self._w_col!r}: "
                     f"{n_bad} valor(es) <= 0 (primero en la fila "
                     f"{first_bad}); los pesos deben ser estrictamente "
                     f"positivos"
                 )
-            self._w_oot = w_oot
 
         temporal_ok = False
         if time_col is not None:
             if time_col in self._df.columns and time_col in df_oot.columns:
-                t_train_max = pd.to_datetime(self._df[time_col]).max()
-                t_oot_min = pd.to_datetime(df_oot[time_col]).min()
+                t_dev = pd.to_datetime(self._df[time_col])
+                t_oot = pd.to_datetime(df_oot[time_col])
+                if t_dev.isna().any() or t_oot.isna().any():
+                    raise ValueError(
+                        "[session] columna temporal contiene valores "
+                        "faltantes/NaT; no se puede verificar separacion OOT"
+                    )
+                t_train_max = t_dev.max()
+                t_oot_min = t_oot.min()
                 if not (t_oot_min > t_train_max):
                     raise ValueError(
                         f"[session] fuga temporal: OOT comienza {t_oot_min} "
@@ -2120,6 +2201,12 @@ class Session:
                 "[session] load_oot sin time_col: cohorte no verificada "
                 "temporalmente (OOS, not OOT)"
             )
+        self._X_oot = X_oot_imp
+        self._y_oot = y_oot_arr
+        # Fase 3.12.c: filas CRUDAS (post-filtro de poblacion) en el mismo
+        # orden que _X_oot/_y_oot; get_node_cases las muestra tal cual.
+        self._df_oot = df_oot
+        self._w_oot = w_oot_arr
         evento = (f"load_oot:{os.path.basename(csv_path)}|n={len(df_oot)}"
                   f"|temporal_verified={temporal_ok}")
         if self._w_col is not None:
@@ -2158,10 +2245,10 @@ class Session:
         from .stability import GiniDropReport, StabilityMonitor, gini_drop_alert
 
         st = self._state
-        assert st.tree is not None and st.spec is not None
+        model = self.active_tree
+        assert model is not None and st.spec is not None
         assert self._X_oot is not None and self._y_oot is not None
 
-        model = st.tree
         K = len(model.class_labels)
         spec_d = dict(st.spec)
 
@@ -2314,9 +2401,12 @@ class Session:
         nuevos = []
         for pos, nid in enumerate(orden):
             nd = nodes[nid]
+            new_parent = None if nd.parent_id is None else mapa[nd.parent_id]
             nuevos.append(replace(
-                nd, node_id=mapa[nid],
-                child_ids=tuple(mapa[c] for c in nd.child_ids)
+                nd,
+                node_id=mapa[nid],
+                parent_id=new_parent,
+                child_ids=tuple(mapa[c] for c in nd.child_ids),
             ))
         return TreeModel(
             root_id=0, nodes=tuple(nuevos), method=model.method,
@@ -2342,13 +2432,17 @@ class Session:
         leaf_reason="podado" y re-indexa BFS). Las acciones grow_tree,
         select_predictor y define_split llegan en sub-fases posteriores.
         """
-        if self._state.tree is None:
+        tree = self.active_tree
+        if tree is None:
             raise ValueError(
                 "[session] intervene_node requiere un modelo entrenado"
             )
-        tree = self._state.tree
-        if not (0 <= node_id < len(tree.nodes)):
-            raise ValueError(f"[session] nodo {node_id} no existe")
+        if (
+            isinstance(node_id, bool)
+            or not isinstance(node_id, int)
+            or not (0 <= node_id < len(tree.nodes))
+        ):
+            raise ValueError(f"[session] nodo {node_id!r} no existe")
 
         if action == "prune_branch":
             if tree.nodes[node_id].is_leaf:
@@ -2379,10 +2473,15 @@ class Session:
             )
             new_overrides = self._state.manual_overrides + (override,)
 
+            self._cv_report = None
             return self._commit(
                 self._state.state,
                 evento=f"intervene:{action}|node={node_id}|fp={new_fp}",
                 tree=final_tree,
+                pruned_tree=None,
+                prune_alpha=None,
+                oos_metrics=None,
+                oot_report=None,
                 manual_overrides=new_overrides,
             )
         else:

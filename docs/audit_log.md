@@ -8479,3 +8479,33 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **673/673 PASSED** (anterior: `660`; `+13` pruebas nuevas de regresión y paridad real en `sqlite3`). Verificados en modo verbose `test_exporters.py`, `test_validation.py`, `test_champion_challenger.py` y `test_gui_smoke.py` (guardias de caja blanca y sala limpia en verde).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`, `CRIT-04`, `CRIT-12`, §1.3); `docs/design_decisions.md` §27; `docs/api.md` (`backend_v3.validation`, `backend_v3.exporters`).
+
+---
+
+### 20/11/2026 — Cierre Bloque 2B: Integridad de sesión, gobernanza Basilea III, poda activa e intervenciones manuales (rama `release/phase2-mrm-fixes`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-mrm-fixes`, pendiente de revisión humana; sin `git push` ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/tree_builder.py` — nueva constante pública `BASEL_PD_FLOOR_MIN = 0.0005` y función pública `classify_governance_mode(apply_jeffreys, pd_floor) -> str` (ambas en `__all__`); `TreeBuilder._governance_label()` delega en `classify_governance_mode`; `TreeBuilder.__init__` endurece `pd_floor` exigiendo float finito en `[0.0, 0.5)` y rechazando `bool`/`NaN`/`±inf`.
+- `backend_v3/session_state.py` — nueva propiedad pública `Session.active_tree` (`pruned_tree` si existe, si no `tree`); conexión de todos los consumidores analíticos y de exportación a `self.active_tree` preservando idempotencia de `prune()`/`get_prune_sequence()` desde `st.tree`; invalidación de `_cv_report`, `oos_metrics` y `oot_report` en `prune()` e `intervene_node()`; remapeo de `parent_id` en `_reindex_tree()` y rechazo de `bool` en `intervene_node()`; conteo de no finitos en `describe_weight_column()`; exclusión automática de `weight_col`/`population_col` en `spec` inferido, rechazo en `spec` explícito, rechazo de `weight_col == population_col`, rechazo de `+inf`/`-inf` en `weight_col` y atomicidad estricta de `_w_col`/`_pop_col`/`_pop_ok_values` en `fix_spec()`; atomicidad de `_last_train_params` en `train()` y propagación de `population_col`/`population_ok_values` a `TreeBuilder` en `train()`, `_evaluate_oos_cv()` y `compare_champion_challenger()`; delegación de `get_summary()` en `classify_governance_mode`; atomicidad, rechazo de cohorte vacía post-filtro y rechazo de fechas `NaT` en `load_oot()`, con guarda de estado en `_routed_partition()` y `_node_cases_source()`.
+- `frontend_v3/main_window.py` — nuevo helper `_active_model()` delegando en `Session.active_tree` (100 % Sala Limpia); sustitución de `state.tree` en `_on_tree_node_selected()`, `_on_tree_context_menu()`, `_hud_reset()`, `_on_prune()` y `_execute_prune_branch()`; sincronización de `_lbl_explorer_model`, `_hud_reset()`, `_metrics_panel.set_report(self._session.get_oos_oot_report())`, `_refresh_reports_panel()` y `_data_viewer.refresh_cases(None)` tras poda e intervención manual.
+- `tests/test_tree_builder.py` — nuevos tests `test_classify_governance_mode_and_builder_label` y `test_pd_floor_rejects_impossible_and_nonfinite_values`; fortalecimiento de `test_multiclass_target_class_inverted` con aserciones sobre hojas asimétricas `nodes[1]` y `nodes[2]`.
+- `tests/test_session_state.py` — 8 nuevos tests de regresión para `CRIT-05` (exclusión/fuga de `weight_col` y `population_col`, `+inf` en pesos, atomicidad en `fix_spec` y `load_oot` ante fuga temporal/`NaT`/pesos inválidos), `CRIT-03` (huella digital con `population_col`, contraste numérico `BANKING` vs `RESEARCH` y `pd_floor=0.0` → `CUSTOM`), `CRIT-06` (poda conectada a todos los consumidores e invalidación de métricas) y `CRIT-07` (`intervene_node` en nodo interno no raíz con profundidad ≥ 3, coherencia de `parent_id`, invalidación y rechazo de `bool`).
+- `tests/test_e2e_mainwindow.py` — verificación de `_lbl_explorer_model`, `_active_model()` y `_on_tree_node_selected(0)` tras poda interactiva e intervención manual en `test_e2e_prune_dialog_flow` y `test_e2e_context_menu_prune_updates_hud`.
+- `docs/design_decisions.md` — añadida sección `§28` registrando las decisiones del Bloque 2B.
+- `docs/api.md` — documentados `BASEL_PD_FLOOR_MIN`, `classify_governance_mode`, `Session.active_tree`, invalidación de métricas en `Session.prune()` / `Session.intervene_node()` y rechazo de `NaT` en `Session.load_oot()`.
+- `docs/audit_log.md` — esta entrada de cierre del Bloque 2B.
+
+**Hallazgos resueltos**:
+
+1. **`CRIT-03` (gobernanza Basilea III CRE 32.4 y trazabilidad de población):** `classify_governance_mode` exige `pd_floor >= 0.0005` para `"BANKING"` (clasificando `0.0` y `0.0003` como `"CUSTOM"`), `pd_floor` se acota a `[0.0, 0.5)` finito sin `bool`, y `Session` propaga `population_col`/`population_ok_values` al `params_fingerprint`.
+2. **`CRIT-05` (fugas y atomicidad en `fix_spec`, `train` y `load_oot`):** exclusión garantizada de `weight_col`/`population_col`, rechazo de no finitos en pesos y `NaT` en `time_col`, y mutación de cachés internos estrictamente atómica post-validación con defensa en lectores OOT.
+3. **`CRIT-06` (poda desconectada aguas abajo):** `Session.active_tree` conecta `pruned_tree` a evaluación, reportes, exportación, reglas, scoring batch, Champion-Challenger y GUI, invalidando métricas obsoletas y preservando la idempotencia de `prune()` desde `state.tree` (fórmula de `backend_v3/pruning.py` sin cambios en este bloque).
+4. **`CRIT-07` (`_reindex_tree` y `intervene_node`):** remapeo de `parent_id` durante el re-indexado BFS, soporte completo para nodos internos no raíz en árboles profundos, rechazo de `bool` en `node_id` e invalidación de métricas y poda previa.
+5. **Protocolo PyPI:** remediación en rama `release/phase2-mrm-fixes` sin publicación en PyPI (`1.0.0rc7` permanece intacta; sin cambios en `pyproject.toml`, `frontend_v3/__init__.py` ni `README*.md`); la publicación se consolidará al cerrar Oleada 1.
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **683/683 PASSED** (anterior: `673`; `+10` pruebas nuevas de regresión + fortalecimiento de `test_multiclass_target_class_inverted` y `test_e2e_mainwindow.py`). Verificados en modo verbose `test_tree_builder.py`, `test_session_state.py`, `test_e2e_mainwindow.py` y `test_gui_smoke.py` (guardias de Caja Blanca y Sala Limpia en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07`); `docs/design_decisions.md` §28; `docs/api.md` (`backend_v3.tree_builder`, `backend_v3.session_state`).

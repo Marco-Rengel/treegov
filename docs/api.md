@@ -66,11 +66,20 @@ underscore) are internal and may change without notice.
 
 ## backend_v3.tree_builder
 
+- `BASEL_PD_FLOOR_MIN: float = 0.0005` — minimum Basel III CRE 32.4 PD floor
+  required for `BANKING` governance classification (Block 2B, 20/11/2026).
+- `classify_governance_mode(apply_jeffreys: bool, pd_floor: float | None) -> str` —
+  single source of truth for effective governance mode classification
+  (`"BANKING"` iff `apply_jeffreys is True` and `pd_floor >= BASEL_PD_FLOOR_MIN`;
+  `"RESEARCH"` iff `apply_jeffreys is False` and `pd_floor is None`;
+  `"CUSTOM"` otherwise, including `0.0` or legacy `0.0003`).
 - `TreeBuilder`, `TreeModel`, `TreeNode`
 - `TreeBuilder(..., validation_scheme="holdout", cv_k=None)` — kwargs
   keyword-only nuevos (Fase 2.1.b). `validation_scheme` y `cv_k`
   entran en `params_fingerprint` SOLO si difieren del default
   ("holdout" / None). Los fingerprints holdout existentes no cambian.
+  Since Block 2B, `pd_floor` must be `None` or a finite float in `[0.0, 0.5)`
+  (booleans and non-finite values raise `ValueError`).
 
 ## backend_v3.exporters
 
@@ -173,6 +182,13 @@ Phase 7.0 public IFRS 9 / ECL contracts:
 ## backend_v3.session_state
 
 - `FlowState` (Enum), `SessionState`, `Session`
+- `Session.active_tree -> TreeModel | None` — read-only property returning the
+  active model (`state.pruned_tree` when cost-complexity pruning has been
+  applied, otherwise `state.tree`; Block 2B, 20/11/2026). All downstream
+  analytical consumers (`get_gains_table`, `get_classification_matrix`,
+  `evaluate_oos`, `evaluate_oot`, `get_summary`, `get_node_cases`,
+  `score_batch`, `compare_champion_challenger`, `export_to_*`, `get_rules`,
+  `intervene_node`) operate on `active_tree`.
 - Nuevos campos de `SessionState` (Fase 2.1.b):
   - `validation_scheme: str = "holdout"`
   - `cv_k: int | None = None`
@@ -251,7 +267,18 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   último informe de CV calculado. None si no hay CV. Estructura:
   `{"scheme": "cv", "k": int, "metrics_mean": dict, "metrics_std":
   dict, "metrics_per_fold": list[dict]}`.
-- `Session.get_prune_sequence() -> list[dict[str, Any]]` — Read-only method that returns the cost-complexity pruning sequence for the trained model. Each dictionary contains `alpha` (float), `n_leaves` (int), and `r_subtree` (float). Returns an empty list if the model has no internal nodes. (Phase 3.9).
+- `Session.get_prune_sequence() -> list[dict[str, Any]]` — Read-only method that returns the cost-complexity pruning sequence for the trained model (`state.tree`). Each dictionary contains `alpha` (float), `n_leaves` (int), and `r_subtree` (float). Returns an empty list if the model has no internal nodes. (Phase 3.9).
+- `Session.prune(alpha: float) -> SessionState` — applies cost-complexity
+  pruning idempotently from the original `state.tree`, stores the result in
+  `state.pruned_tree` (activating it via `Session.active_tree`), and
+  invalidates stale metrics (`oos_metrics=None`, `oot_report=None`,
+  `_cv_report=None`; Block 2B, 20/11/2026).
+- `Session.load_oot(csv_path, *, time_col=None) -> SessionState` — atomically
+  validates and loads an external OOT cohort. Rejects empty cohorts after
+  population filtering, non-finite/non-positive OOT weights, and any missing /
+  `NaT` values in `time_col` (in development or OOT) before checking
+  `t_oot.min() > t_dev.max()`. Failed calls leave `FlowState` and OOT caches
+  untouched (Block 2B, 20/11/2026).
 - `Session.get_univariate_trees(max_depth=3) -> list[dict]` — read-only
   batch univariate trees (Phase 3.11.c.1): trains one depth-`max_depth`
   tree per predictor in the spec using the SAME engine as the trained
@@ -308,8 +335,13 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   is appended to the immutable `SessionState.manual_overrides` log
   `(timestamp, node_id, action, params_str, fp_before, fp_after)`
   (see `docs/design_decisions.md` §18.9). Requires a trained model
-  (`ValueError` otherwise; also if the node does not exist or is
-  already a leaf). Unimplemented actions raise `NotImplementedError`.
+  (`ValueError` otherwise; also if `node_id` is a `bool`, does not exist, or
+  is already a leaf). Since Block 2B (20/11/2026), operates on
+  `Session.active_tree`, remaps `parent_id` during BFS re-indexing so
+  non-root internal nodes in trees of depth ≥ 3 re-index cleanly, and
+  invalidates stale artifacts (`pruned_tree=None`, `prune_alpha=None`,
+  `oos_metrics=None`, `oot_report=None`, `_cv_report=None`). Unimplemented
+  actions raise `NotImplementedError`.
 - `Session.fix_spec(..., cost_matrix=None)` — Phase 3.11.c.3 adds the
   keyword-only `cost_matrix` parameter: an immutable N×N
   misclassification-cost matrix (rows: actual class; columns: predicted

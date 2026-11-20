@@ -2696,6 +2696,33 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`, `CRIT-04`, `CRIT-12`); `docs/api.md` (`backend_v3.validation`, `backend_v3.exporters`); `docs/audit_log.md` (cierre del Bloque 2A, 20/11/2026).
 
+---
+
+## §28. Remediación Bloque 2B: integridad de sesión, gobernanza Basilea III, poda activa e intervenciones manuales (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) identificó cuatro defectos críticos en el flujo transaccional de sesión, gobernanza y operaciones post-entrenamiento:
+1. `CRIT-03`: `TreeBuilder._governance_label()` y `Session.get_summary()` duplicaban la clasificación de modo de gobernanza y etiquetaban cualquier `pd_floor` no nulo (incluso `0.0` o el antiguo `0.0003` de Basilea II) como `"BANKING"`; además, `TreeBuilder.__init__` admitía `pd_floor >= 0.5` o no finito, y `Session.train()` / `_evaluate_oos_cv()` / `compare_champion_challenger()` omitían `population_col` y `population_ok_values` al invocar `TreeBuilder`, impidiendo que el filtro de población entrara en `params_fingerprint`.
+2. `CRIT-05`: `Session.fix_spec()` no excluía `weight_col` ni `population_col` del `spec` cuando `predictors=None`, no rechazaba `+inf` en `weight_col` (ni lo contabilizaba en `describe_weight_column`), y mutaba `self._w_col`/`_pop_col`/`_pop_ok_values` antes de concluir todas las validaciones; de igual forma, `Session.train()` mutaba `_last_train_params` antes de `build()`, y `Session.load_oot()` mutaba `_X_oot`/`_y_oot`/`_df_oot`/`_w_oot` antes de validar pesos y separación temporal, además de tolerar silenciosamente `NaT` en `time_col`.
+3. `CRIT-06`: `Session.prune(alpha)` almacenaba `pruned_tree` en `SessionState`, pero todos los consumidores analíticos aguas abajo (tablas de ganancias, matrices de clasificación, `evaluate_oos`, `evaluate_oot`, `get_summary`, `get_node_cases`, `score_batch`, `compare_champion_challenger`, exportadores y `get_rules`) seguían leyendo `state.tree`, dejando la poda desconectada y conservando métricas OOS/OOT obsoletas del árbol sin podar.
+4. `CRIT-07`: `Session._reindex_tree()` no remapeaba `parent_id` al compactar nodos tras `intervene_node(..., "prune_branch")`, provocando `ValueError: parent_id incoherente` en árboles de profundidad ≥ 3 cuando se intervenía un nodo interno no raíz; además, `intervene_node()` no rechazaba `bool` en `node_id` ni invalidaba `pruned_tree`/`oos_metrics`/`oot_report`/`_cv_report`.
+
+**Decisiones.**
+
+1. **Fuente única de gobernanza BCBS CRE 32.4 (`BASEL_PD_FLOOR_MIN` y `classify_governance_mode`).** `backend_v3.tree_builder` exporta `BASEL_PD_FLOOR_MIN = 0.0005` y `classify_governance_mode(apply_jeffreys, pd_floor) -> str`: `"BANKING"` exige `apply_jeffreys is True` y `pd_floor >= 0.0005`; `"RESEARCH"` exige `apply_jeffreys is False` y `pd_floor is None`; cualquier otra combinación (incluidos `pd_floor == 0.0` o `0.0003`) se clasifica como `"CUSTOM"`. Tanto `TreeBuilder._governance_label()` como `Session.get_summary()` delegan en esta función.
+2. **Cota superior estricta y finitud en `pd_floor`.** `TreeBuilder.__init__` rechaza `bool`, valores no finitos (`NaN`/`±inf`) y valores fuera de `[0.0, 0.5)`, evitando pisos imposibles que inviertan la cota simétrica binaria `pd_floor <= PD <= 1 - pd_floor`.
+3. **Propiedad `Session.active_tree` y poda conectada aguas abajo con idempotencia.** Se expone `Session.active_tree` (`pruned_tree` si existe, en caso contrario `tree`). `prune(alpha)` y `get_prune_sequence()` siguen partiendo de `state.tree` (preservando la idempotencia de poda sin apilamiento), mientras todos los consumidores analíticos y de exportación leen `self.active_tree`. Al confirmar `prune()`, se invalidan `self._cv_report = None`, `oos_metrics=None` y `oot_report=None`. La fórmula matemática de `backend_v3/pruning.py` no se modifica en este bloque.
+4. **Remapeo completo de `parent_id` e invalidación en `intervene_node`.** `_reindex_tree()` remapea `parent_id` junto a `node_id` y `child_ids` (`None if nd.parent_id is None else mapa[nd.parent_id]`). `intervene_node()` opera sobre `self.active_tree`, rechaza `bool` en `node_id`, e invalida `pruned_tree=None`, `prune_alpha=None`, `oos_metrics=None`, `oot_report=None` y `self._cv_report = None` al confirmar el nuevo árbol.
+5. **Exclusión de metadatos, atomicidad transaccional y rechazo de `NaT`.**
+   - `describe_weight_column()` contabiliza valores no finitos (`±inf`) dentro de `n_nonpositive`.
+   - `fix_spec()` rechaza `weight_col == population_col`, rechaza no finitos en `weight_col`, elimina automáticamente `weight_col`/`population_col` cuando el `spec` se infiere (`spec is None, predictors is None`), falla explícitamente si el llamador los incluyó en un `spec` explícito, y solo actualiza `_w_col`/`_pop_col`/`_pop_ok_values` tras superar todas las validaciones (incluida `cost_matrix`).
+   - `train()` solo persiste `_last_train_params` tras completarse `builder.build(...)`, y junto con `_evaluate_oos_cv()` y `compare_champion_challenger()` propaga `population_col` y `population_ok_values` a `TreeBuilder` para que el filtro de población integre `params_fingerprint`.
+   - `load_oot()` rechaza cohortes vacías tras el filtro de población, exige ausencia de `NaT` en `time_col` tanto en desarrollo como en OOT antes de comprobar `t_oot.min() > t_dev.max()`, y solo asigna `_X_oot`/`_y_oot`/`_df_oot`/`_w_oot` al final; como defensa en profundidad, `_routed_partition()` y `_node_cases_source()` exigen estado `OOT_LOADED` o `OOT_EVALUATED` para servir datos OOT.
+6. **Sincronización de presentación en `MainWindow` (Sala Limpia).** `frontend_v3/main_window.py` incorpora `_active_model()` delegando en `Session.active_tree`, refresca `_lbl_explorer_model`, `_hud_reset()`, `_metrics_panel.set_report(self._session.get_oos_oot_report())`, `_refresh_reports_panel()` y `_data_viewer.refresh_cases(None)` tras `_on_prune()` y `_execute_prune_branch()`.
+
+**Consecuencias.** Los árboles podados o intervenidos se reflejan coherentemente en evaluación OOS/OOT, tablas de ganancias, matrices de clasificación, exportación SQL/Python/Markdown, reglas, scoring batch, Champion-Challenger y GUI, sin métricas obsoletas ni fugas de columnas auxiliares/OOT fallidas. Los fingerprints de sesiones con filtro de población cambian ahora al distinguir `population_col` y `population_ok_values` (trazabilidad MRM).
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07`); `docs/api.md` (`backend_v3.tree_builder`, `backend_v3.session_state`); `docs/audit_log.md` (cierre del Bloque 2B, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2739,6 +2766,10 @@ of D2); on 14/11/2026 to add §26 — Phase 3.12, native read-only model
 inspection contracts and three gains charts; on 20/11/2026 to add §27 —
 Block 2A remediation: `select_majority_leaf`, exporter SQL/Python parity,
 ANSI quoting, `NaN` handling, cycle/finiteness guards, and multiclass export
-transparency.)
+transparency; on 20/11/2026 to add §28 — Block 2B remediation: strict Basel
+III CRE 32.4 governance classification, `pd_floor < 0.5` guard,
+`Session.active_tree` downstream wiring with metric invalidation,
+`_reindex_tree` `parent_id` remapping, `fix_spec`/`train`/`load_oot`
+atomicity and `NaT` rejection, and `population_col` fingerprint propagation.)
 
 ---
