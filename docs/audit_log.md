@@ -8421,3 +8421,32 @@ routing y composición de DTOs; frontend solo presenta.
 beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 
 **Retrospectiva pre-release.** Antes de publicar `1.0.0rc7`, se auditó el código y se resolvieron 5 zonas grises: (1) combo de partición deshabilitado sin nodo en el visor; (2) curvas de ganancias ocultas si no hay eventos; (3) `RulesPanel` y `SummaryPanel` capturan errores del backend sin caerse; (4) `get_node_cases("all")` tolera desalineación por nulos; (5) `get_summary()` devuelve valores seguros (None/CUSTOM) si faltan parámetros de entrenamiento.
+
+---
+
+### 20/11/2026 — Mini-cierre: Fase 1 limpieza e higiene de repositorio (rama chore/phase1-repo-cleanup)
+
+**Estado**: ✅ Completado (en rama `chore/phase1-repo-cleanup`, pendiente de revisión humana; sin push ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `.gitignore` — normalización 100% LF (corrigiendo CRLF en L61) con salto de línea final; añadidos `.venv*/`, `.coverage.*`, `.mypy_cache/`, `.ruff_cache/`, `logs/`, `.env`, `.env.*`, `*.pem`, `*.key`, `audit_reports/`, `diff_*.txt`; eliminada línea huérfana `!data/.gitkeep`.
+- `.aiderignore` — añadidos `dist/`, `build/`, `*.egg-info/`, `node_modules/`, `audit_reports/`, `.aider.chat.history.md`, `.aider.input.history`, con LF y salto de línea final.
+- `AGENTS.md` — anonimización de rutas locales/usuario en líneas 17, 161, 190 y 240 (`<RUTA_WSL_DEL_REPO>`, `%LOCALAPPDATA%\pipx\pipx\venvs\...`, `<RUTA_LOCAL_DEL_REPO>`), preservando UTF-8, LF y salto de línea final.
+- `docs/audit_log.md` — esta entrada de mini-cierre.
+- Índice de Git (`git rm --cached -r archive/legacy_docs`) — des-rastreo de los 7 archivos históricos de `archive/legacy_docs/` sin reescritura de historial y conservando el respaldo local intacto en disco: `antigravityrules.txt`, `brute_force_results.md`, `legacy_model_methodology_mrm.md`, `legacy_model_risk_assessment.md`, `sprint3_test_report.md`, `technical_reference_manual.md`, `ui_architecture_changelog.md`.
+
+**Hallazgos**:
+
+1. **Limpieza local en disco (basada en `C1`, `C3` y `F1`):**
+   - Eliminados los entornos virtuales redundantes y contaminados dentro del árbol: `.venv_3.14_backup/` (~1.01 GB), `.venv_linux/` (~1.08 GB) y, solo tras validar `660 passed` en entorno limpio externo (`$env:LOCALAPPDATA\venvs\treegov-311`, Python 3.11.9 con `pip install -e ".[dev,mcp]"`), eliminado `.venv/` (~1.43 GB).
+   - Eliminados cachés `__pycache__/` del árbol, 85 archivos `.log` históricos en `logs/`, historiales/caché locales de Aider (`.aider.chat.history.md`, `.aider.input.history`, `.aider.tags.cache.v4/`), UI legada abandonada sin imports (`archive/legacy_ui_sprint3/`), y artefactos residuales (`dist/`, `.pytest_cache/`, `treegov.egg-info/`, `node_modules/`, `data/ATSParserLog.txt`, `.git/opencode`).
+   - **Reducción medida en disco:** de **3,569.37 MB (3.49 GB)** antes de la limpieza a **6.12 MB** en estado limpio post-`gc` (reducción de **3,563.25 MB / ~3.48 GB**, equivalente a **99.83%** menos).
+2. **Compactación local de Git (`git gc --prune=now`):** de `1225` objetos sueltos (`19.53 MiB`) + `4` packfiles (`1.62 MiB`) a `0` objetos sueltos y `1` packfile (`1.69 MiB`, `2974` objetos).
+3. **Cierre de brechas en `.gitignore` y `.aiderignore`:** verificada cobertura con `git check-ignore -v` sobre `logs/test.txt`, `.env`, `.env.local`, `audit_reports/F1_Informe_Ejecutivo_Final.md`, `diff_utf8.txt` y `.venv_test/`.
+4. **Activos protegidos intactos:** verificados `tests/fixtures/uci/` (12 archivos: 6 `.csv` + 6 `.sha256`), `data/credit_risk_dataset.csv`, `frontend_v3/resources/styles.qss`, `frontend_v3/resources/icons/` (22 `.svg`), `audit_reports/`, `.aider.conf.example.yml`, `.aiderignore` y `archive/legacy_docs/` en disco local.
+5. **Protocolo PyPI:** cambio estrictamente de higiene y configuración del repositorio (no material; sin modificaciones en `backend_v3/`, `frontend_v3/`, `mcp_v3/`, `scripts/`, `tests/`, `treegov*.py`, `pyproject.toml`, `requirements.txt` ni `README*.md`), por lo que **NO se modifica versión ni se publica release en PyPI** (`1.0.0rc7` permanece intacta).
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **660/660 PASSED**.
+
+**Referencias cruzadas**: `audit_reports/C1_Estructura_Limpieza/reporte_auditoria_C1.md` (`C1-01`–`C1-05`, `C1-10`, `C1-13`–`C1-15`), `audit_reports/C3_Archivos_Ocultos_Legado/reporte_auditoria_C3.md` (`C3-04`, `C3-08`), `audit_reports/F1_Informe_Ejecutivo_Final.md`, `AGENTS.md` (Protocolo de mini-cierre y Protocolo PyPI).

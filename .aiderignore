@@ -11,3 +11,10 @@ data/
 __pycache__/
 .aider.tags.cache.v4/
 *.log
+dist/
+build/
+*.egg-info/
+node_modules/
+audit_reports/
+.aider.chat.history.md
+.aider.input.history

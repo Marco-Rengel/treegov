@@ -10,6 +10,7 @@ dist/
 .eggs/
 
 # Entornos virtuales (todos ignorados explícitamente)
+.venv*/
 .venv/
 .venv_linux/
 .venv_3.14_backup/
@@ -19,9 +20,13 @@ env/
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Logs
+logs/
 *.log
 
 # IDE
@@ -36,7 +41,6 @@ Thumbs.db
 
 # Datos confidenciales (nunca subir)
 data/*
-!data/.gitkeep
 
 # Configuración local de OpenCode (por analista)
 .opencode/
@@ -59,3 +63,13 @@ tmp_*
 node_modules/
 package.json
 package-lock.json
+
+# Secretos locales
+.env
+.env.*
+*.pem
+*.key
+
+# Reportes de auditoría interna y diffs temporales UTF-8
+audit_reports/
+diff_*.txt

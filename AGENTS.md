@@ -14,7 +14,7 @@ Instrucciones para agentes de IA que trabajen en este repositorio.
 
 ## Comandos esenciales (WSL bash)
 
-    cd "/mnt/c/Riesgos - copia/DecisionTree_Modeler"
+    cd "<RUTA_WSL_DEL_REPO>"
     source .venv_linux/bin/activate
     python -m pytest tests -q
     python treegov.py
@@ -158,7 +158,7 @@ Los tres deben imprimir `OK`. Cualquier `MISS` bloquea el upload.
 - **Entorno virtual:** `.venv/` (Windows). Activar con `.\.venv\Scripts\activate`.
 - **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 y `.venv_linux/`. Se mantiene operativo por si Windows vuelve a bloquear librerías (política WDAC).
 
-**Herramientas CLI: SIEMPRE vía pipx, nunca en el .venv del proyecto.** Las herramientas de desarrollo (Aider, build, twine, linters, formatters) NO se instalan con pip dentro del .venv del proyecto. Se instalan globalmente con pipx, que las aísla en su propio entorno. Motivo: instalar herramientas CLI dentro del .venv degrada las versiones de las librerías compartidas (numpy, scipy, packaging, rich) y rompe la compatibilidad verificada del proyecto. Esto ya ocurrió dos veces: el 27/09/2026 (Aider bajó numpy 2.4.6 → 1.26.4 y scipy 1.17.1 → 1.15.3) y el 12/10/2026 (build/twine subieron packaging 26.0 → 26.3 y rich 14.3.2 → 15.0.0, rompiendo los pins de Aider). Verificación obligatoria tras instalar cualquier herramienta CLI: ejecutar pip show <tool> y confirmar que Location apunta a C:\Users\maren\AppData\Local\pipx\pipx\venvs\..., no al .venv del proyecto.
+**Herramientas CLI: SIEMPRE vía pipx, nunca en el .venv del proyecto.** Las herramientas de desarrollo (Aider, build, twine, linters, formatters) NO se instalan con pip dentro del .venv del proyecto. Se instalan globalmente con pipx, que las aísla en su propio entorno. Motivo: instalar herramientas CLI dentro del .venv degrada las versiones de las librerías compartidas (numpy, scipy, packaging, rich) y rompe la compatibilidad verificada del proyecto. Esto ya ocurrió dos veces: el 27/09/2026 (Aider bajó numpy 2.4.6 → 1.26.4 y scipy 1.17.1 → 1.15.3) y el 12/10/2026 (build/twine subieron packaging 26.0 → 26.3 y rich 14.3.2 → 15.0.0, rompiendo los pins de Aider). Verificación obligatoria tras instalar cualquier herramienta CLI: ejecutar pip show <tool> y confirmar que Location apunta a %LOCALAPPDATA%\pipx\pipx\venvs\..., no al .venv del proyecto.
 
 **UTF-8 en PowerShell (lección 18/10/2026).** Al verificar archivos con caracteres no-ASCII (acentos, comillas tipográficas, `§`, `≥`, guiones largos), `git diff` en la consola de PowerShell puede mostrar mojibake aunque el archivo en disco esté correcto. Motivo: PowerShell decodifica stdout con un codepage no UTF-8 y la corrupción ocurre en la tubería, no en el archivo. `git diff | Out-File -Encoding utf8` NO arregla el problema, porque el daño ocurre antes del `Out-File`.
 
@@ -187,7 +187,7 @@ Verificación fiable (una de dos):
 
 **Arranque (Windows PowerShell):**
 
-    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    cd "<RUTA_LOCAL_DEL_REPO>"
     .\.venv\Scripts\activate
     opencode
 
@@ -237,7 +237,7 @@ Se usa solo si OpenCode falla en algún caso concreto. No desinstalar.
 
 **Arranque del respaldo (Windows PowerShell):**
 
-    cd "C:\Riesgos - copia\DecisionTree_Modeler"
+    cd "<RUTA_LOCAL_DEL_REPO>"
     .\.venv\Scripts\activate
     $key = Read-Host "Pega tu Moonshot API key" -AsSecureString
     $env:MOONSHOT_API_KEY = [System.Net.NetworkCredential]::new("", $key).Password
