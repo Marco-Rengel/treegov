@@ -2,5 +2,10 @@
 
 Sala limpia: prohibido importar PySide6/PyQt aqui dentro.
 Stack permitido: numpy, pandas, scipy.stats.
-Prohibido: sklearn, statsmodels, xgboost, lightgbm (bloqueado por import_guard).
+Prohibido: sklearn, statsmodels, xgboost, lightgbm, catboost, torch,
+optbinning, scorecardpy, tensorflow, keras (bloqueado por import_guard).
 """
+
+from .import_guard import install_import_guard
+
+install_import_guard()

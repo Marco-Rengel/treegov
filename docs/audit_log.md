@@ -8641,3 +8641,41 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **748/748 PASSED** (anterior: `735`; `+13` pruebas nuevas de regresión). Suite dirigida (`test_tree_builder.py`, `test_splitting.py`, `test_validation.py`, `test_reporting.py`, `test_stability.py`, `test_session_state.py`, `test_gui_smoke.py`) → **300/300 PASSED** (Sala Limpia y Caja Blanca en verde).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-11`, `CRIT-12`); Hosmer, Lemeshow & Sturdivant (2013, §5.2.2); `docs/design_decisions.md` §7.2 y §32; `docs/api.md`.
+
+---
+
+### 20/11/2026 — Cierre Bloque 2G: Coherencia metodológica SR 11-7 (`CRIT-13`), Sala Limpia bidireccional, defensa de Caja Blanca y oráculo manual (`CRIT-14`) (rama `release/phase2-mrm-fixes`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-mrm-fixes`, cierre final de hallazgos críticos **16/16** de la Fase 2, pendiente de revisión humana; sin `git push` ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/import_guard.py` — ampliación de `_BANNED_ROOTS` añadiendo `"torch"`, `"optbinning"`, `"scorecardpy"`, `"tensorflow"` y `"keras"` (conservando `"sklearn"`, `"scikit-learn"`, `"scikit_learn"`, `"statsmodels"`, `"xgboost"`, `"lightgbm"`, `"catboost"`).
+- `backend_v3/__init__.py` — auto-instalación idempotente de `install_import_guard()` al cargar el paquete (sin efectos sobre Qt).
+- `mcp_v3/__init__.py` — auto-instalación idempotente de `install_import_guard()` al cargar el paquete.
+- `scripts/validate_uci.py` — instalación explícita de `install_import_guard()` inmediatamente después de `sys.path.insert(0, str(ROOT_DIR))` y antes de importar `backend_v3.session_state`.
+- `backend_v3/tree_builder.py` — nueva propiedad de solo lectura `TreeNode.gini_impurity` que calcula la impureza empírica exacta $I_G(t) = 1 - \sum_{k=0}^{K-1} (n_k / n)^2$ sobre `n_events`/`n` (Breiman, Friedman, Olshen & Stone 1984, §4.3; `0.0` si `n <= 0`), evitando la distorsión por Jeffreys/piso y sacando el cálculo del frontend.
+- `frontend_v3/tree_view.py` — eliminación de `1.0 - sum(p**2 for p in node.pd_final)` en `_footer_text()`; lectura directa de `node.gini_impurity` con etiqueta inequívoca `"Impurity (I_G): {node.gini_impurity:.3f}"` (eliminando la colisión terminológica con el Gini discriminante $2 \cdot \text{AUC} - 1$).
+- `backend_v3/reporting.py` — campos aditivos `GainsRow.pop_cum_pct: float = 0.0` y `GainsRow.bad_cum_pct: float = 0.0` poblados en `build_gains_table()`; precalculo en backend de `oot_dto["csi_worst_flag"]` en `build_oos_oot_report()` (`None` si `csi` vacío, `"UNDETERMINED"` si algún `c.csi` es no finito, o `.flag` del mayor `c.csi`).
+- `frontend_v3/gains_charts.py` — lectura prioritaria de `row.get("pop_cum_pct")` y `row.get("bad_cum_pct")` (fallback `_ratio` conservado solo para fixtures sintéticos mínimos de tests).
+- `frontend_v3/metrics_panel.py` — lectura prioritaria de `oot["csi_worst_flag"]` en `_build_oot_section()` (fallback conservado solo para dicts sintéticos que omitan la clave).
+- `tests/test_statistics.py` — eliminación de `chi2_contingency`, `f_oneway` y `levene` de `scipy.stats` (conservando exclusivamente `.sf()` de `chi2` y `f`); verificación de todos los casos (incluido el caso heterocedástico de `test_brown_forsythe_hand`) por derivación matemática manual desde primeros principios.
+- `tests/test_gui_smoke.py` — ampliación de `_BANNED` en `test_frontend_clean_room()` y restricción AST de imports `backend_v3` permitidos (`session_state`, `log_config`, `import_guard`, `tree_builder`); nuevo guardrail AST inverso `test_backend_clean_room()` (cero Qt/`frontend_v3`/`_BANNED_ROOTS` en `backend_v3/`); nuevos tests verificando auto-instalación en `backend_v3`/`mcp_v3` y bloqueo `ImportError` para `sklearn`, `torch`, `optbinning`, `scorecardpy`, `tensorflow` y `keras`.
+- `tests/test_tree_view.py` — actualización de aserciones del footer de hoja de `"Gini:"` a `"Impurity (I_G):"` y nuevo test `test_leaf_footer_uses_empirical_gini_impurity_not_pd_final`.
+- `tests/test_reporting.py` — nuevo test `test_gains_row_precomputed_cum_pct_and_oot_csi_worst_flag`.
+- `docs/methodology.md` — sincronización integral SR 11-7 con el código vigente: `§1.10` (CHAID continuas: 10 cortes en cuantiles `1/11..10/11` → hasta 11 bins sin pesos, `right=True` `(a, b]`, `ORDINAL`, pre-fusión, `bin_edges` fuera de `params_fingerprint` global, Cochran en Exhaustive CHAID), `§2.6`/`§2.10` (alcance de `surrogate_splits`, C&RT ponderado y estabilidad numérica), `§3.4`/`§3.7bis`/`§3.8` (ANOVA/Brown-Forsythe/mediana ponderadas, varianza de Kish $W_k - \sum w_i^2 / W_k$, Citardauq, `dummies_lda` → `NotImplementedError` y alcance de `TargetType.CONTINUOUS`), `§4` (`SplitConfig.bin_edges`), `§5.4` (Política de Atípicos bajo SR 11-7), `§6.7` (Jeffreys ponderado y clasificación estricta `BANKING`/`RESEARCH`/`CUSTOM`), `§7` (cuota real `Q_j = N_j * train_frac`, `check B2` y rechazo de `NaN` en `y`), `§8.3`/`§8.5`/`§8.6`/`§8.7`/`§8.8`/`§8.9` + nueva `§8.9bis` (reparando enlace desde `design_decisions.md:1918`, HL OOS tie-preserving con `gl = G_eff` y `_HL_EPS = 1e-6`, `w_accuracy`, PSI/CSI Bloque 2F, `Gini_train <= 0` y alcance conceptual del umbral asimétrico), `§9` (IFRS 9 / ECL Bloque 2C: `ECLDialog` `% -> decimal`, `eir >= 0`, Etapa 3 `PD = 1.0`, `ecl_applicable`/`total_ecl_staged`, separación PD prudencial vs PIT) y bibliografía completa (Hosmer, Lemeshow & Sturdivant 2013, Kish 1965, Chan, Golub & LeVeque 1983, Breiman et al. 1984).
+- `docs/3.10.b_design_chaid_binning.md` — corrección de `§4.2` (`bin_edges` es parte del `SplitConfig` del nodo y NO entra en `params_fingerprint` global) y actualización de `§4.3` con la cobertura vigente de tests de routing por `bin_edges`.
+- `docs/design_decisions.md` — aclaración de `nominal_high_card = "dummies_lda"` (`NotImplementedError` en v1) en `§4.2` y `§11`, nueva sección `§33` y actualización de la nota de versión.
+- `docs/api.md` — documentación de `TreeNode.gini_impurity`, `GainsRow.pop_cum_pct`/`bad_cum_pct`, `build_oos_oot_report()["oot"]["csi_worst_flag"]`, y raíces ampliadas + auto-instalación de `import_guard`.
+- `docs/audit_log.md` — esta entrada de cierre del Bloque 2G.
+
+**Hallazgos resueltos**:
+
+1. **`CRIT-13` (coherencia matemática y documental SR 11-7):** sincronización completa de `docs/methodology.md`, `docs/3.10.b_design_chaid_binning.md`, `docs/design_decisions.md` y `docs/api.md` contra el código auditado (reparando el enlace `§8.9bis` y añadiendo Política de Atípicos `§5.4`).
+2. **`CRIT-14` (Sala Limpia bidireccional, colisión terminológica de Gini, defensa de Caja Blanca y oráculo manual):** eliminada toda analítica de `tree_view.py`, `gains_charts.py` y `metrics_panel.py`; etiqueta inequívoca `Impurity (I_G)` desde `TreeNode.gini_impurity`; `_BANNED_ROOTS` extendido y auto-instalado en `backend_v3`, `mcp_v3` y `scripts/validate_uci.py`; AST guardrail bidireccional en `tests/test_gui_smoke.py`; y oráculo matemático puro en `tests/test_statistics.py`.
+3. **Cierre 16/16 de hallazgos críticos (`F1`):** con `CRIT-13` y `CRIT-14` quedan remediados y verificados los 16 hallazgos críticos del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01` a `CRIT-16`).
+4. **Protocolo PyPI:** remediación acumulada en `release/phase2-mrm-fixes` sin `git push` ni publicación en PyPI (`main` en `3516939`, `pyproject.toml` en `1.0.0rc7`, `README*.md` y `docs/philosophy*.md` intactos, reservados para Bloque 2H).
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **752/752 PASSED** (anterior: `748`; `+4` pruebas nuevas de regresión). Suite dirigida (`test_statistics.py`, `test_gui_smoke.py`, `test_tree_view.py`, `test_tree_builder.py`, `test_reporting.py`, `test_metrics_panel.py`, `test_reports_panel.py`, `test_mcp_server.py`) → **182/182 PASSED** (Sala Limpia bidireccional y Caja Blanca extendida en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-13`, `CRIT-14`, cierre 16/16); `docs/methodology.md`; `docs/3.10.b_design_chaid_binning.md`; `docs/design_decisions.md` §33; `docs/api.md`.

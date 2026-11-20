@@ -490,7 +490,7 @@ def test_node_paint_classic_station_design():
     assert _caption_text(root) == "edad"               # predictor (interno)
     assert _caption_text(leaf) == ""                   # hoja: cadena vacía
     assert "Adj. P-value:" in _footer_text(root)       # stats del split
-    assert "Gini:" in _footer_text(leaf)               # impureza de la hoja
+    assert "Impurity (I_G):" in _footer_text(leaf)     # impureza empirica de la hoja
     assert NodeItem(root, pal, 1.0)._header == "edad"
     assert NodeItem(leaf, pal, 0.5)._header == ""
     # 6. título de cabecera: "Node <id> — <predictor>" (interno) /
@@ -504,7 +504,7 @@ def test_node_paint_classic_station_design():
         == f"{tr('tree_prop_node')} {leaf.node_id}"
     )
     assert "Adj. P-value:" in NodeItem(root, pal, 1.0)._footer
-    assert "Gini:" in NodeItem(leaf, pal, 0.5)._footer
+    assert "Impurity (I_G):" in NodeItem(leaf, pal, 0.5)._footer
 
 
 def test_node_box_fixed_geometry():
@@ -719,6 +719,39 @@ def test_tree_context_menu_signal():
     )
     panel._view.contextMenuEvent(ev2)
     assert recibidos == [0]
+
+
+def test_leaf_footer_uses_empirical_gini_impurity_not_pd_final():
+    """CRIT-14: el footer de hoja lee node.gini_impurity (empirico n_events/n)
+    con etiqueta inequivoca 'Impurity (I_G):', distinto de 1 - sum(pd_final^2)
+    cuando Jeffreys o pd_floor suavizan la probabilidad."""
+    from frontend_v3.tree_view import _footer_text
+
+    # Hoja pura empiricamente: n=10, n_events=(0, 10) -> I_G = 0.000
+    # Pero en modo BANKING Jeffreys+floor da pd_final=(0.04545..., 0.95454...)
+    # cuyo 1 - sum(p^2) seria ~0.087 (muy distinto de 0.000).
+    leaf_pure = TreeNode(
+        node_id=1, depth=1, parent_id=0, n=10, n_events=(0, 10),
+        pd_jeffreys=(0.5 / 11.0, 10.5 / 11.0),
+        pd_final=(0.5 / 11.0, 10.5 / 11.0),
+        class_labels=("Bad", "Good"),
+        is_leaf=True, split=None, child_ids=(), leaf_reason="min_child",
+    )
+    assert leaf_pure.gini_impurity == 0.0
+    pd_based = 1.0 - sum(p**2 for p in leaf_pure.pd_final)
+    assert pd_based > 0.08
+    assert _footer_text(leaf_pure) == "Impurity (I_G): 0.000"
+
+    # Hoja con mezcla 3/10 y 7/10 -> I_G = 1 - (0.09 + 0.49) = 0.420
+    leaf_mix = TreeNode(
+        node_id=2, depth=1, parent_id=0, n=10, n_events=(3, 7),
+        pd_jeffreys=(3.5 / 11.0, 7.5 / 11.0),
+        pd_final=(3.5 / 11.0, 7.5 / 11.0),
+        class_labels=("Bad", "Good"),
+        is_leaf=True, split=None, child_ids=(), leaf_reason="min_child",
+    )
+    assert abs(leaf_mix.gini_impurity - 0.42) < 1e-12
+    assert _footer_text(leaf_mix) == f"Impurity (I_G): {leaf_mix.gini_impurity:.3f}"
 
 
 # ---------------------------------------------------------------------------

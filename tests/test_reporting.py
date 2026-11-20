@@ -886,6 +886,77 @@ def test_reporting_rejects_nan_and_invalid_probabilities() -> None:
             )
 
 
+def test_gains_row_precomputed_cum_pct_and_oot_csi_worst_flag() -> None:
+    """CRIT-14: pop_cum_pct, bad_cum_pct y oot['csi_worst_flag'] en backend."""
+    gt = build_gains_table(_model_3_leaves(), _standard_assign(), _standard_y())
+    assert len(gt.rows) == 3
+    assert gt.rows[0].pop_cum_pct == pytest.approx(50 / 250)
+    assert gt.rows[0].bad_cum_pct == pytest.approx(5 / 95)
+    assert gt.rows[1].pop_cum_pct == pytest.approx(150 / 250)
+    assert gt.rows[1].bad_cum_pct == pytest.approx(35 / 95)
+    assert gt.rows[2].pop_cum_pct == pytest.approx(1.0)
+    assert gt.rows[2].bad_cum_pct == pytest.approx(1.0)
+
+    # Caso sin eventos (n_bad == 0): bad_cum_pct == 0.0 sin division por cero
+    gt_zero = build_gains_table(
+        _model_3_leaves(), _standard_assign(), np.zeros(250, dtype=int)
+    )
+    assert all(r.bad_cum_pct == 0.0 for r in gt_zero.rows)
+    assert gt_zero.rows[-1].pop_cum_pct == pytest.approx(1.0)
+
+    # oot_dto["csi_worst_flag"]: normal, vacio y no finito
+    base_oot = _oot_stub()
+    st_ok = SessionState(
+        tree=_tree_stub(),
+        oot_report=OOTReport(
+            metrics=None,
+            drop=base_oot.drop,
+            psi=base_oot.psi,
+            csi=(
+                CSIReport(predictor="x1", csi=0.03, flag="STABLE", per_bin=()),
+                CSIReport(predictor="x2", csi=0.31, flag="UNSTABLE", per_bin=()),
+            ),
+            n_oot=200,
+            n_excluded=0,
+        ),
+    )
+    dto_ok = build_oos_oot_report(st_ok)
+    assert dto_ok is not None and dto_ok["oot"]["csi_worst_flag"] == "UNSTABLE"
+
+    st_empty = SessionState(
+        tree=_tree_stub(),
+        oot_report=OOTReport(
+            metrics=None,
+            drop=base_oot.drop,
+            psi=base_oot.psi,
+            csi=(),
+            n_oot=200,
+            n_excluded=0,
+        ),
+    )
+    dto_empty = build_oos_oot_report(st_empty)
+    assert dto_empty is not None and dto_empty["oot"]["csi_worst_flag"] is None
+
+    st_nan = SessionState(
+        tree=_tree_stub(),
+        oot_report=OOTReport(
+            metrics=None,
+            drop=base_oot.drop,
+            psi=base_oot.psi,
+            csi=(
+                CSIReport(predictor="x1", csi=0.03, flag="STABLE", per_bin=()),
+                CSIReport(
+                    predictor="x2", csi=float("nan"), flag="UNDETERMINED", per_bin=()
+                ),
+            ),
+            n_oot=200,
+            n_excluded=0,
+        ),
+    )
+    dto_nan = build_oos_oot_report(st_nan)
+    assert dto_nan is not None and dto_nan["oot"]["csi_worst_flag"] == "UNDETERMINED"
+
+
 # ---------------------------------------------------------------------------
 # ejecucion directa
 # ---------------------------------------------------------------------------

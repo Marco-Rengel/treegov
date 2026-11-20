@@ -1,10 +1,11 @@
 """Guardia de importaciones de caja blanca (DecisionTree_Modeler, Fase 0).
 
 Bloquea en tiempo de importacion cualquier libreria de "caja negra"
-(sklearn / scikit-learn / statsmodels / xgboost / lightgbm / catboost)
-mediante un meta-path finder instalado en sys.meta_path, de modo que la
-proteccion aplica incluso a imports dinamicos (importlib.import_module,
-__import__) y a submodulos (p. ej. sklearn.tree).
+(sklearn / scikit-learn / statsmodels / xgboost / lightgbm / catboost /
+torch / optbinning / scorecardpy / tensorflow / keras) mediante un
+meta-path finder instalado en sys.meta_path, de modo que la proteccion
+aplica incluso a imports dinamicos (importlib.import_module, __import__)
+y a submodulos (p. ej. sklearn.tree).
 
 Politica del proyecto: matematica auditable exclusivamente con
 numpy / pandas / scipy.stats. Formulas explicitas en el codigo.
@@ -26,6 +27,11 @@ _BANNED_ROOTS: frozenset[str] = frozenset(
         "xgboost",
         "lightgbm",
         "catboost",
+        "torch",
+        "optbinning",
+        "scorecardpy",
+        "tensorflow",
+        "keras",
     }
 )
 

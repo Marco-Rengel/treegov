@@ -80,6 +80,16 @@ def build_oos_oot_report(st: SessionState) -> dict[str, Any] | None:
         # Fase 3.3.c: contadores de filtro de poblacion
         oot_dto["n_excluded_population"] = st.n_excluded_population_oot
         oot_dto["population_breakdown"] = st.population_breakdown_oot
+        # Bloque 2G (CRIT-14): resumen de peor CSI precalculado en backend
+        csi_reports = st.oot_report.csi
+        if not csi_reports:
+            oot_dto["csi_worst_flag"] = None
+        elif any(not math.isfinite(c.csi) for c in csi_reports):
+            oot_dto["csi_worst_flag"] = "UNDETERMINED"
+        else:
+            oot_dto["csi_worst_flag"] = max(
+                csi_reports, key=lambda c: c.csi
+            ).flag
     return {
         "oos": None if st.oos_metrics is None else asdict(st.oos_metrics),
         "oot": oot_dto,
@@ -136,6 +146,10 @@ class GainsRow:
     w_n_per_class: tuple[float, ...] = ()
     w_n_per_class_cum: tuple[float, ...] = ()
     w_n_per_class_decum: tuple[float, ...] = ()
+    # Bloque 2G (CRIT-14): proporciones acumuladas precalculadas en backend
+    # para consumo directo de graficos sin analitica en frontend_v3.
+    pop_cum_pct: float = 0.0
+    bad_cum_pct: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -538,6 +552,8 @@ def build_gains_table(
                 w_n_decum=dwn,
                 w_bad_decum=dwbad,
                 w_bad_rate_decum=w_bad_rate_decum_g,
+                pop_cum_pct=cum_n / n_total,
+                bad_cum_pct=cum_bad / n_bad if n_bad > 0 else 0.0,
                 **per_class,
             )
         )

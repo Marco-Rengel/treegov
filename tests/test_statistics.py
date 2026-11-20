@@ -1,7 +1,8 @@
 """Tests de backend_v3/statistics.py (Fase 0, Paso 5).
 
-Valores de referencia verificados a mano (aprobados en la auditoria del
-diseno) y referencias cruzadas contra scipy.stats (dependencia permitida).
+Valores de referencia verificados a mano desde primeros principios
+(aprobados en la auditoria del diseno), utilizando exclusivamente las
+funciones de supervivencia .sf() de scipy.stats (politica Clean Room).
 
 Ejecutable de DOS formas, sin dependencia obligatoria de pytest
 (pytest NO forma parte de requirements.txt):
@@ -16,10 +17,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.stats import chi2
-from scipy.stats import chi2_contingency
 from scipy.stats import f as f_dist
-from scipy.stats import f_oneway as sp_f_oneway
-from scipy.stats import levene as sp_levene
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -127,10 +125,6 @@ def test_pearson_hand():
     assert res.df == (1,)
     assert math.isclose(res.statistic, 20.0 / 3.0, rel_tol=1e-12)
     assert math.isclose(res.p_value, float(chi2.sf(20.0 / 3.0, 1)), rel_tol=1e-12)
-    # Referencia cruzada con scipy (sin correccion de Yates)
-    ref = chi2_contingency(np.array(tabla), correction=False)
-    assert math.isclose(res.statistic, ref.statistic, rel_tol=1e-12)
-    assert math.isclose(res.p_value, ref.pvalue, rel_tol=1e-12)
 
 
 def test_pearson_independence():
@@ -164,9 +158,6 @@ def test_anova_hand():
     assert res.df == (2, 6)
     assert math.isclose(res.statistic, 27.0, rel_tol=1e-12)
     assert math.isclose(res.p_value, float(f_dist.sf(27.0, 2, 6)), rel_tol=1e-12)
-    ref = sp_f_oneway([1, 2, 3], [4, 5, 6], [7, 8, 9])
-    assert math.isclose(res.statistic, ref.statistic, rel_tol=1e-12)
-    assert math.isclose(res.p_value, ref.pvalue, rel_tol=1e-12)
 
 
 def test_brown_forsythe_hand():
@@ -182,17 +173,34 @@ def test_brown_forsythe_hand():
     assert res.df == (1, 4)
     assert math.isclose(res.statistic, 0.8, rel_tol=1e-12)
     assert math.isclose(res.p_value, float(f_dist.sf(0.8, 1, 4)), rel_tol=1e-12)
-    ref = sp_levene([0, 1, 2], [0, 2, 4], center="median")
-    assert math.isclose(res.statistic, ref.statistic, rel_tol=1e-12)
-    assert math.isclose(res.p_value, ref.pvalue, rel_tol=1e-12)
 
-    # Caso heterocedastico claro: solamente referencia cruzada con scipy
+    # Caso heterocedastico claro: derivacion matematica manual pura
+    # low ordenado = [0.8, 0.9, 1.0, 1.05, 1.1, 1.2] -> mediana = 1.025
+    # high ordenado = [1.0, 2.0, 4.5, 5.0, 8.0, 9.0] -> mediana = 4.75
     low = [1.0, 1.2, 0.8, 1.1, 0.9, 1.05]
     high = [1.0, 5.0, 9.0, 2.0, 8.0, 4.5]
     res_h = brown_forsythe(low, high)
-    ref_h = sp_levene(low, high, center="median")
-    assert math.isclose(res_h.statistic, ref_h.statistic, rel_tol=1e-12)
-    assert math.isclose(res_h.p_value, ref_h.pvalue, rel_tol=1e-12)
+    med_low = (1.0 + 1.05) / 2.0
+    med_high = (4.5 + 5.0) / 2.0
+    z_low = [abs(x - med_low) for x in low]
+    z_high = [abs(x - med_high) for x in high]
+    mean_low = sum(z_low) / len(z_low)
+    mean_high = sum(z_high) / len(z_high)
+    grand = (sum(z_low) + sum(z_high)) / (len(z_low) + len(z_high))
+    ssb = (
+        len(z_low) * (mean_low - grand) ** 2
+        + len(z_high) * (mean_high - grand) ** 2
+    )
+    ssw = (
+        sum((z - mean_low) ** 2 for z in z_low)
+        + sum((z - mean_high) ** 2 for z in z_high)
+    )
+    df1, df2 = 1, len(low) + len(high) - 2
+    w_manual = (ssb / df1) / (ssw / df2)
+    p_manual = float(f_dist.sf(w_manual, df1, df2))
+    assert res_h.df == (df1, df2)
+    assert math.isclose(res_h.statistic, w_manual, rel_tol=1e-12)
+    assert math.isclose(res_h.p_value, p_manual, rel_tol=1e-12)
 
 
 def test_degenerate_f():

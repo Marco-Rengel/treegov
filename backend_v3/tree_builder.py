@@ -136,6 +136,20 @@ class TreeNode:
     # ones (logical position: right after n_events).
     w_events: tuple[float, ...] = ()
 
+    @property
+    def gini_impurity(self) -> float:
+        """Empirical node Gini impurity I_G(t) = 1 - sum_k (n_k / n)^2.
+
+        Uses raw empirical counts (n_events / n) per Breiman, Friedman,
+        Olshen & Stone (1984, §4.3), avoiding Jeffreys/floor distortion.
+        """
+        if self.n <= 0 or not self.n_events:
+            return 0.0
+        return max(
+            1.0 - sum((k / self.n) ** 2 for k in self.n_events),
+            0.0,
+        )
+
 
 @dataclass(frozen=True)
 class TreeModel:

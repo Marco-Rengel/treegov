@@ -213,11 +213,16 @@ class MetricsPanel(QWidget):
         self._add_badge_row(
             "oot_label_gini_drop", drop.get("alert_oot", "UNDETERMINED")
         )
-        csi = oot.get("csi") or ()
-        if isinstance(csi, (list, tuple)) and len(csi) > 0:
-            valid = [c for c in csi if isinstance(c, dict)]
-            if valid:
-                worst = max(valid, key=lambda c: float(c.get("csi") or 0.0))
-                self._add_badge_row(
-                    "oot_label_csi", worst.get("flag", "UNDETERMINED")
-                )
+        if "csi_worst_flag" in oot:
+            worst_flag = oot["csi_worst_flag"]
+            if worst_flag is not None:
+                self._add_badge_row("oot_label_csi", worst_flag)
+        else:
+            csi = oot.get("csi") or ()
+            if isinstance(csi, (list, tuple)) and len(csi) > 0:
+                valid = [c for c in csi if isinstance(c, dict)]
+                if valid:
+                    worst = max(valid, key=lambda c: float(c.get("csi") or 0.0))
+                    self._add_badge_row(
+                        "oot_label_csi", worst.get("flag", "UNDETERMINED")
+                    )

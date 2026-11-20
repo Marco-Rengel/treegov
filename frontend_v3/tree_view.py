@@ -200,14 +200,14 @@ def _caption_text(node: TreeNode) -> str:
 
 def _footer_text(node: TreeNode) -> str:
     """Footer band text (bottom 20 px of the box): split stats (internal)
-    or node Gini (terminal node).
+    or empirical node impurity I_G (terminal node).
 
-    The Gini shown is the node impurity derived from pd_final (display
-    only, pandas-free); split stats are precomputed by the backend.
+    All statistics are precomputed by the backend (clean room); the label
+    ``Impurity (I_G)`` avoids terminological collision with the
+    discriminatory Gini (2*AUC - 1).
     """
     if node.is_leaf:
-        gini = 1.0 - sum(p**2 for p in node.pd_final) if node.pd_final else 0.0
-        return f"Gini: {gini:.3f}"
+        return f"Impurity (I_G): {node.gini_impurity:.3f}"
     split = node.split
     p_adj = (
         split.p_value_adjusted

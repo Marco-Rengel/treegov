@@ -104,6 +104,13 @@ underscore) are internal and may change without notice.
   `"RESEARCH"` iff `apply_jeffreys is False` and `pd_floor is None`;
   `"CUSTOM"` otherwise, including `0.0` or legacy `0.0003`).
 - `TreeBuilder`, `TreeModel`, `TreeNode`
+  - `TreeNode.gini_impurity -> float` (read-only property, Block 2G,
+    20/11/2026): empirical node Gini impurity
+    $I_G(t) = 1 - \sum_{k=0}^{K-1} (n_k / n)^2$ computed from raw counts
+    (`n_events / n`, Breiman et al. 1984 §4.3; `0.0` if `n <= 0`), avoiding
+    Jeffreys/floor distortion and keeping impurity calculations out of
+    `frontend_v3` (rendered in `TreeView` as `Impurity (I_G)` to prevent
+    terminological collision with discriminatory Gini `2*AUC - 1`).
 - `TreeBuilder(..., validation_scheme="holdout", cv_k=None)` — kwargs
   keyword-only nuevos (Fase 2.1.b). `validation_scheme` y `cv_k`
   entran en `params_fingerprint` SOLO si difieren del default
@@ -465,12 +472,20 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
 
 ## backend_v3.reporting
 
-- `build_oos_oot_report(st)` — flat OOS/OOT DTO (Phase 2.3.d).
+- `build_oos_oot_report(st)` — flat OOS/OOT DTO (Phase 2.3.d). Since
+  Block 2G (20/11/2026), when `st.oot_report is not None`, precomputes
+  `oot["csi_worst_flag"]` in the backend (`None` if `csi` is empty,
+  `"UNDETERMINED"` if any CSI value is non-finite, otherwise the `.flag`
+  of the covariate with maximum `csi`), eliminating frontend aggregation.
 - `GainsRow` (frozen dataclass) — one gains-table line. Extended in
-  Phase 3.5.b with 6 additive fields at the end, all empty by default:
-  `n_per_class`, `n_per_class_cum`, `n_per_class_decum`, and the
-  weighted siblings `w_n_per_class`, `w_n_per_class_cum`,
-  `w_n_per_class_decum`. In the binary path they stay empty.
+  Phase 3.5.b with 6 additive fields (`n_per_class`, `n_per_class_cum`,
+  `n_per_class_decum`, and the weighted siblings `w_n_per_class`,
+  `w_n_per_class_cum`, `w_n_per_class_decum`; empty in the binary path)
+  and in Block 2G (20/11/2026) with 2 additive cumulative-share fields
+  defaulting to `0.0`: `pop_cum_pct` (`n_cum / n_total`) and
+  `bad_cum_pct` (`n_bad_cum / n_bad` if `n_bad > 0` else `0.0`),
+  populated by `build_gains_table()` for direct consumption by gains
+  charts without frontend arithmetic.
 - `GainsTableResult` (frozen dataclass) — extended in Phase 3.5.b
   with 5 additive fields: `class_labels`, `n_per_class_global`,
   `w_n_per_class_global`, `ks_pairs`, `auc_pairs`. Empty in the binary
@@ -556,6 +571,14 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
 ## backend_v3.import_guard
 
 - `install_import_guard()`, `is_installed()`
+  - White-box meta-path blocker (`_BANNED_ROOTS`): blocks `sklearn`,
+    `scikit-learn`, `scikit_learn`, `statsmodels`, `xgboost`, `lightgbm`,
+    `catboost` and, since Block 2G (20/11/2026), also `torch`,
+    `optbinning`, `scorecardpy`, `tensorflow` and `keras`.
+  - Auto-installed idempotently at package/entry-point load in
+    `backend_v3/__init__.py`, `mcp_v3/__init__.py`,
+    `frontend_v3/__init__.py`, `treegov_mcp.py` and
+    `scripts/validate_uci.py`.
 
 ## mcp_v3 (Phase 5.0 — headless MCP layer, stable since 5.0.b)
 

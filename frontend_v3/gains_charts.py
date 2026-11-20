@@ -219,10 +219,14 @@ class GainsCharts(QWidget):
         for row in rows:
             if not isinstance(row, dict):
                 continue
-            x = _ratio(row.get("n_cum"), n_total)
+            x = _finite(row.get("pop_cum_pct"))
+            if x is None:
+                x = _ratio(row.get("n_cum"), n_total)
             if x is None:
                 continue
-            cumulative = _ratio(row.get("n_bad_cum"), n_bad_total)
+            cumulative = _finite(row.get("bad_cum_pct"))
+            if cumulative is None:
+                cumulative = _ratio(row.get("n_bad_cum"), n_bad_total)
             response = _finite(row.get("bad_rate"))
             lift = _finite(row.get("lift_cum"))
             if cumulative is not None:

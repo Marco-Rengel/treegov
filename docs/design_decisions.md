@@ -466,8 +466,10 @@ Loh & Shih (1997) propose a different route (dummies + LDA).
 - **(b)** Heuristic by class rate, sorted descending, cuts between
   adjacent positions. **Chosen.**
 
-**Decision.** Rate-based heuristic. **On the list for Phase 3.0.g** as
-`nominal_high_card: str = "rate"` (canonical: `"dummies_lda"`).
+**Decision.** Rate-based heuristic. **Exposed in Phase 3.0.g** as
+`nominal_high_card: str = "rate"` (canonical value `"dummies_lda"` is
+reserved in the signature and raises `NotImplementedError` in v1; only
+`"rate"` is implemented).
 
 **Consequences.** The result for K > 10 differs from canonical QUEST.
 Documented as a fidelity note in `quest_engine.py`. This is one of the
@@ -1390,7 +1392,7 @@ existing models remain reproducible.
 | # | Decision | Current default (TreeGov) | Canonical alternative | Parameter (implemented) |
 |---|---|---|---|---|
 | 1 | QUEST Bonferroni family (§4.1) | `M = 2J` | `M = J` | `bonferroni_family: int = 2` |
-| 2 | QUEST nominal high-cardinality (§4.2) | rate-based heuristic | dummies + LDA | `nominal_high_card: str = "rate"` |
+| 2 | QUEST nominal high-cardinality (§4.2) | rate-based heuristic | dummies + LDA *(reserved; `NotImplementedError` in v1)* | `nominal_high_card: str = "rate"` |
 | 3 | QUEST QDA root restriction (§4.3) | restricted to `[min, max]` | unrestricted | `qda_root_restriction: bool = True` |
 | 4 | PSI renormalization after clip (§7.4) | not renormalized | renormalized | `psi_renormalize: bool = False` |
 
@@ -1399,8 +1401,10 @@ existing models remain reproducible.
 1. **Defaults preserve current behaviour.** A user who does not touch
    the parameter gets the same model as before. No silent change.
 2. **Canonical mode is one parameter away.** `bonferroni_family = 1`,
-   `nominal_high_card = "dummies_lda"`, `qda_root_restriction = False`,
-   `psi_renormalize = True`.
+   `qda_root_restriction = False`, `psi_renormalize = True`. Note:
+   `nominal_high_card = "dummies_lda"` is reserved in the constructor
+   signature for future work and currently raises `NotImplementedError`
+   in v1 (only `"rate"` is implemented).
 3. **Fingerprint reflects the choice.** All four parameters enter
    `engine_params` (for QUEST) or the stability configuration, so two
    models with different choices get different fingerprints.
@@ -2851,6 +2855,26 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-11`, `CRIT-12`); Hosmer, Lemeshow & Sturdivant (2013), *Applied Logistic Regression*, 3.ª ed., §5.2.2; Siddiqi (2006), *Credit Risk Scorecards*; `docs/design_decisions.md` §7.2 y §7.4; `docs/api.md`; `docs/audit_log.md` (cierre del Bloque 2F, 20/11/2026).
 
+---
+
+## §33. Remediación Bloque 2G: coherencia metodológica SR 11-7, Sala Limpia estricta, defensa de Caja Blanca y oráculo manual (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) cerró los dos últimos hallazgos críticos (`CRIT-13` y `CRIT-14`, completando 16/16):
+1. `CRIT-13` (brechas documentales frente al código real bajo SR 11-7): `docs/methodology.md`, `docs/3.10.b_design_chaid_binning.md` y `docs/design_decisions.md` presentaban divergencias respecto a la implementación vigente — binning CHAID de 11 bins (`1/11..10/11`, `right=True`, sin pesos, `bin_edges` fuera de `params_fingerprint` global), alcance real de `surrogate_splits`, `nominal_high_card="dummies_lda"` (`NotImplementedError` en v1) y `TargetType.CONTINUOUS`, varianza de Kish y Citardauq en QUEST (sustituyendo la nota heredada de `W - 1`), ausencia de Política de Atípicos (`§5.4`), fórmula y sensibilidad a escala de Jeffreys ponderado + clasificación estricta `BANKING`/`RESEARCH`/`CUSTOM`, fórmula de cuota Hamilton-Hare (`Q_j = N_j * train_frac`) y `check B2`, enlace roto a `methodology.md §8.9bis`, Hosmer-Lemeshow OOS (`gl = G_eff`, tie-preserving, `_HL_EPS = 1e-6`), PSI/CSI del Bloque 2F (`eps`, `<MISSING>`, `(a, b]`, continuas constantes, `Gini_train <= 0`), e IFRS 9 / ECL del Bloque 2C (`eir >= 0`, Etapa 3 `PD = 1.0`, `total_ecl_staged`, conversión `% -> decimal` en `ECLDialog`).
+2. `CRIT-14` (Sala Limpia, colisión terminológica de Gini, defensa de Caja Blanca y oráculo manual): `frontend_v3/tree_view.py` calculaba `1.0 - sum(p**2 for p in node.pd_final)` en la capa visual y lo etiquetaba `"Gini:"` (colisionando con el Gini discriminante $2 \cdot \text{AUC} - 1$ y mezclando suavizado Jeffreys/piso en la impureza empírica); `frontend_v3/gains_charts.py` y `frontend_v3/metrics_panel.py` realizaban ratios y agregación `max(...)` de CSI sobre el DTO; `backend_v3/import_guard.py` no bloqueaba `torch`/`optbinning`/`scorecardpy`/`tensorflow`/`keras` ni se auto-instalaba en `backend_v3/__init__.py`, `mcp_v3/__init__.py` y `scripts/validate_uci.py`; `tests/test_statistics.py` dependía de `scipy.stats.chi2_contingency`/`f_oneway`/`levene` en lugar de un oráculo matemático puro; y `tests/test_gui_smoke.py` solo auditaba el sentido unidireccional de Sala Limpia.
+
+**Decisiones.**
+
+1. **Impureza empírica en backend y eliminación de colisión terminológica.** `TreeNode` expone `@property def gini_impurity(self) -> float` usando conteos empíricos $I_G(t) = 1 - \sum_{k=0}^{K-1} (n_k / n)^2$ (Breiman et al. 1984 §4.3; `0.0` si `n <= 0`). `frontend_v3/tree_view.py` lee `node.gini_impurity` directamente y muestra `"Impurity (I_G): {node.gini_impurity:.3f}"`, eliminando toda colisión con el Gini discriminante (`§7.1`).
+2. **Agregaciones de presentación movidas al backend.** `GainsRow` incorpora los campos aditivos `pop_cum_pct: float = 0.0` y `bad_cum_pct: float = 0.0` poblados en `build_gains_table()`, y `build_oos_oot_report(st)` precalcula `oot["csi_worst_flag"]` (`None` si `csi` vacío, `"UNDETERMINED"` si algún `csi` es no finito, o el `.flag` del mayor `csi`). `GainsCharts` y `MetricsPanel` leen primero esos campos precalculados (conservando fallback seguro únicamente para fixtures sintéticos antiguos de tests).
+3. **Defensa en profundidad de Caja Blanca y guardrail AST bidireccional.** `_BANNED_ROOTS` en `backend_v3/import_guard.py` se amplía con `"torch"`, `"optbinning"`, `"scorecardpy"`, `"tensorflow"` y `"keras"`. `install_import_guard()` se auto-instala al importar `backend_v3`, `mcp_v3` y al inicio de `scripts/validate_uci.py`. `tests/test_gui_smoke.py` endurece `test_frontend_clean_room()` (ampliando `_BANNED` y restringiendo los imports de `backend_v3` únicamente a `session_state`, `log_config`, `import_guard` y `tree_builder`) y añade el guardrail inverso `test_backend_clean_room()` (cero imports de Qt/`frontend_v3`/`_BANNED_ROOTS` en `backend_v3/`).
+4. **Oráculo independiente puro en `tests/test_statistics.py`.** Se eliminan `chi2_contingency`, `f_oneway` y `levene` de `scipy.stats`, conservando únicamente `.sf()` de `chi2` y `f`, y verificando todos los casos (incluido el heterocedástico de Brown-Forsythe) mediante derivación matemática manual desde primeros principios.
+5. **Sincronización documental SR 11-7.** `docs/methodology.md` (incluyendo nueva `§5.4` de Política de Atípicos y `§8.9bis` que repara la referencia de `§13.8`), `docs/3.10.b_design_chaid_binning.md`, `docs/design_decisions.md` y `docs/api.md` reflejan al 100 % la matemática y contratos implementados.
+
+**Consecuencias.** Quedan cerrados 16/16 hallazgos críticos del informe `F1`. La Sala Limpia queda protegida en ambas direcciones por AST, la Caja Blanca se activa automáticamente en todos los puntos de entrada del paquete y la documentación metodológica coincide exactamente con el código auditado.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-13`, `CRIT-14`); Breiman et al. (1984, §4.3); `docs/methodology.md`; `docs/3.10.b_design_chaid_binning.md`; `docs/api.md`; `docs/audit_log.md` (cierre del Bloque 2G, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2918,6 +2942,12 @@ population, order-invariant tie-preserving OOS Hosmer-Lemeshow (`hl_df = G_eff`
 per Hosmer, Lemeshow & Sturdivant 2013 §5.2.2, `_HL_EPS = 1e-6`), wired/validated
 `StabilityMonitor.eps`, scale-invariant `leaf_psi`, `<MISSING>`/constant/`(a, b]`
 `covariate_csi`, and CV/non-positive `gini_train` resilience in
-`Session.evaluate_oot`.)
+`Session.evaluate_oot`; on 20/11/2026 to add §33 and clarify §4.2/§11 —
+Block 2G remediation: full SR 11-7 methodology alignment (`docs/methodology.md`,
+`docs/3.10.b_design_chaid_binning.md`, `docs/api.md`), empirical
+`TreeNode.gini_impurity` with `Impurity (I_G)` UI label, backend-precomputed
+`GainsRow.pop_cum_pct`/`bad_cum_pct` and `oot["csi_worst_flag"]`, expanded
+white-box `import_guard` with package auto-install, bidirectional clean-room
+AST guardrails, and pure manual mathematical oracle in `tests/test_statistics.py`.)
 
 ---

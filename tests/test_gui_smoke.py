@@ -44,9 +44,34 @@ from frontend_v3.theme import (  # noqa: E402
     available_themes,
 )
 
-_BANNED = {"numpy", "pandas", "scipy"}
+_BANNED = {
+    "numpy",
+    "pandas",
+    "scipy",
+    "sklearn",
+    "scikit_learn",
+    "statsmodels",
+    "xgboost",
+    "lightgbm",
+    "catboost",
+    "torch",
+    "optbinning",
+    "scorecardpy",
+    "tensorflow",
+    "keras",
+}
+_ALLOWED_FRONTEND_BACKEND_MODULES = frozenset(
+    {
+        "backend_v3.session_state",
+        "backend_v3.log_config",
+        "backend_v3.import_guard",
+        "backend_v3.tree_builder",
+    }
+)
 _TOKEN_RE = re.compile(r"\$[A-Z_]+")
-_FRONTEND_ROOT = Path(__file__).resolve().parents[1] / "frontend_v3"
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_FRONTEND_ROOT = _REPO_ROOT / "frontend_v3"
+_BACKEND_ROOT = _REPO_ROOT / "backend_v3"
 
 
 def _get_app() -> QApplication:
@@ -224,7 +249,8 @@ def test_apply_palette_roles():
 
 
 def test_frontend_clean_room():
-    """AST guardrail: no numpy/pandas/scipy imports inside frontend_v3/.
+    """AST guardrail: no numerical/ML libraries nor analytical backend_v3
+    modules inside frontend_v3/.
 
     AST (not text search) avoids false positives from strings/comments.
     """
@@ -233,15 +259,50 @@ def test_frontend_clean_room():
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
+                for alias in node.names:
+                    root = alias.name.split(".")[0]
+                    if root in _BANNED:
+                        offenders.append(f"{path.name}: {alias.name}")
+                    elif root == "backend_v3" and (
+                        alias.name not in _ALLOWED_FRONTEND_BACKEND_MODULES
+                    ):
+                        offenders.append(f"{path.name}: {alias.name}")
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                root = node.module.split(".")[0]
+                if root in _BANNED:
+                    offenders.append(f"{path.name}: {node.module}")
+                elif root == "backend_v3":
+                    if node.module == "backend_v3":
+                        for alias in node.names:
+                            full = f"backend_v3.{alias.name}"
+                            if full not in _ALLOWED_FRONTEND_BACKEND_MODULES:
+                                offenders.append(f"{path.name}: {full}")
+                    elif node.module not in _ALLOWED_FRONTEND_BACKEND_MODULES:
+                        offenders.append(f"{path.name}: {node.module}")
+    assert not offenders, f"forbidden imports in frontend_v3: {offenders}"
+
+
+def test_backend_clean_room():
+    """Reverse AST guardrail: no Qt/frontend_v3 nor black-box ML libraries
+    inside backend_v3/.
+    """
+    from backend_v3.import_guard import _BANNED_ROOTS
+
+    forbidden = {"PySide6", "PyQt5", "PyQt6", "frontend_v3"} | set(_BANNED_ROOTS)
+    offenders: list[str] = []
+    for path in sorted(_BACKEND_ROOT.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
                 roots = [a.name.split(".")[0] for a in node.names]
             elif isinstance(node, ast.ImportFrom) and node.module:
                 roots = [node.module.split(".")[0]]
             else:
-                continue  # covers "from . import x" (module=None)
-            bad = _BANNED.intersection(roots)
+                continue
+            bad = forbidden.intersection(roots)
             if bad:
                 offenders.append(f"{path.name}: {sorted(bad)}")
-    assert not offenders, f"forbidden imports in frontend_v3: {offenders}"
+    assert not offenders, f"forbidden imports in backend_v3: {offenders}"
 
 
 def test_import_guard_installed_via_frontend_init():
@@ -252,13 +313,43 @@ def test_import_guard_installed_via_frontend_init():
     assert is_installed() is True
 
 
-def test_sklearn_blocked_in_gui_process():
-    """sklearn import must raise ImportError in any GUI process."""
-    import frontend_v3  # noqa: F401
-    import pytest
+def test_import_guard_installed_via_backend_and_mcp_init():
+    """Both backend_v3 and mcp_v3 auto-install the white-box import guard."""
+    import importlib
+    import backend_v3
+    import mcp_v3
+    from backend_v3.import_guard import (
+        _BlackBoxBlocker,
+        install_import_guard,
+        is_installed,
+    )
 
-    with pytest.raises(ImportError):
-        import sklearn  # noqa: F401
+    try:
+        for pkg in (backend_v3, mcp_v3):
+            sys.meta_path[:] = [
+                f for f in sys.meta_path if not isinstance(f, _BlackBoxBlocker)
+            ]
+            assert is_installed() is False
+            importlib.reload(pkg)
+            assert is_installed() is True
+    finally:
+        install_import_guard()
+
+
+def test_sklearn_blocked_in_gui_process():
+    """Black-box ML/scorecard libraries must raise ImportError."""
+    import importlib
+    import frontend_v3  # noqa: F401
+
+    for pkg in (
+        "sklearn",
+        "torch",
+        "optbinning",
+        "scorecardpy",
+        "tensorflow",
+        "keras",
+    ):
+        _assert_raises(ImportError, importlib.import_module, pkg)
 
 
 # ---------------------------------------------------------------------------

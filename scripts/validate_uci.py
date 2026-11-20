@@ -55,6 +55,10 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent  # V11/V12: raíz, no cwd
 sys.path.insert(0, str(ROOT_DIR))                  # V12: backend_v3 desde la raíz
 
+from backend_v3.import_guard import install_import_guard  # noqa: E402
+
+install_import_guard()
+
 from backend_v3.session_state import Session      # noqa: E402
 from backend_v3.types import TargetType           # noqa: E402
 

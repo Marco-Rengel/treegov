@@ -180,6 +180,45 @@ TreeGov does **not** normalize: the decision stays with the analyst.
 
 > See `docs/design_decisions.md` §13.2 for the full decision rationale.
 
+### 1.10 Continuous predictors in CHAID and Exhaustive CHAID (Phase 3.10.b, Block 2E)
+
+`ChaidEngine` supports `PredictorType.CONTINUOUS` predictors via automatic
+discretization (`_reduce_continuous_predictor`), transforming each continuous
+predictor into ordered numeric intervals before applying Kass merging:
+
+1. **Internal quantile cuts (11 bins, not deciles).** Ten internal cut points
+   are computed on the node's finite values at quantiles `1/11, 2/11, …, 10/11`:
+   `edges = np.unique(np.quantile(xv, np.linspace(0.0, 1.0, 12)[1:-1]))`.
+   Deduplication yields at most 11 non-overlapping bins (`bin_0 .. bin_m`).
+   Quantiles are computed **without sample weights** (documented choice in
+   `docs/design_decisions.md` §16.2; sample weights still govern the
+   subsequent χ² or ANOVA F statistics).
+2. **Half-open encoding.** Values are assigned via
+   `np.digitize(xv, edges, right=True)`, so each bin covers `(a, b]`, with
+   `bin_0 = (−∞, edges[0]]` and `bin_m = (edges[-1], +∞)`.
+3. **Ordinal Kass merging and empty-bin pre-merge.** Any empty bin produced by
+   ties is pre-merged with the adjacent upper bin (`_premerge_empty_bins`). If
+   fewer than 2 bins remain (e.g., constant predictor), `evaluate` returns
+   `None` cleanly in both classic and Exhaustive modes. Remaining bins are
+   treated as **`ORDINAL`** under Kass (1980) (adjacent merges only,
+   multiplier `C(c − 1, r − 1)`).
+4. **Storage and fingerprint scope.** The strictly increasing cut points are
+   stored in `SplitConfig.bin_edges` on the resulting node split and used by
+   `TreeBuilder._partition`, `validation.predict_leaf_assignment` and the
+   SQL/Python/Markdown exporters (routing by consolidated `SplitConfig.branches`).
+   `bin_edges` belongs to each node's immutable `SplitConfig` and is **not** a
+   global hyperparameter inside `TreeModel.params_fingerprint`.
+5. **Numerical stability and Cochran eligibility (Block 2E).** `ChaidEngine`
+   rejects `±inf` in continuous predictors and continuous targets, centers
+   continuous targets (`y_c = y − ȳ`, Chan, Golub & LeVeque 1983) prior to
+   accumulating sufficient statistics, and in **Exhaustive CHAID** restricts
+   final selection to **Cochran-valid** steps (`step_cochran_ok`) whenever at
+   least one valid state exists (while preserving the complete merge trajectory
+   in `MergeDiagnostics.exhaustive_steps`).
+
+> See `docs/3.10.b_design_chaid_binning.md` §4.2 and `docs/design_decisions.md`
+> §16 and §31.
+
 ---
 
 ## 2. C&RT (Classification and Regression Trees)
@@ -223,6 +262,8 @@ For K > 10: heuristic by majority-class rate (supervised ordering).
 ### 2.6. Surrogate splits
 
 Replications of the primary left/right assignment over secondary predictors, used to route missing values. They are ordered by agreement with the primary split and only those outperforming the majority rule are kept.
+
+**Operational scope in v1.** `CrtEngine.surrogate_splits()` (and its `find_surrogates` computation) is exposed as an **engine-level analytical API** on `CrtEngine`; it is **not** automatically activated during `TreeBuilder` / `Session` tree routing, where missing predictor values are imputed upstream via `TrainOnlyImputer` (§5).
 
 **Citation**: Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
 
@@ -322,6 +363,33 @@ J. (1984). *Classification and Regression Trees*. Wadsworth, §5.3.
 
 > See `docs/design_decisions.md` §3.3 for the full decision rationale.
 
+### 2.10 Weighted C&RT and numerical stability (Phase 3.2, Block 2E)
+
+`CrtEngine` accepts strictly positive per-row sample weights (`weights`), and
+`TreeBuilder` enforces an optional cumulative weighted-mass floor per branch
+(`min_child_weight`, checked alongside physical row counts `min_child_size`):
+
+- **Weighted Gini impurity.** Class probabilities in parent, left and right
+  nodes are normalized by their respective weighted masses before squaring
+  (`p_k = W_k / W`), using the cancellation-free identity
+  `I_G = q · (2 − q) − Σ_{k ≠ m} p_k²` where `m = argmax_k p_k` and
+  `q = Σ_{k ≠ m} p_k`. This prevents floating-point overflow/underflow under
+  extreme weight magnitudes (`~1e160` or `~1e-160`).
+- **Reverse cumulative sums and direct complements.** Continuous sweeps and
+  rate-sorted nominal sweeps compute right-child cumulative sums from the right
+  (`cumsum(arr[::-1])[::-1]`), and exhaustive nominal search computes the left
+  branch directly (`(~masks) @ counts`), avoiding catastrophic subtraction
+  cancellation under extreme weight ratios (`≥ 1e16`).
+- **Centered regression variance.** For `TargetType.CONTINUOUS`, target values
+  are centered (`y_c = y − μ_w`) before accumulating weighted sufficient
+  statistics (Chan, Golub & LeVeque 1983), eliminating cancellation when
+  `|μ| ≫ σ`.
+- **Finiteness guards.** Degenerate zero-mass sides are scored `−∞` and
+  `surrogate_splits()` rejects `±inf` in numeric predictors.
+
+**Citation:** Breiman et al. (1984); Chan, Golub & LeVeque (1983); Heeringa,
+West & Berglund (2010), §5.3. See `docs/design_decisions.md` §13.3 and §31.
+
 ---
 
 ## 3. QUEST (Quick, Unbiased, Efficient Statistical Tree)
@@ -414,8 +482,10 @@ dependency (LDA) that would require its own methodology section and
 audit. The heuristic is documented as a deliberate deviation from
 canonical Loh & Shih.
 
-**Configuration.** Exposed as `nominal_high_card: str = "rate"`
-(canonical: `"dummies_lda"`) in Phase 3.0.g.
+**Configuration.** Exposed as `nominal_high_card: str = "rate"` in Phase 3.0.g.
+The canonical option `"dummies_lda"` is reserved in the `QuestEngine`
+constructor signature for future work and raises `NotImplementedError` in v1
+(only `"rate"` is implemented).
 
 **Citation:** Breiman, L. et al. (1984), §4 — the rate-based cut is
 discussed in the C&RT chapter as the standard high-cardinality
@@ -481,38 +551,63 @@ consistent with the empirical prior. Documented in `quest_engine.py`.
 
 > See `docs/design_decisions.md` §4.4 for the full decision rationale.
 
-### 3.7bis Weighted QUEST — QDA split and weighted variance
+### 3.7bis Weighted QUEST — weighted ANOVA/Brown-Forsythe, Kish QDA variance and Citardauq roots (Phase 3.2, Block 2E)
 
-Weighting affects both QUEST stages.
+Weighting affects both QUEST stages (`backend_v3/statistics.py` and
+`backend_v3/quest_engine.py`):
 
-**Stage 1 (variable selection).** Weighted F over the groups defined by the
-target class: weighted means, effective sizes `W_i = Σ weights in group`.
-Weighted χ² for nominal predictors, same scheme as §1.9bis.
+**Stage 1 (variable selection).**
+- **Weighted one-way ANOVA F (`statistics.f_oneway`):** uses weighted class
+  means `m_k = Σ_i w_i x_i / W_k`, group weight sums `W_k`, grand weighted mean
+  `m = Σ_k W_k m_k / W`, `SSB = Σ_k W_k (m_k − m)²`,
+  `SSW = Σ_k Σ_{i ∈ k} w_i (x_i − m_k)²`, and physical degrees of freedom
+  `df1 = K − 1`, `df2 = N − K`. Because `F = (SSB / df1) / (SSW / df2)` is a
+  ratio, it is **strictly scale-invariant** under `w → c · w`.
+- **Weighted Brown-Forsythe (`statistics.brown_forsythe`):** computes the
+  **weighted median** `_weighted_median(x_k, w_k)` per class (with floating-point
+  tie tolerance `rel_tol=1e-12, abs_tol=1e-15` matching `np.median` under equal
+  weights), forms `z_ij = |x_ij − median_w(x_k)|`, and applies weighted ANOVA F
+  to `z`. Scale-invariant in `w`.
+- **Weighted Pearson χ²:** nominal predictors use the weighted contingency
+  table scheme of §1.9bis.
+- **Non-hijacking under degenerate separation (Block 2E):** if a degenerate
+  predictor yields `F = ∞`, Stage 1 prioritizes finite significant predictors
+  first and logs `"no representable"` + returns `None` only when no finite
+  significant predictor exists.
 
-**Stage 2 (QDA cut).**
+**Stage 2 (univariate QDA cutpoint).**
 
-    Weighted class means:      m_k = Σ_i w_i x_i / W_k
-    Weighted variances:        v_k = Σ_i w_i (x_i − m_k)² / (W_k − 1)
+    Weighted class means:      m_k = Σ_{i ∈ k} w_i x_i / W_k
+    Kish reliability variance: v_k = Σ_{i ∈ k} w_i (x_i − m_k)² / (W_k − (Σ_{i ∈ k} w_i²) / W_k)
     Weighted empirical priors: π_k = W_k / W
-    Weighted midpoint (fallback when no real root lies between the means):
-                               x̄ = (W_0 m_0 + W_1 m_1) / (W_0 + W_1)
+    Weighted midpoint fallback: x̄ = (W_0 m_0 + W_1 m_1) / (W_0 + W_1)
 
-**Divisor convention (W − 1).** The divisor W − 1 (instead of W) is the
-natural generalization of the classic n − 1 when weights act as
-frequencies. It matches the standard weighted-variance convention used in complex survey analysis (Heeringa, West & Berglund 2010, §5.3).
+**Kish reliability-weight divisor (Block 2E, replacing `W_k − 1`).** The
+frequency-weight divisor `W_k − 1` breaks when weights are normalized
+(`W_k ≤ 1` produces division by zero or negative variance) and is not
+scale-invariant. TreeGov uses **Kish's unbiased reliability-weight variance**
+divisor `W_k − (Σ w_i²) / W_k` (Kish 1965; Heeringa, West & Berglund 2010):
 
-**Non-intuitive consequence.** With divisor W − 1, the weighted variance
-is **not** scale-invariant: multiplying the weights by k turns the
-denominator from W − 1 into kW − 1, which is not k·(W − 1). The QUEST QDA
-threshold therefore depends on the scale chosen by the analyst. The
-alternative with divisor W (population variance) would be scale-invariant
-but would systematically underestimate. W − 1 is kept for consistency with
-standard practice.
+- **Strictly scale-invariant:** multiplying all weights by any `c > 0` scales
+  both numerator and denominator by `c`, leaving `v_k` and the QDA threshold
+  identical.
+- **Safe for normalized weights (`Σ w_i = 1`):** strictly positive for any
+  class with `n_k ≥ 2` positive weights (falling back safely to `x̄` if
+  precision degenerates).
+- **Exact parity under uniform weights:** when `w_i ≡ 1`,
+  `W_k − (Σ w_i²) / W_k = n_k − n_k / n_k = n_k − 1`.
 
-**Citation:** Loh & Shih (1997); Heeringa, West & Berglund (2010), §5.3
-(weighted variance in complex surveys).
+**Stable quadratic roots (Citardauq) and domain bounds.** The quadratic
+`A x² + B x + C = 0` is solved via **Citardauq's numerically stable formula**
+(Press et al. 2007, §5.6): `q = −0.5 · (B + sign(B) · √Δ)`, `r_1 = q / A`,
+`r_2 = C / q`, preventing catastrophic cancellation when `v_0 ≈ v_1`. All
+returned thresholds (QDA, linear LDA and fallback) are bounded to
+`[min(x), max(x))` so neither child branch can be empty.
 
-> See `docs/design_decisions.md` §13.4 for the full decision rationale.
+**Citation:** Loh & Shih (1997); Kish (1965); Heeringa, West & Berglund
+(2010), §5.3; Press et al. (2007), §5.6.
+
+> See `docs/design_decisions.md` §13.4 and §31 for the full decision rationale.
 
 ### 3.8 QUEST multiclass extensions (Phase 3.4)
 
@@ -563,6 +658,13 @@ justified by (a) internal coherence with C&RT, and (b) preserving the
 binary nature of each node's split, as required by the tree builder's
 contract (binary split per node, K-length PD vector).
 
+**Scope limits in v1.**
+- `nominal_high_card="dummies_lda"` is reserved in the constructor signature
+  and raises `NotImplementedError` in v1 (only `"rate"` is implemented).
+- `TargetType.CONTINUOUS` is not supported by `QuestEngine` and is **blocked
+  in `Session`**; continuous-target regression is reserved exclusively to the
+  engine-level `CrtEngine` and `ChaidEngine` APIs.
+
 **Fingerprint.** No new field is added. The multiclass behaviour is a
 property of the model, not a configuration toggle: two QUEST models —
 one built on K=2, the other on K=3, same CSV and hyperparameters — are
@@ -596,8 +698,13 @@ All engines (CHAID, C&RT, QUEST) return `SplitConfig` objects, an immutable (fro
 - bonferroni_multiplier: applied Kass M.
 - n_merges: number of merges applied.
 - threshold: numeric threshold (continuous only).
-- branches: category groups per branch (categorical only).
+- branches: category groups per branch (categorical and binned CHAID splits).
 - impurity_gain: impurity gain (C&RT only).
+- bin_edges: tuple of strictly increasing finite numeric cut points for binned
+  continuous predictors in CHAID / CHAID_EXHAUSTIVE (empty tuple otherwise).
+  Note: `bin_edges` is part of each node's immutable `SplitConfig` (for
+  routing and export) and is **not** included as a global parameter in
+  `TreeModel.params_fingerprint`.
 
 ### 4.2. Validated invariants
 
@@ -606,6 +713,8 @@ In the constructor (__post_init__) the following is verified:
 - method ↔ statistic_name ↔ required-field coherence.
 - Exactly one of threshold / branches is defined.
 - branches forms a real partition (non-empty groups, disjoint categories).
+- bin_edges, when non-empty, contains strictly increasing finite floats and
+  requires method ∈ {"CHAID", "CHAID_EXHAUSTIVE"} with branches defined.
 - len(child_ns) matches the number of branches.
 - sum(child_ns) ≤ parent_n.
 - p_value_adjusted ≥ p_value (Bonferroni never reduces).
@@ -627,6 +736,34 @@ Computing the mean over the full dataset introduces data leakage: the model "see
 If the mode is tied:
 - Orderable labels → the smallest one.
 - Non-comparable labels → first in order of appearance (sequential pass, not pandas' internal order).
+
+### 5.4. Outlier policy (SR 11-7)
+
+Under SR 11-7 model risk governance, TreeGov enforces an explicit three-part
+policy on non-finite values and finite outliers:
+
+1. **Fail-fast rejection of non-finite values (`±inf`).** `TrainOnlyImputer`
+   rejects `±inf` in numeric columns during both `fit()` and `transform()`
+   (preventing `mean = NaN` from `[+inf, -inf]`). All analytical engines
+   (`CrtEngine`, `ChaidEngine`, `QuestEngine`), `TreeBuilder._partition`,
+   `validation` and `StabilityMonitor` likewise reject `±inf` with
+   `ValueError`.
+2. **Structural robustness of rank/cut-based splits for finite outliers.**
+   Because C&RT continuous splits depend only on rank order (midpoints between
+   consecutive values) and CHAID continuous binning depends on empirical
+   quantiles (`1/11 .. 10/11`), finite extreme values do not distort split
+   geometry or leaf probabilities the way they distort linear/logistic
+   regression coefficients.
+3. **Analyst responsibility for domain capping / winsorizing (and QUEST
+   exception).** TreeGov does **not** perform automatic silent winsorizing or
+   outlier deletion, so the raw data distribution remains auditable. The
+   modelling analyst is explicitly responsible for validating extreme finite
+   observations and, when warranted by institutional risk policy, applying
+   documented *winsorizing* or *capping* upstream. **Exception:** in **QUEST**,
+   Stage 1 (ANOVA F) and Stage 2 (univariate QDA) estimate parametric class
+   means and variances, which **are** sensitive to extreme finite outliers;
+   analysts using QUEST on heavy-tailed predictors should inspect and cap
+   outliers prior to training.
 
 ---
 
@@ -777,20 +914,74 @@ of London A*, 186(1007), 453-461.
 the phase design; `docs/design_decisions.md` §5.2 for the tuple-fields
 decision.
 
+### 6.7 Weighted Jeffreys estimator and strict governance classification (Phase 3.2, Block 2B)
+
+When sample weights are provided (`TreeBuilder(..., weights=...)`), the
+multivariate Jeffreys estimator replaces raw counts `k_c` and `n` with the
+node's per-class weighted masses `W_c = Σ_{i: y_i = c} w_i` and total mass
+`W = Σ_c W_c` (`backend_v3/tree_builder.py`):
+
+    pd_jeffreys[c] = (W_c + 0.5) / (W + 0.5 · K)
+
+With `weights=None`, `W_c = k_c` and `W = n` (exact bit-for-bit parity).
+
+**Weight-scale sensitivity.** Because the symmetric Dirichlet(0.5, …, 0.5)
+pseudocount `0.5` is fixed on the count scale, weighted Jeffreys is **not**
+scale-invariant in `w`:
+- **Normalized weights (`Σ w_i = 1`, or `W ≪ 0.5 · K`):** the pseudocount
+  dominates and shrinks `pd_jeffreys[c]` strongly toward the uniform prior
+  `1 / K`.
+- **Large weights (`W ≫ n`):** the prior is attenuated and `pd_jeffreys[c]`
+  converges toward the unsmoothed weighted empirical rate `W_c / W`.
+
+Analysts using weighted `BANKING` models should scale weights deliberately
+(e.g., mean weight `1.0` so `W ≈ n`) when the intended Jeffreys shrinkage
+corresponds to effective sample size.
+
+**Strict governance classification (`classify_governance_mode`, Block 2B).**
+Effective governance is classified by a single source of truth
+(`backend_v3.tree_builder.classify_governance_mode`, with
+`BASEL_PD_FLOOR_MIN = 0.0005` and domain `pd_floor ∈ [0.0, 0.5)`):
+
+- **`BANKING`:** strictly requires `apply_jeffreys=True` **and**
+  `pd_floor >= 0.0005` (BCBS CRE 32.4).
+- **`RESEARCH`:** strictly requires `apply_jeffreys=False` **and**
+  `pd_floor is None`.
+- **`CUSTOM`:** any intermediate combination — including `pd_floor == 0.0` or
+  legacy Basel II `0.0 < pd_floor < 0.0005` (such as `0.0003` for sovereign
+  exposures).
+
+> See `docs/design_decisions.md` §13.5 and §28.
+
 ---
 
 ## 7. Hamilton-Hare partition (Largest Remainder)
 
-For a dataset with N observations and target training quota N_train = round(N × train_frac):
+For a dataset with `N` observations, training fraction `train_frac ∈ (0, 1)`
+and target training size `N_train = round(N × train_frac)`
+(`backend_v3/splitting.py`):
 
-Per stratum j (j ∈ {0, 1} for a binary target):
+Per stratum `j` (for every observed class in `y`):
 
-1. Ideal quota: Q_j = N_j × (N_train / N).
-2. Integer part: n_j = floor(Q_j).
-3. Remainder: R = N_train − (n_0 + n_1).
-4. Allocation of the R remaining observations: the classes with the largest residual fraction f_j = Q_j − n_j receive +1 unit each.
+1. Ideal quota: `Q_j = N_j × train_frac`.
+2. Integer part: `n_j = floor(Q_j)`.
+3. Remainder: `R = N_train − Σ_j n_j`.
+4. Allocation of the `R` remaining observations: the classes with the largest
+   residual fraction `f_j = Q_j − n_j` receive `+1` unit each (ties broken
+   deterministically by class order).
 
-It guarantees that the event rate in train matches the population exactly.
+**Missing-target guard (Block 2F).** Both `stratified_split` and
+`stratified_kfold` reject any `NaN` / missing values in `y` with `ValueError`
+before computing strata.
+
+**Small-class caveat and `check B2` (weighted mode).** Under arbitrary
+`train_frac` near `0` or `1`, a small stratum (even with `N_j ≥ 2`) can
+receive `0` rows on one side of an unweighted holdout split (for example,
+`N_j = 2` with `train_frac = 0.1` has `Q_j = 0.2`, `n_j = 0`). In **weighted
+mode** (`weights is not None`), stratification still uses physical row counts
+`N_j` (preserving exact index parity with unweighted mode), and **`check B2`**
+enforces fail-fast that every observed class retains **at least 2 physical
+rows in train AND at least 2 physical rows in test** (`ValueError` otherwise).
 
 ### 7.1 Cost-complexity pruning (Breiman 1984)
 
@@ -926,13 +1117,26 @@ KS = max_s |F_bad(s) − F_good(s)|
 
 Maximum vertical distance between the cumulative distribution functions of events and non-events.
 
-### 8.3. Hosmer-Lemeshow
+### 8.3. Hosmer-Lemeshow (external OOS/OOT calibration)
 
 H = Σ_g (O_g − N_g π̄_g)² / [N_g π̄_g (1 − π̄_g)]
 
-Under H₀: H ~ χ²(G − 2), where G is the number of groups (typically 10 deciles).
+TreeGov computes Hosmer-Lemeshow on **external validation samples (OOS/OOT)**
+using **tie-preserving quantile grouping** (Block 2F): ordered score blocks
+advance to the end of any tie block so the grouping — and therefore `H` and
+`p` — is **strictly invariant to row permutations** of `X_test`. Because model
+parameters are estimated on train rather than on the validation cohort, the
+reference distribution under H₀ has **external degrees of freedom**:
 
-If p > 0.05, H₀ is not rejected (calibrated model).
+    H ~ χ²(G_eff)       (df = G_eff, where G_eff is the number of non-empty
+                         tie-preserving groups; Hosmer, Lemeshow & Sturdivant
+                         2013, §5.2.2)
+
+If `p > 0.05`, H₀ is not rejected (calibrated model). See §8.9 for extreme-
+probability handling (`_HL_EPS = 1e-6`) and §8.9bis for weighted HL.
+
+**Citation:** Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied
+Logistic Regression* (3rd ed.), §5.2.2. Wiley.
 
 ### 8.4. Brier Score and BSS
 
@@ -952,16 +1156,26 @@ PSI = Σ_k (P_actual,k − P_expected,k) · ln(P_actual,k / P_expected,k)
     = KL(actual || expected) + KL(expected || actual)    (symmetric KL)
 ```
 
-TreeGov policy:
-- Clip ε = 1e-4 per bin **before the log and without renormalization**: this
-  preserves the signal of empty OOT bins; the scale error is negligible
-  against the 0.10 / 0.25 thresholds when bins are non-empty.
+TreeGov policy (updated in Block 2F):
+- Configurable clip `eps` (default `ε = 1e-4`, validated finite in `(0, 0.5)`)
+  per bin **before the log and without renormalization** by default
+  (`renormalize=False`): this preserves the signal of empty OOT bins; the scale
+  error is negligible against the 0.10 / 0.25 thresholds when bins are
+  non-empty. `StabilityMonitor(..., eps=...)` forwards `self.eps` to both
+  `leaf_psi` and `covariate_csi`.
 - Leaf PSI: bins are the leaves. OOT rows that cannot be routed (unseen
-  categories/values) form the extra bin `<UNSEEN>` with P_expected = ε.
-- CSI: continuous variables are binned into the **deciles learned on train
-  only** (first and last bins open: −inf / +inf absorb out-of-range OOT
-  values); nominal variables use the train categories, and unseen OOT
-  categories are grouped into `<OTHER>` with P_expected = ε.
+  categories/values) form the extra bin `<UNSEEN>` with `P_expected = ε`.
+  Empty or zero-mass cohorts are rejected fail-fast, and `leaf_psi` divides
+  strictly by total cohort weight (`total_act`), preserving scale invariance
+  even when `Σ w_oot < 1`.
+- CSI: continuous variables reject `±inf`, separate `NaN` into an explicit
+  `<MISSING>` bin (preserving probability sum `1.0`), handle 100%-`NaN` and
+  constant-train covariates (`==v0` + `<OTHER>`), and otherwise bin non-`NaN`
+  values into **deciles learned on train only** with `np.digitize(..., right=True)`
+  so intervals are `(a, b]` (first and last bins open: `−∞` / `+∞` absorb
+  out-of-range OOT values). Nominal variables use train categories, track `NaN`
+  in `<MISSING>`, and group unseen OOT categories into `<OTHER>` with
+  `P_expected = ε`.
 
 Industry-standard monitoring thresholds (Siddiqi 2006; not prescribed
 by Basel or EBA):
@@ -975,7 +1189,7 @@ by Basel or EBA):
 drop_X = (Gini_train − Gini_X) / Gini_train      (X in {OOS, OOT})
 alert: drop > 0.40 → CRITICAL;  drop > 0.20 → WARNING;  else NONE.
 NaN or undefined drop → UNDETERMINED.
-If Gini_train == 0 → drop = None (undefined; WARNING in the log).
+If Gini_train ≤ 0 → drop = None (undefined; alert = UNDETERMINED; WARNING in log).
 ```
 
 Temporal governance: the OOT cohort is an external, independent file
@@ -1027,13 +1241,20 @@ where:
 
 Search for θ* = argmin_θ E[Loss](θ) via grid search.
 
-**Scope: this is a cost optimisation, not an IFRS 9 prescription.** θ*
-minimises the institution's own misclassification cost; it is **not** a
-provision, an ECL measurement, nor a threshold that IFRS 9 requires. IFRS 9
-prescribes how to measure expected credit losses (see §9 below); it does not
-prescribe the cut-off at which a model classifies an exposure as bad. The
-cost matrix (`C_FN`, `C_FP`) is an input of the business owner, not a
-regulatory constant, and any θ* is only as defensible as those two values.
+**Scope: conceptual business-decision reference — not implemented as a
+provisioning engine and not an IFRS 9 prescription.** This section documents
+the standard Bayesian cost-minimization cut-off as a conceptual reference for
+analysts choosing an operating threshold `threshold` in
+`build_classification_matrix`. TreeGov does **not** implement an automated
+threshold optimizer or provisioning engine from this formula (the stored
+`cost_matrix` in `SessionState` is traceability metadata; see
+`design_decisions.md` §18.8). θ* minimises the institution's own
+misclassification cost; it is **not** a provision, an ECL measurement, nor a
+threshold that IFRS 9 requires. IFRS 9 prescribes how to measure expected
+credit losses (see §9 below); it does not prescribe the cut-off at which a
+model classifies an exposure as bad. The cost matrix (`C_FN`, `C_FP`) is an
+input of the business owner, not a regulatory constant, and any θ* is only as
+defensible as those two values.
 
 Consequences:
 - Changing `C_FP` (for example a new NIM assumption) moves θ* without
@@ -1044,18 +1265,19 @@ Consequences:
 - Do not report θ* as "the IFRS 9 threshold". The correct label is
   "cost-optimal threshold under the declared cost matrix".
 
-### 8.7 PSI with clip ε=1e-4 and no renormalization
+### 8.7 PSI with configurable clip ε (default 1e-4) and no renormalization
 
 The Population Stability Index (see §8.5) uses a natural logarithm. When
 a bin's probability is zero (either in the expected or the actual
-distribution), the log is undefined. TreeGov clips each probability to
-`ε = 1e-4` **without renormalizing** the resulting vector.
+distribution), the log is undefined. TreeGov clips each probability to a
+configurable floor `eps` (default `ε = 1e-4`, validated finite in `(0, 0.5)`,
+no booleans) **without renormalizing** the resulting vector by default.
 
 **Formula.**
 
-    p_k ← max(p_k, 1e-4)   for every bin k
+    p_k ← max(p_k, eps)   for every bin k    (default eps = 1e-4)
     PSI = Σ_k (p_act,k − p_exp,k) · ln(p_act,k / p_exp,k)
-    (no renormalization after clipping)
+    (no renormalization after clipping when renormalize=False)
 
 **Rationale.** If a bin present in train vanishes in OOT (or vice
 versa), the correct signal is "this bin's probability dropped to ~0",
@@ -1064,71 +1286,123 @@ would dilute this signal — the very thing PSI is designed to detect.
 The scale error from not renormalizing is negligible compared to the
 0.10 / 0.25 thresholds when bins are non-empty.
 
-**Configuration.** Exposed as `psi_renormalize: bool = False`
-(canonical: `True`) in Phase 3.0.g.
+**Configuration.** Both `psi_index(..., eps=1e-4, renormalize=False)` and
+`StabilityMonitor(eps=1e-4, renormalize=False)` expose `eps` and
+`renormalize` (canonical renormalized variant: `renormalize=True`).
 
 **Citation:** Siddiqi, N. (2006). *Credit Risk Scorecards*. Wiley.
 
-> See `docs/design_decisions.md` §7.4 for the full decision rationale.
+> See `docs/design_decisions.md` §7.4 and §32 for the full decision rationale.
 
-### 8.8 CSI: deciles learned on train, with open extreme bins
+### 8.8 CSI: deciles learned on train, `(a, b]` intervals, `<MISSING>` and constant covariates
 
 The Characteristic Stability Index (CSI) is PSI computed per covariate.
-For continuous covariates, the binning must be defined; TreeGov uses
-**deciles learned on the training partition only**, with the first and
-last bins open:
+For continuous covariates, TreeGov rejects `±inf`, separates `NaN` into an
+explicit `<MISSING>` bin, and bins finite non-`NaN` observations into
+**deciles learned on the training partition only** using
+`np.digitize(..., interior, right=True)`, yielding half-open `(a, b]`
+intervals with open extreme bins:
 
     bin_0   = (−inf,  q_10]
     bin_1   = (q_10, q_20]
     ...
     bin_9   = (q_90, +inf)
 
-where `q_10, …, q_90` are the deciles of the covariate in train.
+where `q_10, …, q_90` are the unique interior deciles of non-`NaN` training
+values.
 
-**Formula.**
-
-    Bins learned on X_train (deciles of the train distribution).
-    Bins applied unchanged to X_actual (typically the OOT cohort).
-    Out-of-range values fall into the open extreme bins.
+**Edge cases (Block 2F).**
+- **Constant continuous covariate in train (`v_0`):** encoded with two bins
+  `==v0` and `<OTHER>` (plus `<MISSING>` if `NaN` occurs), so drift away from
+  `v_0` in OOT is detected instead of returning a false `CSI = 0`.
+- **All-`NaN` covariate in train:** encoded as `["<MISSING>"]` (or
+  `["<MISSING>", "<OTHER>"]` if OOT introduces finite values).
+- **Nominal covariates:** bins are the non-null categories observed in train;
+  `NaN` values go to `<MISSING>` and unseen OOT categories are grouped into
+  `<OTHER>` with `p_expected = eps`.
 
 **Rationale.**
 - **Learned on train:** anti-leakage rule (see §5). The bins must not
   depend on OOT data.
-- **Open extreme bins:** an OOT value outside the train range is
-  genuine drift. It must contribute to the CSI, not be silently
-  dropped. Open bins capture this.
-
-For nominal covariates, the bins are the categories observed in train;
-unseen OOT categories are grouped into `<OTHER>` with `p_expected = ε`.
+- **Open extreme bins and `<MISSING>`:** an OOT value outside the train range
+  or an increase in missingness is genuine drift and contributes directly to
+  CSI while keeping `Σ p_exp = Σ p_act = 1`.
 
 **Citation:** Siddiqi, N. (2006). *Credit Risk Scorecards*. Wiley.
 
-> See `docs/design_decisions.md` §7.5 for the full decision rationale.
+> See `docs/design_decisions.md` §7.5 and §32 for the full decision rationale.
 
-### 8.9 Hosmer-Lemeshow: `π_g` clipped to `[1e-15, 1−1e-15]`
+### 8.9 Hosmer-Lemeshow: tie-preserving grouping, external `df = G_eff` and `_HL_EPS = 1e-6` (Block 2F)
 
 The Hosmer-Lemeshow statistic (see §8.3) has the term:
 
     H = Σ_g (O_g − N_g π_g)² / [N_g π_g (1 − π_g)]
 
-If `π_g = 0` or `π_g = 1` for some group, the denominator is zero. In
-practice, `π_g` can hit exactly 0 or 1 when a leaf predicts a constant
-PD across the group.
+In practice, `π_g` can hit `0` or `1` (for example, a pure leaf under
+`RESEARCH` mode without Jeffreys smoothing or PD floor).
 
-**Formula (with clip).**
+**Formula and rules (Block 2F, `backend_v3/validation.py`).**
 
-    π_g ← max(π_g, 1e-15)
-    π_g ← min(π_g, 1 − 1e-15)
+1. **Tie-preserving grouping:** sorted predicted probabilities are partitioned
+   into up to `n_groups` buckets while advancing every boundary past tied
+   scores, making `H`, `G_eff` and `hl_p` strictly invariant to input row
+   order.
+2. **External degrees of freedom:** `hl_groups = G_eff`, `hl_df = G_eff`,
+   `hl_p = χ²_sf(H, G_eff)` (Hosmer, Lemeshow & Sturdivant 2013, §5.2.2).
+3. **Exact extreme match:** if `(π_g == 0 and O_g == 0)` or
+   `(π_g == 1 and O_g == N_g)`, the group contributes **`0.0`** exactly without
+   warning.
+4. **Numerical clip (`_HL_EPS = 1e-6`):** otherwise, if `π_g < 1e-6` or
+   `π_g > 1 − 1e-6`, `π_g` is clipped to `[1e-6, 1 − 1e-6]` and an explicit
+   `WARNING` is emitted in the log.
 
-**Rationale.** A model that predicts `π = 0` or `π = 1` for a group is
-itself suspect; clipping keeps the statistic computable **without
-discarding the group**. `1e-15` is above floating-point epsilon but
-below any analytically meaningful probability.
+**Rationale.** Replacing the legacy `1e-15` clip with `_HL_EPS = 1e-6`
+prevents artificial `~1e15` explosions when a `RESEARCH`-mode leaf predicts
+`0.0` and encounters a single OOS event, while still flagging severe
+miscalibration loudly and keeping `H` finite without silently dropping groups.
 
-**Consequences.** The HL statistic is always finite, and no group is
-silently dropped. Documented in `validation.py` as constant `_HL_EPS`.
+**Citation:** Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied
+Logistic Regression* (3rd ed.), §5.2.2. Wiley.
 
-> See `docs/design_decisions.md` §7.2 for the full decision rationale.
+> See `docs/design_decisions.md` §7.2 and §32 for the full decision rationale.
+
+### 8.9bis Weighted validation metrics and check B2
+
+When sample weights `w_i > 0` are active (`backend_v3/validation.py`,
+`backend_v3/reporting.py`, `backend_v3/splitting.py`), all evaluation metrics
+incorporate `w_i` consistently while preserving exact bit-for-bit parity when
+`weights=None` or `w_i ≡ 1`:
+
+- **Weighted AUC & Gini (`_pair_auc_ks`):** concordant and tied pairs are
+  weighted by `w_i · w_j`, divided by `W_1 · W_0` (`W_1 = Σ_{y=1} w_i`,
+  `W_0 = Σ_{y=0} w_i`). Scale-invariant in `w`.
+- **Weighted KS:** maximum vertical distance between the weighted empirical
+  CDFs `F_bad^w(s)` and `F_good^w(s)`. Scale-invariant in `w`.
+- **Weighted PR-AUC:** step-wise Average Precision using weighted true
+  positives `TP_w` and weighted predicted positives `TP_w + FP_w`.
+  Scale-invariant in `w`.
+- **Weighted Brier Score and BSS:**
+  `BS_w = (Σ_i w_i (y_i − p̂_i)²) / W`, with weighted prevalence
+  `ȳ_w = (Σ_i w_i y_i) / W` and `BS_ref,w = ȳ_w (1 − ȳ_w)` (multiclass
+  generalization in §8.12). Scale-invariant in `w`.
+- **Weighted Hosmer-Lemeshow:** per-group aggregates become weighted sums
+  `O_g^w = Σ_{i ∈ g} w_i y_i`, `N_g^w = Σ_{i ∈ g} w_i`,
+  `π_g^w = (Σ_{i ∈ g} w_i p̂_i) / N_g^w`. Because both numerator and
+  denominator scale linearly with `W`, **weighted HL scales linearly with the
+  total weight mass** (not scale-invariant; see `docs/design_decisions.md`
+  §13.8).
+- **Weighted accuracy (`w_accuracy`, Block 2F):** populated in both binary
+  (`K = 2`) and multiclass (`K > 2`) classification matrices as
+  `w_accuracy = (Σ_i w_i · 1[ŷ_i = y_i]) / W` (for binary:
+  `(w_tp + w_tn) / w_total`), matching `accuracy` exactly under uniform
+  weights.
+- **Stratification guard (`check B2`):** in weighted mode,
+  `splitting.stratified_split` validates `weights` (1D, finite, strictly
+  positive) and enforces `check B2`: every class must retain **at least 2
+  physical rows in train and at least 2 physical rows in test** (§7).
+
+**Citation:** Heeringa, West & Berglund (2010), §5.3. See
+`docs/design_decisions.md` §13.6–§13.8 and §32.
 
 ### 8.10 PR-AUC as step-wise Average Precision
 
@@ -1351,79 +1625,97 @@ D20; see `docs/3.5_design_multiclass_weighted_reports.md` §3 and §5.
 
 ---
 
-## 9. Simplified IFRS 9 / ECL and deterministic staging (Phase 7.0)
+## 9. Simplified IFRS 9 / ECL and deterministic staging (Phase 7.0, Block 2C)
 
 `backend_v3.ecl.calculate_ecl` implements a **single-scenario, single-period**
 expected credit loss calculation. It is anchored to IFRS 9, Section 5.5
-(impairment), and is deliberately narrower than a full accounting engine.
+(impairment) and Appendix A (credit-impaired financial assets), and is
+deliberately narrower than a full accounting engine.
 
-**Inputs.** Required columns: `exposure_id`, `ead`, `lgd`, `days_past_due`,
-`pd_initial`, plus the PD column named by `pd_column` (default `pd_current`).
-Optional: `is_default` (booleans or 0/1; absent ⇒ all `False`) and
-`pd_lifetime`. Validation is per exposure and fails loudly: `ead ≥ 0`,
+**Inputs and validation.** Required columns: `exposure_id`, `ead`, `lgd`,
+`days_past_due`, `pd_initial`, plus the non-empty PD column named by
+`pd_column` (default `pd_current`, forbidden from colliding with reserved
+input columns including `is_default`). Optional: `is_default` (booleans or
+0/1; absent ⇒ all `False`) and `pd_lifetime`. Validation is fail-fast on a
+non-empty `DataFrame`: boolean numeric columns are rejected, `ead ≥ 0`,
 `lgd ∈ [0, 1]`, `days_past_due ≥ 0`, PD columns finite and in `[0, 1]` with
-no missing values.
+no missing values, and **`pd_lifetime + 1e-12 ≥ pd_12m`** (a lifetime PD
+cannot be strictly lower than the 12-month PD).
+
+**Staging rules and mandatory Stage 3 default PD (deterministic, top-down).**
+
+| Order | Stage | Condition | Effective PD & Horizon |
+|---|---|---|---|
+| 1 | **Stage 3** | `days_past_due > 90` **or** `is_default` | **`PD_12m = 1.0`, `PD_lifetime = 1.0`** (mandatory, IFRS 9 §5.5 / Appendix A); applicable horizon = **lifetime** |
+| 2 | **Stage 2** | `days_past_due > 30` **or** `pd_current > 2 × pd_initial` | input `pd_12m`, `pd_lifetime`; applicable horizon = **lifetime** |
+| 3 | **Stage 1** | everything else | input `pd_12m`, `pd_lifetime`; applicable horizon = **12-month** |
+
+The order matters: an exposure with `days_past_due = 120` and a default flag
+is Stage 3, not Stage 2, and its effective PD is forced to `1.0` regardless of
+the model-predicted PD column. There is no fitting, no simulation and no
+random component: the same input CSV always yields the same stages, the same
+per-exposure rows and the same totals. The input DataFrame is never mutated.
 
 **ECL formula.**
 
-    ECL = PD × LGD × EAD                        (generic form)
-
-    ECL_12m      = PD_12m      × LGD × EAD × d
-    ECL_lifetime = PD_lifetime × LGD × EAD × d
+    ECL_12m        = PD_12m      × LGD × EAD × d
+    ECL_lifetime   = PD_lifetime × LGD × EAD × d
+    ECL_applicable = ECL_12m        if Stage == 1
+                   = ECL_lifetime   if Stage ∈ {2, 3}
 
     d = 1                       if eir is None
-    d = 1 / (1 + EIR)           if eir is not None   (EIR > −1, finite)
+    d = 1 / (1 + EIR)           if eir is not None   (EIR ≥ 0, finite, non-bool)
 
     total_ecl_12m      = Σ_exposures ECL_12m        (math.fsum)
     total_ecl_lifetime = Σ_exposures ECL_lifetime   (math.fsum)
+    total_ecl_staged   = Σ_exposures ECL_applicable (math.fsum)
 
-The discount factor `d` is a **one-period** simplification: it discounts the
-whole horizon with a single factor instead of a multi-period amortised-cost
-schedule. `ECLConfig(eir=None)` disables discounting. `pd_lifetime` absent ⇒
-the 12-month PD is reused and an explicit `UserWarning` is emitted, so a
-reviewer can see that the lifetime figure is an approximation.
-
-**Staging rules (deterministic, evaluated top-down).**
-
-| Order | Stage | Condition |
-|---|---|---|
-| 1 | **Stage 3** | `days_past_due > 90` **or** `is_default` |
-| 2 | **Stage 2** | `days_past_due > 30` **or** `pd_current > 2 × pd_initial` |
-| 3 | **Stage 1** | everything else |
-
-The order matters: an exposure with `days_past_due = 120` and a default flag
-is Stage 3, not Stage 2. There is no fitting, no simulation and no random
-component: the same input CSV always yields the same stages, the same
-per-exposure rows and the same totals. The input DataFrame is never mutated.
+The discount factor `d` is a **one-period simplification in v1**: it discounts
+the whole horizon with a single factor instead of a multi-period amortised-cost
+schedule. `ECLConfig(eir=None)` disables discounting, and `eir < 0` is
+rejected (`ValueError`) so `d` never exceeds `1`. In the GUI (`ECLDialog`),
+the user enters annual `EIR (%)` in `[0.0, 200.0]` and the dialog performs
+the pure presentation conversion `eir = value / 100.0` before calling the
+backend. When `pd_lifetime` is absent, `pd_12m` is reused (still overridden
+to `1.0` in Stage 3) with an explicit `UserWarning`.
 
 **Outputs.** `ECLRow` per exposure (`exposure_id`, `stage`, `pd_12m`,
-`pd_lifetime`, `lgd`, `ead`, `ecl_12m`, `ecl_lifetime`) and an `ECLSummary`
-with `total_ecl_12m`, `total_ecl_lifetime` and `stage_counts` in Stage 1/2/3
-order. The Session facade (`Session.calculate_ecl`) returns only the bounded
-summary: the per-exposure detail is discarded so the MCP channel does not
-leak exposure-level data.
+`pd_lifetime`, `lgd`, `ead`, `ecl_12m`, `ecl_lifetime`, `ecl_applicable`) and
+an `ECLSummary` with `total_ecl_12m`, `total_ecl_lifetime`, `stage_counts`
+(Stage 1/2/3 order) and **`total_ecl_staged`** (the combined IFRS 9 staged
+provision: Stage 1 at 12 months + Stages 2 and 3 at lifetime). The Session
+facade (`Session.calculate_ecl`) returns only the bounded summary: the
+per-exposure detail is discarded so the MCP channel does not leak
+exposure-level data.
+
+**Governance separation: Prudential Basel PD vs. Accounting IFRS 9 PIT PD.**
+A PD produced under TreeGov's `BANKING` mode (§6.3, §6.7) incorporates
+Jeffreys smoothing and the prudential BCBS CRE 32.4 floor (`≥ 0.0005`), which
+are **prudential conservatism adjustments** for IRB capital. IFRS 9 §5.5.17
+requires **unbiased, probability-weighted, point-in-time (PIT)** PDs without
+prudential floors or regulatory margins of conservatism. Consequently,
+`calculate_ecl` applies **no** Basel floor, and the institution must ensure
+that the PD supplied in `pd_column` is properly calibrated as an unbiased PIT
+accounting estimate rather than reusing a floored prudential `BANKING` PD
+without documented reconciliation.
 
 **Scope limits — what this is not.**
 
 - Not a multi-scenario model: no probability-weighted macroeconomic
   scenarios, no forward-looking overlay.
-- Not a multi-period schedule: one discount factor, no year-by-year
-  amortisation or prepayment modelling.
+- Not a multi-period schedule: one-period discount factor `1 / (1 + EIR)` in
+  v1, no year-by-year amortisation or prepayment modelling.
 - The Stage 2 trigger `pd_current > 2 × pd_initial` is a **documented
   simplification** of the significant-increase-in-credit-risk test, not the
   IFRS 9 text.
-- The accounting PD is supplied by the caller and receives **no** regulatory
-  floor: the Basel PD floor of §6.3 is a prudential parameter and must not
-  migrate silently into an accounting provision (see
-  `docs/design_decisions.md` §22.2).
 - Passing these checks does **not** certify IFRS 9 compliance. Calibration,
   default definition, staging policy and *point-in-time* adequacy remain the
   institution's responsibility.
 
 **Citation:** IFRS 9 *Financial Instruments* (IASB), Section 5.5 —
-Impairment. See `docs/design_decisions.md` §22.1 and §22.2; `docs/api.md`
-(`backend_v3.ecl`, `Session.calculate_ecl`); `docs/security_audit.md` §0 for
-the sensitivity of the resulting artefacts.
+Impairment, and Appendix A. See `docs/design_decisions.md` §22.1, §22.2 and
+§29; `docs/api.md` (`backend_v3.ecl`, `Session.calculate_ecl`);
+`docs/security_audit.md` §0 for the sensitivity of the resulting artefacts.
 
 ---
 
@@ -1431,7 +1723,9 @@ the sensitivity of the resulting artefacts.
 
 - Biggs, D., de Ville, B. & Suen, E. (1991). A Method of Choosing Multiway Partitions for Classification and Decision Trees. Journal of Applied Statistics, 18(1), 49-62.
 - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). Classification and Regression Trees. Wadsworth.
+- Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). Algorithms for Computing the Sample Variance: Analysis and Recommendations. The American Statistician, 37(3), 242-247.
 - Cochran, W.G. (1954). Some Methods for Strengthening the Common Chi-2 Tests. Biometrics, 10(4), 417-451.
+- Davis, J. & Goadrich, M. (2006). The relationship between Precision-Recall and ROC curves. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
 - Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). Multinomial
   goodness-of-fit tests for logistic regression models. Statistics in
   Medicine, 31(30), 4238-4253.
@@ -1439,9 +1733,14 @@ the sensitivity of the resulting artefacts.
 - Hand, D.J. & Till, R.J. (2001). A simple generalisation of the area
   under the ROC curve for multiple class classification problems.
   Machine Learning, 45(2), 171-186.
+- Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). Applied Survey Data Analysis. Chapman & Hall/CRC.
+- Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). Applied Logistic Regression (3rd ed.). Wiley.
+- Jeffreys, H. (1946). An invariant form for the prior probability in estimation problems. Proceedings of the Royal Society of London A, 186(1007), 453-461.
 - Kass, G.V. (1980). An Exploratory Technique for Investigating Large Quantities of Categorical Data. Applied Statistics, 29(2), 119-127.
+- Kish, L. (1965). Survey Sampling. Wiley.
 - Loh, W.-Y. & Shih, Y.-S. (1997). Split Selection Methods for Classification Trees. Statistica Sinica, 7(4), 815-840.
 - Pearson, K. (1900). On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling. Philosophical Magazine, Ser. 5, 50(302), 157-175.
+- Press, W.H., Teukolsky, S.A., Vetterling, W.T. & Flannery, B.P. (2007). Numerical Recipes: The Art of Scientific Computing (3rd ed.), §5.6. Cambridge University Press.
 - Siddiqi, N. (2006). Credit Risk Scorecards: Developing and Implementing Intelligent Credit Scoring. Wiley.
 
 ---
@@ -1452,5 +1751,5 @@ the sensitivity of the resulting artefacts.
   (0.05% for corporate, bank and retail; 0.03% or exempt for
   sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: staging, ECL and threshold optimization.
+- **IFRS 9**: staging and expected credit loss (ECL) impairment (§5.5 and Appendix A).
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
