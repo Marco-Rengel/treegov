@@ -162,14 +162,23 @@ def _validate_groups(
 def _weighted_median(a: np.ndarray, w: np.ndarray) -> float:
     """Mediana ponderada: primera observacion ordenada cuyo peso acumulado
     alcanza la mitad del peso total del grupo. Si el peso acumulado coincide
-    exactamente con la mitad, se promedian esa observacion y la siguiente
-    (convencion que reproduce exactamente la mediana clasica cuando todos
-    los pesos son iguales, incluidos los grupos de tamano par)."""
+    con la mitad (dentro de tolerancia flotante rel_tol=1e-12, abs_tol=1e-15),
+    se promedian esa observacion y la siguiente (convencion que reproduce
+    exactamente la mediana clasica cuando todos los pesos son iguales,
+    incluidos los grupos de tamano par)."""
     order = np.argsort(a, kind="stable")
     cum_w = np.cumsum(w[order])
     half = float(w.sum()) / 2.0
-    idx = int(np.searchsorted(cum_w, half, side="left"))
-    if idx + 1 < a.size and cum_w[idx] == half:
+    idx = min(int(np.searchsorted(cum_w, half, side="left")), a.size - 1)
+    if (
+        idx > 0
+        and math.isclose(float(cum_w[idx - 1]), half, rel_tol=1e-12, abs_tol=1e-15)
+        and not math.isclose(float(cum_w[idx]), half, rel_tol=1e-12, abs_tol=1e-15)
+    ):
+        return float((a[order[idx - 1]] + a[order[idx]]) / 2.0)
+    if idx + 1 < a.size and math.isclose(
+        float(cum_w[idx]), half, rel_tol=1e-12, abs_tol=1e-15
+    ):
         return float((a[order[idx]] + a[order[idx + 1]]) / 2.0)
     return float(a[order[idx]])
 
@@ -437,7 +446,10 @@ def bonferroni_adjust(p: float, m: int) -> float:
     """p_adj = min(1.0, p * m)   (Kass 1980; Bonferroni nunca reduce p).
 
     Garantiza por construccion el invariante p_adj >= p que SplitConfig
-    exige en backend_v3.types.
+    exige en backend_v3.types. Evalua el producto en escala logaritmica
+    (math.log(p) + math.log(m)) para evitar OverflowError cuando m es un
+    entero Python de precision arbitraria > ~1.8e308 (p. ej. multiplicadores
+    de Kass con alta cardinalidad).
     """
     p = float(p)
     if not 0.0 <= p <= 1.0:
@@ -445,4 +457,11 @@ def bonferroni_adjust(p: float, m: int) -> float:
     m = _as_int("m", m)
     if m < 1:
         raise ValueError(f"[bonferroni_adjust] m debe ser entero >= 1 (m={m})")
-    return min(1.0, p * m)
+    if p == 0.0:
+        return 0.0
+    log_prod = math.log(p) + math.log(m)
+    if log_prod >= 0.0:
+        return 1.0
+    if m.bit_length() > 1020:
+        return min(1.0, math.exp(log_prod))
+    return min(1.0, p * float(m))

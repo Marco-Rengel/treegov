@@ -57,8 +57,10 @@ ANOVA, la chi-cuadrado y el QDA pasan a ser sumas de pesos:
     Data Analysis", §5.3.
   * chi2 de Pearson es sensible a la escala de la masa total de pesos
     (ibid., §5.4): comportamiento correcto, NO se normaliza.
-  * varianza ponderada con divisor W - 1 (generalizacion natural del
-    n - 1 clasico cuando los pesos actuan como frecuencias).
+  * varianza ponderada de confiabilidad de Kish (Kish 1965, "Survey Sampling";
+    Heeringa, West & Berglund 2010) con divisor W_k - sum(w_i^2) / W_k:
+    invariante a escala de pesos, estrictamente positivo para n_k >= 2 y
+    exactamente igual a n_k - 1 cuando todos los pesos son iguales.
 Con `weights=None` el comportamiento es identico bit a bit al previo.
 `SplitConfig.child_ns` y `parent_n` siguen siendo CONTEO FISICO DE
 FILAS (enteros).
@@ -213,7 +215,9 @@ class QuestEngine:
         ponderado (Heeringa, West & Berglund 2010, §5.3) y la chi2 de
         Pearson recibe una tabla con sumas de pesos (sensible a la escala,
         ibid. §5.4: comportamiento correcto, no se normaliza). La varianza
-        ponderada del QDA usa divisor W - 1. Con weights=None, el
+        ponderada del QDA usa el divisor insesgado de pesos de confiabilidad
+        de Kish W_k - sum(w_i^2)/W_k (Kish 1965, Survey Sampling), invariante
+        a escala y seguro para pesos normalizados. Con weights=None, el
         comportamiento es identico bit a bit al previo.
         """
         if not spec:
@@ -271,8 +275,12 @@ class QuestEngine:
         )
 
         # --- Etapa 1, familia 1: medias / asociacion ---
+        # Priorizamos candidatos con estadistico finito para que un predictor
+        # degenerado (F = inf por SSW = 0) no secuestre la Etapa 1 bloqueando
+        # a otros predictores validos y representables en SplitConfig.
         preparado: dict[str, tuple] = {}
         mejor_media: tuple[float, str, str, TestResult] | None = None
+        mejor_media_inf: tuple[float, str, str, TestResult] | None = None
         for orden, (nombre, ptype) in enumerate(spec.items()):
             pre = self._prepare(X[nombre], y_full, ptype, nombre, weights=w_full)
             if pre is None:
@@ -280,8 +288,12 @@ class QuestEngine:
             xd, yc, info = pre
             preparado[nombre] = (xd, yc, info)
             res = info["test"]
-            if mejor_media is None or res.p_value < mejor_media[0]:
-                mejor_media = (res.p_value, nombre, info["source"], res)
+            if math.isfinite(float(res.statistic)):
+                if mejor_media is None or res.p_value < mejor_media[0]:
+                    mejor_media = (res.p_value, nombre, info["source"], res)
+            else:
+                if mejor_media_inf is None or res.p_value < mejor_media_inf[0]:
+                    mejor_media_inf = (res.p_value, nombre, info["source"], res)
 
         seleccion: QuestSelection | None = None
         if mejor_media is not None and mejor_media[0] < umbral:
@@ -290,6 +302,7 @@ class QuestEngine:
         else:
             # --- Etapa 1, familia 2: desempate robusto Levene/Brown-Forsythe ---
             mejor_var: tuple[float, str, TestResult] | None = None
+            mejor_var_inf: tuple[float, str, TestResult] | None = None
             for nombre, ptype in spec.items():
                 if ptype == PredictorType.NOMINAL or nombre not in preparado:
                     continue
@@ -299,10 +312,20 @@ class QuestEngine:
                 if any(x.size == 0 for x in xs_k):
                     continue
                 bf = brown_forsythe(*xs_k, weights=tuple(ws_k))
-                if mejor_var is None or bf.p_value < mejor_var[0]:
-                    mejor_var = (bf.p_value, nombre, bf)
+                if math.isfinite(float(bf.statistic)):
+                    if mejor_var is None or bf.p_value < mejor_var[0]:
+                        mejor_var = (bf.p_value, nombre, bf)
+                else:
+                    if mejor_var_inf is None or bf.p_value < mejor_var_inf[0]:
+                        mejor_var_inf = (bf.p_value, nombre, bf)
             if mejor_var is not None and mejor_var[0] < umbral:
                 _, nombre, bf = mejor_var
+                seleccion = self._mk_selection(nombre, "levene", bf, j_total)
+            elif mejor_media_inf is not None and mejor_media_inf[0] < umbral:
+                _, nombre, source, res = mejor_media_inf
+                seleccion = self._mk_selection(nombre, source, res, j_total)
+            elif mejor_var_inf is not None and mejor_var_inf[0] < umbral:
+                _, nombre, bf = mejor_var_inf
                 seleccion = self._mk_selection(nombre, "levene", bf, j_total)
 
         if seleccion is None:
@@ -335,6 +358,8 @@ class QuestEngine:
             (branches, child_ns), threshold = corte, None
         else:
             threshold, branches = self._numeric_cut(xd, yc, info, seleccion.predictor)
+            if threshold is None and branches is None:
+                return None
             if branches is not None:       # ordinal simbolico -> grupos
                 child_ns = (
                     int((np.isin(xd, list(branches[0]))).sum()),
@@ -426,6 +451,12 @@ class QuestEngine:
             return None
         yc = np.searchsorted(present, yc)  # relabel a 0..local_K-1
         K = int(present.size)  # K local, no global
+        if n <= K:
+            self._log.info(
+                "[QUEST|%r] n=%d <= K=%d: sin grados de libertad residuales",
+                nombre, n, K,
+            )
+            return None
 
         if ptype == PredictorType.NOMINAL:
             # tabla (c, K) de contingencia con sumas de pesos (np.bincount
@@ -495,7 +526,7 @@ class QuestEngine:
         nombre: str,
         *,
         weights: np.ndarray | None = None,
-    ) -> float:
+    ) -> float | None:
         """Raiz de las log-verosimilitudes condicionales gaussianas.
 
             A x^2 + B x + C = 0
@@ -503,11 +534,16 @@ class QuestEngine:
             B = 2 (m1/s1^2 - m0/s0^2)
             C = m0^2/s0^2 - m1^2/s1^2 + 2 ln(pi1/pi0) - ln(s1^2/s0^2)
 
+        La cuadratica se resuelve con la formula numericamente estable de
+        Citardauq (Press et al., Numerical Recipes §5.6) para evitar
+        cancelacion catastrofica cuando s0^2 ≈ s1^2:
+            q = -0.5 * (B + sign(B) * sqrt(B^2 - 4AC)),  r1 = q/A,  r2 = C/q.
+
         Root-selection modes (self.qda_root_restriction):
-          - True (default, documented Fase 0 restriction): only roots inside
-            the inter-means range [min(m0, m1), max(m0, m1)] are accepted;
-            external roots are discarded and, if none qualifies, the
-            fallback is the WEIGHTED midpoint x_bar = (W0 m0 + W1 m1)/(W0+W1).
+          - True (default, documented Fase 0 restriction): only roots (and
+            linear LDA cutpoints) inside the inter-means range
+            [min(m0, m1), max(m0, m1)] are accepted; external values fall
+            back to the WEIGHTED midpoint x_bar = (W0 m0 + W1 m1)/(W0+W1).
           - False (canonical): any real root is accepted; with two real
             roots, the one closest to the weighted mean x_bar is returned
             (operational determinism, same tie-break criterion as the
@@ -515,21 +551,40 @@ class QuestEngine:
 
         Si s0^2 == s1^2: forma lineal (LDA con priors):
             t = (m0+m1)/2 - s^2 ln(pi1/pi0) / (m1 - m0)
-        Varianza nula de alguna clase: fallback directo (operativo, no optimo).
+        Si xv es constante (min == max) devuelve None. En cualquier caso no
+        constante, una guarda de dominio garantiza que el umbral devuelto es
+        finito y pertenece a [min(xv), max(xv)) para evitar ramas vacias.
 
-        Pesos (Fase 3.2.d): con `weights`, las medias son medias
-        ponderadas, los priors empiricos son pi_k = W_k / (W0 + W1) y las
-        varianzas son ponderadas con correccion de Bessel ponderada
+        Pesos (remediado en Bloque 2E; design_decisions.md §13.4 y §31):
+        con `weights`, las medias son medias ponderadas, los priors empiricos
+        son pi_k = W_k / (W0 + W1) y las varianzas usan el estimador insesgado
+        de pesos de confiabilidad de Kish (Kish 1965, Survey Sampling;
+        Heeringa, West & Berglund 2010):
 
-            v_k = sum_k w (x - m_k)^2 / (W_k - 1),
+            v_k = sum_{i in k} w_i (x_i - m_k)^2 / (W_k - sum_{i in k} w_i^2 / W_k)
 
-        donde el divisor W_k - 1 es la generalizacion natural del n - 1
-        clasico cuando los pesos actuan como frecuencias. Los checks de
-        tamano ("clase con < 2 obs") se evaluan sobre FILAS FISICAS
-        (n0, n1); el check de varianza nula, sobre las varianzas
-        ponderadas. Con weights=None (equivale a todos unos) el calculo
-        reproduce el original.
+        Este divisor es estrictamente invariante a la escala de pesos
+        (w -> c * w), estrictamente positivo para todo vector positivo con
+        n_k >= 2 (incluidos pesos normalizados sum w_i = 1) y exactamente igual
+        a n_k - 1 cuando todos los pesos son iguales (paridad exacta con
+        Bessel clasico).
         """
+        xmin = float(xv.min())
+        xmax = float(xv.max())
+        if xmin == xmax:
+            self._log.info("[QUEST|%r] predictor constante: sin corte QDA", nombre)
+            return None
+
+        def _bound_cut(cand: float, fallback: float) -> float:
+            out = float(cand)
+            if not math.isfinite(out) or out < xmin or out >= xmax:
+                out = float(fallback)
+            if not math.isfinite(out) or out < xmin or out >= xmax:
+                out = xmin + (xmax - xmin) / 2.0
+                if not math.isfinite(out) or out < xmin or out >= xmax:
+                    out = xmin
+            return float(out)
+
         y1 = yc == 1
         x0 = xv[~y1]
         x1 = xv[y1]
@@ -539,22 +594,48 @@ class QuestEngine:
         w1 = w[y1]
         if n0 < 2 or n1 < 2:
             self._log.info("[QUEST|%r] clase con <2 obs: fallback a media", nombre)
-            return float(np.average(xv, weights=w))
+            x_bar = float(np.average(xv, weights=w))
+            return _bound_cut(x_bar, x_bar)
         w_tot0 = float(w0.sum())
         w_tot1 = float(w1.sum())
         m0 = float((w0 * x0).sum()) / w_tot0
         m1 = float((w1 * x1).sum()) / w_tot1
-        v0 = float((w0 * (x0 - m0) ** 2).sum()) / (w_tot0 - 1.0)
-        v1 = float((w1 * (x1 - m1) ** 2).sum()) / (w_tot1 - 1.0)
         w_tot = w_tot0 + w_tot1
         x_bar = (w_tot0 * m0 + w_tot1 * m1) / w_tot
 
-        if v0 <= 0.0 or v1 <= 0.0:
+        w2_0 = float((w0 * w0).sum())
+        w2_1 = float((w1 * w1).sum())
+        denom0 = (
+            w_tot0 - w2_0 / w_tot0
+            if math.isfinite(w2_0) and w2_0 > 0.0
+            else w_tot0 * (1.0 - float(((w0 / w_tot0) ** 2).sum()))
+        )
+        denom1 = (
+            w_tot1 - w2_1 / w_tot1
+            if math.isfinite(w2_1) and w2_1 > 0.0
+            else w_tot1 * (1.0 - float(((w1 / w_tot1) ** 2).sum()))
+        )
+        if (
+            denom0 <= 0.0
+            or denom1 <= 0.0
+            or not math.isfinite(denom0)
+            or not math.isfinite(denom1)
+        ):
+            self._log.info(
+                "[QUEST|%r] denominador Kish degenerado: corte operativo x_bar",
+                nombre,
+            )
+            return _bound_cut(x_bar, x_bar)
+
+        v0 = float((w0 * (x0 - m0) ** 2).sum()) / denom0
+        v1 = float((w1 * (x1 - m1) ** 2).sum()) / denom1
+
+        if v0 <= 0.0 or v1 <= 0.0 or not math.isfinite(v0) or not math.isfinite(v1):
             self._log.info(
                 "[QUEST|%r] varianza nula de clase: corte operativo x_bar",
                 nombre,
             )
-            return float(x_bar)
+            return _bound_cut(x_bar, x_bar)
 
         pi1 = w_tot1 / w_tot
         pi0 = w_tot0 / w_tot
@@ -562,9 +643,17 @@ class QuestEngine:
 
         if math.isclose(v0, v1, rel_tol=1e-12):
             if m0 == m1:
-                return float(x_bar)
+                return _bound_cut(x_bar, x_bar)
             t = (m0 + m1) / 2.0 - v1 * log_odds / (m1 - m0)
-            return float(t)
+            if self.qda_root_restriction:
+                lo, hi = (m0, m1) if m0 <= m1 else (m1, m0)
+                if not (lo <= t <= hi):
+                    self._log.info(
+                        "[QUEST|%r] corte LDA fuera del rango inter-medias: fallback a x_bar",
+                        nombre,
+                    )
+                    return _bound_cut(x_bar, x_bar)
+            return _bound_cut(t, x_bar)
 
         a_coef = 1.0 / v0 - 1.0 / v1
         b_coef = 2.0 * (m1 / v1 - m0 / v0)
@@ -576,10 +665,14 @@ class QuestEngine:
             self._log.info(
                 "[QUEST|%r] QDA sin raices reales: fallback a x_bar", nombre
             )
-            return float(x_bar)
+            return _bound_cut(x_bar, x_bar)
         sq = math.sqrt(disc)
-        r1 = (-b_coef + sq) / (2.0 * a_coef)
-        r2 = (-b_coef - sq) / (2.0 * a_coef)
+        q = -0.5 * (b_coef + (sq if b_coef >= 0.0 else -sq))
+        if q == 0.0:
+            r1 = r2 = 0.0
+        else:
+            r1 = q / a_coef
+            r2 = c_coef / q
         if self.qda_root_restriction:
             # restricted mode (default): keep only roots inside the
             # inter-means range [min(m0, m1), max(m0, m1)]
@@ -590,16 +683,17 @@ class QuestEngine:
                     "[QUEST|%r] raices fuera del rango inter-medias: fallback a x_bar",
                     nombre,
                 )
-                return float(x_bar)
+                return _bound_cut(x_bar, x_bar)
             if len(dentro) == 2 and abs(dentro[1] - x_bar) < abs(dentro[0] - x_bar):
-                return float(dentro[1])  # closest to the weighted total mean
-            return float(dentro[0])
+                t_sel = float(dentro[1])  # closest to the weighted total mean
+            else:
+                t_sel = float(dentro[0])
+            return _bound_cut(t_sel, x_bar)
         # canonical mode: accept any real root; with two real roots pick the
         # one closest to the weighted mean (operational determinism, same
         # tie-break criterion as the restricted path)
-        if abs(r2 - x_bar) < abs(r1 - x_bar):
-            return float(r2)
-        return float(r1)
+        t_sel = float(r2) if abs(r2 - x_bar) < abs(r1 - x_bar) else float(r1)
+        return _bound_cut(t_sel, x_bar)
 
     def _gini_sweep_numeric(
         self,
@@ -631,14 +725,19 @@ class QuestEngine:
         ws = w[orden]
         w_total = float(ws.sum())
         one_hot = (ys[:, None] == np.arange(K)[None, :]).astype(np.float64)
-        cum = np.cumsum(one_hot * ws[:, None], axis=0)
+        w_oh = one_hot * ws[:, None]
+        cum = np.cumsum(w_oh, axis=0)
+        cum_rev = np.cumsum(w_oh[::-1], axis=0)[::-1]
         c_l = cum[bordes]
-        c_r = cum[-1][None, :] - c_l
+        c_r = cum_rev[bordes + 1]
         counts_parent = cum[-1]
         p_parent = counts_parent / w_total
-        i_parent = 1.0 - float((p_parent * p_parent).sum())
+        i_parent = max(1.0 - float((p_parent * p_parent).sum()), 0.0)
         d_i, _, _ = _gini_dI(c_l, c_r, i_parent, w_total)
+        d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
         best = int(np.argmax(d_i))
+        if not math.isfinite(float(d_i[best])):
+            return None
         v_low = float(xs[bordes[best]])
         v_high = float(xs[bordes[best] + 1])
         return v_low + (v_high - v_low) / 2.0
@@ -662,8 +761,8 @@ class QuestEngine:
             t = self._qda_cutpoint(xv, yc, nombre, weights=info["w"])
         else:
             t = self._gini_sweep_numeric(xv, yc, info["w"], nombre)
-            if t is None:
-                return None, None
+        if t is None:
+            return None, None
         if labels is None:
             return t, None
         k = int(math.floor(t))
@@ -723,10 +822,14 @@ class QuestEngine:
         if k_cats <= self.max_exhaustive_cardinality:
             masks = _masks_exhaustivas(k_cats)
             mf = masks.astype(float)
+            mf_left = (~masks).astype(float)
             c_r = mf @ counts
-            c_l = counts.sum(axis=0)[None, :] - c_r
+            c_l = mf_left @ counts
             d_i, n_l, n_r = _gini_dI(c_l, c_r, i_parent, n_tot)
+            d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
             best = int(np.argmax(d_i))
+            if not math.isfinite(float(d_i[best])):
+                return None
             mask_der = masks[best]
         else:
             if counts.shape[1] == 2:
@@ -740,11 +843,16 @@ class QuestEngine:
                 )
             tasas = counts[:, clase] / counts.sum(axis=1)
             orden = np.argsort(-tasas, kind="stable")
-            cum = np.cumsum(counts[orden], axis=0)
+            co = counts[orden]
+            cum = np.cumsum(co, axis=0)
+            cum_rev = np.cumsum(co[::-1], axis=0)[::-1]
             c_l = cum[:-1]
-            c_r = cum[-1][None, :] - c_l
+            c_r = cum_rev[1:]
             d_i, n_l, n_r = _gini_dI(c_l, c_r, i_parent, n_tot)
+            d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
             bpos = int(np.argmax(d_i))
+            if not math.isfinite(float(d_i[bpos])):
+                return None
             mask_der = np.zeros(k_cats, dtype=bool)
             mask_der[orden[: bpos + 1]] = True  # derecha = tasas ALTAS
 

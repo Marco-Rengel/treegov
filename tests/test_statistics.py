@@ -432,6 +432,42 @@ def _manual_weighted_anova_f(z1, w1, z2, w2):
 
 
 # ---------------------------------------------------------------------------
+# Bloque 2E (CRIT-10): bonferroni_adjust sin overflow y _weighted_median
+# ---------------------------------------------------------------------------
+
+
+def test_bonferroni_adjust_huge_m_no_overflow():
+    # Multiplicador de Kass gigante (c=250, r=5, nominal -> > 1e170; y m = 10**400 > 1.8e308)
+    m_kass = kass_multiplier(250, 5, ordinal=False)
+    assert bonferroni_adjust(1e-50, m_kass) == 1.0
+    assert bonferroni_adjust(1e-50, 10**400) == 1.0
+    assert bonferroni_adjust(0.0, 10**400) == 0.0
+    # p subnormal muy pequeno con m = 10**320 -> producto finito exacto < 1.0
+    p_tiny = 1e-322
+    m_big = 10**320
+    res = bonferroni_adjust(p_tiny, m_big)
+    expected = math.exp(math.log(p_tiny) + math.log(m_big))
+    assert 0.0 < res < 1.0
+    assert math.isclose(res, expected, rel_tol=1e-12)
+
+
+def test_weighted_median_float_rounding_tie():
+    # Pesos cuya suma binaria tiene error de representacion flotante:
+    # 0.1 + 0.2 = 0.30000000000000004, total = 0.6000000000000001
+    a = np.array([1.0, 2.0, 3.0])
+    w = np.array([0.1, 0.2, 0.3])
+    assert _weighted_median(a, w) == 2.5
+    # Orden inverso (cum_w[0] = 0.3 < half = 0.30000000000000004): debe promediar igual
+    assert _weighted_median(np.array([3.0, 2.0, 1.0]), w) == 1.5
+    # 4 pesos iguales de 1/3 -> mediana exacta = promedio de los dos centrales
+    a4 = np.array([10.0, 20.0, 30.0, 40.0])
+    w4 = np.array([1.0 / 3.0] * 4)
+    assert _weighted_median(a4, w4) == 25.0
+    # 4 pesos [0.1, 0.2, 0.1, 0.2] -> mitad exacta tras el 2do valor
+    assert _weighted_median(a4, np.array([0.1, 0.2, 0.1, 0.2])) == 25.0
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

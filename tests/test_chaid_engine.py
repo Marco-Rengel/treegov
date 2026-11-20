@@ -221,16 +221,18 @@ def test_exhaustive_historial_y_argmin():
     assert steps[2].global_p_value == p2
     assert steps[2].adjusted_p_value == bonferroni_adjust(p2, 7)
 
-    # argmin de p_adj corresponde al paso 0 (0.0012 < 0.0024 < 0.0030):
-    # el exhaustivo retiene las 4 categorias originales
+    # Bloque 2E (CRIT-10): en N=40, r=4 y r=3 violan Cochran (E=4.25 < 5 en
+    # >= 33% de celdas). Exhaustive conserva el historial completo [4, 3, 2],
+    # pero restringe la seleccion a particiones Cochran-validas -> elige r=2.
     assert steps[0].adjusted_p_value < steps[1].adjusted_p_value
     assert steps[0].adjusted_p_value < steps[2].adjusted_p_value
-    assert cfg.n_merges == 0
-    assert len(cfg.branches) == 4
-    assert cfg.bonferroni_multiplier == 1
-    assert cfg.p_value_adjusted == cfg.p_value
+    assert cfg.n_merges == 2
+    assert len(cfg.branches) == 2
+    assert cfg.bonferroni_multiplier == 7
+    assert cfg.p_value_adjusted == bonferroni_adjust(p2, 7)
+    assert eng.diagnostics.cochran_ok is True
 
-    # contraste: el clasico con los mismos datos SI fusiona hasta r=2
+    # contraste: el clasico con los mismos datos tambien fusiona hasta r=2
     cfg_clasico = _engine().evaluate(
         x, y, predictor="x_exh", predictor_type=_NOMINAL, target_type=_BINARY
     )
@@ -238,6 +240,32 @@ def test_exhaustive_historial_y_argmin():
     assert cfg_clasico.n_merges == 2
     assert len(cfg_clasico.branches) == 2
     assert cfg_clasico.bonferroni_multiplier == 7
+
+
+def test_exhaustive_retains_r4_when_cochran_ok():
+    # Mismo patron que _fixture_exhaustive escalado 2x (N=80): todas las
+    # frecuencias esperadas E >= 5 -> Cochran se cumple en todos los pasos
+    # y Exhaustive SI retiene r=4 (n_merges == 0) por menor p_adj.
+    x = pd.Series(["a"] * 20 + ["b"] * 20 + ["c"] * 20 + ["d"] * 20)
+    y = pd.Series(
+        [0] * 4 + [1] * 16 + [0] * 2 + [1] * 18
+        + [0] * 10 + [1] * 10 + [0] * 18 + [1] * 2
+    )
+    eng = _engine(exhaustive=True)
+    cfg = eng.evaluate(
+        x, y, predictor="x_exh80", predictor_type=_NOMINAL, target_type=_BINARY
+    )
+    assert cfg is not None
+    assert eng.diagnostics.n_forced_merges == 0
+    assert eng.diagnostics.cochran_ok is True
+    steps = eng.diagnostics.exhaustive_steps
+    assert [s.n_groups for s in steps] == [4, 3, 2]
+    assert steps[0].adjusted_p_value < steps[1].adjusted_p_value
+    assert steps[0].adjusted_p_value < steps[2].adjusted_p_value
+    assert cfg.n_merges == 0
+    assert len(cfg.branches) == 4
+    assert cfg.bonferroni_multiplier == 1
+    assert cfg.p_value_adjusted == cfg.p_value
 
 
 def _fixture_exhaustive_limpio():
@@ -751,6 +779,98 @@ def test_weighted_chaid_best_split_propagates_weights():
     w = np.r_[np.full(80, 10.0), np.full(200, 0.1)]
     bw = eng.best_split(X, y, spec, target_type=_BINARY, weights=w)
     assert bw is not None and bw.predictor == "p2"
+
+
+# ---------------------------------------------------------------------------
+# 13. Bloque 2E (CRIT-10): continuo constante exhaustive, centrado y +/-inf
+# ---------------------------------------------------------------------------
+
+
+def test_chaid_continuous_constant_exhaustive_returns_none():
+    # Predictor CONTINUOUS constante con exhaustive=True no debe crashear
+    x = pd.Series([42.0] * 40)
+    y_bin = pd.Series([0, 1] * 20)
+    y_cont = pd.Series(np.linspace(1.0, 10.0, 40))
+    eng = _engine(exhaustive=True)
+    assert eng.evaluate(
+        x, y_bin, predictor="c_bin",
+        predictor_type=PredictorType.CONTINUOUS, target_type=_BINARY,
+    ) is None
+    assert eng.evaluate(
+        x, y_cont, predictor="c_cont",
+        predictor_type=PredictorType.CONTINUOUS, target_type=_CONTINUOUS,
+    ) is None
+
+
+def test_chaid_continuous_target_large_offset_no_cancellation():
+    # Target 1e9 + noise produce el mismo F y las mismas ramas que noise
+    # (sin cancelacion catastrofica en q - s^2/n).
+    rng = np.random.default_rng(77)
+    n = 120
+    x_nom = pd.Series(["a"] * 40 + ["b"] * 40 + ["c"] * 40)
+    noise = np.concatenate([
+        rng.normal(0.0, 0.5, 40),
+        rng.normal(0.1, 0.5, 40),
+        rng.normal(2.5, 0.5, 40),
+    ])
+    y_base = pd.Series(noise)
+    y_shift = pd.Series(1e9 + noise)
+
+    eng = _engine()
+    cfg_base = eng.evaluate(
+        x_nom, y_base, predictor="x_nom",
+        predictor_type=_NOMINAL, target_type=_CONTINUOUS,
+    )
+    cfg_shift = eng.evaluate(
+        x_nom, y_shift, predictor="x_nom",
+        predictor_type=_NOMINAL, target_type=_CONTINUOUS,
+    )
+    assert cfg_base is not None and cfg_shift is not None
+    assert cfg_shift.branches == cfg_base.branches
+    assert math.isclose(cfg_shift.statistic, cfg_base.statistic, rel_tol=1e-7)
+
+    # Tambien en predictor CONTINUOUS + target CONTINUOUS
+    x_cont = pd.Series(np.linspace(0.0, 10.0, n))
+    cfg_cb = eng.evaluate(
+        x_cont, y_base, predictor="x_c",
+        predictor_type=PredictorType.CONTINUOUS, target_type=_CONTINUOUS,
+    )
+    cfg_cs = eng.evaluate(
+        x_cont, y_shift, predictor="x_c",
+        predictor_type=PredictorType.CONTINUOUS, target_type=_CONTINUOUS,
+    )
+    assert cfg_cb is not None and cfg_cs is not None
+    assert cfg_cs.branches == cfg_cb.branches
+    assert math.isclose(cfg_cs.statistic, cfg_cb.statistic, rel_tol=1e-7)
+
+
+def test_chaid_rejects_nonfinite_continuous_x_and_y():
+    eng = _engine()
+    # +/-inf en predictor CONTINUOUS
+    for bad in (np.inf, -np.inf):
+        x_bad = pd.Series([1.0, 2.0, bad, 4.0, 5.0, 6.0])
+        y_ok = pd.Series([0, 0, 0, 1, 1, 1])
+        _assert_raises(
+            ValueError, eng.evaluate, x_bad, y_ok,
+            predictor="x_inf", predictor_type=PredictorType.CONTINUOUS,
+            target_type=_BINARY,
+        )
+    # +/-inf en target continuo (predictor nominal y continuo)
+    for bad in (np.inf, -np.inf):
+        _assert_raises(
+            ValueError, eng.evaluate,
+            pd.Series(["a", "a", "a", "b", "b", "b"]),
+            pd.Series([1.0, 2.0, bad, 4.0, 5.0, 6.0]),
+            predictor="y_inf_nom", predictor_type=_NOMINAL,
+            target_type=_CONTINUOUS,
+        )
+        _assert_raises(
+            ValueError, eng.evaluate,
+            pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]),
+            pd.Series([1.0, 2.0, bad, 4.0, 5.0, 6.0]),
+            predictor="y_inf_cont", predictor_type=PredictorType.CONTINUOUS,
+            target_type=_CONTINUOUS,
+        )
 
 
 # ---------------------------------------------------------------------------

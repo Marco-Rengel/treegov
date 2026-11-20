@@ -1651,6 +1651,17 @@ but introduces bias. We prefer unbiasedness over strict invariance.
 `docs/design_decisions.md` §13.2; `docs/audit_log.md` entry of
 10/10/2026 (Phase 3.2.d).
 
+> **Actualización (Bloque 2E, 20/11/2026 — ver `§31`):** El divisor `W - 1`
+> adoptado originalmente en Fase 3.2.d ha sido **sustituido** por el divisor
+> insesgado de pesos de confiabilidad de Kish,
+> $W_k - \sum_{i \in k} w_i^2 / W_k$ (Kish 1965, *Survey Sampling*; Heeringa,
+> West & Berglund 2010), para remediar `CRIT-09` (`ZeroDivisionError` cuando
+> $W_k = 1$ y varianzas negativas cuando $W_k < 1$ con pesos normalizados).
+> Este estimador conserva paridad exacta con `n - 1` bajo pesos uniformes, es
+> estrictamente positivo para todo $n_k \ge 2$ y hace al umbral QDA
+> **estrictamente invariante a la escala de pesos** ($w \mapsto c \cdot w$).
+> El test de verificación pasa a `test_weighted_quest_qda_variance_uses_kish_reliability`.
+
 ---
 
 ### 13.5 TreeNode.w_events — informative field with empty default
@@ -2766,6 +2777,40 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-08`, `CRIT-16`); `docs/api.md` (`backend_v3.session_state`, `backend_v3.reporting`); `docs/audit_log.md` (cierre del Bloque 2D, 20/11/2026).
 
+---
+
+## §31. Remediación Bloque 2E: estabilidad matemática y numérica de motores (QUEST, CHAID, C&RT, statistics e imputation) (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) identificó dos hallazgos críticos de cálculo numérico y control en los motores analíticos:
+1. `CRIT-09` (`backend_v3/quest_engine.py`): el divisor `W_k - 1` de la varianza ponderada QDA provocaba `ZeroDivisionError` cuando $W_k = 1$ y varianzas negativas cuando $W_k < 1$ (pesos normalizados $\sum w_i = 1$); la fórmula escolar de la cuadrática sufría cancelación catastrófica cuando $v_0 \approx v_1$; la rama lineal LDA y el QDA canónico podían producir cortes fuera de $[\min(x), \max(x))$ dejando una rama vacía; faltaban guardas para multiclase con $n \le K$ (`ValueError: N <= k` en `f_oneway`) y para `_numeric_cut` devolviendo `(None, None)` (`TypeError`); y un predictor degenerado con separación perfecta ($F = \infty$) secuestraba la Etapa 1 bloqueando a otros predictores válidos con $F$ finito.
+2. `CRIT-10` (`backend_v3/statistics.py`, `backend_v3/imputation.py`, `backend_v3/crt_engine.py`, `backend_v3/chaid_engine.py`): `bonferroni_adjust(p, m)` lanzaba `OverflowError` cuando $m > 1.8 \times 10^{308}$ (multiplicadores de Kass en alta cardinalidad); `_weighted_median` usaba igualdad flotante exacta `cum_w[idx] == half` sin clamping de índice; `TrainOnlyImputer` aceptaba `±inf` (pudiendo aprender `mean = NaN` ante `[+inf, -inf]`); en C&RT, `_gini_dI` elevaba conteos antes de normalizar (`inf/inf = NaN` o `0/0 = NaN` bajo pesos $\gtrsim 10^{154}$ / $\lesssim 10^{-155}$), los acumulados derechos por resta `total - left` sufrían cancelación bajo ratios de peso $\ge 10^{16}$, y la varianza en regresión sufría cancelación catastrófica ante offsets grandes ($|\mu| \gg \sigma$); y en CHAID, un predictor `CONTINUOUS` constante con `exhaustive=True` fallaba tras `_premerge_empty_bins`, faltaba rechazo de `±inf` y centrado en target continuo, y Exhaustive CHAID podía retroceder a una partición que violaba la regla de Cochran existiendo particiones Cochran-válidas (además de registrar literalmente `(r=2)` en el aviso final).
+
+**Decisiones.**
+
+1. **Varianza ponderada de confiabilidad de Kish, Citardauq y guardas de dominio/control en `QuestEngine` (`backend_v3/quest_engine.py`).**
+   - Se sustituye `W_k - 1` en `_qda_cutpoint` por el estimador insesgado de pesos de confiabilidad de Kish (Kish 1965, *Survey Sampling*; Heeringa, West & Berglund 2010):
+     $$v_k = \frac{\sum_{i \in k} w_i (x_i - m_k)^2}{W_k - \frac{\sum_{i \in k} w_i^2}{W_k}}$$
+     invariante a escala ($w \mapsto c \cdot w$), estrictamente positivo para todo $n_k \ge 2$ y exactamente igual a $n_k - 1$ con pesos uniformes (con fallback seguro a `x_bar` si el denominador degenera por precisión).
+   - Se adopta la fórmula de Citardauq (Press et al., *Numerical Recipes* §5.6) para la cuadrática QDA (`q = -0.5 * (b + sign(b)*sqrt(disc))`, `r1 = q/a`, `r2 = c/q`), evitando cancelación cuando $v_0 \approx v_1$.
+   - `_qda_cutpoint` devuelve `None` si `xv` es constante; en la rama LDA aplica la restricción inter-medias cuando `qda_root_restriction=True`; y toda salida de `_qda_cutpoint` pasa por una guarda final de dominio que asegura un umbral finito en $[\min(x), \max(x))$ (fallback escalonado `x_bar` $\to$ punto medio $\to$ `xmin`).
+   - En `_prepare` se añade `if n <= K: return None`; en `evaluate` se comprueba `if threshold is None and branches is None: return None`; en Etapa 1 (medias y Brown-Forsythe) se priorizan los candidatos con `math.isfinite(statistic)` que superen `< umbral`, conservando el `WARNING` `"no representable"` y retorno `None` únicamente si no existe ningún candidato finito significativo; y en `_gini_sweep_numeric` / `_subset_cut` se emplea suma acumulada inversa / complemento directo y saneamiento de no finitos antes de `argmax`.
+2. **Estabilidad de `bonferroni_adjust`, `_weighted_median` y `TrainOnlyImputer` (`backend_v3/statistics.py`, `backend_v3/imputation.py`).**
+   - `bonferroni_adjust(p, m)` trata `p == 0.0` retornando `0.0` y evalúa `log_prod = math.log(p) + math.log(m)` (aritmética entera de precisión arbitraria soportada por `math.log(int)` en Python 3), retornando `1.0` si `log_prod >= 0.0`, `min(1.0, math.exp(log_prod))` si `m.bit_length() > 1020`, y `min(1.0, p * float(m))` en el caso ordinario (paridad bit a bit).
+   - `_weighted_median(a, w)` aplica clamping `min(searchsorted(...), a.size - 1)` y tolerancia flotante `math.isclose(..., rel_tol=1e-12, abs_tol=1e-15)` (con simetría de orden para empates afectados por redondeo binario en `half`).
+   - `TrainOnlyImputer.fit()` y `transform()` rechazan con `ValueError` cualquier valor no finito (`±inf`) en columnas numéricas imputadas por media.
+3. **Kernels a prueba de overflow, cancelación y `±inf` en `CrtEngine` (`backend_v3/crt_engine.py`).**
+   - `_gini_dI` normaliza probabilidades antes de elevar al cuadrado, usa la identidad sin cancelación $1 - \sum p_k^2 = q(2 - q) - \sum_{k \ne m} p_k^2$ (con $q = \sum_{k \ne m} p_k$) y marca cortes degenerados (`n_l <= 0` o `n_r <= 0`) como `-np.inf`.
+   - `_sweep_values` y `_subset_por_tasa` calculan los acumulados derechos mediante suma acumulada inversa (`cumsum(arr[::-1])[::-1]`); `_subset_exhaustivo` calcula el lado izquierdo por producto matricial directo `(~masks).astype(float) @ counts`; y todo `argmax` sanea previamente los valores no finitos a `-np.inf`.
+   - En regresión (`evaluate` y `_embedded_split`), se centra `y_c = y - media_global` (Chan, Golub & LeVeque 1983, *The American Statistician* 37(3):242–247) antes de acumular suficientes; `_var_dI` protege divisiones y lados vacíos devolviendo `-np.inf`; y `surrogate_splits` valida finitud en el primario numérico y en los candidatos numéricos.
+4. **Centrado de varianza, guardas y elegibilidad de Cochran en `ChaidEngine` (`backend_v3/chaid_engine.py`).**
+   - `_reduce_continuous_predictor` rechaza `±inf` en `x` (y en `y` si `target_continuo`) y devuelve `None` si `x` es constante; `_reduce_continuous` rechaza `±inf` en `y`; ambos centran `y_c = y - y_mean` (Chan, Golub & LeVeque 1983) preservando la invariancia de `SSB` y `SSW`.
+   - En `evaluate()`, tras `_premerge_empty_bins(counts)` se añade la guarda `if len(groups) < 2: return self._finish_none(...)` antes de registrar el paso 0 de Exhaustive CHAID.
+   - En modo `exhaustive=True` se registra paralelamente `step_cochran_ok` y la selección del mínimo `p_adj` se restringe a los estados Cochran-válidos (conservando el historial completo en `diagnostics.exhaustive_steps` y recurriendo a todos los estados solo si la violación es irreductible). El aviso de Cochran final informa el `(r=%d)` real.
+
+**Consecuencias.** Los tres motores, el núcleo estadístico y el imputador conservan paridad exacta con las fórmulas clásicas sin pesos sobre datos limpios, y quedan blindados frente a overflow/underflow de pesos y multiplicadores de Kass, cancelación catastrófica, infinitos, nodos degenerados y violaciones de Cochran en Exhaustive CHAID.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-09`, `CRIT-10`); Kish (1965), *Survey Sampling*; Heeringa, West & Berglund (2010), *Applied Survey Data Analysis*; Press et al., *Numerical Recipes* §5.6; Chan, Golub & LeVeque (1983), *The American Statistician* 37(3):242–247; `docs/design_decisions.md` §13.4; `docs/api.md`; `docs/audit_log.md` (cierre del Bloque 2E, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2820,6 +2865,12 @@ remediation: IFRS 9 staged ECL/EIR unit parity, Stage 3 `PD = 1.0`,
 remediation: end-to-end multiclass K≥3 support (string targets, `get_gains_table`
 translation, `ClassificationMatrix.class_labels`, `Session.train` safe
 `target_type` resolution, K×K `ReportsPanel`/HTML) and `ModelWizard` SR 11-7
-validation/cost-matrix hardening.)
+validation/cost-matrix hardening; on 20/11/2026 to add §31 and update §13.4 —
+Block 2E remediation: QUEST Kish scale-invariant weighted variance, Citardauq
+QDA root stability, domain/control guards and non-hijacking under `F = inf`,
+overflow-free `bonferroni_adjust`, tolerance-aware `_weighted_median`,
+`TrainOnlyImputer` `±inf` rejection, C&RT normalized Gini/reverse-cumsum/centered
+regression variance, and CHAID centered continuous target, constant-continuous
+guard and Cochran-eligible Exhaustive selection.)
 
 ---

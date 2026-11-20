@@ -305,14 +305,22 @@ class ChaidEngine:
             # bin no vacio superior mas cercano. Garantiza child_ns > 0 y
             # que las ramas cubren TODOS los bins (routing por bin_edges).
             groups: list[tuple[int, ...]] = self._premerge_empty_bins(counts)
+            if len(groups) < 2:
+                return self._finish_none(predictor, c, 1, 0, True, n_dropped, ())
         else:
             groups = [(i,) for i in range(c)]
         steps: list[MergeStep] = []
         states: list[tuple[tuple[int, ...], ...]] = [tuple(groups)]
+        step_cochran_ok: list[bool] = []
         n_forced = 0
 
         if self.exhaustive:
             steps.append(self._record_step(groups, c, matrix, continuo, ordinal, (), math.nan, counts))
+            step_cochran_ok.append(
+                True if continuo else not _cochran_status(
+                    self._expected(self._groups_table(matrix, groups))
+                )[0]
+            )
 
         while len(groups) > 1:
             r = len(groups)
@@ -338,6 +346,11 @@ class ChaidEngine:
                                               (i_sel, j_sel), p_forced, counts)
                         )
                         states.append(tuple(groups))
+                        step_cochran_ok.append(
+                            not _cochran_status(
+                                self._expected(self._groups_table(matrix, groups))
+                            )[0]
+                        )
                     continue
 
             # -- paso de significancia: fusionar el par con MAYOR p --
@@ -355,6 +368,11 @@ class ChaidEngine:
                                       (i_sel, j_sel), p_max, counts)
                 )
                 states.append(tuple(groups))
+                step_cochran_ok.append(
+                    True if continuo else not _cochran_status(
+                        self._expected(self._groups_table(matrix, groups))
+                    )[0]
+                )
                 continue
             if p_max > self.alpha_merge:
                 groups = self._fuse(groups, i_sel, j_sel)
@@ -363,8 +381,10 @@ class ChaidEngine:
 
         # -- seleccion del estado final --
         if self.exhaustive:
+            eligible = [t for t in range(len(steps)) if step_cochran_ok[t]]
+            pool = eligible if eligible else range(len(steps))
             best = min(
-                range(len(steps)),
+                pool,
                 key=lambda t: (steps[t].adjusted_p_value, steps[t].n_groups),
             )
             groups = list(states[best])
@@ -402,8 +422,8 @@ class ChaidEngine:
             if not cochran_ok:
                 self._log.warning(
                     "[CHAID|%r][Cochran] violacion irreductible en la tabla FINAL "
-                    "(r=2); p-valores asintoticos cuestionables",
-                    predictor,
+                    "(r=%d); p-valores asintoticos cuestionables",
+                    predictor, r,
                 )
 
         if p_adj > self.alpha_split:
@@ -541,10 +561,19 @@ class ChaidEngine:
         """Suficientes estadisticos por categoria: matrix[:, 0:3] = (n, sum, sumsq).
 
         Sin pesos: n_i = conteo de filas. Con pesos: n_i = SUMA DE PESOS
-        (W_i), s_i = sum w*y, q_i = sum w*y^2 (Heeringa et al. 2010,
+        (W_i), s_i = sum w*y_c, q_i = sum w*y_c^2 (Heeringa et al. 2010,
         sec. 5.3); el conteo fisico de filas viaja aparte en `counts`.
+
+        Centra y_c = y - media_global antes de acumular suficientes (Chan,
+        Golub & LeVeque 1983, The American Statistician 37(3):242-247) para
+        eliminar la cancelacion catastrofica de q - s^2/n cuando |media| >> sigma,
+        preservando invariancia exacta de SSB y SSW ante traslacion.
         """
         yv = yd.to_numpy(dtype=float)
+        if yv.size == 0:
+            return None
+        if not np.all(np.isfinite(yv)):
+            raise ValueError(f"[CHAID|{predictor!r}] y contiene no finitos")
         try:
             codes, uniques = pd.factorize(xd, sort=True)
         except TypeError as e:
@@ -554,13 +583,17 @@ class ChaidEngine:
         c = len(uniques)
         counts = np.bincount(codes, minlength=c).astype(float)
         if weights is None:
+            y_mean = float(yv.mean())
+            yv_c = yv - y_mean
             n_i = counts
-            s_i = np.bincount(codes, weights=yv, minlength=c)
-            q_i = np.bincount(codes, weights=yv * yv, minlength=c)
+            s_i = np.bincount(codes, weights=yv_c, minlength=c)
+            q_i = np.bincount(codes, weights=yv_c * yv_c, minlength=c)
         else:
+            y_mean = float((weights * yv).sum()) / float(weights.sum())
+            yv_c = yv - y_mean
             n_i = np.bincount(codes, weights=weights, minlength=c)
-            s_i = np.bincount(codes, weights=weights * yv, minlength=c)
-            q_i = np.bincount(codes, weights=weights * yv * yv, minlength=c)
+            s_i = np.bincount(codes, weights=weights * yv_c, minlength=c)
+            q_i = np.bincount(codes, weights=weights * yv_c * yv_c, minlength=c)
         matrix = np.column_stack([n_i, s_i, q_i])
         return tuple(uniques), matrix, counts
 
@@ -582,7 +615,8 @@ class ChaidEngine:
             bucle de fusion los absorbe via _premerge_empty_bins.
           - matrix: tabla (bins, K) de floats (target categorico; celdas
             ponderadas si `weights` no es None) o suficientes
-            (n, sum, sumsq) por bin (target continuo).
+            (n, sum, sumsq) por bin (target continuo, centrados via
+            y_c = y - media_global; Chan, Golub & LeVeque 1983).
           - counts: conteo FISICO de filas por bin.
           - bin_edges: cortes usados (tupla creciente de floats).
         """
@@ -594,21 +628,32 @@ class ChaidEngine:
             ) from e
         if xv.size == 0:
             return None
+        if not np.all(np.isfinite(xv)):
+            raise ValueError(f"[CHAID|{predictor!r}] x contiene no finitos")
+        if target_continuo:
+            yv = yd.to_numpy(dtype=float)
+            if not np.all(np.isfinite(yv)):
+                raise ValueError(f"[CHAID|{predictor!r}] y contiene no finitos")
+        if float(xv.min()) == float(xv.max()):
+            return None
         edges = np.unique(np.quantile(xv, np.linspace(0.0, 1.0, 12)[1:-1]))
         codes = np.digitize(xv, edges, right=True)           # 0..len(edges)
         c = int(edges.size) + 1
         labels = tuple(f"bin_{i}" for i in range(c))
         counts = np.bincount(codes, minlength=c).astype(float)
         if target_continuo:
-            yv = yd.to_numpy(dtype=float)
             if weights is None:
+                y_mean = float(yv.mean())
+                yv_c = yv - y_mean
                 n_i = counts
-                s_i = np.bincount(codes, weights=yv, minlength=c)
-                q_i = np.bincount(codes, weights=yv * yv, minlength=c)
+                s_i = np.bincount(codes, weights=yv_c, minlength=c)
+                q_i = np.bincount(codes, weights=yv_c * yv_c, minlength=c)
             else:
+                y_mean = float((weights * yv).sum()) / float(weights.sum())
+                yv_c = yv - y_mean
                 n_i = np.bincount(codes, weights=weights, minlength=c)
-                s_i = np.bincount(codes, weights=weights * yv, minlength=c)
-                q_i = np.bincount(codes, weights=weights * yv * yv, minlength=c)
+                s_i = np.bincount(codes, weights=weights * yv_c, minlength=c)
+                q_i = np.bincount(codes, weights=weights * yv_c * yv_c, minlength=c)
             matrix = np.column_stack([n_i, s_i, q_i])
         else:
             try:

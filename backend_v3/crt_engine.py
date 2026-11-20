@@ -96,20 +96,49 @@ class SurrogateSplit:
 # ---------------------------------------------------------------------------
 
 
+def _gini_impurity_from_probs(p: np.ndarray) -> np.ndarray:
+    """Impureza de Gini 1 - sum_k p_k^2 sin cancelacion catastrofica.
+
+    Usa la identidad exacta (con m = argmax_k p_k y q = sum_{k != m} p_k):
+        1 - sum_k p_k^2 = q * (2 - q) - sum_{k != m} p_k^2
+    que conserva precision completa incluso cuando p_m ≈ 1 - 1e-17.
+    """
+    k_cls = p.shape[-1]
+    idx_max = np.argmax(p, axis=-1)
+    mask_other = np.arange(k_cls) != idx_max[..., None]
+    p_other = np.where(mask_other, p, 0.0)
+    q = p_other.sum(axis=-1)
+    return np.maximum(q * (2.0 - q) - (p_other * p_other).sum(axis=-1), 0.0)
+
+
 def _gini_dI(
     c_l: np.ndarray, c_r: np.ndarray, i_parent: float, n_total: float
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """dI(corte) = I_padre - (nL/N) I_L - (nR/N) I_R con I = 1 - sum p_k^2.
 
     c_l, c_r: (P, K) conteos por clase a cada lado de P cortes candidatos.
-    Devuelve (dI, nL, nR) por corte. Nunca hay lados vacios por construccion
-    (cortes solo entre valores distintos / mascaras propias).
+    Devuelve (dI, nL, nR) por corte. Normaliza probabilidades p_k = c_k / n
+    antes de elevar al cuadrado para evitar overflow (pesos >= 1e154) o
+    underflow (pesos <= 1e-155) en c^2 / n^2. Cortes degenerados con
+    nL <= 0 o nR <= 0 reciben dI = -inf (nunca NaN).
     """
     n_l = c_l.sum(axis=1)
     n_r = c_r.sum(axis=1)
-    imp_l = 1.0 - (c_l * c_l).sum(axis=1) / (n_l * n_l)
-    imp_r = 1.0 - (c_r * c_r).sum(axis=1) / (n_r * n_r)
+    valid = (n_l > 0.0) & (n_r > 0.0) & np.isfinite(n_l) & np.isfinite(n_r)
+    p_l = np.divide(
+        c_l, n_l[:, None],
+        out=np.zeros_like(c_l, dtype=float),
+        where=n_l[:, None] > 0.0,
+    )
+    p_r = np.divide(
+        c_r, n_r[:, None],
+        out=np.zeros_like(c_r, dtype=float),
+        where=n_r[:, None] > 0.0,
+    )
+    imp_l = _gini_impurity_from_probs(p_l)
+    imp_r = _gini_impurity_from_probs(p_r)
     d_i = i_parent - (n_l / n_total) * imp_l - (n_r / n_total) * imp_r
+    d_i = np.where(valid, d_i, -np.inf)
     return d_i, n_l, n_r
 
 
@@ -118,10 +147,22 @@ def _var_dI(
     n_r: np.ndarray, s_r: np.ndarray, q_r: np.ndarray,
     i_parent: float, n_total: float,
 ) -> np.ndarray:
-    """dI de varianza: I = E[y^2] - E[y]^2 (clip a 0 por redondeo)."""
-    v_l = np.maximum(q_l / n_l - (s_l / n_l) ** 2, 0.0)
-    v_r = np.maximum(q_r / n_r - (s_r / n_r) ** 2, 0.0)
-    return i_parent - (n_l / n_total) * v_l - (n_r / n_total) * v_r
+    """dI de varianza: I = E[y_c^2] - E[y_c]^2 (clip a 0 por redondeo).
+
+    Opera sobre suficientes acumulados con y centrado (y_c = y - media_global;
+    Chan, Golub & LeVeque 1983, The American Statistician 37(3):242-247) para
+    evitar cancelacion catastrofica cuando |media| >> sigma. Cortes con
+    n_l <= 0 o n_r <= 0 devuelven -inf (nunca NaN).
+    """
+    valid = (n_l > 0.0) & (n_r > 0.0) & np.isfinite(n_l) & np.isfinite(n_r)
+    m_l = np.divide(s_l, n_l, out=np.zeros_like(s_l, dtype=float), where=n_l > 0.0)
+    m_r = np.divide(s_r, n_r, out=np.zeros_like(s_r, dtype=float), where=n_r > 0.0)
+    e2_l = np.divide(q_l, n_l, out=np.zeros_like(q_l, dtype=float), where=n_l > 0.0)
+    e2_r = np.divide(q_r, n_r, out=np.zeros_like(q_r, dtype=float), where=n_r > 0.0)
+    v_l = np.maximum(e2_l - m_l * m_l, 0.0)
+    v_r = np.maximum(e2_r - m_r * m_r, 0.0)
+    d_i = i_parent - (n_l / n_total) * v_l - (n_r / n_total) * v_r
+    return np.where(valid, d_i, -np.inf)
 
 
 def _masks_exhaustivas(k_cats: int) -> np.ndarray:
@@ -276,10 +317,9 @@ class CrtEngine:
             if not np.all(np.isfinite(yv)):
                 raise ValueError(f"[CRT|{predictor!r}] y contiene no finitos")
             mean = float((w * yv).sum()) / w_total
-            i_parent = max(
-                float((w * yv * yv).sum()) / w_total - mean * mean, 0.0
-            )
-            ydata: tuple = ("reg", yv, 0, i_parent, n_total)
+            yv_c = yv - mean
+            i_parent = max(float((w * yv_c * yv_c).sum()) / w_total, 0.0)
+            ydata: tuple = ("reg", yv_c, 0, i_parent, n_total)
         else:
             codes, classes = pd.factorize(yd, sort=True)
             k_classes = len(classes)
@@ -292,7 +332,7 @@ class CrtEngine:
             yint = codes.astype(np.int64)
             counts = np.bincount(yint, weights=w, minlength=k_classes)
             p = counts / w_total
-            i_parent = max(float(1.0 - (p * p).sum()), 0.0)
+            i_parent = float(_gini_impurity_from_probs(p))
             ydata = ("cls", yint, k_classes, i_parent, n_total)
 
         if i_parent <= 0.0:
@@ -425,7 +465,12 @@ class CrtEngine:
         xp = X[primary.predictor]
         mask_p = xp.notna().to_numpy()
         if primary.threshold is not None:
-            left_p = (xp.to_numpy(dtype=float) <= float(primary.threshold)) & mask_p
+            xp_arr = xp.to_numpy(dtype=float)
+            if not np.all(np.isfinite(xp_arr[mask_p])):
+                raise ValueError(
+                    f"[surrogates|{primary.predictor!r}] x contiene no finitos (+/-inf)"
+                )
+            left_p = (xp_arr <= float(primary.threshold)) & mask_p
         elif primary.branches is not None and len(primary.branches) == 2:
             izq0 = set(primary.branches[0])
             left_p = xp.isin(list(izq0)).to_numpy() & mask_p
@@ -441,6 +486,12 @@ class CrtEngine:
             if nombre not in X.columns:
                 raise ValueError(f"[surrogates] predictor ausente en X: {nombre!r}")
             cand = X[nombre]
+            if ptype != PredictorType.NOMINAL and pd.api.types.is_numeric_dtype(cand):
+                cand_valid = cand.dropna().to_numpy(dtype=float)
+                if cand_valid.size > 0 and not np.all(np.isfinite(cand_valid)):
+                    raise ValueError(
+                        f"[surrogates|{nombre!r}] x contiene no finitos (+/-inf)"
+                    )
             mask = mask_p & cand.notna().to_numpy()
             n_used = int(mask.sum())
             if n_used == 0:
@@ -527,7 +578,10 @@ class CrtEngine:
             return None  # x constante
 
         d_i, n_l, n_r = self._sweep_values(xs, bordes, orden, ydata, weights)
+        d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
         bpos = int(np.argmax(d_i))  # primer maximo -> determinista
+        if not math.isfinite(float(d_i[bpos])):
+            return None
         n_left = int(n_l[bpos])
         n_right = int(n_r[bpos])
 
@@ -552,9 +606,9 @@ class CrtEngine:
 
         Los acumulados de la formula (conteos por clase / suficientes) se
         ponderan por `weights`; los vectores n_l / n_r devueltos son
-        CONTEOS FISICOS de filas a cada lado del corte. Las firmas de
-        _gini_dI / _var_dI no cambian: reciben sumas de pesos como
-        "conteos" y el total de pesos W como n_total.
+        CONTEOS FISICOS de filas a cada lado del corte. Los acumulados
+        derechos se calculan por suma acumulada inversa para evitar
+        cancelacion catastrofica (total - izq) bajo ratios de peso extremos.
         """
         kind, yvals, k_cls, i_parent, n = ydata
         w_sorted = weights[orden]
@@ -566,20 +620,25 @@ class CrtEngine:
             one_hot = (
                 y_sorted[:, None] == np.arange(k_cls)[None, :]
             ).astype(np.float64)
-            cum = np.cumsum(one_hot * w_sorted[:, None], axis=0)
+            w_oh = one_hot * w_sorted[:, None]
+            cum = np.cumsum(w_oh, axis=0)
+            cum_rev = np.cumsum(w_oh[::-1], axis=0)[::-1]
             c_l = cum[bordes]
-            c_r = cum[-1][None, :] - c_l
+            c_r = cum_rev[bordes + 1]
             d_i, _, _ = _gini_dI(c_l, c_r, i_parent, w_total)
             return d_i, n_l, n_r
         y_sorted = yvals[orden]
         wys = w_sorted * y_sorted
+        wy2s = wys * y_sorted
         cumw = np.cumsum(w_sorted)
         cum1 = np.cumsum(wys)
-        cum2 = np.cumsum(wys * y_sorted)
-        w_l = cumw[bordes]
+        cum2 = np.cumsum(wy2s)
+        cumw_r = np.cumsum(w_sorted[::-1])[::-1]
+        cum1_r = np.cumsum(wys[::-1])[::-1]
+        cum2_r = np.cumsum(wy2s[::-1])[::-1]
         d_i = _var_dI(
-            w_l, cum1[bordes], cum2[bordes],
-            w_total - w_l, cum1[-1] - cum1[bordes], cum2[-1] - cum2[bordes],
+            cumw[bordes], cum1[bordes], cum2[bordes],
+            cumw_r[bordes + 1], cum1_r[bordes + 1], cum2_r[bordes + 1],
             i_parent, w_total,
         )
         return d_i, n_l, n_r
@@ -681,21 +740,27 @@ class CrtEngine:
         """2^(K-1)-1 particiones por mascara binaria, vectorizado."""
         masks = _masks_exhaustivas(counts.shape[0])  # (M, k) True = derecha
         mf = masks.astype(float)
+        mf_left = (~masks).astype(float)
         if kind == "cls":
             c_r = mf @ counts                       # (M, K)
-            c_l = counts.sum(axis=0)[None, :] - c_r
+            c_l = mf_left @ counts
             d_i, n_l, n_r = _gini_dI(c_l, c_r, i_parent, n)
         else:
             n_r = mf @ counts[:, 0]
             s_r = mf @ counts[:, 1]
             q_r = mf @ counts[:, 2]
-            n_l = n - n_r
+            n_l = mf_left @ counts[:, 0]
+            s_l = mf_left @ counts[:, 1]
+            q_l = mf_left @ counts[:, 2]
             d_i = _var_dI(
-                n_l, counts[:, 1].sum() - s_r, counts[:, 2].sum() - q_r,
+                n_l, s_l, q_l,
                 n_r, s_r, q_r,
                 i_parent, n,
             )
+        d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
         best = int(np.argmax(d_i))  # mascara de menor entero en empate
+        if not math.isfinite(float(d_i[best])):
+            return None
         return masks[best], float(d_i[best]), float(n_l[best]), float(n_r[best])
 
     def _subset_por_tasa(
@@ -705,26 +770,30 @@ class CrtEngine:
         """Orden por tasa/media descendente + cortes entre adyacentes."""
         orden = np.argsort(-tasas, kind="stable")
         mask = np.zeros(counts.shape[0], dtype=bool)
-        # barrido sobre la tabla reordenada
+        # barrido sobre la tabla reordenada (acumulado inverso para lado derecho)
+        co = counts[orden]
+        cum = np.cumsum(co, axis=0)
+        cum_rev = np.cumsum(co[::-1], axis=0)[::-1]
         if kind == "cls":
-            co = counts[orden]
-            cum = np.cumsum(co, axis=0)
             c_l = cum[:-1]
-            c_r = cum[-1][None, :] - c_l
+            c_r = cum_rev[1:]
             d_i, n_l, n_r = _gini_dI(c_l, c_r, i_parent, n)
         else:
-            co = counts[orden]
-            cum = np.cumsum(co, axis=0)  # (k, 3) acumulado de (n, s, q)
             n_l = cum[:-1, 0]
             s_l = cum[:-1, 1]
             q_l = cum[:-1, 2]
+            n_r = cum_rev[1:, 0]
+            s_r = cum_rev[1:, 1]
+            q_r = cum_rev[1:, 2]
             d_i = _var_dI(
                 n_l, s_l, q_l,
-                n - n_l, counts[:, 1].sum() - s_l, counts[:, 2].sum() - q_l,
+                n_r, s_r, q_r,
                 i_parent, n,
             )
-            n_r = n - n_l
+        d_i = np.where(np.isfinite(d_i), d_i, -np.inf)
         bpos = int(np.argmax(d_i))
+        if not math.isfinite(float(d_i[bpos])):
+            return None
         mask[orden[: bpos + 1]] = True
         return mask, float(d_i[bpos]), float(n_l[bpos]), float(n_r[bpos])
 
@@ -772,6 +841,10 @@ class CrtEngine:
         etiquetas: tuple | None = None
         if pd.api.types.is_numeric_dtype(cand):
             xv = cand.to_numpy(dtype=float)
+            if not np.all(np.isfinite(xv)):
+                raise ValueError(
+                    f"[surrogates|{nombre!r}] x contiene no finitos (+/-inf)"
+                )
         else:
             try:
                 codes, uniques = pd.factorize(cand, sort=True)
@@ -917,19 +990,20 @@ class CrtEngine:
         continuo_y = target_type == TargetType.CONTINUOUS
         if continuo_y:
             yv = yd.to_numpy(dtype=float)
-            wl = w[izq]
-            yl = yv[izq]
-            w_l = float(wl.sum())
-            s_l = float((wl * yl).sum())
-            q_l = float((wl * yl * yl).sum())
-            s_all = float((w * yv).sum())
-            q_all = float((w * yv * yv).sum())
-            mean = s_all / w_total
-            i_parent = max(q_all / w_total - mean * mean, 0.0)
+            if not np.all(np.isfinite(yv)):
+                raise ValueError(f"[surrogates|{nombre!r}] y contiene no finitos")
+            mean = float((w * yv).sum()) / w_total
+            yv_c = yv - mean
+            i_parent = max(float((w * yv_c * yv_c).sum()) / w_total, 0.0)
+            wl, wr = w[izq], w[~izq]
+            yl, yr = yv_c[izq], yv_c[~izq]
             d_i = float(_var_dI(
-                np.array([w_l]), np.array([s_l]), np.array([q_l]),
-                np.array([w_total - w_l]), np.array([s_all - s_l]),
-                np.array([q_all - q_l]),
+                np.array([float(wl.sum())]),
+                np.array([float((wl * yl).sum())]),
+                np.array([float((wl * yl * yl).sum())]),
+                np.array([float(wr.sum())]),
+                np.array([float((wr * yr).sum())]),
+                np.array([float((wr * yr * yr).sum())]),
                 i_parent, w_total,
             )[0])
             stat_name: str = "variance_gain"
@@ -940,14 +1014,18 @@ class CrtEngine:
                 return None
             counts = np.bincount(codes, weights=w, minlength=k_cls)
             p = counts / w_total
-            i_parent = float(1.0 - (p * p).sum())
+            i_parent = float(_gini_impurity_from_probs(p))
             c_l = np.bincount(
                 codes[izq], weights=w[izq], minlength=k_cls
             )[None, :]
-            c_r = (counts - c_l[0])[None, :]
+            c_r = np.bincount(
+                codes[~izq], weights=w[~izq], minlength=k_cls
+            )[None, :]
             d_i = float(_gini_dI(c_l, c_r, i_parent, w_total)[0][0])
             stat_name = "gini_gain"
 
+        if not math.isfinite(d_i):
+            return None
         d_i = max(d_i, 0.0)
         return SplitConfig(
             predictor=nombre,

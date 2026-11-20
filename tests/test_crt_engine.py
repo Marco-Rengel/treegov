@@ -769,6 +769,151 @@ def test_weighted_crt_surrogate_embedded_child_ns_physical():
 
 
 # ---------------------------------------------------------------------------
+# 11. Bloque 2E (CRIT-10): estabilidad numerica (Gini, pesos extremos, offset)
+# ---------------------------------------------------------------------------
+
+
+def test_crt_extreme_weight_magnitudes_no_nan():
+    # Pesos 1e160 (overflow de c^2 si no se normaliza) y 1e-160 (underflow):
+    # Gini sin NaN y mismo corte que con pesos 1.0.
+    x = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    eng = _engine()
+    ref = eng.evaluate(
+        x, y, predictor="x", predictor_type=_CONTINUOUS, target_type=_BINARY
+    )
+    assert ref is not None
+    for scale in (1e160, 1e-160):
+        cfg = eng.evaluate(
+            x, y, predictor="x", predictor_type=_CONTINUOUS,
+            target_type=_BINARY, weights=np.full(len(x), scale),
+        )
+        assert cfg is not None
+        assert math.isfinite(cfg.statistic)
+        assert cfg.threshold == ref.threshold
+        assert math.isclose(cfg.statistic, ref.statistic, rel_tol=1e-12)
+
+    # Tambien en nominal exhaustivo
+    xn = pd.Series(["a", "a", "b", "b", "c", "c"])
+    ref_n = eng.evaluate(
+        xn, y, predictor="xn", predictor_type=_NOMINAL, target_type=_BINARY
+    )
+    assert ref_n is not None
+    for scale in (1e160, 1e-160):
+        cfg_n = eng.evaluate(
+            xn, y, predictor="xn", predictor_type=_NOMINAL,
+            target_type=_BINARY, weights=np.full(len(xn), scale),
+        )
+        assert cfg_n is not None
+        assert math.isfinite(cfg_n.statistic)
+        assert cfg_n.branches == ref_n.branches
+        assert math.isclose(cfg_n.statistic, ref_n.statistic, rel_tol=1e-12)
+
+
+def test_crt_extreme_weight_ratio_no_cancellation():
+    # Ratio de pesos 1e17:1 -> total - left daba 0 en el lado derecho y NaN en Gini/Var.
+    # Con suma acumulada inversa y complemento directo el lado derecho permanece exacto.
+    x = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    y_cls = pd.Series([0, 1, 0, 0, 1, 1])
+    y_reg = pd.Series([0.0, 10.0, 1.0, 1.0, 5.0, 5.0])
+    w = np.array([1e17, 1.0, 1.0, 1.0, 1.0, 1.0])
+    eng = _engine(min_impurity_decrease=0.0)
+
+    cfg_cls = eng.evaluate(
+        x, y_cls, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg_cls is not None
+    assert math.isfinite(cfg_cls.statistic) and cfg_cls.statistic >= 0.0
+
+    cfg_reg = eng.evaluate(
+        x, y_reg, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_T_CONT, weights=w,
+    )
+    assert cfg_reg is not None
+    assert math.isfinite(cfg_reg.statistic) and cfg_reg.statistic >= 0.0
+
+    # Nominal exhaustivo con ratio extremo (incluyendo 2 pesos 1e17 de clases
+    # distintas donde cum[-1] - c_l colapsaba a [0, 0] -> 0/0 = NaN)
+    xn = pd.Series(["a", "b", "c", "c", "d", "d"])
+    cfg_nom = eng.evaluate(
+        xn, y_cls, predictor="xn", predictor_type=_NOMINAL,
+        target_type=_BINARY, weights=w,
+    )
+    assert cfg_nom is not None and math.isfinite(cfg_nom.statistic)
+
+    w_pair = np.array([1e17, 1e17, 1.0, 1.0, 1.0, 1.0])
+    cfg_pair = eng.evaluate(
+        x, y_cls, predictor="x", predictor_type=_CONTINUOUS,
+        target_type=_BINARY, weights=w_pair,
+    )
+    assert cfg_pair is not None and math.isfinite(cfg_pair.statistic)
+    assert cfg_pair.threshold == 1.5
+
+
+def test_crt_regression_large_offset_no_cancellation():
+    # Regresion con 1e9 + noise produce exactamente el mismo corte y ganancia
+    # que noise (centrado y_c = y - media_global evita cancelacion catastrofica).
+    rng = np.random.default_rng(99)
+    n = 100
+    x = pd.Series(np.linspace(0.0, 10.0, n))
+    noise = np.where(x.to_numpy() <= 5.0, 0.0, 2.0) + rng.normal(0.0, 0.25, n)
+    y_base = pd.Series(noise)
+    y_shift = pd.Series(1e9 + noise)
+
+    eng = _engine()
+    cfg_base = eng.evaluate(
+        x, y_base, predictor="x", predictor_type=_CONTINUOUS, target_type=_T_CONT
+    )
+    cfg_shift = eng.evaluate(
+        x, y_shift, predictor="x", predictor_type=_CONTINUOUS, target_type=_T_CONT
+    )
+    assert cfg_base is not None and cfg_shift is not None
+    assert cfg_shift.threshold == cfg_base.threshold
+    assert math.isclose(cfg_shift.statistic, cfg_base.statistic, rel_tol=1e-7)
+
+    # Tambien nominal
+    xn = pd.Series(["a"] * 25 + ["b"] * 25 + ["c"] * 25 + ["d"] * 25)
+    cfg_nb = eng.evaluate(
+        xn, y_base, predictor="xn", predictor_type=_NOMINAL, target_type=_T_CONT
+    )
+    cfg_ns = eng.evaluate(
+        xn, y_shift, predictor="xn", predictor_type=_NOMINAL, target_type=_T_CONT
+    )
+    assert cfg_nb is not None and cfg_ns is not None
+    assert cfg_ns.branches == cfg_nb.branches
+    assert math.isclose(cfg_ns.statistic, cfg_nb.statistic, rel_tol=1e-7)
+
+
+def test_crt_surrogates_rejects_nonfinite():
+    x1 = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    eng = _engine()
+    prim = eng.evaluate(
+        x1, y, predictor="x1", predictor_type=_CONTINUOUS, target_type=_BINARY
+    )
+    assert prim is not None
+    # Inf en primario
+    X_inf_p = pd.DataFrame({
+        "x1": pd.Series([1.0, 2.0, np.inf, 4.0, 5.0, 6.0]),
+        "x2": x1.copy(),
+    })
+    _assert_raises(
+        ValueError, eng.surrogate_splits, prim, X_inf_p, y,
+        {"x1": _CONTINUOUS, "x2": _CONTINUOUS}, target_type=_BINARY,
+    )
+    # Inf en candidato numerico
+    X_inf_c = pd.DataFrame({
+        "x1": x1.copy(),
+        "x2": pd.Series([1.0, -np.inf, 3.0, 4.0, 5.0, 6.0]),
+    })
+    _assert_raises(
+        ValueError, eng.surrogate_splits, prim, X_inf_c, y,
+        {"x1": _CONTINUOUS, "x2": _CONTINUOUS}, target_type=_BINARY,
+    )
+
+
+# ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------
 

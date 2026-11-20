@@ -411,7 +411,8 @@ def test_nominal_high_card_dummies_lda_not_implemented():
 #   * chi2 de Pearson escala linealmente con la masa total de pesos
 #     (design_decisions.md §13.2; Heeringa et al. 2010 §5.4).
 #   * child_ns y parent_n son siempre conteos FISICOS de filas (enteros).
-#   * La varianza ponderada del QDA usa divisor W - 1 (Bessel ponderado).
+#   * La varianza ponderada del QDA usa el divisor insesgado de pesos de
+#     confiabilidad de Kish: W_k - sum(w_i^2) / W_k (invariante a escala).
 # ---------------------------------------------------------------------------
 
 
@@ -451,17 +452,18 @@ def _assert_configs_iguales(a: SplitConfig, b: SplitConfig) -> None:
         assert math.isclose(a.threshold, b.threshold, rel_tol=1e-12)
 
 
-def _qda_ponderado_manual(xv, yc, w, divisor_bessel=True):
+def _qda_ponderado_manual(xv, yc, w, divisor_kish=True):
     """Replica manual del QDA ponderado (Etapa 2): medias, priors y
-    varianzas ponderadas. divisor_bessel=True -> W - 1; False -> W."""
+    varianzas ponderadas. divisor_kish=True -> W - sum(w^2)/W (Kish 1965);
+    False -> W (MLE)."""
     y1 = yc == 1
     x0, x1 = xv[~y1], xv[y1]
     w0, w1 = w[~y1], w[y1]
     W0, W1 = float(w0.sum()), float(w1.sum())
     m0 = float((w0 * x0).sum()) / W0
     m1 = float((w1 * x1).sum()) / W1
-    d0 = W0 - 1.0 if divisor_bessel else W0
-    d1 = W1 - 1.0 if divisor_bessel else W1
+    d0 = (W0 - float((w0 * w0).sum()) / W0) if divisor_kish else W0
+    d1 = (W1 - float((w1 * w1).sum()) / W1) if divisor_kish else W1
     v0 = float((w0 * (x0 - m0) ** 2).sum()) / d0
     v1 = float((w1 * (x1 - m1) ** 2).sum()) / d1
     x_bar = (W0 * m0 + W1 * m1) / (W0 + W1)
@@ -480,8 +482,12 @@ def _qda_ponderado_manual(xv, yc, w, divisor_bessel=True):
     if disc < 0.0:
         return x_bar
     sq = math.sqrt(disc)
-    r1 = (-b + sq) / (2.0 * a)
-    r2 = (-b - sq) / (2.0 * a)
+    q = -0.5 * (b + (sq if b >= 0.0 else -sq))
+    if q == 0.0:
+        r1 = r2 = 0.0
+    else:
+        r1 = q / a
+        r2 = c / q
     lo, hi = (m0, m1) if m0 <= m1 else (m1, m0)
     dentro = [r for r in (r1, r2) if lo <= r <= hi]
     if not dentro:
@@ -550,9 +556,10 @@ def test_weighted_quest_f_is_scale_invariant():
     assert cfg_w.child_ns == cfg_k.child_ns
     assert cfg_w.parent_n == cfg_k.parent_n
     assert cfg_w.branches == cfg_k.branches
-    # NOTA: el threshold QDA NO es invariante a escala porque la varianza
-    # ponderada usa divisor W - 1 (Bessel): escalar los pesos cambia el
-    # factor (W - 1)/W. Es la convencion documentada en Fase 3.2.d.
+    # Bloque 2E (CRIT-09): con el divisor insesgado de confiabilidad de Kish
+    # W_k - sum(w^2)/W_k, el threshold QDA es estrictamente invariante a escala.
+    assert cfg_w.threshold is not None and cfg_k.threshold is not None
+    assert math.isclose(cfg_w.threshold, cfg_k.threshold, rel_tol=1e-12)
 
 
 def test_weighted_quest_chi2_scales_linearly():
@@ -601,30 +608,35 @@ def test_weighted_quest_qda_uses_weighted_means_and_priors():
     cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS}, weights=w)
     assert cfg is not None
     esperado = _qda_ponderado_manual(
-        X["v"].to_numpy(), y.to_numpy(), w, divisor_bessel=True
+        X["v"].to_numpy(), y.to_numpy(), w, divisor_kish=True
     )
     assert math.isclose(cfg.threshold, esperado, rel_tol=1e-12)
     # y difiere del umbral NO ponderado (t = 5.0, ver test_seleccion_anova_f54)
     assert not math.isclose(cfg.threshold, 5.0, rel_tol=1e-9)
 
 
-def test_weighted_quest_qda_variance_uses_w_minus_one():
-    # Convencion documentada (Fase 3.2.d): la varianza ponderada del QDA
-    # usa divisor W - 1 (generalizacion del n - 1 de Bessel cuando los pesos
-    # actuan como frecuencias), NO el divisor W del estimador de maxima
-    # verosimilitud.
+def test_weighted_quest_qda_variance_uses_kish_reliability():
+    # Convencion Bloque 2E (CRIT-09, design_decisions.md §13.4 y §31):
+    # la varianza ponderada del QDA usa el divisor insesgado de pesos de
+    # confiabilidad de Kish W_k - sum(w^2)/W_k (invariante a escala y exacto
+    # a n - 1 con pesos uniformes), NO el divisor MLE W_k.
     X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0])})
     y = pd.Series([0, 0, 0, 1, 1, 1])
     w = np.array([3.0, 1.0, 1.0, 1.0, 1.0, 4.0])  # no todos iguales
     cfg = _engine().evaluate(X, y, {"v": _CONTINUOUS}, weights=w)
     assert cfg is not None
     xv, yc = X["v"].to_numpy(), y.to_numpy()
-    t_wmenos1 = _qda_ponderado_manual(xv, yc, w, divisor_bessel=True)
-    t_w = _qda_ponderado_manual(xv, yc, w, divisor_bessel=False)
-    assert math.isclose(cfg.threshold, t_wmenos1, rel_tol=1e-12)
-    # con pesos no uniformes los dos divisores dan umbrales distintos
-    assert not math.isclose(t_wmenos1, t_w, rel_tol=1e-9)
-    assert not math.isclose(cfg.threshold, t_w, rel_tol=1e-9)
+    t_kish = _qda_ponderado_manual(xv, yc, w, divisor_kish=True)
+    t_mle = _qda_ponderado_manual(xv, yc, w, divisor_kish=False)
+    assert math.isclose(cfg.threshold, t_kish, rel_tol=1e-12)
+    # con pesos no uniformes el divisor Kish difiere del divisor MLE W
+    assert not math.isclose(t_kish, t_mle, rel_tol=1e-9)
+    assert not math.isclose(cfg.threshold, t_mle, rel_tol=1e-9)
+    # con pesos uniformes (cualquier constante c > 0) reproduce n - 1 exacto
+    cfg_unif = _engine().evaluate(X, y, {"v": _CONTINUOUS}, weights=np.full(6, 0.1))
+    cfg_sin = _engine().evaluate(X, y, {"v": _CONTINUOUS})
+    assert cfg_unif is not None and cfg_sin is not None
+    assert math.isclose(cfg_unif.threshold, cfg_sin.threshold, rel_tol=1e-12)
 
 
 def test_weighted_quest_rejects_wrong_length():
@@ -781,6 +793,134 @@ def test_quest_multiclass_brown_forsythe_k3():
     assert math.isclose(cfg.statistic, 23.142857, rel_tol=1e-5)
     assert math.isclose(cfg.threshold, 4.5, abs_tol=1e-9)
     assert cfg.child_ns == (4, 26)
+
+
+# ---------------------------------------------------------------------------
+# Bloque 2E (CRIT-09): estabilidad matematica, control y no-secuestro F=inf
+# ---------------------------------------------------------------------------
+
+
+def test_quest_qda_normalized_weights_and_unit_class_mass():
+    # Pesos normalizados (sum w = 1 -> W_0 < 1 y W_1 < 1) y caso exacto W_k = 1.0:
+    # antes lanzaba ZeroDivisionError (W_k = 1) o producia varianza negativa (W_k < 1).
+    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0])})
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    w_raw = np.array([3.0, 1.0, 1.0, 1.0, 1.0, 4.0])
+    w_norm = w_raw / float(w_raw.sum())
+    assert float(w_norm[:3].sum()) < 1.0 and float(w_norm[3:].sum()) < 1.0
+
+    eng = _engine()
+    cfg_raw = eng.evaluate(X, y, {"v": _CONTINUOUS}, weights=w_raw)
+    cfg_norm = eng.evaluate(X, y, {"v": _CONTINUOUS}, weights=w_norm)
+    assert cfg_raw is not None and cfg_norm is not None
+    assert math.isclose(cfg_norm.threshold, cfg_raw.threshold, rel_tol=1e-12)
+
+    # Caso exacto W_0 = 1.0 y W_1 = 1.0
+    w_unit = np.array([0.2, 0.3, 0.5, 0.25, 0.25, 0.5])
+    assert math.isclose(float(w_unit[:3].sum()), 1.0, rel_tol=1e-15)
+    assert math.isclose(float(w_unit[3:].sum()), 1.0, rel_tol=1e-15)
+    cfg_u = eng.evaluate(X, y, {"v": _CONTINUOUS}, weights=w_unit)
+    cfg_u10 = eng.evaluate(X, y, {"v": _CONTINUOUS}, weights=w_unit * 10.0)
+    assert cfg_u is not None and cfg_u10 is not None
+    assert math.isclose(cfg_u.threshold, cfg_u10.threshold, rel_tol=1e-12)
+
+
+def test_quest_qda_nearly_equal_variances_citardauq():
+    # v0 = 1.0, v1 = 1.0 + 1e-9 (fuera del umbral isclose rel_tol=1e-12):
+    # la formula de Citardauq (Numerical Recipes §5.6) evita cancelacion catastrofica
+    # y reproduce el limite LDA (m0+m1)/2 = 5.0 con alta precision.
+    eps = 1e-9
+    s1 = math.sqrt(1.0 + eps)
+    xv = np.array([2.0 - 1.0, 2.0, 2.0 + 1.0, 8.0 - s1, 8.0, 8.0 + s1])
+    yc = np.array([0, 0, 0, 1, 1, 1])
+    t = _engine()._qda_cutpoint(xv, yc, "nearly_eq")
+    assert t is not None and math.isfinite(t)
+    # Limite LDA con priores iguales: (2 + 8)/2 = 5.0; la desviacion O(eps) es < 1e-7
+    assert math.isclose(t, 5.0, abs_tol=1e-7)
+
+
+def test_quest_lda_and_qda_domain_bounds_extreme_imbalance():
+    # Desbalance extremo donde la solucion analitica LDA o QDA cae fuera de
+    # [min(x), max(x)): la guarda de dominio garantiza t en [xmin, xmax) y
+    # ambos child_ns > 0 tanto en modo restringido como canonico.
+    # Caso LDA (varianzas iguales): m0=0, m1=0.2, v0=v1=1, n0=3, n1=1000
+    # -> log_odds = ln(1000/3) ≈ 5.81 -> t_LDA = 0.1 - 1 * 5.81 / 0.2 ≈ -28.95 << xmin
+    x0 = np.array([-1.0, 0.0, 1.0])
+    # construir x1 con media 0.2 y varianza exacta 1.0
+    rng = np.random.default_rng(123)
+    z = rng.normal(0.0, 1.0, 1000)
+    z = (z - z.mean()) / z.std(ddof=1)
+    x1 = 0.2 + z
+    xv_lda = np.concatenate([x0, x1])
+    yc_lda = np.array([0] * 3 + [1] * 1000)
+    xmin, xmax = float(xv_lda.min()), float(xv_lda.max())
+
+    for restrict in (True, False):
+        eng = _engine(qda_root_restriction=restrict)
+        t = eng._qda_cutpoint(xv_lda, yc_lda, "lda_imb")
+        assert t is not None and math.isfinite(t)
+        assert xmin <= t < xmax
+        assert int((xv_lda <= t).sum()) > 0 and int((xv_lda > t).sum()) > 0
+        if restrict:
+            # en modo restringido, t_LDA fuera de [m0, m1] cae a x_bar
+            assert math.isclose(t, float(xv_lda.mean()), rel_tol=1e-12)
+
+    # Caso QDA con desbalance extremo e2e (ambos modos producen SplitConfig valido)
+    x_e2e = pd.Series(
+        [0.0, 0.5, 1.0] + [1.2 + 0.05 * (i % 5) for i in range(400)]
+    )
+    y_e2e = pd.Series([0] * 3 + [1] * 400)
+    X_e2e = pd.DataFrame({"v": x_e2e})
+    for restrict in (True, False):
+        cfg = _engine(qda_root_restriction=restrict).evaluate(
+            X_e2e, y_e2e, {"v": _CONTINUOUS}
+        )
+        assert cfg is not None and cfg.threshold is not None
+        assert float(x_e2e.min()) <= cfg.threshold < float(x_e2e.max())
+        assert cfg.child_ns[0] > 0 and cfg.child_ns[1] > 0
+
+
+def test_quest_multiclass_n_le_k_returns_none():
+    # K = 3 con n = 3 (n <= K): antes lanzaba ValueError: N <= k en f_oneway
+    X = pd.DataFrame({"v": pd.Series([1.0, 2.0, 3.0])})
+    y = pd.Series([0, 1, 2])
+    assert _engine().evaluate(X, y, {"v": _CONTINUOUS}) is None
+
+
+def test_quest_constant_numeric_k3_and_k2_returns_none():
+    # Predictor constante en K=2 y K=3: _qda_cutpoint / _numeric_cut devuelven
+    # None sin TypeError en evaluate().
+    eng = _engine()
+    xv_c = np.array([5.0, 5.0, 5.0, 5.0, 5.0, 5.0])
+    yc_2 = np.array([0, 0, 0, 1, 1, 1])
+    assert eng._qda_cutpoint(xv_c, yc_2, "const") is None
+
+    X3 = pd.DataFrame({"v": pd.Series([5.0] * 9)})
+    y3 = pd.Series([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    assert eng.evaluate(X3, y3, {"v": _CONTINUOUS}) is None
+
+    # Simulacion directa de _numeric_cut -> (None, None) en evaluate()
+    X2 = pd.DataFrame({"v": pd.Series([5.0] * 6)})
+    y2 = pd.Series([0, 0, 0, 1, 1, 1])
+    assert eng.evaluate(X2, y2, {"v": _CONTINUOUS}) is None
+
+
+def test_quest_perfect_separation_does_not_hijack_finite_predictor():
+    # Un predictor con separacion perfecta (SSW=0 -> F=inf) NO debe bloquear
+    # a otro predictor valido con F finito significativo.
+    X = pd.DataFrame({
+        "perfecto": pd.Series([1.0, 1.0, 1.0, 3.0, 3.0, 3.0]),
+        "finito": pd.Series([1.0, 2.0, 3.0, 7.0, 8.0, 9.0]),
+    })
+    y = pd.Series([0, 0, 0, 1, 1, 1])
+    cfg = _engine().evaluate(
+        X, y, {"perfecto": _CONTINUOUS, "finito": _CONTINUOUS}
+    )
+    assert cfg is not None
+    assert cfg.predictor == "finito"
+    assert math.isfinite(cfg.statistic)
+    assert cfg.statistic == 54.0
+    assert cfg.threshold == 5.0
 
 
 # ---------------------------------------------------------------------------

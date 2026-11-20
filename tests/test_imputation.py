@@ -120,6 +120,34 @@ def test_ordinal_simbolico_usa_moda_y_numerico_media():
     assert out["nivel"].tolist() == [1.0, 2.0, 3.0, 2.0]
 
 
+def test_imputer_fit_rejects_nonfinite_inf():
+    imp = TrainOnlyImputer(logger=logging.getLogger("treegov.imputation.t6"))
+    # +inf, -inf y par [+inf, -inf] (cuya media daba NaN silencioso)
+    for bad_vals in ([1.0, np.inf, 3.0], [1.0, -np.inf, 3.0], [np.inf, -np.inf]):
+        _assert_raises(
+            ValueError, imp.fit,
+            pd.DataFrame({"x": pd.Series(bad_vals)}), {"x": _CONT},
+        )
+    # Ordinal numerico tambien rechaza +/-inf
+    _assert_raises(
+        ValueError, imp.fit,
+        pd.DataFrame({"ord": pd.Series([1.0, np.inf, 2.0])}), {"ord": _ORD},
+    )
+
+
+def test_imputer_transform_rejects_nonfinite_inf():
+    imp = TrainOnlyImputer(logger=logging.getLogger("treegov.imputation.t7"))
+    imp.fit(pd.DataFrame({"x": pd.Series([1.0, 2.0, 3.0])}), {"x": _CONT})
+    for bad in (np.inf, -np.inf):
+        _assert_raises(
+            ValueError, imp.transform,
+            pd.DataFrame({"x": pd.Series([1.0, bad, np.nan])}),
+        )
+    # NaN sin infinitos se imputa limpiamente
+    out = imp.transform(pd.DataFrame({"x": pd.Series([1.0, np.nan, 5.0])}))
+    assert out["x"].tolist() == [1.0, 2.0, 5.0]
+
+
 # ---------------------------------------------------------------------------
 # ejecucion directa sin pytest
 # ---------------------------------------------------------------------------

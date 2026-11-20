@@ -15,6 +15,7 @@ Politica:
 Guardas duras:
   - columna de spec ausente en X_train  -> ValueError
   - columna 100% NaN en train           -> ValueError (no hay con que imputar)
+  - valores no finitos (+/-inf) en col  -> ValueError (en fit y en transform)
   - columna de la spec ausente en X     -> ValueError (en transform)
   - transform() antes de fit()          -> RuntimeError
   - columnas extra en X no presentes en spec: se dejan intactas (sin imputar;
@@ -27,6 +28,7 @@ import logging
 from collections.abc import Hashable
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from .log_config import get_logger
@@ -77,7 +79,12 @@ class TrainOnlyImputer:
             if ptype == PredictorType.NOMINAL or not pd.api.types.is_numeric_dtype(s):
                 modes[col] = self._mode(s)
             else:
-                means[col] = float(s.astype(float).mean())
+                vals = s.to_numpy(dtype=float)
+                if not np.all(np.isfinite(vals)):
+                    raise ValueError(
+                        f"[imputer] columna {col!r} contiene valores no finitos (+/-inf)"
+                    )
+                means[col] = float(vals.mean())
         self._spec = ImputationSpec(
             means=means, modes=modes, fitted_n=int(len(X_train))
         )
@@ -97,6 +104,12 @@ class TrainOnlyImputer:
         for col, fill in reglas:
             if col not in out.columns:
                 raise ValueError(f"[imputer] columna ausente en transform: {col!r}")
+            if col in spec.means:
+                vals = out[col].dropna().to_numpy(dtype=float)
+                if vals.size > 0 and not np.all(np.isfinite(vals)):
+                    raise ValueError(
+                        f"[imputer] columna {col!r} contiene valores no finitos (+/-inf) en transform"
+                    )
             n_na = int(out[col].isna().sum())
             if n_na:
                 out[col] = out[col].fillna(fill)

@@ -30,15 +30,32 @@ underscore) are internal and may change without notice.
 - `brown_forsythe(*groups) -> TestResult`
 - `stirling_second_kind(c, r) -> int`
 - `kass_multiplier(c, r, *, ordinal) -> int`
-- `bonferroni_adjust(p, m) -> float`
+- `bonferroni_adjust(p, m) -> float` — evaluates `min(1.0, p * m)` in log space
+  (`math.log(p) + math.log(m)`) so arbitrarily large integer multipliers
+  (`m > 1.8e308`, e.g. high-cardinality Kass multipliers) never raise
+  `OverflowError`, returning `0.0` for `p == 0.0`, `1.0` on saturation, and
+  accurate finite values even for subnormal `p` (Block 2E, 20/11/2026;
+  `design_decisions.md` §31).
 
 ## backend_v3.chaid_engine
 
 - `ChaidEngine`, `MergeDiagnostics`, `MergeStep`
+  - Since Block 2E (20/11/2026): rejects non-finite `±inf` in continuous
+    predictors and continuous targets, centers continuous targets before
+    accumulating sufficient statistics (avoiding catastrophic cancellation),
+    handles constant `CONTINUOUS` predictors cleanly under `exhaustive=True`,
+    and restricts Exhaustive CHAID final selection to Cochran-valid steps
+    whenever at least one exists (while keeping the full merge history in
+    `diagnostics.exhaustive_steps`).
 
 ## backend_v3.crt_engine
 
 - `CrtEngine`, `SurrogateSplit`
+  - Since Block 2E (20/11/2026): Gini evaluation normalizes class probabilities
+    before squaring and avoids subtraction cancellation under extreme weight
+    magnitudes or weight ratios (reverse cumulative sums / direct complement),
+    regression centers targets (`y - mean`) before variance evaluation, and
+    `surrogate_splits` rejects `±inf` in numeric primary/candidate predictors.
 
 ## backend_v3.quest_engine
 
@@ -56,13 +73,26 @@ underscore) are internal and may change without notice.
     (canonical Loh & Shih) is reserved for Phase 3.4 and raises
     `NotImplementedError` if requested. See `design_decisions.md` §4.2.
   - `qda_root_restriction` (bool, default True) — restricts the QDA
-    cutpoint to the inter-means interval. `False` accepts any real root
-    (canonical mode), tie-broken by closeness to the weighted mean. See
-    `design_decisions.md` §4.3.
+    cutpoint (and linear LDA cutpoint) to the inter-means interval. `False`
+    accepts any real root (canonical mode), tie-broken by closeness to the
+    weighted mean. See `design_decisions.md` §4.3.
+  - Numerical & Stage-1 guarantees (Block 2E, 20/11/2026; `design_decisions.md`
+    §13.4 & §31): weighted QDA variance uses Kish's unbiased reliability-weight
+    divisor `W_k - sum(w_i^2) / W_k` (strictly scale-invariant under
+    `w -> c * w`, safe for normalized weights `sum(w) = 1`, exact `n_k - 1`
+    parity under uniform weights); QDA roots are solved via Citardauq's stable
+    quadratic formula; all returned thresholds are bounded to `[min(x), max(x))`
+    so child splits are never empty; and Stage 1 prioritizes finite significant
+    statistics so a degenerate predictor with `F = inf` never hijacks valid
+    finite predictors (preserving the `"no representable"` warning + `None`
+    return only when no finite significant predictor exists).
 
 ## backend_v3.imputation
 
 - `TrainOnlyImputer`, `ImputationSpec`
+  - Since Block 2E (20/11/2026): both `fit()` and `transform()` reject
+    non-finite values (`±inf`) in numeric columns with `ValueError`
+    (`design_decisions.md` §31).
 
 ## backend_v3.tree_builder
 
