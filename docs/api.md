@@ -97,21 +97,38 @@ rows unscored (`NULL` in SQL, `None` in Python).
 
 Since Phase 5.0.c, all three exporters route CHAID continuous splits by
 their consolidated `SplitConfig.branches`, not by individual bins: each
-branch yields a condition from its real merged-bin interval and the top
-branch is the residual `ELSE`. This preserves scoring parity after CHAID
-adjacent-bin merges (H-5.0.c-1; `docs/design_decisions.md` §16.4). No
-public signature changed.
+branch yields a condition from its real merged-bin interval (H-5.0.c-1;
+`docs/design_decisions.md` §16.4).
 
 Since Phase 4.0.1.b, `unseen_policy` accepts `"error"`, `"exclude"`
 (default), and `"majority"`. In `"error"` mode, SQL emits `ELSE 1/0`:
 fatal on PostgreSQL/SQL Server/Oracle, but `NULL` with a warning on
 MySQL/SQLite, where the receiver must filter the row. Python raises
-`ValueError` identifying the predictor and the unseen value. In
+`ValueError` identifying the predictor and the unseen/missing value. In
 `"majority"` mode, the fallback is the majority leaf's `pd_final[0]`,
-selected by physical `n` (not weighted `n`) with a `node_id` minimum
-tie-break, replicating `validation.predict_leaf_assignment`. The generated
-Python functions are annotated `float` in `"error"` and `"majority"` modes;
-they remain `float | None` in `"exclude"` mode.
+selected via `backend_v3.validation.select_majority_leaf` (maximum physical
+`n`, deterministic minimum `node_id` tie-break). The generated Python
+functions are annotated `float` in `"error"` and `"majority"` modes; they
+remain `float | None` in `"exclude"` mode.
+
+Since Block 2A (20/11/2026; `docs/design_decisions.md` §27), the exporters
+enforce strict scoring parity and hardening:
+- ANSI SQL double-quoted identifiers (`"..."`) on every predictor column and
+  sanitized single-line header comments.
+- Preserved numeric vs. text scalar types in categorical `IN (...)` / Python
+  tuples and imputation modes.
+- Dependency-free `None` and `NaN` handling (`val is None or val != val`) in
+  Python imputation and numeric split guards, plus explicit `WHEN >` and
+  policy-governed `ELSE` on merged CHAID SQL splits so `NULL` never falls
+  into the top bin.
+- Fail-fast `ValueError` on non-finite constants (`NaN`/`±inf`), booleans in
+  numeric contexts, and cycles in `child_ids`; f-string-free `ValueError`
+  emission in Python `"error"` mode.
+- Explicit multiclass transparency (`len(model.class_labels) > 2`): SQL and
+  Python add a header comment documenting that class index 0 is exported and
+  classes `1..K-1` are omitted, while Markdown adds a header note and renders
+  the full class probability vector on every leaf (binary `K == 2` output
+  contract unchanged).
 
 ## backend_v3.scoring
 
@@ -326,6 +343,11 @@ Phase 7.0 public IFRS 9 / ECL contracts:
   `ks_pairs: tuple[tuple[int, int, float], ...]`,
   `auc_pairs: tuple[tuple[int, int, float], ...]`,
   `roc_per_class: tuple[tuple[tuple[float, float, float], ...], ...]`.
+- `select_majority_leaf(model: TreeModel) -> TreeNode` — single source of
+  truth for `unseen_policy="majority"` (Block 2A, 20/11/2026): selects the
+  leaf with maximum physical `n` (not weighted) and breaks ties
+  deterministically by minimum `node_id`; raises `ValueError` if the model
+  contains no leaves.
 - `predict_pd(model, X, *, unseen_policy="error")` — returns a 2D
   array of shape (n_rows, K) since Phase 3.1.
 - `predict_leaf_assignment(model, X, *, unseen_policy="error")`.

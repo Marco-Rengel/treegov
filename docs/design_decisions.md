@@ -2672,6 +2672,30 @@ comportamiento. La suite final es 660/660.
 - **Nulos en "All"**: `get_node_cases("all")` alinea por índice y omite filas no enrutables, sin `RuntimeError`.
 - **Resumen seguro**: `get_summary()` devuelve `governance_mode="CUSTOM"` y params `None` si falta `_last_train_params`.
 
+---
+
+## §27. Remediación Bloque 2A: paridad predictiva, hoja mayoritaria y exportadores productivos (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) confirmó tres defectos críticos de paridad en inferencia y exportación productiva:
+1. `CRIT-01`: `validation.predict_leaf_assignment` y `exporters._majority_leaf_pd` usaban `max(hojas, key=lambda h: (-h.n, h.node_id))`, invirtiendo exactamente el contrato de `unseen_policy="majority"` y asignando la hoja **menos** poblada.
+2. `CRIT-04`: `backend_v3/exporters.py` rompía paridad para categorías/modas numéricas (convertidas a texto), omitía `float('nan')` en Python (solo verificaba `is None`), absorbía `NULL` en el `ELSE` del bin superior en CHAID SQL fusionado, emitía identificadores SQL sin delimitadores ANSI `"..."`, no validaba finitud (`NaN`/`±inf`/`bool`) ni ciclos, usaba un f-string vulnerable a `{}`/`"` en `unseen_policy="error"`, y truncaba modelos multiclase (`K > 2`) sin advertencia explícita.
+3. Propagación incompleta en `scoring.compare_champion_challenger`: las llamadas a `predict_pd` omitían `unseen_policy=req.unseen_policy`, abortando con `ValueError` cuando `unseen_policy="majority"` enrutaba categorías no vistas.
+
+**Decisiones.**
+
+1. **Fuente única de verdad para hoja mayoritaria (`select_majority_leaf`).** Se expone `backend_v3.validation.select_majority_leaf(model) -> TreeNode`, que selecciona `min(hojas, key=lambda h: (-h.n, h.node_id))` (máximo `n` físico, desempate determinista por menor `node_id`; `ValueError` si el modelo carece de hojas). Tanto `predict_leaf_assignment` como `exporters._majority_leaf_pd` delegan exclusivamente en ella, eliminando la duplicación.
+2. **Identificadores ANSI SQL y saneamiento de cabeceras.** Toda columna emitida en SQL se entrecomilla siempre con comillas dobles ANSI (`_sql_ident`: `"` escapado como `""`), habilitando palabras reservadas (`order`, `default`), espacios y comillas. Los textos insertados en comentarios de cabecera (`params_fingerprint`, etiquetas) se sanean sustituyendo `\r`/`\n` por espacio (`_sanitize_comment`).
+3. **Paridad de tipos en categorías y modas.** `_is_numeric_scalar` (vía `numbers.Real`, excluyendo `bool`, sin importar `numpy`) distingue escalares numéricos de texto. En SQL (`_sql_value`) y Python (`_python_literal`), los enteros no-bool se emiten como literales enteros, los reales no-bool pasan por el validador de finitud (`_sql_literal`/`_python_number`) y solo los no numéricos se citan como cadenas.
+4. **Manejo de `None`/`NaN` sin imports externos y eliminación de f-string.** En Python exportado (cero dependencias y cero imports), tanto la imputación (`_python_imputation`) como las guardas previas en splits numéricos (`threshold` y `bin_edges`) comprueban `val is None or val != val`, cubriendo `None`, `float('nan')` y `np.nan` sobre cualquier tipo. Bajo `unseen_policy="error"`, el mensaje de `ValueError` se construye por concatenación segura de literales `repr(...)` sin f-string, haciéndolo inmune a `{`, `}`, `"` y `\n` en nombres de columna.
+5. **Cláusula explícita `WHEN >` + `ELSE <unseen_policy>` en CHAID SQL fusionado.** En `_sql_node` se elimina el atajo que sustituía la rama superior fusionada por `ELSE`. Todas las ramas emiten predicados explícitos (`<= edge[hi]` y `> edge[lo - 1]` con guarda `lo == 0`), cerrando siempre el bloque `CASE` con `ELSE` gobernado por `unseen_policy` (`ELSE NULL` / `ELSE <majority_pd>` / `ELSE 1/0`) para que un `NULL` sin imputación nunca caiga al bin superior.
+6. **Validación fail-fast de finitud y ciclos.** `_validate_finite_float` rechaza `bool` y valores no finitos (`NaN`/`±inf`) en literales numéricos, medias de imputación, umbrales y probabilidades de hojas. Todos los recorridos de exportación (`_sql_node`, `_python_node`, `_python_predictors`, `_md_node`) rastrean nodos visitados y lanzan `ValueError` ante ciclos en `child_ids`.
+7. **Transparencia explícita multiclase (`K > 2`).** El contrato escalar y el formato de salida para modelos binarios (`K == 2`) permanecen inalterados byte-por-byte. Cuando `len(model.class_labels) > 2`, SQL y Python añaden un comentario explícito tras `policy_header` indicando que se exporta la clase de interés (índice 0) y se omiten `1..K-1`, mientras Markdown añade nota en cabecera y renderiza el vector completo de probabilidades en cada hoja.
+8. **Propagación de `unseen_policy` en Champion-Challenger.** `scoring.compare_champion_challenger()` reenvía `unseen_policy=req.unseen_policy` a ambas invocaciones de `predict_pd`.
+
+**Consecuencias.** Se restablece la paridad exacta (`SQL ejecutado en SQLite == Python puro == backend_v3.validation.predict_pd`) en todos los tipos de split, valores faltantes/`NaN`, categorías enteras y nombres de columna complejos. Los fingerprints de modelos existentes y el flujo de entrenamiento no se alteran.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`, `CRIT-04`, `CRIT-12`); `docs/api.md` (`backend_v3.validation`, `backend_v3.exporters`); `docs/audit_log.md` (cierre del Bloque 2A, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2712,6 +2736,9 @@ fingerprint, BANKING labels bit-identical, on 25/10/2026 to add §18.11
 — Hotfix Visual post-3.6.e (granular View menu toggles per left-panel
 block; bidirectional Tree Map selection map->canvas; scoped relaxation
 of D2); on 14/11/2026 to add §26 — Phase 3.12, native read-only model
-inspection contracts and three gains charts.)
+inspection contracts and three gains charts; on 20/11/2026 to add §27 —
+Block 2A remediation: `select_majority_leaf`, exporter SQL/Python parity,
+ANSI quoting, `NaN` handling, cycle/finiteness guards, and multiclass export
+transparency.)
 
 ---

@@ -8450,3 +8450,32 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **660/660 PASSED**.
 
 **Referencias cruzadas**: `audit_reports/C1_Estructura_Limpieza/reporte_auditoria_C1.md` (`C1-01`–`C1-05`, `C1-10`, `C1-13`–`C1-15`), `audit_reports/C3_Archivos_Ocultos_Legado/reporte_auditoria_C3.md` (`C3-04`, `C3-08`), `audit_reports/F1_Informe_Ejecutivo_Final.md`, `AGENTS.md` (Protocolo de mini-cierre y Protocolo PyPI).
+
+---
+
+### 20/11/2026 — Cierre Bloque 2A: Paridad predictiva, `unseen_policy="majority"` y exportadores productivos (rama `fix/phase2a-parity-exporters`)
+
+**Estado**: ✅ Completado (en rama aislada `fix/phase2a-parity-exporters`, pendiente de revisión humana; sin `git push` ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/validation.py` — nueva función pública `select_majority_leaf(model) -> TreeNode` (expuesta en `__all__`; máximo `n` físico con desempate determinista por menor `node_id` y `ValueError` si no hay hojas); `predict_leaf_assignment()` delega en `select_majority_leaf(model)` y elimina la variable muerta `asignadas`.
+- `backend_v3/scoring.py` — propagación de `unseen_policy=req.unseen_policy` en ambas llamadas a `predict_pd()` dentro de `compare_champion_challenger()`.
+- `backend_v3/exporters.py` — delegación de `_majority_leaf_pd` en `select_majority_leaf`; validación fail-fast `_validate_finite_float` (`math.isfinite` + rechazo de `bool`); identificadores ANSI SQL `"..."` (`_sql_ident`) y saneamiento de comentarios (`_sanitize_comment`); paridad de tipos numéricos vs. texto en categorías/modas (`_is_numeric_scalar`, `_sql_value`, `_python_literal`); imputación y guardas de `None`/`NaN` en Python puro sin imports (`val is None or val != val`); predicado explícito `WHEN >` + `ELSE <unseen_policy>` en CHAID SQL fusionado (evitando absorción silenciosa de `NULL` en el bin superior); eliminación de f-string vulnerable en `unseen_policy="error"` de Python; detección de ciclos en recorridos (`_sql_node`, `_python_node`, `_python_predictors`, `_md_node`); reutilización de `_index_nodes` en `export_to_sql`; transparencia explícita para modelos multiclase (`K > 2`) en cabeceras SQL/Python y vector completo por hoja en Markdown (contrato `K == 2` inalterado).
+- `tests/test_validation.py` — nuevo test de regresión `test_select_majority_leaf_unequal_and_tie_break` (hojas de tamaño desigual `n=20` vs `n=80` y empate `n=50` vs `n=50`).
+- `tests/test_exporters.py` — actualización de asserts de desempate (`0.8` → `0.1`), identificadores ANSI `"..."` y `WHEN >` + `ELSE NULL` en CHAID fusionado; nuevos tests de regresión con hojas desiguales, ejecución real en `sqlite3` (paridad exacta `SQL == Python == predict_pd` para `threshold` con/sin imputación, CHAID fusionado con `NULL`/`NaN`, comillas simples `"O'Connor"`, categorías enteras `1, 2, 3`, y nombres de columna peligrosos `order`, `default`, `credit score`, `a"b`, `col_{x}`), validación fail-fast de no finitos/ciclos y transparencia multiclase `K = 3`.
+- `tests/test_champion_challenger.py` — nuevo test `test_compare_unseen_policy_majority_separate_cohort` con cohorte externa que contiene categorías no vistas bajo `unseen_policy="majority"`.
+- `docs/design_decisions.md` — añadida sección `§27` documentando las decisiones del Bloque 2A.
+- `docs/api.md` — documentada `backend_v3.validation.select_majority_leaf` y contrato endurecido de `backend_v3.exporters`.
+- `docs/audit_log.md` — esta entrada de cierre del Bloque 2A.
+
+**Hallazgos resueltos**:
+
+1. **`CRIT-01` (hoja mayoritaria invertida):** corregido en `validation.py` y `exporters.py` mediante fuente única de verdad `select_majority_leaf(model)` (`min(hojas, key=lambda h: (-h.n, h.node_id))`).
+2. **`CRIT-04` (ruptura de paridad y endurecimiento de exportadores):** corregida paridad de categorías/modas numéricas, manejo de `None`/`float('nan')` sin imports en Python, fuga de `NULL` en CHAID SQL fusionado, delimitadores ANSI `"..."`, saneamiento de comentarios, validación de finitud/ciclos, eliminación de f-string inseguro en `unseen_policy="error"`, y nota explícita multiclase `K > 2`.
+3. **`scoring.compare_champion_challenger` (`CRIT-12` parcial):** corregida la omisión de `unseen_policy=req.unseen_policy` al llamar a `predict_pd()`, evitando `ValueError` cuando `unseen_policy="majority"` enruta filas no vistas.
+4. **Protocolo PyPI:** cambio remediador en rama aislada sin publicación en PyPI (`1.0.0rc7` permanece intacta; sin cambios en `pyproject.toml`, `frontend_v3/` ni `README*.md`); la versión/release se consolidará al cerrar la Oleada 1 / Fase 2.
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **673/673 PASSED** (anterior: `660`; `+13` pruebas nuevas de regresión y paridad real en `sqlite3`). Verificados en modo verbose `test_exporters.py`, `test_validation.py`, `test_champion_challenger.py` y `test_gui_smoke.py` (guardias de caja blanca y sala limpia en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`, `CRIT-04`, `CRIT-12`, §1.3); `docs/design_decisions.md` §27; `docs/api.md` (`backend_v3.validation`, `backend_v3.exporters`).

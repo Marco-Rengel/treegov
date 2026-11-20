@@ -30,10 +30,11 @@ from backend_v3.validation import (  # noqa: E402
     compute_oos_metrics,
     predict_leaf_assignment,
     predict_pd,
+    select_majority_leaf,
 )
 from backend_v3.crt_engine import CrtEngine  # noqa: E402
-from backend_v3.tree_builder import TreeBuilder  # noqa: E402
-from backend_v3.types import PredictorType, TargetType  # noqa: E402
+from backend_v3.tree_builder import TreeBuilder, TreeModel, TreeNode  # noqa: E402
+from backend_v3.types import PredictorType, SplitConfig, TargetType  # noqa: E402
 
 
 def _assert_raises(exc_type, fn, *args, **kwargs):
@@ -773,6 +774,90 @@ def test_predict_leaf_assignment_binned_continuous():
         [raiz.child_ids[rama_map[int(b)]] for b in bins], dtype=int
     )
     assert (asign == esperado).all()
+
+
+def test_select_majority_leaf_unequal_and_tie_break():
+    """CRIT-01: select_majority_leaf elige maximo n fisico y desempata por menor node_id."""
+    labels = ("Event", "Non-event")
+    split = SplitConfig(
+        predictor="seg",
+        method="CHAID",
+        statistic=10.0,
+        statistic_name="chi2",
+        df=(1,),
+        parent_n=100,
+        child_ns=(20, 80),
+        p_value=0.001,
+        p_value_adjusted=0.002,
+        bonferroni_multiplier=2,
+        n_merges=0,
+        branches=(("A",), ("B",)),
+    )
+    root = TreeNode(
+        node_id=0, depth=0, parent_id=None, n=100, n_events=(24, 76),
+        pd_jeffreys=(0.24, 0.76), pd_final=(0.24, 0.76), class_labels=labels,
+        is_leaf=False, split=split, child_ids=(1, 2), leaf_reason=None,
+    )
+    small_leaf = TreeNode(
+        node_id=1, depth=1, parent_id=0, n=20, n_events=(16, 4),
+        pd_jeffreys=(0.8, 0.2), pd_final=(0.8, 0.2), class_labels=labels,
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
+    large_leaf = TreeNode(
+        node_id=2, depth=1, parent_id=0, n=80, n_events=(8, 72),
+        pd_jeffreys=(0.1, 0.9), pd_final=(0.1, 0.9), class_labels=labels,
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
+    model_unequal = TreeModel(
+        root_id=0, nodes=(root, small_leaf, large_leaf), method="CHAID",
+        params_fingerprint="fp-majority-unequal", class_labels=labels,
+        target_class=1, target_class_index=0,
+    )
+    assert select_majority_leaf(model_unequal).node_id == 2
+    X_unseen = pd.DataFrame({"seg": ["A", "B", "Z"]})
+    asign = predict_leaf_assignment(model_unequal, X_unseen, unseen_policy="majority")
+    assert list(asign) == [1, 2, 2]
+    pds = predict_pd(model_unequal, X_unseen, unseen_policy="majority")
+    assert math.isclose(pds[2, 0], 0.1, rel_tol=1e-12)
+
+    # Empate exacto n=50 vs n=50 -> menor node_id (nodo 1)
+    split_tie = SplitConfig(
+        predictor="seg",
+        method="CHAID",
+        statistic=10.0,
+        statistic_name="chi2",
+        df=(1,),
+        parent_n=100,
+        child_ns=(50, 50),
+        p_value=0.001,
+        p_value_adjusted=0.002,
+        bonferroni_multiplier=2,
+        n_merges=0,
+        branches=(("A",), ("B",)),
+    )
+    root_tie = TreeNode(
+        node_id=0, depth=0, parent_id=None, n=100, n_events=(45, 55),
+        pd_jeffreys=(0.45, 0.55), pd_final=(0.45, 0.55), class_labels=labels,
+        is_leaf=False, split=split_tie, child_ids=(1, 2), leaf_reason=None,
+    )
+    leaf_1 = TreeNode(
+        node_id=1, depth=1, parent_id=0, n=50, n_events=(5, 45),
+        pd_jeffreys=(0.1, 0.9), pd_final=(0.1, 0.9), class_labels=labels,
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
+    leaf_2 = TreeNode(
+        node_id=2, depth=1, parent_id=0, n=50, n_events=(40, 10),
+        pd_jeffreys=(0.8, 0.2), pd_final=(0.8, 0.2), class_labels=labels,
+        is_leaf=True, split=None, child_ids=(), leaf_reason="max_depth",
+    )
+    model_tie = TreeModel(
+        root_id=0, nodes=(root_tie, leaf_1, leaf_2), method="CHAID",
+        params_fingerprint="fp-majority-tie", class_labels=labels,
+        target_class=1, target_class_index=0,
+    )
+    assert select_majority_leaf(model_tie).node_id == 1
+    asign_tie = predict_leaf_assignment(model_tie, X_unseen, unseen_policy="majority")
+    assert list(asign_tie) == [1, 2, 1]
 
 
 # ---------------------------------------------------------------------------

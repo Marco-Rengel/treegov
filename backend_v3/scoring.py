@@ -443,8 +443,12 @@ def compare_champion_challenger(
     y_valid = y_internal[valid_mask]
     w_valid = w[valid_mask] if w is not None else None
 
-    pd_champ = predict_pd(champ.model, X_champ_valid)
-    pd_chall = predict_pd(chall.model, X_chall_valid)
+    pd_champ = predict_pd(
+        champ.model, X_champ_valid, unseen_policy=req.unseen_policy
+    )
+    pd_chall = predict_pd(
+        chall.model, X_chall_valid, unseen_policy=req.unseen_policy
+    )
     n_classes = len(canonical_classes)
     if n_classes == 2:
         pd_champ_use = pd_champ[:, 0]

@@ -29,8 +29,12 @@ Invariants (see ``docs/4.0_design_exports.md`` §3):
 
 from __future__ import annotations
 
+import math
+import numbers
+
 from backend_v3.imputation import ImputationSpec
 from backend_v3.tree_builder import TreeModel
+from backend_v3.validation import select_majority_leaf
 
 __all__ = ["export_to_markdown", "export_to_python", "export_to_sql"]
 
@@ -39,7 +43,7 @@ def _ensure_unseen_policy(unseen_policy: str) -> None:
     """Validate the governed ``unseen_policy`` vocabulary.
 
     The vocabulary mirrors the backend parameter of the same name in
-    ``backend_v3.validation._assign_leaves`` (design_decisions.md §7.6):
+    ``backend_v3.validation.predict_leaf_assignment`` (design_decisions.md §7.6):
     ``"error"``, ``"exclude"`` and ``"majority"``. Anything else raises
     ``ValueError`` naming the three admissible values. All three policies are
     implemented in sub-phase 4.0.1.b of
@@ -52,6 +56,35 @@ def _ensure_unseen_policy(unseen_policy: str) -> None:
         )
 
 
+def _validate_finite_float(value: object, context: str) -> float:
+    """Convert ``value`` to a finite builtin float, rejecting booleans."""
+    if isinstance(value, bool) or type(value).__name__ == "bool_":
+        raise ValueError(
+            f"[exporters] boolean value {value!r} is not valid for {context}."
+        )
+    num = float(value)
+    if not math.isfinite(num):
+        raise ValueError(
+            f"[exporters] non-finite numeric value {value!r} for {context}."
+        )
+    return num
+
+
+def _is_numeric_scalar(value: object) -> bool:
+    """Return True for real numeric scalars (int/float/numpy scalars), excluding bool."""
+    return isinstance(value, numbers.Real) and not isinstance(value, bool)
+
+
+def _sql_ident(name: str) -> str:
+    """Quote a column identifier using ANSI SQL double quotes."""
+    return '"' + str(name).replace('"', '""') + '"'
+
+
+def _sanitize_comment(text: object) -> str:
+    """Replace CR/LF with spaces so single-line comments cannot be broken."""
+    return str(text).replace("\r", " ").replace("\n", " ")
+
+
 def _sql_literal(value: object) -> str:
     """Render a numeric value as a SQL literal without losing precision.
 
@@ -59,7 +92,7 @@ def _sql_literal(value: object) -> str:
     significant digit of the threshold stored in the model. Truncating it would
     silently move rows across a split and break prediction parity.
     """
-    return repr(float(value))
+    return repr(_validate_finite_float(value, "SQL numeric literal"))
 
 
 def _sql_string(value: object) -> str:
@@ -71,6 +104,15 @@ def _sql_string(value: object) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def _sql_value(value: object) -> str:
+    """Render a categorical or mode value preserving numeric vs. text type."""
+    if isinstance(value, numbers.Integral) and not isinstance(value, bool):
+        return str(int(value))
+    if _is_numeric_scalar(value):
+        return _sql_literal(value)
+    return _sql_string(value)
+
+
 def _imputed_predictor(split: object, imputer: object) -> str:
     """Return the predictor expression with the training-time imputation baked in.
 
@@ -80,14 +122,15 @@ def _imputed_predictor(split: object, imputer: object) -> str:
     row contains a missing value, which is what prevents imputation leakage.
     """
     predictor = split.predictor
+    col_sql = _sql_ident(predictor)
     means = getattr(imputer, "means", None) or {}
     modes = getattr(imputer, "modes", None) or {}
 
     if predictor in means:
-        return f"COALESCE({predictor}, {_sql_literal(means[predictor])})"
+        return f"COALESCE({col_sql}, {_sql_literal(means[predictor])})"
     if predictor in modes:
-        return f"COALESCE({predictor}, {_sql_string(modes[predictor])})"
-    return predictor
+        return f"COALESCE({col_sql}, {_sql_value(modes[predictor])})"
+    return col_sql
 
 
 def _merged_bin_branches(split: object) -> list[tuple[int, int]] | None:
@@ -144,18 +187,19 @@ def _merged_bin_branches(split: object) -> list[tuple[int, int]] | None:
 def _majority_leaf_pd(model: "TreeModel") -> float:
     """Return the majority-leaf PD for ``unseen_policy="majority"``.
 
-    Exact replica of ``validation.predict_leaf_assignment``: select the leaf
-    with maximum PHYSICAL ``n`` (not weighted), break ties by minimum
-    ``node_id``, and return ``pd_final[0]`` (class of interest, index 0).
+    Delegates directly to :func:`backend_v3.validation.select_majority_leaf`
+    (maximum physical ``n``, tie-break by minimum ``node_id``) and validates
+    that ``pd_final[0]`` (class of interest, index 0) is a finite float.
 
     The choice is model-wide on purpose: a sub-tree export (``node_id``) keeps
     the same fallback constant as the full export (Phase 3.12.a). Redefining
     the majority leaf per segment would silently change the governed
     ``unseen_policy`` semantics.
     """
-    hojas = [nd for nd in model.nodes if nd.is_leaf]
-    destino = max(hojas, key=lambda h: (-h.n, h.node_id))
-    return float(destino.pd_final[0])
+    destino = select_majority_leaf(model)
+    return _validate_finite_float(
+        destino.pd_final[0], f"majority leaf {destino.node_id} pd_final[0]"
+    )
 
 
 def _sql_condition(split: object, index: int, imputer: object) -> str:
@@ -172,7 +216,8 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
       Without ``branches`` (legacy encoding) one predicate per bin is
       emitted: branch 0 is ``<= edge[0]``, the last one is ``> edge[-1]``
       and the intermediate ones are ``> edge[i-1] AND <= edge[i]``.
-    * ``branches``: categorical split, rendered as ``IN ('a', 'b')``.
+    * ``branches``: categorical split, rendered as ``IN (...)`` preserving
+      numeric vs. text scalar types.
     """
     expression = _imputed_predictor(split, imputer)
 
@@ -195,7 +240,13 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
             # por RAMA consolidada, no por bin individual.
             lo, hi = merged[index]
             if hi == len(edges):
-                # Rama superior (sin corte por encima): dominio residual.
+                if lo == 0:
+                    raise ValueError(
+                        f"CHAID split on {split.predictor!r}: merged top "
+                        "branch starts at bin 0 and has no lower boundary."
+                    )
+                # Rama superior (sin corte por encima): predicado explicito >
+                # para que NULL/faltantes sin imputacion caigan en ELSE.
                 return f"{expression} > {_sql_literal(edges[lo - 1])}"
             return f"{expression} <= {_sql_literal(edges[hi])}"
         if index == 0:
@@ -213,7 +264,7 @@ def _sql_condition(split: object, index: int, imputer: object) -> str:
 
     if split.branches is not None:
         values = tuple(split.branches[index])
-        literals = ", ".join(_sql_string(value) for value in values)
+        literals = ", ".join(_sql_value(value) for value in values)
         return f"{expression} IN ({literals})"
 
     raise ValueError(
@@ -285,13 +336,9 @@ def export_to_sql(
     """
     _ensure_unseen_policy(unseen_policy)
     majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
-    raw_nodes = model.nodes
-    if isinstance(raw_nodes, dict):
-        nodes_by_id = dict(raw_nodes)
-    else:
-        nodes_by_id = {node.node_id: node for node in raw_nodes}
+    nodes_by_id = _index_nodes(model)
 
-    def _sql_node(node_id: int, indent: int) -> str:
+    def _sql_node(node_id: int, indent: int, visiting: frozenset[int]) -> str:
         """Render one node as a SQL fragment, padded by ``indent`` spaces.
 
         Leaves render as the class-of-interest probability (index 0 of
@@ -300,6 +347,10 @@ def export_to_sql(
         ``NULL``, raises via division by zero, or returns the majority-leaf PD
         according to ``unseen_policy``; it never routes to an arbitrary child.
         """
+        if node_id in visiting:
+            raise ValueError(
+                f"[exporters] cycle detected in SQL export at node_id {node_id}."
+            )
         try:
             node = nodes_by_id[node_id]
         except KeyError as exc:
@@ -310,7 +361,7 @@ def export_to_sql(
         pad = " " * indent
 
         if node.is_leaf:
-            return str(node.pd_final[0])
+            return _sql_literal(node.pd_final[0])
 
         split = node.split
         if split is None:
@@ -337,35 +388,27 @@ def export_to_sql(
                 f"consolidated branches, got {len(child_ids)} children."
             )
 
+        next_visiting = visiting | {node_id}
         lines = ["CASE"]
-        has_else = False
         for index, child_id in enumerate(child_ids):
-            child_sql = _sql_node(child_id, indent + 1)
-            if merged is not None and merged[index][1] == len(split.bin_edges):
-                # Rama superior de un split CHAID fusionado (H-5.0.c-1): cubre
-                # el dominio residual completo, se renderiza como ELSE.
-                lines.append(f"{pad}ELSE")
-                lines.append(f"{pad} {child_sql}")
-                has_else = True
-                continue
+            child_sql = _sql_node(child_id, indent + 1, next_visiting)
             condition = _sql_condition(split, index, imputer)
             lines.append(f"{pad}WHEN {condition} THEN")
             lines.append(f"{pad} {child_sql}")
-        if not has_else:
-            if unseen_policy == "error":
-                lines.append(
-                    f"{pad}-- WARNING: unseen category in predictor "
-                    f"{split.predictor!r} -> division by zero"
-                )
-                lines.append(f"{pad}ELSE 1/0")
-            elif unseen_policy == "majority":
-                lines.append(f"{pad}ELSE {_sql_literal(majority_pd)}")
-            else:
-                lines.append(f"{pad}ELSE NULL")
+        if unseen_policy == "error":
+            lines.append(
+                f"{pad}-- WARNING: unseen category in predictor "
+                f"{_sanitize_comment(repr(split.predictor))} -> division by zero"
+            )
+            lines.append(f"{pad}ELSE 1/0")
+        elif unseen_policy == "majority":
+            lines.append(f"{pad}ELSE {_sql_literal(majority_pd)}")
+        else:
+            lines.append(f"{pad}ELSE NULL")
         lines.append(f"{pad}END")
         return "\n".join(lines)
 
-    body = _sql_node(model.root_id if node_id is None else node_id, 0)
+    body = _sql_node(model.root_id if node_id is None else node_id, 0, frozenset())
     if unseen_policy == "error":
         policy_header = (
             "-- Unseen policy: error (unseen categories abort the scoring)\n"
@@ -382,11 +425,20 @@ def export_to_sql(
         policy_header = (
             "-- Unseen policy: exclude (unseen categories return NULL; caller must filter)"
         )
-    return (
-        f"-- TreeGov Model Fingerprint: {model.params_fingerprint}\n"
-        f"{policy_header}\n"
-        f"SELECT {body} AS prediction_score;"
-    )
+    class_labels = tuple(getattr(model, "class_labels", ()))
+    header_lines = [
+        f"-- TreeGov Model Fingerprint: {_sanitize_comment(model.params_fingerprint)}",
+        policy_header,
+    ]
+    if len(class_labels) > 2:
+        k_classes = len(class_labels)
+        label_0 = _sanitize_comment(repr(class_labels[0]))
+        header_lines.append(
+            f"-- Multiclass note (K={k_classes}): exports class of interest "
+            f"{label_0} (index 0); classes 1..{k_classes - 1} omitted"
+        )
+    header_lines.append(f"SELECT {body} AS prediction_score;")
+    return "\n".join(header_lines)
 
 
 # --------------------------------------------------------------------------- #
@@ -432,17 +484,26 @@ def _python_number(value: object) -> str:
     ``repr`` on a ``numpy.float64`` would emit ``np.float64(0.1)`` and the
     exported script must stay free of third-party dependencies.
     """
-    return repr(float(value))
+    return repr(_validate_finite_float(value, "Python numeric literal"))
+
+
+def _python_literal(value: object) -> str:
+    """Render a categorical or mode value preserving numeric vs. text type."""
+    if isinstance(value, numbers.Integral) and not isinstance(value, bool):
+        return repr(int(value))
+    if _is_numeric_scalar(value):
+        return _python_number(value)
+    return repr(str(value))
 
 
 def _python_tuple(values: object) -> str:
-    """Render a tuple of text values as a Python tuple literal.
+    """Render a tuple of category values as a Python tuple literal.
 
-    ``repr`` is used for the elements because it already escapes quotes and
-    backslashes correctly. A single element keeps its trailing comma so the
-    literal stays a tuple instead of collapsing into a parenthesised string.
+    Preserves integer/real types for numeric categories and quotes text values
+    via ``repr``. A single element keeps its trailing comma so the literal
+    stays a tuple instead of collapsing into a parenthesised scalar.
     """
-    items = [repr(str(value)) for value in values]
+    items = [_python_literal(value) for value in values]
     if len(items) == 1:
         return "(" + items[0] + ",)"
     return "(" + ", ".join(items) + ")"
@@ -459,12 +520,9 @@ def _python_imputation(predictor: str, variable: str, imputer: object) -> list:
     The returned lines are relative to the body of ``_eval_tree``; the caller
     adds the base indentation.
 
-    The specified ``row.get(col, default)`` line covers an absent key but not
-    a key that is present with a ``None`` value, while ``COALESCE`` in the SQL
-    exporter covers both: a ``None`` reaching the comparison would raise
-    ``TypeError``. The line is therefore emitted unchanged and a two-line
-    guard is appended after it so both exporters treat missing values
-    identically (resolved in design_decisions.md §19.2, 01/11/2026).
+    The guard checks both ``None`` and ``NaN`` (via ``val != val``, zero
+    imports, works for builtin ``float('nan')`` and ``numpy.nan``) so both
+    exporters treat missing values identically.
     """
     means = getattr(imputer, "means", None) or {}
     modes = getattr(imputer, "modes", None) or {}
@@ -473,13 +531,13 @@ def _python_imputation(predictor: str, variable: str, imputer: object) -> list:
     if predictor in means:
         default = _python_number(means[predictor])
     elif predictor in modes:
-        default = repr(str(modes[predictor]))
+        default = _python_literal(modes[predictor])
     else:
         return [f"{variable} = row.get({key})"]
 
     return [
         f"{variable} = row.get({key}, {default})",
-        f"if {variable} is None:",
+        f"if {variable} is None or {variable} != {variable}:",
         f"    {variable} = {default}",
     ]
 
@@ -493,10 +551,16 @@ def _python_predictors(root_id: int, nodes_by_id: dict) -> list:
     """
     ordered = []
     seen = set()
+    visited: set[int] = set()
     stack = [root_id]
 
     while stack:
         node_id = stack.pop()
+        if node_id in visited:
+            raise ValueError(
+                f"[exporters] cycle detected in Python export at node_id {node_id}."
+            )
+        visited.add(node_id)
         try:
             node = nodes_by_id[node_id]
         except KeyError as exc:
@@ -522,17 +586,47 @@ def _python_predictors(root_id: int, nodes_by_id: dict) -> list:
     return ordered
 
 
-def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: str, majority_pd: float | None) -> list:
+def _python_unseen_fallback(
+    pad: str,
+    predictor: str,
+    variable: str,
+    *,
+    unseen_policy: str,
+    majority_pd: float | None,
+    reason: str,
+) -> list[str]:
+    """Emit the policy-governed fallback statement without f-string interpolation."""
+    if unseen_policy == "error":
+        prefix_lit = repr(f"{reason} in predictor {str(predictor)!r}: ")
+        return [f"{pad}raise ValueError({prefix_lit} + repr({variable}))"]
+    if unseen_policy == "majority":
+        assert majority_pd is not None
+        return [f"{pad}return {_python_number(majority_pd)}"]
+    return [f"{pad}return None"]
+
+
+def _python_node(
+    node_id: int,
+    depth: int,
+    nodes_by_id: dict,
+    *,
+    unseen_policy: str,
+    majority_pd: float | None,
+    visiting: frozenset[int] = frozenset(),
+) -> list:
     """Render one node as a list of Python source lines indented by ``depth``.
 
     ``depth`` counts indentation levels of four spaces, so the generated script
     always keeps strict Python indentation. Leaves emit ``return`` with the
     class-of-interest probability (index 0 of ``pd_final``); internal nodes emit
     an ``if`` / ``elif`` / ``else`` chain whose arms recurse into the children.
-    A categorical split's residual branch returns ``None``, raises
-    ``ValueError``, or returns the majority-leaf PD according to
-    ``unseen_policy``.
+    Missing/NaN numeric values (when not imputed) and unseen categorical values
+    apply ``unseen_policy`` identically to the backend.
     """
+    if node_id in visiting:
+        raise ValueError(
+            f"[exporters] cycle detected in Python export at node_id {node_id}."
+        )
     pad = "    " * depth
 
     try:
@@ -553,6 +647,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
 
     variable = _python_variable(split.predictor)
     child_ids = tuple(node.child_ids)
+    next_visiting = visiting | {node_id}
 
     if len(child_ids) < 2:
         raise ValueError(
@@ -566,7 +661,18 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                 f"Threshold split on {split.predictor!r} has exactly 2 branches, "
                 f"got {len(child_ids)} children."
             )
-        lines = [f"{pad}if {variable} <= {_python_number(split.threshold)}:"]
+        lines = [f"{pad}if {variable} is None or {variable} != {variable}:"]
+        lines.extend(
+            _python_unseen_fallback(
+                pad + "    ",
+                split.predictor,
+                variable,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+                reason="Missing value",
+            )
+        )
+        lines.append(f"{pad}if {variable} <= {_python_number(split.threshold)}:")
         lines.extend(
             _python_node(
                 child_ids[0],
@@ -574,6 +680,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                 nodes_by_id,
                 unseen_policy=unseen_policy,
                 majority_pd=majority_pd,
+                visiting=next_visiting,
             )
         )
         lines.append(f"{pad}else:")
@@ -584,6 +691,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                 nodes_by_id,
                 unseen_policy=unseen_policy,
                 majority_pd=majority_pd,
+                visiting=next_visiting,
             )
         )
         return lines
@@ -594,14 +702,23 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
         if merged is not None:
             # CHAID continuo con ramas fusionadas (H-5.0.c-1): if/elif por
             # corte superior de cada RAMA consolidada; la rama que contiene
-            # el bin superior es el else residual. La guarda bins+1 solo
-            # aplica a la codificacion antigua sin ramas fusionadas.
+            # el bin superior es el else residual (tras proteger None/NaN).
             if len(child_ids) != len(merged):
                 raise ValueError(
                     f"CHAID split on {split.predictor!r} has {len(merged)} "
                     f"consolidated branches, got {len(child_ids)} children."
                 )
-            lines = []
+            lines = [f"{pad}if {variable} is None or {variable} != {variable}:"]
+            lines.extend(
+                _python_unseen_fallback(
+                    pad + "    ",
+                    split.predictor,
+                    variable,
+                    unseen_policy=unseen_policy,
+                    majority_pd=majority_pd,
+                    reason="Missing value",
+                )
+            )
             for index, (_lo, hi) in enumerate(merged):
                 if hi == len(edges):
                     lines.append(f"{pad}else:")
@@ -617,6 +734,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                         nodes_by_id,
                         unseen_policy=unseen_policy,
                         majority_pd=majority_pd,
+                        visiting=next_visiting,
                     )
                 )
             return lines
@@ -625,7 +743,17 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                 f"CHAID split on {split.predictor!r} with {len(edges)} edges needs "
                 f"{len(edges) + 1} children, got {len(child_ids)}."
             )
-        lines = []
+        lines = [f"{pad}if {variable} is None or {variable} != {variable}:"]
+        lines.extend(
+            _python_unseen_fallback(
+                pad + "    ",
+                split.predictor,
+                variable,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+                reason="Missing value",
+            )
+        )
         for index, edge in enumerate(edges):
             keyword = "if" if index == 0 else "elif"
             lines.append(f"{pad}{keyword} {variable} <= {_python_number(edge)}:")
@@ -636,6 +764,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                     nodes_by_id,
                     unseen_policy=unseen_policy,
                     majority_pd=majority_pd,
+                    visiting=next_visiting,
                 )
             )
         lines.append(f"{pad}else:")
@@ -646,6 +775,7 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                 nodes_by_id,
                 unseen_policy=unseen_policy,
                 majority_pd=majority_pd,
+                visiting=next_visiting,
             )
         )
         return lines
@@ -670,25 +800,22 @@ def _python_node(node_id: int, depth: int, nodes_by_id: dict, *, unseen_policy: 
                     nodes_by_id,
                     unseen_policy=unseen_policy,
                     majority_pd=majority_pd,
+                    visiting=next_visiting,
                 )
             )
         # An unseen categorical value matches no branch set; apply the same
         # residual policy as the backend and the other scoring exporters.
-        if unseen_policy == "error":
-            name_lit = repr(str(split.predictor))
-            var = _python_variable(split.predictor)
-            lines.append(f"{pad}else:")
-            lines.append(
-                f'{pad}    raise ValueError(f"Unseen category in predictor '
-                f'{name_lit}: {{{var}}}")'
+        lines.append(f"{pad}else:")
+        lines.extend(
+            _python_unseen_fallback(
+                pad + "    ",
+                split.predictor,
+                variable,
+                unseen_policy=unseen_policy,
+                majority_pd=majority_pd,
+                reason="Unseen category",
             )
-        elif unseen_policy == "majority":
-            assert majority_pd is not None
-            lines.append(f"{pad}else:")
-            lines.append(f"{pad}    return {_python_number(majority_pd)}")
-        else:
-            lines.append(f"{pad}else:")
-            lines.append(f"{pad}    return None")
+        )
         return lines
 
     raise ValueError(
@@ -787,16 +914,26 @@ def export_to_python(
         )
     return_type = "float | None" if unseen_policy == "exclude" else "float"
 
+    class_labels = tuple(getattr(model, "class_labels", ()))
     lines = [
-        f"# TreeGov Model Fingerprint: {model.params_fingerprint}",
+        f"# TreeGov Model Fingerprint: {_sanitize_comment(model.params_fingerprint)}",
         policy_header,
+    ]
+    if len(class_labels) > 2:
+        k_classes = len(class_labels)
+        label_0 = _sanitize_comment(repr(class_labels[0]))
+        lines.append(
+            f"# Multiclass note (K={k_classes}): exports class of interest "
+            f"{label_0} (index 0); classes 1..{k_classes - 1} omitted"
+        )
+    lines.extend([
         "",
         f"def predict(row: dict) -> {return_type}:",
         "    return _eval_tree(row)",
         "",
         "",
         f"def _eval_tree(row: dict) -> {return_type}:",
-    ]
+    ])
 
     for predictor in predictors:
         for line in _python_imputation(predictor, variables[predictor], imputer):
@@ -874,15 +1011,22 @@ def export_to_markdown(
     _ensure_unseen_policy(unseen_policy)
     majority_pd = _majority_leaf_pd(model) if unseen_policy == "majority" else None
     nodes_by_id = _index_nodes(model)
+    class_labels = tuple(getattr(model, "class_labels", ()))
+    is_multiclass = len(class_labels) > 2
 
-    def _md_node(node_id: int, depth: int) -> str:
+    def _md_node(node_id: int, depth: int, visiting: frozenset[int]) -> str:
         """Render one node and its descendants as a nested Markdown list.
 
         ``depth`` counts indentation levels of two spaces. Leaves render as a
-        single bullet with the leaf probability; internal nodes render as a
-        bullet naming the split predictor followed by one indented sub-bullet
-        per branch, whose bodies recurse into the children.
+        single bullet with the leaf probability (and the full class vector when
+        ``K > 2``); internal nodes render as a bullet naming the split
+        predictor followed by one indented sub-bullet per branch, whose bodies
+        recurse into the children.
         """
+        if node_id in visiting:
+            raise ValueError(
+                f"[exporters] cycle detected in Markdown export at node_id {node_id}."
+            )
         try:
             node = nodes_by_id[node_id]
         except KeyError as exc:
@@ -893,9 +1037,31 @@ def export_to_markdown(
         indent = "  " * depth
 
         if node.is_leaf:
+            pd_0 = _validate_finite_float(
+                node.pd_final[0], f"leaf {node.node_id} pd_final[0]"
+            )
+            if is_multiclass:
+                labels = (
+                    tuple(node.class_labels)
+                    if len(node.class_labels) == len(node.pd_final)
+                    else class_labels
+                )
+                if len(labels) != len(node.pd_final):
+                    raise ValueError(
+                        f"[exporters] leaf {node.node_id} pd_final length "
+                        f"{len(node.pd_final)} != class_labels length {len(labels)}."
+                    )
+                vec = ", ".join(
+                    f"{lbl}: {_validate_finite_float(prob, f'leaf {node.node_id} pd_final[{idx}]'):.4f}"
+                    for idx, (lbl, prob) in enumerate(zip(labels, node.pd_final))
+                )
+                return (
+                    f"{indent}- **Leaf {node.node_id}**: "
+                    f"Probability ({labels[0]}) = {pd_0:.4f} | Vector = ({vec})\n"
+                )
             return (
                 f"{indent}- **Leaf {node.node_id}**: "
-                f"Probability = {node.pd_final[0]:.4f}\n"
+                f"Probability = {pd_0:.4f}\n"
             )
 
         split = node.split
@@ -911,6 +1077,7 @@ def export_to_markdown(
                 f"got {len(child_ids)}."
             )
 
+        next_visiting = visiting | {node_id}
         lines = [
             f"{indent}- **Node {node.node_id}** (Split on `{split.predictor}`):\n"
         ]
@@ -921,18 +1088,21 @@ def export_to_markdown(
                     f"Threshold split on {split.predictor!r} has exactly 2 "
                     f"branches, got {len(child_ids)} children."
                 )
+            _validate_finite_float(split.threshold, f"node {node_id} threshold")
             lines.append(
                 f"{indent}  - If <= {split.threshold}:\n"
-                + _md_node(child_ids[0], depth + 1)
+                + _md_node(child_ids[0], depth + 1, next_visiting)
             )
             lines.append(
                 f"{indent}  - Else:\n"
-                + _md_node(child_ids[1], depth + 1)
+                + _md_node(child_ids[1], depth + 1, next_visiting)
             )
             return "".join(lines)
 
         if split.bin_edges:
             edges = tuple(split.bin_edges)
+            for idx, edge in enumerate(edges):
+                _validate_finite_float(edge, f"node {node_id} bin_edges[{idx}]")
             merged = _merged_bin_branches(split)
             if merged is not None:
                 # CHAID continuo con ramas fusionadas (H-5.0.c-1): reglas por
@@ -946,13 +1116,13 @@ def export_to_markdown(
                     if hi == len(edges):
                         lines.append(
                             f"{indent}  - Else:\n"
-                            + _md_node(child_ids[index], depth + 1)
+                            + _md_node(child_ids[index], depth + 1, next_visiting)
                         )
                         continue
                     keyword = "If" if index == 0 else "Elif"
                     lines.append(
                         f"{indent}  - {keyword} <= {edges[hi]}:\n"
-                        + _md_node(child_ids[index], depth + 1)
+                        + _md_node(child_ids[index], depth + 1, next_visiting)
                     )
                 return "".join(lines)
             if len(child_ids) != len(edges) + 1:
@@ -964,10 +1134,11 @@ def export_to_markdown(
                 keyword = "If" if index == 0 else "Elif"
                 lines.append(
                     f"{indent}  - {keyword} <= {edge}:\n"
-                    + _md_node(child_ids[index], depth + 1)
+                    + _md_node(child_ids[index], depth + 1, next_visiting)
                 )
             lines.append(
-                f"{indent}  - Else:\n" + _md_node(child_ids[-1], depth + 1)
+                f"{indent}  - Else:\n"
+                + _md_node(child_ids[-1], depth + 1, next_visiting)
             )
             return "".join(lines)
 
@@ -986,7 +1157,7 @@ def export_to_markdown(
                 keyword = "If" if index == 0 else "Elif"
                 lines.append(
                     f"{indent}  - {keyword} in {branch_values[index]}:\n"
-                    + _md_node(child_ids[index], depth + 1)
+                    + _md_node(child_ids[index], depth + 1, next_visiting)
                 )
             if unseen_policy == "error":
                 lines.append(
@@ -1023,13 +1194,21 @@ def export_to_markdown(
             "**Unseen policy:** exclude (unseen categories are not scored; "
             "caller must filter NULL/None)."
         )
-    header = (
-        "# TreeGov Decision Tree\n\n"
-        f"**Fingerprint:** {model.params_fingerprint}\n"
-        f"**Method:** {model.method}\n"
-        f"{policy_header}\n\n"
-        "## Decision Rules\n\n"
-    )
+    header_lines = [
+        "# TreeGov Decision Tree",
+        "",
+        f"**Fingerprint:** {_sanitize_comment(model.params_fingerprint)}",
+        f"**Method:** {_sanitize_comment(model.method)}",
+        policy_header,
+    ]
+    if is_multiclass:
+        header_lines.append(
+            f"**Multiclass note (K={len(class_labels)}):** primary score is "
+            f"class of interest {class_labels[0]!r} (index 0); full class "
+            "probability vector shown per leaf."
+        )
+    header_lines.extend(["", "## Decision Rules", "", ""])
+    header = "\n".join(header_lines)
     return header + _md_node(
-        model.root_id if node_id is None else node_id, 0
+        model.root_id if node_id is None else node_id, 0, frozenset()
     )

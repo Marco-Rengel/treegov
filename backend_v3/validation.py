@@ -65,9 +65,15 @@ import pandas as pd
 from scipy.stats import chi2 as _chi2_dist
 
 from .log_config import get_logger
-from .tree_builder import TreeModel
+from .tree_builder import TreeModel, TreeNode
 
-__all__ = ["OOSMetrics", "predict_pd", "predict_leaf_assignment", "compute_oos_metrics"]
+__all__ = [
+    "OOSMetrics",
+    "select_majority_leaf",
+    "predict_pd",
+    "predict_leaf_assignment",
+    "compute_oos_metrics",
+]
 
 _HL_EPS = 1e-15
 
@@ -108,6 +114,23 @@ class OOSMetrics:
     ks_pairs: tuple[tuple[int, int, float], ...] = ()
     auc_pairs: tuple[tuple[int, int, float], ...] = ()
     roc_per_class: tuple[tuple[tuple[float, float, float], ...], ...] = ()
+
+
+def select_majority_leaf(model: TreeModel) -> TreeNode:
+    """Selecciona la hoja mayoritaria del modelo (fuente unica de verdad).
+
+    Contrato (docs/api.md, docs/design_decisions.md §7.6/§19): elige la hoja
+    con maximo ``n`` fisico (no ponderado) y desempata de forma determinista
+    por el menor ``node_id``.
+
+    Raises:
+        ValueError: si el modelo no contiene hojas.
+    """
+    raw_nodes = model.nodes.values() if isinstance(model.nodes, dict) else model.nodes
+    hojas = [nd for nd in raw_nodes if nd.is_leaf]
+    if not hojas:
+        raise ValueError("[validation] el modelo no contiene hojas")
+    return min(hojas, key=lambda h: (-h.n, h.node_id))
 
 
 def predict_leaf_assignment(
@@ -165,18 +188,15 @@ def predict_leaf_assignment(
             cola.append((nd.child_ids[1], idx[der]))
         else:
             etiquetas = col.iloc[idx]
-            asignadas = np.zeros(len(idx), dtype=bool)
             for rama, cid in zip(cfg.branches or (), nd.child_ids):
                 mask = etiquetas.isin(list(rama)).to_numpy()
-                asignadas |= mask
                 cola.append((cid, idx[mask]))
             # categorias no vistas o NaN quedan sin ruta (se resuelven abajo)
 
     sin_ruta = np.flatnonzero(asign < 0)
     if sin_ruta.size:
         if unseen_policy == "majority":
-            hojas = [nd for nd in model.nodes if nd.is_leaf]
-            destino = max(hojas, key=lambda h: (-h.n, h.node_id))
+            destino = select_majority_leaf(model)
             asign[sin_ruta] = destino.node_id
             get_logger("validation").info(
                 "[validation] %d filas sin ruta -> hoja mayoritaria id=%d",

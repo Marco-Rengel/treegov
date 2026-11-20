@@ -117,3 +117,34 @@ def test_compare_incompatible_targets():
 
         with pytest.raises(ValueError, match="clases del target no coinciden"):
             session.compare_champion_challenger(str(csv_path))
+
+
+def test_compare_unseen_policy_majority_separate_cohort():
+    """Unseen categories in an external cohort route via majority without error."""
+    with tempfile.TemporaryDirectory() as td:
+        td_path = Path(td)
+        session, train_csv = _setup_session(td_path)
+        train_df = pd.read_csv(train_csv)
+
+        # Build a separate evaluation cohort containing unseen categorical values
+        # that hit the categorical branch (edad < 40 and seg == 'UNSEEN_X').
+        rng = np.random.default_rng(123)
+        eval_df = train_df.copy()
+        eval_df["edad"] = rng.integers(20, 61, size=len(eval_df))
+        eval_df.loc[:9, "edad"] = 25
+        eval_df.loc[:9, "seg"] = "UNSEEN_X"
+        eval_csv = td_path / "external_oot.csv"
+        eval_df.to_csv(eval_csv, index=False)
+
+        result = session.compare_champion_challenger(
+            str(eval_csv), unseen_policy="majority"
+        )
+
+        assert result["n_total"] == len(eval_df)
+        assert result["n_common_routed"] == len(eval_df)
+        assert result["champion_coverage"] == 1.0
+        assert result["challenger_coverage"] == 1.0
+        assert len(result["metrics"]) == 6
+        metric_map = {name: (c, ch, d) for name, c, ch, d in result["metrics"]}
+        assert metric_map["AUC"][0] is not None
+        assert metric_map["Brier"][0] is not None
