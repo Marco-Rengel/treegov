@@ -66,7 +66,10 @@ def stratified_split(
     if not isinstance(seed, (int, np.integer)) or isinstance(seed, bool):
         raise ValueError(f"[splitting] seed debe ser entera: {seed!r}")
 
-    yv = pd.Series(y).to_numpy()
+    ys = pd.Series(y)
+    if ys.isna().any():
+        raise ValueError("[splitting] y contiene valores NaN/ausentes")
+    yv = ys.to_numpy()
     classes = np.unique(yv)
     n_clases = len(classes)
     n_total = len(yv)
@@ -169,7 +172,10 @@ def stratified_kfold(
     if isinstance(seed, bool) or not isinstance(seed, (int, np.integer)):
         raise ValueError(f"[splitting] seed debe ser entera: {seed!r}")
 
-    yv = pd.Series(y).to_numpy()
+    ys = pd.Series(y)
+    if ys.isna().any():
+        raise ValueError("[splitting] y contiene valores NaN/ausentes")
+    yv = ys.to_numpy()
     n_total = len(yv)
     if n_total == 0:
         raise ValueError("[splitting] y vacio")

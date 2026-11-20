@@ -12,13 +12,17 @@ numpy/pandas/scipy.stats):
   * KS = max_s |F_bad(s) - F_good(s)|  sobre las curvas acumuladas ordenadas
     por el score.
 
-  * Hosmer-Lemeshow (Hosmer & Lemeshow 1980), sobre G grupos del score
-    ordenado (conteo equitativo):
+  * Hosmer-Lemeshow externo OOS/OOT (Hosmer & Lemeshow 1980; Hosmer,
+    Lemeshow & Sturdivant 2013, Applied Logistic Regression, 3.a ed.,
+    §5.2.2), sobre G_eff grupos del score ordenado preservando bloques de
+    empates (invariante al orden de filas de X_test):
         pi_g = (1/N_g) sum_{i in g} p_i
         H    = sum_g (O_g - N_g pi_g)^2 / [N_g pi_g (1 - pi_g)]
-        H ~ chi2(G - 2)
-    Guarda: n_groups * 5 > N -> ValueError (cada grupo debe caber >=5 obs);
-    pi_g extremo se recorta a [1e-15, 1 - 1e-15] (documentado).
+        H ~ chi2(G_eff)   (validacion externa: gl = G_eff)
+    Guarda de llamada: n_groups >= 3 y n_groups * 5 <= N -> ValueError;
+    grupos con calibracion exacta en los extremos (pi_g == 0 y O_g == 0,
+    o pi_g == 1 y O_g == N_g) aportan 0.0; en otro caso, pi_g extremo se
+    recorta a [_HL_EPS, 1 - _HL_EPS] con _HL_EPS = 1e-6 emitiendo WARNING.
 
   * Brier Score + Brier Skill Score (Brier 1950):
         BS = (1/N) sum (p_i - y_i)^2 ;  BS_ref = y_bar (1 - y_bar)
@@ -75,7 +79,66 @@ __all__ = [
     "compute_oos_metrics",
 ]
 
-_HL_EPS = 1e-15
+_HL_EPS = 1e-6
+
+
+def _validate_int_labels(y, who: str, *, name: str = "y") -> np.ndarray:
+    """Valida etiquetas enteras ANTES de convertir a int.
+
+    Rechaza NaN, None, pd.NA, +/-inf, booleanos, strings y floats no
+    enteros (p. ej. 0.5), evitando el truncado silencioso a enteros
+    negativos al castear con np.asarray(..., dtype=int).
+    """
+    if isinstance(y, (pd.Series, pd.Index)):
+        if y.isna().any():
+            raise ValueError(f"[{who}] {name} contiene valores NaN/ausentes")
+        y_arr = y.to_numpy()
+    else:
+        y_arr = np.asarray(y)
+
+    if y_arr.dtype == object or pd.api.types.is_string_dtype(y_arr.dtype):
+        if pd.isna(y_arr).any():
+            raise ValueError(f"[{who}] {name} contiene valores NaN/ausentes")
+        vals: list[int] = []
+        for v in y_arr.flat:
+            if isinstance(v, (bool, np.bool_)):
+                raise ValueError(f"[{who}] {name} no acepta valores booleanos")
+            if isinstance(v, (int, np.integer)):
+                vals.append(int(v))
+            elif isinstance(v, (float, np.floating)):
+                fv = float(v)
+                if not math.isfinite(fv) or fv != math.floor(fv):
+                    raise ValueError(
+                        f"[{who}] {name} contiene valores no enteros o no finitos"
+                    )
+                vals.append(int(fv))
+            else:
+                raise ValueError(
+                    f"[{who}] {name} debe contener etiquetas enteras; recibido {v!r}"
+                )
+        return np.asarray(vals, dtype=int).reshape(y_arr.shape)
+
+    if np.issubdtype(y_arr.dtype, np.bool_):
+        raise ValueError(f"[{who}] {name} no acepta valores booleanos")
+
+    if np.issubdtype(y_arr.dtype, np.floating):
+        if not np.all(np.isfinite(y_arr)):
+            raise ValueError(
+                f"[{who}] {name} contiene valores NaN/ausentes o no finitos"
+            )
+        if not np.all(y_arr == np.floor(y_arr)):
+            raise ValueError(
+                f"[{who}] {name} contiene valores decimales no enteros"
+            )
+        iinfo = np.iinfo(np.int64)
+        if np.any((y_arr < iinfo.min) | (y_arr > iinfo.max)):
+            raise ValueError(f"[{who}] {name} fuera de rango entero")
+        return np.asarray(y_arr, dtype=int)
+
+    if np.issubdtype(y_arr.dtype, np.integer):
+        return np.asarray(y_arr, dtype=int)
+
+    raise ValueError(f"[{who}] dtype invalido para {name}: {y_arr.dtype}")
 
 
 @dataclass(frozen=True)
@@ -350,7 +413,7 @@ def _binary_metrics(
         raise ValueError("[validation] test vacio")
     if n_groups < 3:
         raise ValueError(
-            f"[validation] Hosmer-Lemeshow exige n_groups >= 3 (gl = G - 2); "
+            f"[validation] Hosmer-Lemeshow exige n_groups >= 3; "
             f"n_groups={n_groups}"
         )
     if n_groups * 5 > n:
@@ -419,23 +482,47 @@ def _binary_metrics(
         recall_prev = np.concatenate([[0.0], recall[:-1]])
         pr_auc = float(np.sum((recall - recall_prev) * precision))
 
-    # ---- Hosmer-Lemeshow (grupos equitativos por score) ----
-    # Grupos por posicion en el orden descendente (criterio actual); dentro
-    # de cada grupo se acumula masa ponderada.
-    bordes = np.floor(np.arange(1, n_groups) * n / n_groups).astype(int)
+    # ---- Hosmer-Lemeshow (grupos tie-preserving, OOS gl = G_eff) ----
+    # Hosmer, Lemeshow & Sturdivant (2013), Applied Logistic Regression,
+    # 3.a ed., §5.2.2: en validacion externa (OOS/OOT) los parametros no
+    # se estiman en la muestra de evaluacion -> gl = G_eff. Los cortes
+    # avanzan al final de cada bloque de empate para garantizar invarianza
+    # exacta frente a permutaciones de filas de X_test.
+    cuts: list[int] = []
+    for k in range(1, n_groups):
+        b = int(math.floor(k * n / n_groups))
+        while 0 < b < n and ps[b] == ps[b - 1]:
+            b += 1
+        if 0 < b < n and (not cuts or b > cuts[-1]):
+            cuts.append(b)
+    bounds = [0, *cuts, n]
+    g_eff = len(bounds) - 1
+
     hl_h = 0.0
-    for g in range(n_groups):
-        ini = 0 if g == 0 else bordes[g - 1]
-        fin = n if g == n_groups - 1 else bordes[g]
+    for g in range(g_eff):
+        ini = bounds[g]
+        fin = bounds[g + 1]
         sub_p = ps[ini:fin]
         sub_y = ys[ini:fin]
         sub_w = ws[ini:fin]
         n_g_w = max(float(sub_w.sum()), _HL_EPS)
-        pi_g = float((sub_w * sub_p).sum() / n_g_w)
-        pi_g = min(max(pi_g, _HL_EPS), 1.0 - _HL_EPS)
+        pi_g_raw = float((sub_w * sub_p).sum() / n_g_w)
         o_g = float((sub_w * sub_y).sum())
+        if (pi_g_raw == 0.0 and o_g == 0.0) or (
+            pi_g_raw == 1.0 and o_g == n_g_w
+        ):
+            continue
+        if pi_g_raw < _HL_EPS or pi_g_raw > 1.0 - _HL_EPS:
+            pi_g = min(max(pi_g_raw, _HL_EPS), 1.0 - _HL_EPS)
+            log.warning(
+                "[validation] Hosmer-Lemeshow: grupo %d con pi_g=%.6g "
+                "recortado a [%.0e, 1-%.0e]",
+                g, pi_g_raw, _HL_EPS, _HL_EPS,
+            )
+        else:
+            pi_g = pi_g_raw
         hl_h += (o_g - n_g_w * pi_g) ** 2 / (n_g_w * pi_g * (1.0 - pi_g))
-    hl_df = n_groups - 2
+    hl_df = g_eff
     hl_p = float(_chi2_dist.sf(hl_h, hl_df))
 
     # ---- Brier (ponderado) ----
@@ -448,7 +535,7 @@ def _binary_metrics(
     return OOSMetrics(
         n_test=n, n_events=n1,
         auc=auc, gini=gini, ks=ks, pr_auc=pr_auc,
-        hl_stat=float(hl_h), hl_df=hl_df, hl_p=hl_p, hl_groups=n_groups,
+        hl_stat=float(hl_h), hl_df=hl_df, hl_p=hl_p, hl_groups=g_eff,
         brier=bs, brier_ref=bs_ref, brier_skill=bss,
         roc_points=roc_points,
     )
@@ -506,10 +593,18 @@ def compute_oos_metrics(
     uniformes, el resultado es idéntico bit a bit al pre-3.5, salvo por
     los tres campos nuevos (ks_pairs, auc_pairs, roc_per_class) que el
     modo 1D deja vacíos y el modo 2D con K=2 puebla.
+    Bloque 2F (CRIT-11 / CRIT-12):
+      - Validacion estricta de entradas: ``p`` debe ser 1D o 2D no vacio,
+        finito y en [0, 1]; ``y`` se valida antes del casteo a ``int``
+        (rechazando NaN, +/-inf, booleanos, strings y floats no enteros);
+        en modo binario 1D ``y`` debe pertenecer estrictamente a {0, 1}.
+      - Hosmer-Lemeshow OOS/OOT usa agrupacion tie-preserving invariante
+        al orden de filas, grados de libertad externos ``hl_df = g_eff``
+        (Hosmer, Lemeshow & Sturdivant 2013, §5.2.2) y proteccion
+        numerica ``_HL_EPS = 1e-6`` con aviso en log.
     """
     log = get_logger("validation")
     pv = np.asarray(p, dtype=float)
-    yv = np.asarray(y, dtype=int)
     if pv.ndim == 1:
         n_pre = int(pv.size)
     elif pv.ndim == 2:
@@ -518,6 +613,15 @@ def compute_oos_metrics(
         raise ValueError(
             f"[validation] p debe ser 1D o 2D: ndim={pv.ndim}"
         )
+    if n_pre == 0:
+        raise ValueError("[validation] test vacio")
+    if not np.all(np.isfinite(pv)):
+        raise ValueError("[validation] p contiene NaN o valores no finitos")
+    if ((pv < 0.0) | (pv > 1.0)).any():
+        raise ValueError("[validation] p fuera de [0, 1]")
+
+    yv = _validate_int_labels(y, "validation")
+
     if weights is not None:
         w = np.asarray(weights, dtype=float)
         if w.ndim != 1:
@@ -541,6 +645,14 @@ def compute_oos_metrics(
 
     # ---- Dispatch por la forma de p (decision D15) ----
     if pv.ndim == 1:
+        if yv.ndim != 1 or yv.shape != pv.shape:
+            raise ValueError(
+                "[validation] p e y deben ser vectores de igual longitud"
+            )
+        if not np.isin(yv, (0, 1)).all():
+            raise ValueError(
+                "[validation] y binario 1D debe contener solo valores en {0, 1}"
+            )
         return _binary_metrics(pv, yv, n_groups, w)
 
     # ---- p 2D: validaciones comunes ----

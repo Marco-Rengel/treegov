@@ -179,6 +179,16 @@ def test_stratified_kfold_invalid_k():
     _assert_raises(ValueError, stratified_kfold, pd.Series([0, 0, 1, 1]), 3, 42)
 
 
+def test_stratified_split_and_kfold_reject_nan_in_y():
+    """CRIT-11: stratified_split y stratified_kfold rechazan NaN/None en y."""
+    y_nan = pd.Series([0.0, 1.0, np.nan, 0.0, 1.0, 0.0])
+    y_none = pd.Series(["a", "b", None, "a", "b", "a"], dtype=object)
+    _assert_raises(ValueError, stratified_split, y_nan, 0.5, 42)
+    _assert_raises(ValueError, stratified_split, y_none, 0.5, 42)
+    _assert_raises(ValueError, stratified_kfold, y_nan, 2, 42)
+    _assert_raises(ValueError, stratified_kfold, y_none, 2, 42)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

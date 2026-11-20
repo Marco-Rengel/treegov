@@ -949,6 +949,15 @@ but below any analytically meaningful probability.
 `validation.py` (constant `_HL_EPS`). Item to add to
 `methodology.md` §8.3 in Phase 3.0.c.
 
+> **Actualización (20/11/2026, Bloque 2F — ver §32):** `_HL_EPS` se
+> ajusta de `1e-15` a `1e-6` (con `WARNING` al recortar y contribución
+> exacta `0.0` cuando el grupo está perfectamente calibrado en los
+> extremos `pi_g == 0, O_g == 0` o `pi_g == 1, O_g == N_g`), la
+> agrupación preserva bloques de empates (invariante al orden de filas)
+> y los grados de libertad fuera de muestra pasan a `hl_df = G_eff`
+> (Hosmer, Lemeshow & Sturdivant 2013, *Applied Logistic Regression*,
+> 3.ª ed., §5.2.2). Ver `§32`.
+
 ### 7.3 PR-AUC as step-wise Average Precision
 
 **Context.** Precision-Recall AUC admits multiple definitions
@@ -2811,6 +2820,37 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-09`, `CRIT-10`); Kish (1965), *Survey Sampling*; Heeringa, West & Berglund (2010), *Applied Survey Data Analysis*; Press et al., *Numerical Recipes* §5.6; Chan, Golub & LeVeque (1983), *The American Statistician* 37(3):242–247; `docs/design_decisions.md` §13.4; `docs/api.md`; `docs/audit_log.md` (cierre del Bloque 2E, 20/11/2026).
 
+---
+
+## §32. Remediación Bloque 2F: guardas anti-NaN, Hosmer-Lemeshow OOS invariante al orden, w_accuracy binario y estabilidad PSI/CSI (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) cerró dos hallazgos críticos adicionales en la Ola 2 de remediación:
+1. `CRIT-11` (corrupción silenciosa por `NaN`/entradas inválidas y omisión de `w_accuracy` binario): `TreeBuilder._partition()` permitía que un `NaN` residual en un split numérico (`threshold` o `bin_edges`) pasara a la rama derecha o al último bin; `stratified_split()` y `stratified_kfold()` no rechazaban `NaN` en `y`; `validation.compute_oos_metrics()` y `reporting._validated_routed()` convertían `y` (y `leaf_assignment`) con `np.asarray(..., dtype=int)` antes de validar, truncando silenciosamente `NaN` a enteros negativos (contando filas corruptas como `n_excluded` o rompiendo etiquetas); `compute_oos_metrics()` no validaba finitud ni dominio `[0, 1]` de `p` ni `{0, 1}` en modo binario 1D; `build_classification_matrix()` y `build_classification_matrix_multiclass()` no validaban finitud/`[0, 1]` en `pd_per_leaf` (clasificando `NaN` como `"good"` o ganando `argmax`); y `build_classification_matrix()` dejaba `w_accuracy=None` en el camino binario.
+2. `CRIT-12` (Hosmer-Lemeshow OOS, `StabilityMonitor` y `Session.evaluate_oot`): en `validation._binary_metrics()`, cortar por posiciones físicas sin respetar empates hacía el estadístico HL dependiente del orden de filas de `X_test`, reportaba `hl_df = G - 2` (fórmula in-sample) en lugar de `gl = G` en validación externa OOS/OOT (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y el clip `_HL_EPS = 1e-15` provocaba explosiones artificiales de `~1e15` cuando una hoja en modo `RESEARCH` emitía `PD = 0.0` con un evento OOS; en `stability.py`, `StabilityMonitor.eps` era código muerto no conectado a `psi_index()`, `leaf_psi()` usaba `max(total_act, 1)` rompiendo la invarianza a escala cuando $\sum w_{\text{oot}} < 1$, `covariate_csi()` devolvía 0 bins / `CSI = 0` falso en variables continuas constantes, usaba `right=False` en contradicción con los intervalos `(a, b]` de `methodology.md`, enviaba `NaN` al último decil o perdía masa en nominales y aceptaba `±inf`; y en `session_state.py`, `Session.evaluate_oot()` crasheaba con `TypeError` bajo `scheme="cv"` (`_X_test is None`) e invertía el signo del `Gini Drop` cuando `gini_train < 0`.
+
+**Decisiones.**
+
+1. **Guardas fail-fast contra `NaN`, no finitos y etiquetas inválidas (`tree_builder.py`, `splitting.py`, `validation.py`, `reporting.py`).**
+   - `TreeBuilder._partition()` exige `np.all(np.isfinite(vals))` tanto en splits por `bin_edges` como por `threshold`.
+   - `stratified_split()` y `stratified_kfold()` validan `pd.Series(y).isna().any()` antes de estratificar.
+   - `validation._validate_int_labels()` valida `y` (y, reutilizado por `reporting._validated_routed()`, también `leaf_assignment`) ANTES de castear a `int`, rechazando `NaN`, `None`, `pd.NA`, `±inf`, booleanos, cadenas y floats fraccionarios (`0.5`). `compute_oos_metrics()` valida además `pv.ndim in (1, 2)`, no vacío, finito, en `[0, 1]` y, en modo 1D, `np.isin(yv, (0, 1)).all()`.
+   - `reporting.build_classification_matrix()` valida que cada probabilidad usada en `pd_per_leaf` sea finita en `[0, 1]` y puebla `w_accuracy = (w_tp + w_tn) / w_total` (garantizando paridad `w_accuracy == accuracy` con `weights=None`); `build_classification_matrix_multiclass()` valida todos los componentes de `pd_per_leaf[lid]` en `[0, 1]` finitos.
+2. **Hosmer-Lemeshow OOS invariante al orden, `gl = G_eff` y `_HL_EPS = 1e-6` (`validation.py`).**
+   - Los cortes del score ordenado avanzan hasta el final de cada bloque de empates (misma convención que `reporting.build_gains_table(tie="preserve")`), garantizando invarianza exacta frente a permutaciones de filas de `X_test`.
+   - Siguiendo a Hosmer, Lemeshow & Sturdivant (2013, *Applied Logistic Regression*, 3.ª ed., §5.2.2), en validación externa (OOS/OOT) los parámetros no se estiman sobre la muestra de evaluación, por lo que `hl_groups = g_eff`, `hl_df = g_eff` y `hl_p = chi2.sf(hl_stat, g_eff)` (manteniendo las guardas de llamada `n_groups >= 3` y `n_groups * 5 <= n`).
+   - `_HL_EPS` pasa a `1e-6`: los grupos exactamente calibrados en los extremos (`pi_g == 0, O_g == 0` o `pi_g == 1, O_g == N_g`) aportan `0.0` exacto sin aviso; en otro caso, si `pi_g` cae fuera de `[_HL_EPS, 1 - _HL_EPS]`, se recorta con `WARNING` explícito.
+3. **Saneamiento integral de `StabilityMonitor` y `psi_index` (`stability.py`).**
+   - `psi_index(..., eps=1e-4, renormalize=False)` y `StabilityMonitor(..., eps=1e-4)` validan `eps` (numérico finito en `(0, 0.5)`, sin booleanos) y conectan `self.eps` en todas las llamadas desde `leaf_psi()` y `covariate_csi()`.
+   - `leaf_psi()` rechaza cohortes OOT (o train) vacías o sin masa y divide estrictamente por `total_act` (eliminando `max(total_act, 1)`), preservando invarianza a escala para pesos normalizados ($\sum w < 1$).
+   - `covariate_csi()` en continuas/ordinales numéricas rechaza `±inf`, separa `NaN` en el bin explícito `"<MISSING>"` (conservando $\sum p_{\text{exp}} = \sum p_{\text{act}} = 1$), maneja variables 100 % `NaN` (`["<MISSING>"]` / `["<MISSING>", "<OTHER>"]`) y continuas constantes en train (`==v0` + `"<OTHER>"`), y calcula deciles exclusivamente sobre los no-NaN de train con `np.digitize(..., interior, right=True)` (intervalos `(a, b]` coherentes con `methodology.md` y `ChaidEngine`). En nominales/simbólicas, separa `NaN` en `"<MISSING>"` (sin mandarlos a `"<OTHER>"` ni perder masa).
+4. **Resiliencia CV y signo de `Gini Drop` en `Session.evaluate_oot()` (`session_state.py`).**
+   - Si `st.oos_metrics is None`: cuando existe holdout (`_X_test`/`_y_test`), evalúa `gini_oos` sobre las filas enrutables (`unseen_policy="exclude"`); cuando no existe holdout (`scheme="cv"` sin evaluación previa o tras `prune()`), fija `gini_oos = None` (`alert_oos = "UNDETERMINED"`) con log informativo en lugar de fallar con `TypeError`.
+   - En `_drop(g)`, la guarda pasa de `gini_train == 0` a `gini_train <= 0.0`, devolviendo `None` (`"UNDETERMINED"`) con `WARNING` cuando el modelo carece de poder discriminante positivo en entrenamiento.
+
+**Consecuencias.** Quedan eliminadas las rutas de corrupción silenciosa por `NaN`, las inconsistencias de `w_accuracy`, la dependencia del orden de filas en Hosmer-Lemeshow, la subestimación de grados de libertad en HL externo, el código muerto de `eps` y las patologías de `leaf_psi`/`covariate_csi`, y el fallo de `evaluate_oot()` en modo CV o con `gini_train < 0`.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-11`, `CRIT-12`); Hosmer, Lemeshow & Sturdivant (2013), *Applied Logistic Regression*, 3.ª ed., §5.2.2; Siddiqi (2006), *Credit Risk Scorecards*; `docs/design_decisions.md` §7.2 y §7.4; `docs/api.md`; `docs/audit_log.md` (cierre del Bloque 2F, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2871,6 +2911,13 @@ QDA root stability, domain/control guards and non-hijacking under `F = inf`,
 overflow-free `bonferroni_adjust`, tolerance-aware `_weighted_median`,
 `TrainOnlyImputer` `±inf` rejection, C&RT normalized Gini/reverse-cumsum/centered
 regression variance, and CHAID centered continuous target, constant-continuous
-guard and Cochran-eligible Exhaustive selection.)
+guard and Cochran-eligible Exhaustive selection; on 20/11/2026 to add §32 and
+update §7.2 — Block 2F remediation: anti-NaN/non-finite guards in
+`tree_builder`/`splitting`/`validation`/`reporting`, binary `w_accuracy`
+population, order-invariant tie-preserving OOS Hosmer-Lemeshow (`hl_df = G_eff`
+per Hosmer, Lemeshow & Sturdivant 2013 §5.2.2, `_HL_EPS = 1e-6`), wired/validated
+`StabilityMonitor.eps`, scale-invariant `leaf_psi`, `<MISSING>`/constant/`(a, b]`
+`covariate_csi`, and CV/non-positive `gini_train` resilience in
+`Session.evaluate_oot`.)
 
 ---

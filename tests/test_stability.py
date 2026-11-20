@@ -326,8 +326,8 @@ def test_weighted_stability_csi_uses_weights():
     bordes[0] = -np.inf
     bordes[-1] = np.inf
     n_bins = len(bordes) - 1
-    bins_tr = np.digitize(X_tr["x"].to_numpy(dtype=float), bordes[1:-1])
-    bins_ac = np.digitize(X_ac["x"].to_numpy(dtype=float), bordes[1:-1])
+    bins_tr = np.digitize(X_tr["x"].to_numpy(dtype=float), bordes[1:-1], right=True)
+    bins_ac = np.digitize(X_ac["x"].to_numpy(dtype=float), bordes[1:-1], right=True)
     p_exp = np.array(
         [float((bins_tr == i).sum()) for i in range(n_bins)]
     ) / len(X_tr)
@@ -379,6 +379,118 @@ def test_weighted_stability_other_bin_accumulates_weights():
     assert math.isclose(p_act_other, esperado, rel_tol=1e-12)
     # No es el conteo (4/6)
     assert not math.isclose(p_act_other, 4.0 / 6.0, rel_tol=1e-12)
+
+
+def test_stability_eps_wired_and_validated():
+    """CRIT-12: self.eps conectado a psi_index y validado en (0, 0.5)."""
+    # Rechazo de eps invalidos
+    for bad_eps in (0.0, -1e-4, 0.5, 0.8, float("nan"), float("inf"), True, False):
+        _assert_raises(ValueError, StabilityMonitor, eps=bad_eps)
+        _assert_raises(
+            ValueError,
+            psi_index,
+            np.array([0.5, 0.5]),
+            np.array([0.5, 0.5]),
+            eps=bad_eps,
+        )
+
+    # Con bin vacio, eps=1e-2 y eps=1e-6 producen PSI y CSI distintos
+    m, _X_tr, _X_oot, asign_tr, _asign_oot = _fixture_hojas_y_oot()
+    hojas = [nd for nd in m.nodes if nd.is_leaf]
+    counts = np.array(
+        [float((asign_tr == nd.node_id).sum()) for nd in hojas], dtype=float
+    )
+    # OOT solo cae en la primera hoja -> segunda hoja vacia
+    asign_one_leaf = np.full(20, hojas[0].node_id, dtype=int)
+    mon_hi = StabilityMonitor(eps=1e-2)
+    mon_lo = StabilityMonitor(eps=1e-6)
+    psi_hi = mon_hi.leaf_psi(m, counts, asign_one_leaf)
+    psi_lo = mon_lo.leaf_psi(m, counts, asign_one_leaf)
+    assert psi_lo.psi > psi_hi.psi
+
+    X_tr = pd.DataFrame({"seg": ["a", "a", "b", "b"]})
+    X_ac = pd.DataFrame({"seg": ["a", "a", "c", "c"]})
+    csi_hi = mon_hi.covariate_csi(X_tr, X_ac, "seg", PredictorType.NOMINAL)
+    csi_lo = mon_lo.covariate_csi(X_tr, X_ac, "seg", PredictorType.NOMINAL)
+    assert csi_lo.csi > csi_hi.csi
+
+
+def test_leaf_psi_scale_invariant_for_small_oot_weights():
+    """CRIT-12: leaf_psi es invariante a escala cuando sum(weights_oot) < 1."""
+    m, _X_tr, _X_oot, asign_tr, asign_oot = _fixture_hojas_y_oot()
+    hojas = [nd for nd in m.nodes if nd.is_leaf]
+    counts = np.array(
+        [float((asign_tr == nd.node_id).sum()) for nd in hojas], dtype=float
+    )
+    rng = np.random.default_rng(17)
+    w_raw = rng.uniform(0.5, 2.0, size=len(asign_oot))
+    w_small = w_raw * (0.25 / float(w_raw.sum()))    # suma = 0.25 < 1.0
+    w_large = w_raw * (100.0 / float(w_raw.sum()))   # suma = 100.0
+
+    mon = StabilityMonitor()
+    rep_small = mon.leaf_psi(m, counts, asign_oot, weights_oot=w_small)
+    rep_large = mon.leaf_psi(m, counts, asign_oot, weights_oot=w_large)
+    assert math.isclose(rep_small.psi, rep_large.psi, rel_tol=1e-12)
+    for b1, b2 in zip(rep_small.per_bin, rep_large.per_bin):
+        assert b1[0] == b2[0]
+        assert math.isclose(b1[2], b2[2], rel_tol=1e-12)
+    # OOT vacia -> ValueError
+    _assert_raises(ValueError, mon.leaf_psi, m, counts, np.array([], dtype=int))
+
+
+def test_csi_continuous_constant_train_detects_shift():
+    """CRIT-12: continua constante en train detecta desplazamientos arriba/abajo."""
+    mon = StabilityMonitor()
+    X_tr = pd.DataFrame({"x": np.full(50, 5.0)})
+    X_same = pd.DataFrame({"x": np.full(40, 5.0)})
+    rep_same = mon.covariate_csi(X_tr, X_same, "x", _CONT)
+    assert rep_same.csi == 0.0 and rep_same.flag == "STABLE"
+    assert len(rep_same.per_bin) == 1
+
+    for shifted in (
+        np.concatenate([np.full(20, 5.0), np.full(30, 10.0)]),
+        np.full(50, 1.0),
+    ):
+        rep_shift = mon.covariate_csi(
+            X_tr, pd.DataFrame({"x": shifted}), "x", _CONT
+        )
+        assert rep_shift.csi > 0.0
+        assert rep_shift.flag == "UNSTABLE"
+        assert len(rep_shift.per_bin) >= 2
+        assert any(lbl == "<OTHER>" for lbl, _, _, _ in rep_shift.per_bin)
+
+
+def test_csi_missing_bin_and_rejects_inf():
+    """CRIT-12: bin <MISSING> en continua y nominal con suma=1.0; +/-inf -> ValueError."""
+    mon = StabilityMonitor()
+
+    # Continua con NaN identicos -> csi == 0.0, bin <MISSING>, sumas == 1.0
+    rng = np.random.default_rng(23)
+    vals = rng.normal(0.0, 1.0, 200)
+    vals[::10] = np.nan
+    X_c = pd.DataFrame({"x": vals})
+    rep_c = mon.covariate_csi(X_c, X_c, "x", _CONT)
+    assert rep_c.csi == 0.0 and rep_c.flag == "STABLE"
+    labels_c = [lbl for lbl, _, _, _ in rep_c.per_bin]
+    assert "<MISSING>" in labels_c
+    assert math.isclose(sum(b[1] for b in rep_c.per_bin), 1.0, rel_tol=1e-12)
+    assert math.isclose(sum(b[2] for b in rep_c.per_bin), 1.0, rel_tol=1e-12)
+
+    # Nominal con NaN identicos -> csi == 0.0, bin <MISSING>, sin <OTHER>, sumas == 1.0
+    X_n = pd.DataFrame({"seg": ["a", "b", None, np.nan, "a", "b"]})
+    rep_n = mon.covariate_csi(X_n, X_n, "seg", PredictorType.NOMINAL)
+    assert rep_n.csi == 0.0 and rep_n.flag == "STABLE"
+    labels_n = [lbl for lbl, _, _, _ in rep_n.per_bin]
+    assert "<MISSING>" in labels_n and "<OTHER>" not in labels_n
+    assert math.isclose(sum(b[1] for b in rep_n.per_bin), 1.0, rel_tol=1e-12)
+    assert math.isclose(sum(b[2] for b in rep_n.per_bin), 1.0, rel_tol=1e-12)
+
+    # +/-inf en continua -> ValueError (en train o en actual)
+    X_ok = pd.DataFrame({"x": [1.0, 2.0, 3.0, 4.0]})
+    X_posinf = pd.DataFrame({"x": [1.0, np.inf, 3.0, 4.0]})
+    X_neginf = pd.DataFrame({"x": [1.0, -np.inf, 3.0, 4.0]})
+    _assert_raises(ValueError, mon.covariate_csi, X_posinf, X_ok, "x", _CONT)
+    _assert_raises(ValueError, mon.covariate_csi, X_ok, X_neginf, "x", _CONT)
 
 
 if __name__ == "__main__":

@@ -2359,26 +2359,62 @@ class Session:
 
         if st.oos_metrics is not None:
             gini_oos = st.oos_metrics.gini
-        else:
+        elif self._X_test is not None and self._y_test is not None:
             asign_te = predict_leaf_assignment(
-                model, self._X_test, unseen_policy="error"
+                model, self._X_test, unseen_policy="exclude"
             )
-            if K == 2:
-                p_te = np.array([model.nodes[int(a)].pd_final[0] for a in asign_te])
-                y_te = self._y_test
+            validas_te = asign_te >= 0
+            n_val_te = int(validas_te.sum())
+            if n_val_te >= 15:
+                if K == 2:
+                    p_te = np.array(
+                        [
+                            model.nodes[int(a)].pd_final[0]
+                            for a in asign_te[validas_te]
+                        ]
+                    )
+                    y_te = self._y_test[validas_te]
+                else:
+                    p_te = np.array(
+                        [
+                            model.nodes[int(a)].pd_final
+                            for a in asign_te[validas_te]
+                        ]
+                    )
+                    y_te = self._translate_y_to_internal(
+                        self._y_test[validas_te]
+                    )
+                g_eff_te = (
+                    n_groups
+                    if n_val_te >= 5 * n_groups
+                    else max(3, n_val_te // 5)
+                )
+                w_te = (
+                    None if self._w_test is None else self._w_test[validas_te]
+                )
+                gini_oos = compute_oos_metrics(
+                    p_te, y_te, n_groups=g_eff_te, weights=w_te
+                ).gini
             else:
-                p_te = np.array([model.nodes[int(a)].pd_final for a in asign_te])
-                y_te = self._translate_y_to_internal(self._y_test)
-            n_te_eff = max(3, int(len(p_te)) // 5)
-            gini_oos = compute_oos_metrics(
-                p_te, y_te, n_groups=n_te_eff, weights=self._w_test
-            ).gini
+                self._log.warning(
+                    "[session] evaluate_oot: OOS enrutable demasiado pequeno "
+                    "(%d): gini_oos=None (alert_oos=UNDETERMINED)",
+                    n_val_te,
+                )
+                gini_oos = None
+        else:
+            self._log.info(
+                "[session] evaluate_oot sin particion holdout ni oos_metrics "
+                "previo: gini_oos=None (alert_oos=UNDETERMINED)"
+            )
+            gini_oos = None
 
         def _drop(g):
-            # None, NaN o Gini_train == 0 -> indefinido (NUNCA se reporta
-            # silenciosamente como 'sin alerta': gini_drop_alert -> UNDETERMINED)
+            # None, NaN o Gini_train <= 0 -> indefinido (NUNCA se reporta
+            # silenciosamente como 'sin alerta' ni invierte signo:
+            # gini_drop_alert -> UNDETERMINED)
             if (gini_train is None or gini_train != gini_train
-                    or gini_train == 0 or g is None):
+                    or gini_train <= 0.0 or g is None):
                 self._log.warning(
                     "[session] Gini Drop indefinido (train=%s, X=%s)", gini_train, g
                 )

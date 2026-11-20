@@ -663,6 +663,10 @@ class TreeBuilder:
             # partición por bin desincronizaría el árbol de
             # cfg.branches/child_ns. Ver design_decisions.md §16.3.
             vals = col.iloc[idx].to_numpy(dtype=float)
+            if not np.all(np.isfinite(vals)):
+                raise ValueError(
+                    f"[tree_builder] valores NaN o no finitos en predictor {cfg.predictor!r}"
+                )
             bin_idx = np.digitize(vals, cfg.bin_edges, right=True)
             n_bins = len(cfg.bin_edges) + 1
             mapa = np.full(n_bins, -1, dtype=int)
@@ -673,6 +677,10 @@ class TreeBuilder:
             partes = [idx[mapa[bin_idx] == j] for j in range(len(ramas))]
         elif cfg.threshold is not None:
             vals = col.iloc[idx].to_numpy(dtype=float)
+            if not np.all(np.isfinite(vals)):
+                raise ValueError(
+                    f"[tree_builder] valores NaN o no finitos en predictor {cfg.predictor!r}"
+                )
             izq = vals <= float(cfg.threshold)
             partes = [idx[izq], idx[~izq]]
         else:

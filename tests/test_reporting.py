@@ -556,7 +556,7 @@ def test_binary_accuracy_populated() -> None:
     assert m.w_precision_per_class == ()
     assert m.w_recall_per_class == ()
     assert m.w_f1_per_class == ()
-    assert m.w_accuracy is None
+    assert m.w_accuracy == pytest.approx(0.7, rel=1e-12)
 
 
 def test_multiclass_classification_matrix_k3() -> None:
@@ -829,6 +829,61 @@ def test_multiclass_classification_matrix_class_labels_propagation_and_guard() -
         _standard_assign(), _standard_y(), {0: 0.1, 1: 0.3, 2: 0.6},
     )
     assert m_bin.class_labels == ()
+
+
+def test_binary_classification_matrix_weighted_accuracy() -> None:
+    """CRIT-11: w_accuracy binario ponderado == (w_tp + w_tn) / w_total."""
+    assign = _standard_assign()
+    y = _standard_y()
+    pd_per_leaf = {0: 0.1, 1: 0.3, 2: 0.6}
+    # Hojas 0 y 1 predichas good (pd < 0.5); hoja 2 predicha bad (pd >= 0.5).
+    # Dar peso 3.0 a la hoja 2 (60 bad + 40 good) y 1.0 al resto.
+    w = np.where(assign == 2, 3.0, 1.0)
+    m = build_classification_matrix(assign, y, pd_per_leaf, threshold=0.5, weights=w)
+    w_total = m.w_tp + m.w_tn + m.w_fp + m.w_fn
+    assert m.w_accuracy == pytest.approx((m.w_tp + m.w_tn) / w_total, rel=1e-12)
+    assert m.w_accuracy != pytest.approx(m.accuracy, rel=1e-6)
+
+
+def test_reporting_rejects_nan_and_invalid_probabilities() -> None:
+    """CRIT-11: rechazo de NaN en leaf_assignment/y y de PDs invalidas."""
+    assign_nan = np.array([0.0, np.nan, 1.0, 1.0])
+    y_ok = np.array([0, 1, 0, 1])
+    with pytest.raises(ValueError):
+        build_classification_matrix(assign_nan, y_ok, {0: 0.1, 1: 0.8})
+
+    y_nan = np.array([0.0, 1.0, np.nan, 1.0])
+    assign_ok = np.array([0, 0, 1, 1])
+    with pytest.raises(ValueError):
+        build_classification_matrix(assign_ok, y_nan, {0: 0.1, 1: 0.8})
+
+    y_frac = np.array([0.0, 0.5, 1.0, 1.0])
+    with pytest.raises(ValueError):
+        build_classification_matrix(assign_ok, y_frac, {0: 0.1, 1: 0.8})
+
+    # Binario: pd_per_leaf con NaN o fuera de [0, 1]
+    for bad_pd in (float("nan"), float("inf"), -0.1, 1.5):
+        with pytest.raises(ValueError, match="pd_per_leaf"):
+            build_classification_matrix(assign_ok, y_ok, {0: 0.2, 1: bad_pd})
+
+    # Multiclase: pd_per_leaf con NaN o fuera de [0, 1], y/assign con NaN
+    y_k3 = np.array([0, 1, 2, 0])
+    pd_k3_ok = {0: (0.7, 0.2, 0.1), 1: (0.1, 0.7, 0.2)}
+    with pytest.raises(ValueError):
+        build_classification_matrix_multiclass(assign_nan, y_k3, pd_k3_ok)
+    with pytest.raises(ValueError):
+        build_classification_matrix_multiclass(
+            assign_ok, np.array([0.0, 1.0, np.nan, 2.0]), pd_k3_ok
+        )
+    for bad_vec in (
+        (float("nan"), 0.5, 0.5),
+        (1.5, 0.0, 0.0),
+        (-0.1, 0.6, 0.5),
+    ):
+        with pytest.raises(ValueError, match="pd_per_leaf"):
+            build_classification_matrix_multiclass(
+                assign_ok, y_k3, {0: bad_vec, 1: (0.1, 0.7, 0.2)}
+            )
 
 
 # ---------------------------------------------------------------------------

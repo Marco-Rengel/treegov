@@ -418,8 +418,13 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   `scheme`, `k`, `metrics_mean`, `metrics_std`, `metrics_per_fold`.
   `SessionState.oos_metrics` queda None en modo CV.
 - `Session.evaluate_oot(*, n_groups=10, weight_oot=True)` — supports
-  K > 2 since Phase 3.5.c. Same label translation. The Gini Drop
-  formula is unchanged; it now feeds from the multiclass Gini.
+  K > 2 since Phase 3.5.c. Same label translation. Since Block 2F
+  (20/11/2026): works under `scheme="cv"` without prior `oos_metrics`
+  (or after `prune()`), setting `gini_oos=None` and
+  `alert_oos="UNDETERMINED"` when no holdout partition exists (when
+  holdout exists, computes `gini_oos` over routable rows via
+  `unseen_policy="exclude"`); returns `drop=None` (`"UNDETERMINED"`)
+  with a warning whenever `gini_train <= 0.0` to prevent sign inversion.
 - `Session.get_classification_matrix(*, partition="oos",
   threshold=0.5)` — supports K > 2 since Phase 3.5.c. With K = 2 it
   calls the binary function with the threshold; with K > 2 it calls
@@ -449,7 +454,14 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   K = 2, the 2D path reduces internally to column 0 and executes
   the binary path; the caller must pass `y_2d = 1 - y_1d` to
   preserve the uniform "column c ↔ label c" contract. For K > 2,
-  `y` must be a 1D array of labels in {0, 1, ..., K-1}.
+  `y` must be a 1D array of labels in {0, 1, ..., K-1}. Since Block 2F
+  (20/11/2026): strictly validates `p` (non-empty, finite, in `[0, 1]`)
+  and `y` prior to integer casting (rejects `NaN`, `None`, `±inf`,
+  booleans, strings and fractional floats; binary 1D requires `y` in
+  `{0, 1}`); binary Hosmer-Lemeshow uses tie-preserving grouping
+  (invariant to row order), external OOS degrees of freedom
+  `hl_df = hl_groups = g_eff` (Hosmer, Lemeshow & Sturdivant 2013,
+  §5.2.2) and `_HL_EPS = 1e-6` with warning on extreme clipping.
 
 ## backend_v3.reporting
 
@@ -482,22 +494,36 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   negative (D19).
 - `build_classification_matrix(leaf_assignment, y, pd_per_leaf, *,
   threshold=0.5, weights=None)` — binary, unchanged signature.
-  Populates `accuracy` since Phase 3.5.b.
+  Populates `accuracy` since Phase 3.5.b and `w_accuracy` since
+  Block 2F (20/11/2026, exact parity `w_accuracy == accuracy` when
+  `weights=None`); rejects `NaN`/non-finite/non-integer values in
+  `leaf_assignment` and `y`, and non-finite or out-of-`[0, 1]`
+  probabilities in `pd_per_leaf`.
 - `build_classification_matrix_multiclass(leaf_assignment, y,
   pd_per_leaf: dict[int, tuple[float, ...]], *, weights=None,
   class_labels=())` — new in Phase 3.5.b; extended in Block 2D (20/11/2026)
   with optional keyword-only `class_labels: tuple[str, ...] = ()` (validated
   for `len(class_labels) == K` when non-empty). Argmax assignment, K×K
   matrix, per-class metrics, accuracy, binary legacy fields from class 0 vs
-  rest. `threshold` records NaN.
+  rest. `threshold` records NaN. Since Block 2F (20/11/2026): validates
+  all `pd_per_leaf` probability components are finite in `[0, 1]` and
+  rejects `NaN`/non-integer entries in `leaf_assignment` and `y`.
 
 ## backend_v3.stability
 
 - `PSIReport`, `CSIReport`, `GiniDropReport`, `OOTReport`.
-- `StabilityMonitor(*, eps=1e-4, renormalize=False)` (leaf_psi /
-  covariate_csi / report).
-- `psi_index(expected, actual, *, renormalize=False)`,
+- `StabilityMonitor(*, eps=1e-4, renormalize=False)` (`leaf_psi` /
+  `covariate_csi` / `report`). Since Block 2F (20/11/2026): validates
+  `eps` in `(0, 0.5)` finite (no booleans) and forwards `self.eps` to
+  `psi_index`; `leaf_psi` is scale-invariant for OOT weight sums `< 1`
+  and rejects empty/zero-mass cohorts; `covariate_csi` uses `(a, b]`
+  decile bins (`right=True`), handles constant and all-`NaN` continuous
+  predictors, tracks missing values in an explicit `"<MISSING>"` bin
+  for both continuous and nominal predictors, and rejects `±inf`.
+- `psi_index(expected, actual, *, eps=1e-4, renormalize=False)`,
   `traffic_light(value)`, `gini_drop_alert(drop)`.
+  - `eps` (float, default `1e-4`, Block 2F) — finite clip floor in
+    `(0, 0.5)` applied before the logarithm (booleans rejected).
   - `renormalize` (bool, default False) — whether to renormalize both
     distributions after the ε-clip. Default `False` preserves the
     signal of vanishing bins (TreeGov convention); `True` is the
@@ -511,11 +537,12 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
 ## backend_v3.splitting
 
 - `stratified_split(y, train_frac, seed, log=None, *, weights=None)` —
-  holdout estratificado Hamilton-Hare (sin cambios desde 3.2).
+  holdout estratificado Hamilton-Hare (desde Bloque 2F, 20/11/2026:
+  rechaza `NaN`/ausentes en `y` con `ValueError`).
 - `stratified_kfold(y, k, seed, log=None) -> list[tuple[np.ndarray, np.ndarray]]`
   — k-fold estratificado (Fase 2.1.b). Devuelve k pares
   (train_idx, val_idx) disjuntos y deterministas. Misma proporción
-  de clase por fold.
+  de clase por fold (desde Bloque 2F: rechaza `NaN`/ausentes en `y`).
 
 ## backend_v3.profiling
 

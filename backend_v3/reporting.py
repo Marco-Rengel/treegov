@@ -36,11 +36,12 @@ exactly (parity invariant).
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import math
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from .validation import _pair_auc_ks, compute_oos_metrics
+from .validation import _pair_auc_ks, _validate_int_labels, compute_oos_metrics
 
 if TYPE_CHECKING:  # type-checkers only; no runtime imports from these modules
     from .session_state import SessionState
@@ -223,8 +224,9 @@ class ClassificationMatrix:
     w_recall: float | None = None
     w_f1: float | None = None
     w_bad_capture_rate: float | None = None
-    # Fase 3.5.b (D19): campos aditivos. En el path binario (K=2) solo
-    # accuracy se puebla; el resto queda vacio. En K>2 se pueblan todos.
+    # Fase 3.5.b (D19) / Bloque 2F (CRIT-11): campos aditivos. En el path
+    # binario (K=2) se pueblan accuracy y w_accuracy; el resto queda vacio.
+    # En K>2 se pueblan todos.
     confusion_matrix: tuple[tuple[int, ...], ...] = ()
     n_per_class: tuple[int, ...] = ()
     precision_per_class: tuple[float | None, ...] = ()
@@ -254,9 +256,14 @@ def _validated_routed(
     requires binary y (0/1); ``n_classes=K`` requires y labels in
     {0, 1, ..., K-1}. The binary path keeps the strict validation; the
     multiclass path extends it without duplicating the helper.
+
+    Block 2F (CRIT-11): validates ``leaf_assignment`` and ``y`` before
+    integer conversion, rejecting NaN, +/-inf, None and fractional floats.
     """
-    assign = np.asarray(leaf_assignment, dtype=int)
-    yv = np.asarray(y, dtype=int)
+    assign = _validate_int_labels(
+        leaf_assignment, f"reporting/{who}", name="leaf_assignment"
+    )
+    yv = _validate_int_labels(y, f"reporting/{who}", name="y")
     if assign.shape != yv.shape or assign.ndim != 1:
         raise ValueError(
             f"[reporting] {who}: leaf_assignment and y must be 1-D vectors "
@@ -637,8 +644,30 @@ def build_classification_matrix(
     )
     w_r = w[routed] if w is not None else np.ones(int(leaf_ids.size), dtype=float)
 
+    # Bloque 2F (CRIT-11): validar que toda probabilidad usada sea finita
+    # y este en [0.0, 1.0], evitando clasificar NaN silenciosamente como "good".
+    pd_clean: dict[int, float] = {}
+    for lid_raw in np.unique(leaf_ids):
+        lid = int(lid_raw)
+        val = pd_per_leaf[lid]
+        if isinstance(val, (bool, np.bool_)):
+            raise ValueError(
+                f"[reporting] classification_matrix: probabilidad inválida en pd_per_leaf[{lid}]"
+            )
+        try:
+            pf = float(val)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"[reporting] classification_matrix: probabilidad inválida en pd_per_leaf[{lid}]"
+            ) from exc
+        if not math.isfinite(pf) or not (0.0 <= pf <= 1.0):
+            raise ValueError(
+                f"[reporting] classification_matrix: probabilidad inválida en pd_per_leaf[{lid}]"
+            )
+        pd_clean[lid] = pf
+
     pd_row = np.fromiter(
-        (float(pd_per_leaf[int(lid)]) for lid in leaf_ids),
+        (pd_clean[int(lid)] for lid in leaf_ids),
         dtype=float,
         count=int(leaf_ids.size),
     )
@@ -671,9 +700,11 @@ def build_classification_matrix(
         else 2.0 * w_precision * w_recall / (w_precision + w_recall)
     )
 
-    # Fase 3.5.b (D19): accuracy tambien en K=2 (traza 2x2 / n_total).
+    # Fase 3.5.b (D19) / Bloque 2F (CRIT-11): accuracy y w_accuracy en K=2.
     n_total = int(leaf_ids.size)
     accuracy = (tp + tn) / n_total if n_total > 0 else None
+    w_total = w_tp + w_tn + w_fp + w_fn
+    w_accuracy = (w_tp + w_tn) / w_total if w_total > 0.0 else None
 
     return ClassificationMatrix(
         threshold=float(threshold),
@@ -698,6 +729,7 @@ def build_classification_matrix(
         w_f1=w_f1,
         w_bad_capture_rate=w_recall,
         accuracy=accuracy,
+        w_accuracy=w_accuracy,
     )
 
 
@@ -735,12 +767,31 @@ def build_classification_matrix_multiclass(
     K = len(next(iter(pd_per_leaf.values())))
     if K < 2:
         raise ValueError(f"[reporting] {who}: K={K} invalido (>= 2)")
+    pd_mat: dict[int, tuple[float, ...]] = {}
     for lid, vec in pd_per_leaf.items():
         if len(vec) != K:
             raise ValueError(
                 f"[reporting] {who}: pd_per_leaf[{lid}] tiene longitud "
                 f"{len(vec)} != K={K}"
             )
+        clean_vec: list[float] = []
+        for comp in vec:
+            if isinstance(comp, (bool, np.bool_)):
+                raise ValueError(
+                    f"[reporting] {who}: probabilidad inválida en pd_per_leaf[{lid}]"
+                )
+            try:
+                cf = float(comp)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"[reporting] {who}: probabilidad inválida en pd_per_leaf[{lid}]"
+                ) from exc
+            if not math.isfinite(cf) or not (0.0 <= cf <= 1.0):
+                raise ValueError(
+                    f"[reporting] {who}: probabilidad inválida en pd_per_leaf[{lid}]"
+                )
+            clean_vec.append(cf)
+        pd_mat[int(lid)] = tuple(clean_vec)
     resolved_labels: tuple[str, ...] = ()
     if class_labels:
         if len(class_labels) != K:
@@ -759,10 +810,6 @@ def build_classification_matrix_multiclass(
     w_r = w[routed] if w is not None else np.ones(n_total, dtype=float)
 
     # Matriz K x K: filas = clase verdadera, columnas = clase predicha.
-    pd_mat = {
-        int(lid): tuple(float(v) for v in vec)
-        for lid, vec in pd_per_leaf.items()
-    }
     cm = np.zeros((K, K), dtype=int)
     cm_w = np.zeros((K, K), dtype=float)
     for i in range(n_total):

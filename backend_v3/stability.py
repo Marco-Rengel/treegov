@@ -10,7 +10,8 @@ log; ver nota en psi_index):
 
     (dos formas equivalentes: divergencia KL simetrica KL(a||e)+KL(e||a))
 
-    Gini Drop = (Gini_train - Gini_X) / Gini_train   (X in {OOS, OOT})
+    Gini Drop = (Gini_train - Gini_X) / Gini_train   (X in {OOS, OOT},
+                 solo definido cuando Gini_train > 0)
 
 Umbrales de monitoreo de TreeGov (convencion de la industria, no prescripcion
 regulatoria): PSI/CSI < 0.10 -> STABLE; [0.10, 0.25) -> MODERATE;
@@ -20,10 +21,13 @@ no son un umbral prescrito por Basilea ni por EBA.
 
 La referencia ("expected") es SIEMPRE la particion train (la poblacion de
 desarrollo, por definicion). Los bins de CSI de variables continuas son los
-deciles APRENDIDOS SOLO EN TRAIN (con borde inferior -inf y superior +inf:
-el primer y ultimo decil absorben valores fuera del rango de train).
+deciles APRENDIDOS SOLO EN TRAIN con intervalos semiabiertos (a, b]
+(``np.digitize(..., right=True)``, coherente con ``docs/methodology.md`` y
+``ChaidEngine``; primer y ultimo decil abiertos a -inf/+inf absorbiendo
+desbordes). Los valores ausentes (NaN) se contabilizan en un bin explicito
+``<MISSING>``; los valores no finitos (+/-inf) se rechazan con ValueError.
 Categorias nominales: las observadas en train; las nuevas en OOT se agrupan
-en <OTHER> con p_expected = eps (la novedad se registra con ese rango).
+en ``<OTHER>`` y los ausentes en ``<MISSING>``.
 
 Extension ponderada (Fase 3.2.h): leaf_psi, covariate_csi y report aceptan
 pesos por fila. Convencion (diseno v2 §5.3 B4, opcion 1, default): cada
@@ -44,12 +48,12 @@ Dependencias: numpy, pandas, stdlib. Reutiliza validation.predict_*.
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-
-from typing import TYPE_CHECKING
 
 from .log_config import get_logger
 from .tree_builder import TreeModel
@@ -70,6 +74,22 @@ __all__ = [
 ]
 
 _EPS_DEFAULT: float = 1e-4
+
+
+def _validate_eps(eps: float) -> float:
+    """Valida el piso epsilon para PSI/CSI: float finito en (0, 0.5), sin bool."""
+    if isinstance(eps, (bool, np.bool_)) or not isinstance(
+        eps, (int, float, np.integer, np.floating)
+    ):
+        raise ValueError(
+            f"[stability] eps debe ser numerico finito en (0, 0.5): {eps!r}"
+        )
+    val = float(eps)
+    if not math.isfinite(val) or not (0.0 < val < 0.5):
+        raise ValueError(
+            f"[stability] eps fuera de (0, 0.5): {eps!r}"
+        )
+    return val
 
 
 def _validated_weights(
@@ -130,7 +150,11 @@ def gini_drop_alert(drop: float | None) -> str:
 
 
 def psi_index(
-    expected: np.ndarray, actual: np.ndarray, *, renormalize: bool = False
+    expected: np.ndarray,
+    actual: np.ndarray,
+    *,
+    eps: float = _EPS_DEFAULT,
+    renormalize: bool = False,
 ) -> tuple[float, np.ndarray]:
     """PSI with eps clip; optional canonical renormalization.
 
@@ -145,8 +169,16 @@ def psi_index(
         actual /= actual.sum()) BEFORE computing the product
         (act - exp) * log(act / exp). Canonical textbook behavior.
 
+    Parameters:
+        expected: reference cohort bin proportions.
+        actual: monitored cohort bin proportions.
+        eps: positive finite floor in (0, 0.5) applied before the log
+            (default ``1e-4``; booleans rejected).
+        renormalize: if True, renormalize both distributions after clipping.
+
     Returns (psi, per_bin_contributions).
     """
+    eps_val = _validate_eps(eps)
     exp = np.asarray(expected, dtype=float)
     act = np.asarray(actual, dtype=float)
     if exp.shape != act.shape:
@@ -156,8 +188,8 @@ def psi_index(
     # Decision: NO renormalizacion tras el clip para PRESERVAR la senal de
     # los bins vacios en OOT; el error de escala es despreciable frente a
     # los umbrales 0.10/0.25 cuando los bins no estan vacios.
-    exp = np.clip(exp, _EPS_DEFAULT, None)
-    act = np.clip(act, _EPS_DEFAULT, None)
+    exp = np.clip(exp, eps_val, None)
+    act = np.clip(act, eps_val, None)
     if renormalize:
         # Canonical opt-in mode: rescale both vectors to sum 1 right after
         # the eps clip, BEFORE the contributions (design_decisions.md 7.4).
@@ -190,8 +222,9 @@ class GiniDropReport:
     monoclase), drop_X queda None y el semaforo es "UNDETERMINED"
     (nunca "NONE": una degradacion indefinida no es ausencia de alerta;
     ver gini_drop_alert).
-    Si gini_train == 0 (modelo sin poder discriminante), ambos drops quedan
-    None (division por cero evitada; se loggea WARNING).
+    Si gini_train <= 0 (modelo sin poder discriminante positivo en train),
+    ambos drops quedan None (evitando division por cero o inversion de
+    signo; se loggea WARNING).
     """
 
     gini_train: float
@@ -225,7 +258,8 @@ class StabilityMonitor:
     """Compute leaf PSI and per-covariate CSI (train as reference).
 
     Parameters:
-        eps: epsilon floor applied to probabilities before the log.
+        eps: epsilon floor in (0, 0.5) applied to probabilities before the
+            log (forwarded to ``psi_index`` on every internal call).
         renormalize: forwarded to psi_index on every internal call. If True,
             both probability vectors are renormalized to sum 1 after the
             eps clip (canonical mode); if False (default), the clip is
@@ -246,7 +280,7 @@ class StabilityMonitor:
             raise ValueError(
                 f"renormalize debe ser bool (recibido {renormalize!r})"
             )
-        self.eps = float(eps)
+        self.eps = _validate_eps(eps)
         self.renormalize = bool(renormalize)
         self._log = logger if logger is not None else get_logger("stability")
 
@@ -283,10 +317,14 @@ class StabilityMonitor:
         hojas = [nd for nd in model.nodes if nd.is_leaf]
         leaf_ids = [nd.node_id for nd in hojas]
         if w_tr is None:
-            n_train = int(leaf_counts_train.sum())
+            n_train = float(leaf_counts_train.sum())
+            if n_train <= 0.0:
+                raise ValueError(
+                    "[stability] leaf_psi: cohorte train vacia o sin masa"
+                )
             p_exp = leaf_counts_train.astype(float) / n_train
         else:
-            p_exp = w_tr / w_tr.sum()
+            p_exp = w_tr / float(w_tr.sum())
 
         n_oot_total = int(leaf_assign_oot.size)
         mask_ok = leaf_assign_oot >= 0
@@ -305,6 +343,11 @@ class StabilityMonitor:
             masa_excluidas = float(w_oot[~mask_ok].sum())
             total_act = float(w_oot.sum())
 
+        if n_oot_total == 0 or total_act <= 0.0:
+            raise ValueError(
+                "[stability] leaf_psi: cohorte OOT vacia o sin masa"
+            )
+
         etiquetas = [f"leaf_{nid}" for nid in leaf_ids]
         if n_excluidas > 0:
             self._log.info(
@@ -314,9 +357,11 @@ class StabilityMonitor:
             etiquetas.append("<UNSEEN>")
             p_exp = np.concatenate([p_exp, [0.0]])
             counts = np.concatenate([counts, [masa_excluidas]])
-        p_act = counts / max(total_act, 1)
+        p_act = counts / total_act
 
-        psi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
+        psi, contrib = psi_index(
+            p_exp, p_act, eps=self.eps, renormalize=self.renormalize
+        )
         per_bin = tuple(
             (etiquetas[i], float(p_exp[i]), float(p_act[i]), float(contrib[i]))
             for i in range(len(etiquetas))
@@ -342,15 +387,21 @@ class StabilityMonitor:
     ) -> CSIReport:
         """CSI por covariable (train = referencia).
 
-        Continua/ordinal numerico: deciles aprendidos SOLO en train
-        (primer y ultimo bin abiertos: -inf / +inf absorven desbordes).
+        Continua/ordinal numerico: deciles aprendidos SOLO en train sobre
+        valores no-NaN con intervalos semiabiertos (a, b]
+        (``np.digitize(..., right=True)``, coherente con
+        ``docs/methodology.md`` y ``ChaidEngine``; primer y ultimo bin
+        abiertos a -inf/+inf). Variables constantes en train usan el bin
+        ``==v0`` y ``<OTHER>`` ante desplazamientos; valores ausentes
+        (NaN) se contabilizan en ``<MISSING>``; ``+/-inf`` lanza ValueError.
+
         Nominal u ordinal simbolico: categorias observadas en train;
-        las nuevas en OOT se agrupan en <OTHER> con p_expected=eps.
+        las nuevas en OOT se agrupan en ``<OTHER>`` y los ausentes en
+        ``<MISSING>``.
 
         Fase 3.2.h (ponderacion): convencion "cada cohorte con sus propios
         pesos". La asignacion a bins NO cambia; los conteos por bin pasan
-        a ser sumas de pesos cuando hay pesos (el bin <OTHER> acumula la
-        suma de pesos de las filas con categoria nueva). Con ambos None,
+        a ser sumas de pesos cuando hay pesos. Con ambos None,
         comportamiento identico al pre-3.2.
         """
         x_tr = X_train[predictor]
@@ -361,60 +412,146 @@ class StabilityMonitor:
             raise ValueError(f"[stability] CSI {predictor!r}: columna vacia")
         w_tr = _validated_weights(weights_train, n_tr, f"csi/{predictor}/train")
         w_ac = _validated_weights(weights_actual, n_ac, f"csi/{predictor}/actual")
+        tot_tr = float(n_tr) if w_tr is None else float(w_tr.sum())
+        tot_ac = float(n_ac) if w_ac is None else float(w_ac.sum())
 
         if ptype in (PredictorType.CONTINUOUS, PredictorType.ORDINAL) and \
                 pd.api.types.is_numeric_dtype(x_tr):
-            qs = np.quantile(x_tr.to_numpy(dtype=float),
-                             np.linspace(0.0, 1.0, 11))
-            bordes = np.unique(qs)
-            bordes[0] = -np.inf
-            bordes[-1] = np.inf
-            etiquetas = [f"D{i}" for i in range(len(bordes) - 1)]
-            bins_tr = np.digitize(x_tr.to_numpy(dtype=float), bordes[1:-1])
-            bins_ac = np.digitize(x_ac.to_numpy(dtype=float), bordes[1:-1])
-            if w_tr is None:
-                p_exp = np.array(
-                    [float((bins_tr == i).sum()) for i in range(len(etiquetas))],
-                    dtype=float,
-                ) / n_tr
+            tr_na = x_tr.isna().to_numpy()
+            ac_na = x_ac.isna().to_numpy()
+            v_tr = x_tr[~tr_na].to_numpy(dtype=float)
+            v_ac = x_ac[~ac_na].to_numpy(dtype=float)
+            if (v_tr.size > 0 and not np.all(np.isfinite(v_tr))) or (
+                v_ac.size > 0 and not np.all(np.isfinite(v_ac))
+            ):
+                raise ValueError(
+                    f"[stability] CSI {predictor!r}: valores no finitos (+/-inf)"
+                )
+            w_tr_ok = None if w_tr is None else w_tr[~tr_na]
+            w_ac_ok = None if w_ac is None else w_ac[~ac_na]
+
+            etiquetas: list[str] = []
+            p_exp_list: list[float] = []
+            p_act_list: list[float] = []
+
+            if v_tr.size == 0:
+                # 100 % NaN en train
+                etiquetas.append("<MISSING>")
+                masa_na_ac = (
+                    float(ac_na.sum()) if w_ac is None else float(w_ac[ac_na].sum())
+                )
+                p_exp_list.append(1.0)
+                p_act_list.append(masa_na_ac / tot_ac)
+                if v_ac.size > 0:
+                    etiquetas.append("<OTHER>")
+                    p_exp_list.append(0.0)
+                    masa_ac_ok = (
+                        float(v_ac.size)
+                        if w_ac_ok is None
+                        else float(w_ac_ok.sum())
+                    )
+                    p_act_list.append(masa_ac_ok / tot_ac)
             else:
-                p_exp = np.array(
-                    [float(w_tr[bins_tr == i].sum()) for i in range(len(etiquetas))],
-                    dtype=float,
-                ) / w_tr.sum()
-            if w_ac is None:
-                p_act = np.array(
-                    [float((bins_ac == i).sum()) for i in range(len(etiquetas))],
-                    dtype=float,
-                ) / n_ac
-            else:
-                p_act = np.array(
-                    [float(w_ac[bins_ac == i].sum()) for i in range(len(etiquetas))],
-                    dtype=float,
-                ) / w_ac.sum()
+                if float(v_tr.min()) == float(v_tr.max()):
+                    # Continua constante en train
+                    v0 = float(v_tr[0])
+                    etiquetas.append(f"=={v0:g}")
+                    masa_tr_eq = (
+                        float(v_tr.size)
+                        if w_tr_ok is None
+                        else float(w_tr_ok.sum())
+                    )
+                    p_exp_list.append(masa_tr_eq / tot_tr)
+                    eq_ac = v_ac == v0
+                    masa_ac_eq = (
+                        float(eq_ac.sum())
+                        if w_ac_ok is None
+                        else float(w_ac_ok[eq_ac].sum())
+                    )
+                    p_act_list.append(masa_ac_eq / tot_ac)
+                    if not np.all(eq_ac):
+                        etiquetas.append("<OTHER>")
+                        p_exp_list.append(0.0)
+                        masa_ac_other = (
+                            float((~eq_ac).sum())
+                            if w_ac_ok is None
+                            else float(w_ac_ok[~eq_ac].sum())
+                        )
+                        p_act_list.append(masa_ac_other / tot_ac)
+                else:
+                    qs = np.quantile(v_tr, np.linspace(0.0, 1.0, 11))
+                    interior = np.unique(qs[1:-1])
+                    if interior.size == 0:
+                        interior = np.array([float(v_tr.min())], dtype=float)
+                    n_bins = int(interior.size) + 1
+                    etiquetas.extend(f"D{i}" for i in range(n_bins))
+                    bins_tr = np.digitize(v_tr, interior, right=True)
+                    bins_ac = np.digitize(v_ac, interior, right=True)
+                    for i in range(n_bins):
+                        m_tr = bins_tr == i
+                        m_ac = bins_ac == i
+                        masa_tr = (
+                            float(m_tr.sum())
+                            if w_tr_ok is None
+                            else float(w_tr_ok[m_tr].sum())
+                        )
+                        masa_ac = (
+                            float(m_ac.sum())
+                            if w_ac_ok is None
+                            else float(w_ac_ok[m_ac].sum())
+                        )
+                        p_exp_list.append(masa_tr / tot_tr)
+                        p_act_list.append(masa_ac / tot_ac)
+
+                if tr_na.any() or ac_na.any():
+                    etiquetas.append("<MISSING>")
+                    masa_na_tr = (
+                        float(tr_na.sum())
+                        if w_tr is None
+                        else float(w_tr[tr_na].sum())
+                    )
+                    masa_na_ac = (
+                        float(ac_na.sum())
+                        if w_ac is None
+                        else float(w_ac[ac_na].sum())
+                    )
+                    p_exp_list.append(masa_na_tr / tot_tr)
+                    p_act_list.append(masa_na_ac / tot_ac)
+
+            p_exp = np.array(p_exp_list, dtype=float)
+            p_act = np.array(p_act_list, dtype=float)
         else:
-            clases_tr = list(dict.fromkeys(x_tr.dropna().tolist()))
+            tr_na = x_tr.isna().to_numpy()
+            ac_na = x_ac.isna().to_numpy()
+            clases_tr = list(dict.fromkeys(x_tr[~tr_na].tolist()))
             if w_tr is None:
                 p_exp = np.array(
-                    [float((x_tr == c).sum()) for c in clases_tr], dtype=float
-                ) / n_tr
+                    [
+                        float(((~tr_na) & x_tr.eq(c).fillna(False).to_numpy(dtype=bool)).sum())
+                        for c in clases_tr
+                    ],
+                    dtype=float,
+                ) / tot_tr
             else:
                 p_exp = np.array(
-                    [float(w_tr[(x_tr == c).to_numpy()].sum()) for c in clases_tr],
+                    [
+                        float(w_tr[(~tr_na) & x_tr.eq(c).fillna(False).to_numpy(dtype=bool)].sum())
+                        for c in clases_tr
+                    ],
                     dtype=float,
-                ) / w_tr.sum()
+                ) / tot_tr
             p_act_parts = []
-            # numpy puro (booleano): evita el dtype mixto Series |= ndarray
-            visto = np.zeros(len(x_ac), dtype=bool)
+            # numpy puro (booleano): evita el dtype mixto Series |= ndarray;
+            # los NaN van a <MISSING>, no a <OTHER>.
+            visto = ac_na.copy()
             for c in clases_tr:
-                m = (x_ac == c).to_numpy()
+                m = (~ac_na) & x_ac.eq(c).fillna(False).to_numpy(dtype=bool)
                 if w_ac is None:
                     p_act_parts.append(float(m.sum()))
                 else:
                     p_act_parts.append(float(w_ac[m].sum()))
                 visto |= m
-            total_act = float(n_ac) if w_ac is None else float(w_ac.sum())
-            p_act = np.array(p_act_parts, dtype=float) / total_act
+            p_act = np.array(p_act_parts, dtype=float) / tot_ac
             etiquetas = [str(c) for c in clases_tr]
             n_otros = int((~visto).sum())
             if n_otros > 0:
@@ -428,9 +565,25 @@ class StabilityMonitor:
                     masa_otros = float(n_otros)
                 else:
                     masa_otros = float(w_ac[~visto].sum())
-                p_act = np.concatenate([p_act, [masa_otros / total_act]])
+                p_act = np.concatenate([p_act, [masa_otros / tot_ac]])
+            if tr_na.any() or ac_na.any():
+                etiquetas.append("<MISSING>")
+                masa_na_tr = (
+                    float(tr_na.sum())
+                    if w_tr is None
+                    else float(w_tr[tr_na].sum())
+                )
+                masa_na_ac = (
+                    float(ac_na.sum())
+                    if w_ac is None
+                    else float(w_ac[ac_na].sum())
+                )
+                p_exp = np.concatenate([p_exp, [masa_na_tr / tot_tr]])
+                p_act = np.concatenate([p_act, [masa_na_ac / tot_ac]])
 
-        csi, contrib = psi_index(p_exp, p_act, renormalize=self.renormalize)
+        csi, contrib = psi_index(
+            p_exp, p_act, eps=self.eps, renormalize=self.renormalize
+        )
         per_bin = tuple(
             (etiquetas[i], float(p_exp[i]), float(p_act[i]), float(contrib[i]))
             for i in range(len(etiquetas))

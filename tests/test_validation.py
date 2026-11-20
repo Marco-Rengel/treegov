@@ -86,12 +86,13 @@ def test_hosmer_lemeshow_manual():
     p, y = _rep([0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9],
                 [0, 0, 0, 0, 0, 1, 1, 1], 5)
     m = compute_oos_metrics(p, y, n_groups=4)
-    assert m.hl_groups == 4 and m.hl_df == 2
+    # Bloque 2F (CRIT-12): OOS/OOT externo -> gl = G_eff (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2)
+    assert m.hl_groups == 4 and m.hl_df == 4
     # exacto racional: 2*(6/17) + 18/91 + 98/91 = 3064/1547 (por grupo original)
     # x5 por la replicacion identica -> 15320/1547
     h_esperado = 15320.0 / 1547.0
     assert math.isclose(m.hl_stat, h_esperado, rel_tol=1e-12)
-    assert math.isclose(m.hl_p, math.exp(-h_esperado / 2.0), rel_tol=1e-9)
+    assert math.isclose(m.hl_p, float(_chi2.sf(h_esperado, 4)), rel_tol=1e-12)
 
 
 def test_brier_manual():
@@ -242,30 +243,39 @@ def test_weighted_validation_ks_matches_manual():
 
 def test_weighted_validation_hl_matches_manual():
     # n=40, n_groups=5. Implementacion independiente de la formula
-    # ponderada (bucle directo con la misma regla de bordes documentada).
+    # ponderada con agrupacion tie-preserving y gl OOS = g_eff.
     p, y = _rep([0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9],
                 [0, 0, 0, 0, 0, 1, 1, 1], 5)
     rng = np.random.default_rng(7)
     w = rng.uniform(0.5, 2.0, size=40)
     n_groups = 5
     m = compute_oos_metrics(p, y, n_groups=n_groups, weights=w)
-    # calculo manual independiente
+    # calculo manual independiente (tie-preserving)
     orden = np.argsort(-p, kind="mergesort")
     ys, ps, ws = y[orden], p[orden], w[orden]
     n = 40
-    bordes = np.floor(np.arange(1, n_groups) * n / n_groups).astype(int)
+    cuts = []
+    for k in range(1, n_groups):
+        b = int(math.floor(k * n / n_groups))
+        while 0 < b < n and ps[b] == ps[b - 1]:
+            b += 1
+        if 0 < b < n and (not cuts or b > cuts[-1]):
+            cuts.append(b)
+    bounds = [0, *cuts, n]
+    g_eff = len(bounds) - 1
     h = 0.0
-    for g in range(n_groups):
-        ini = 0 if g == 0 else bordes[g - 1]
-        fin = n if g == n_groups - 1 else bordes[g]
+    for g in range(g_eff):
+        ini = bounds[g]
+        fin = bounds[g + 1]
         sw = ws[ini:fin]
         n_g_w = float(sw.sum())
         pi_g = float((sw * ps[ini:fin]).sum() / n_g_w)
-        pi_g = min(max(pi_g, 1e-15), 1.0 - 1e-15)
+        pi_g = min(max(pi_g, 1e-6), 1.0 - 1e-6)
         o_g = float((sw * ys[ini:fin]).sum())
         h += (o_g - n_g_w * pi_g) ** 2 / (n_g_w * pi_g * (1.0 - pi_g))
     assert math.isclose(m.hl_stat, h, rel_tol=1e-12)
-    assert m.hl_df == n_groups - 2
+    assert m.hl_groups == g_eff
+    assert m.hl_df == m.hl_groups
 
 
 def test_weighted_validation_brier_matches_manual():
@@ -858,6 +868,83 @@ def test_select_majority_leaf_unequal_and_tie_break():
     assert select_majority_leaf(model_tie).node_id == 1
     asign_tie = predict_leaf_assignment(model_tie, X_unseen, unseen_policy="majority")
     assert list(asign_tie) == [1, 2, 1]
+
+
+def test_hosmer_lemeshow_tie_preserving_permutation_invariant():
+    """CRIT-12: Hosmer-Lemeshow con hojas empatadas es invariante al orden de filas."""
+    # 3 hojas con empates y mezcla heterogenea de y dentro de cada hoja
+    p = np.array([0.05] * 25 + [0.30] * 20 + [0.75] * 15, dtype=float)
+    y = np.array(
+        [0] * 23 + [1] * 2
+        + [0] * 14 + [1] * 6
+        + [0] * 4 + [1] * 11,
+        dtype=int,
+    )
+    rng_w = np.random.default_rng(101)
+    w = rng_w.uniform(0.5, 2.5, size=len(p))
+
+    base = compute_oos_metrics(p, y, n_groups=5, weights=w)
+    assert base.hl_groups == 3 and base.hl_df == 3
+    for seed in (1, 7, 42, 99, 2026):
+        perm = np.random.default_rng(seed).permutation(len(p))
+        m_perm = compute_oos_metrics(
+            p[perm], y[perm], n_groups=5, weights=w[perm]
+        )
+        assert m_perm.hl_groups == base.hl_groups
+        assert m_perm.hl_df == base.hl_df
+        assert math.isclose(m_perm.hl_stat, base.hl_stat, rel_tol=1e-12)
+        assert math.isclose(m_perm.hl_p, base.hl_p, rel_tol=1e-12)
+
+
+def test_hosmer_lemeshow_research_pd_zero_protection():
+    """CRIT-12: proteccion PD=0.0 en modo RESEARCH (_HL_EPS=1e-6 + WARNING)."""
+    # Caso 1: grupo con p=0.0 y y=0 (calibracion perfecta) -> aporta 0.0 sin WARNING
+    p_cal = np.array([0.0] * 10 + [0.5] * 10 + [1.0] * 10, dtype=float)
+    y_cal = np.array([0] * 10 + [0] * 5 + [1] * 5 + [1] * 10, dtype=int)
+    m_cal, recs_cal = _capture_validation_log(
+        compute_oos_metrics, p_cal, y_cal, n_groups=3
+    )
+    assert m_cal.hl_groups == 3 and m_cal.hl_df == 3
+    assert math.isclose(m_cal.hl_stat, 0.0, abs_tol=1e-12)
+    assert not [r for r in recs_cal if r.levelno == logging.WARNING]
+
+    # Caso 2: grupo con p=0.0 y 1 default OOS -> recorte a 1e-6 (~1e5, NO ~1e14) + WARNING
+    p_bad = np.array([0.0] * 10 + [0.5] * 10 + [0.8] * 10, dtype=float)
+    y_bad = np.array([0] * 9 + [1] + [0] * 5 + [1] * 5 + [0] * 2 + [1] * 8, dtype=int)
+    m_bad, recs_bad = _capture_validation_log(
+        compute_oos_metrics, p_bad, y_bad, n_groups=3
+    )
+    assert math.isfinite(m_bad.hl_stat)
+    # Con n_g=10 y eps=1e-6: (1 - 1e-5)^2 / (10 * 1e-6 * (1 - 1e-6)) ~= 1e5
+    assert 5e4 < m_bad.hl_stat < 2e5
+    warns = [r.getMessage() for r in recs_bad if r.levelno == logging.WARNING]
+    assert any("recortado" in msg for msg in warns)
+
+
+def test_compute_oos_metrics_rejects_invalid_p_and_y():
+    """CRIT-11: rechazo estricto de p/y con NaN, inf, fuera de rango o no binarios."""
+    p_ok = np.linspace(0.1, 0.9, 20)
+    y_ok = np.array([0] * 10 + [1] * 10)
+
+    # p vacio, NaN, +/-inf, <0, >1
+    _assert_raises(ValueError, compute_oos_metrics, np.array([]), np.array([]), n_groups=3)
+    for bad_val in (np.nan, np.inf, -np.inf, -0.1, 1.1):
+        p_bad = p_ok.copy()
+        p_bad[3] = bad_val
+        _assert_raises(ValueError, compute_oos_metrics, p_bad, y_ok, n_groups=3)
+
+    # y con NaN, None, decimal 0.5, +inf, bool
+    y_nan = y_ok.astype(float); y_nan[2] = np.nan
+    y_frac = y_ok.astype(float); y_frac[2] = 0.5
+    y_inf = y_ok.astype(float); y_inf[2] = np.inf
+    y_none = np.array([0] * 10 + [1] * 9 + [None], dtype=object)
+    y_bool = y_ok.astype(bool)
+    for y_bad in (y_nan, y_frac, y_inf, y_none, y_bool):
+        _assert_raises(ValueError, compute_oos_metrics, p_ok, y_bad, n_groups=3)
+
+    # y binario 1D fuera de {0, 1}
+    _assert_raises(ValueError, compute_oos_metrics, p_ok, np.array([1] * 10 + [2] * 10), n_groups=3)
+    _assert_raises(ValueError, compute_oos_metrics, p_ok, np.array([-1] * 10 + [1] * 10), n_groups=3)
 
 
 # ---------------------------------------------------------------------------

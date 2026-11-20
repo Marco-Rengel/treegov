@@ -927,6 +927,55 @@ def test_pd_floor_rejects_impossible_and_nonfinite_values():
         _assert_raises(ValueError, TreeBuilder, _crt(), pd_floor=bad, **base)
 
 
+def test_partition_rejects_nan_and_inf_in_threshold_and_bin_edges():
+    """CRIT-11: _partition rechaza NaN y +/-inf en splits threshold y bin_edges."""
+    from backend_v3.types import SplitConfig
+
+    tb = TreeBuilder(
+        _crt(),
+        target_type=_BIN,
+        target_class=1,
+        class_labels=("Event", "Non-event"),
+        max_depth=2,
+        min_child_size=2,
+    )
+    idx = np.arange(4)
+
+    cfg_thr = SplitConfig(
+        predictor="x",
+        method="CRT",
+        statistic=0.25,
+        statistic_name="gini_gain",
+        df=(),
+        parent_n=4,
+        child_ns=(2, 2),
+        impurity_gain=0.25,
+        threshold=2.5,
+    )
+    for bad in (np.nan, np.inf, -np.inf):
+        X_bad = pd.DataFrame({"x": [1.0, bad, 3.0, 4.0]})
+        _assert_raises(ValueError, tb._partition, X_bad, idx, cfg_thr)
+
+    cfg_bins = SplitConfig(
+        predictor="x",
+        method="CHAID",
+        statistic=5.0,
+        statistic_name="chi2",
+        df=(1,),
+        parent_n=4,
+        child_ns=(2, 2),
+        p_value=0.01,
+        p_value_adjusted=0.01,
+        bonferroni_multiplier=1,
+        n_merges=0,
+        branches=(("bin_0",), ("bin_1",)),
+        bin_edges=(2.5,),
+    )
+    for bad in (np.nan, np.inf, -np.inf):
+        X_bad = pd.DataFrame({"x": [1.0, bad, 3.0, 4.0]})
+        _assert_raises(ValueError, tb._partition, X_bad, idx, cfg_bins)
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

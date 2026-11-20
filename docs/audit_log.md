@@ -8607,3 +8607,37 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **735/735 PASSED** (anterior: `717`; `+18` pruebas nuevas de regresión). Suite dirigida (`test_quest_engine.py`, `test_chaid_engine.py`, `test_crt_engine.py`, `test_statistics.py`, `test_imputation.py`, `test_tree_builder.py`, `test_gui_smoke.py`) → **200/200 PASSED** (paridad sin pesos, Sala Limpia y Caja Blanca en verde).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-09`, `CRIT-10`); `docs/design_decisions.md` §13.4 y §31; `docs/api.md`.
+
+---
+
+### 20/11/2026 — Cierre Bloque 2F: Guardas anti-NaN, `w_accuracy` binario, Hosmer-Lemeshow OOS invariante al orden, estabilidad PSI/CSI y `evaluate_oot` en CV (rama `release/phase2-mrm-fixes`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-mrm-fixes`, tercer bloque de la Ola 2 de remediación, pendiente de revisión humana; sin `git push` ni merge a `main`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `backend_v3/tree_builder.py` — en `_partition()`, validación inmediata `np.all(np.isfinite(vals))` tanto en la rama `cfg.bin_edges` como en la rama `cfg.threshold is not None`, lanzando `ValueError` ante cualquier `NaN` o `±inf` residual.
+- `backend_v3/splitting.py` — validación `pd.Series(y).isna().any()` en `stratified_split()` y `stratified_kfold()` antes de `np.unique(yv)`, rechazando `NaN`/ausentes con `ValueError`.
+- `backend_v3/validation.py` — nuevo helper `_validate_int_labels()` validando `y` antes del casteo a `int` (rechazo de `NaN`, `None`, `pd.NA`, `±inf`, booleanos, strings y floats decimales); en `compute_oos_metrics()`, validación estricta de `p` (`ndim in (1, 2)`, no vacío, finito, en `[0, 1]`) y en modo 1D `np.isin(yv, (0, 1)).all()`; en `_binary_metrics()`, Hosmer-Lemeshow con agrupación tie-preserving invariante al orden de filas de `X_test`, grados de libertad externos OOS/OOT `hl_df = hl_groups = g_eff` (Hosmer, Lemeshow & Sturdivant 2013, §5.2.2), constante `_HL_EPS = 1e-6`, contribución exacta `0.0` en extremos perfectamente calibrados (`pi_g == 0, O_g == 0` o `pi_g == 1, O_g == N_g`) y `WARNING` explícito al recortar grupos extremos.
+- `backend_v3/reporting.py` — `_validated_routed()` valida `leaf_assignment` e `y` vía `validation._validate_int_labels()` antes de castear a `int`; `build_classification_matrix()` valida que toda probabilidad usada en `pd_per_leaf` sea finita en `[0, 1]` y calcula/puebla `w_accuracy = (w_tp + w_tn) / w_total` (paridad exacta con `accuracy` cuando `weights=None`); `build_classification_matrix_multiclass()` valida todos los componentes de `pd_per_leaf[lid]` como finitos en `[0, 1]`.
+- `backend_v3/stability.py` — nuevo validador `_validate_eps()` (numérico finito en `(0, 0.5)`, sin booleanos); `psi_index(..., eps=_EPS_DEFAULT, renormalize=False)` y conexión efectiva de `self.eps` desde `StabilityMonitor.leaf_psi()` y `covariate_csi()`; en `leaf_psi()`, rechazo de cohortes vacías/sin masa y división exacta `counts / total_act` (eliminando `max(total_act, 1)`, garantizando invarianza a escala con $\sum w_{\text{oot}} < 1$); en `covariate_csi()`, rechazo de `±inf` en continuas, soporte de continuas 100 % `NaN` (`["<MISSING>"]`/`["<MISSING>", "<OTHER>"]`) y continuas constantes en train (`==v0` + `"<OTHER>"`), deciles sobre no-NaN con `np.digitize(..., interior, right=True)` (intervalos `(a, b]`), y bin explícito `"<MISSING>"` en continuas y nominales (conservando suma `1.0`).
+- `backend_v3/session_state.py` — en `evaluate_oot()`, soporte sin crash bajo `scheme="cv"` sin `oos_metrics` previo ni `_X_test` (o tras `prune()`), fijando `gini_oos = None` (`alert_oos = "UNDETERMINED"`) con log informativo (y `unseen_policy="exclude"` defensivo cuando existe holdout); corrección en `_drop(g)` de `gini_train == 0` a `gini_train <= 0.0` (evita inversión de signo con `gini_train < 0`).
+- `tests/test_validation.py` — actualización de `test_hosmer_lemeshow_manual` y `test_weighted_validation_hl_matches_manual` al contrato tie-preserving OOS `gl = G_eff` y `_HL_EPS = 1e-6`, más 3 nuevos tests (invariancia a permutaciones con 5 semillas, protección `PD = 0.0` en modo `RESEARCH` con `WARNING`, y rechazo de `p`/`y` inválidos).
+- `tests/test_reporting.py` — actualización de `test_binary_accuracy_populated` (`m.w_accuracy == pytest.approx(0.7)`) y 2 nuevos tests (`w_accuracy` binario ponderado y rechazo de `NaN`/PDs inválidas en binario y multiclase).
+- `tests/test_tree_builder.py` — nuevo test verificando rechazo de `NaN` y `±inf` en `_partition()` para splits `threshold` y `bin_edges`.
+- `tests/test_splitting.py` — nuevo test verificando rechazo de `NaN`/`None` en `y` en `stratified_split` y `stratified_kfold`.
+- `tests/test_stability.py` — actualización de `test_weighted_stability_csi_uses_weights` a `right=True` y 4 nuevos tests (conexión y validación de `eps`, invarianza a escala en `leaf_psi` con $\sum w < 1$, detección de deriva en continua constante, y bin `"<MISSING>"` + rechazo de `±inf`).
+- `tests/test_session_state.py` — actualización de `test_evaluate_oos_e2e_valores_exactos` y `test_evaluate_oos_k2_parity` (`hl_groups=2`, `hl_df=2`, `hl_stat=36/85`), más 2 nuevos tests (`evaluate_oot` en modo CV sin OOS previo y tras `prune()`, y `evaluate_oot` con `gini_train < 0` → `UNDETERMINED`).
+- `docs/design_decisions.md` — nota de actualización en `§7.2`, nueva sección `§32` y actualización de versión.
+- `docs/api.md` — actualización de contratos públicos de `validation.compute_oos_metrics`, `reporting.build_classification_matrix`/`build_classification_matrix_multiclass`, `stability.psi_index`/`StabilityMonitor`, `splitting` y `Session.evaluate_oot`.
+- `docs/audit_log.md` — esta entrada de cierre del Bloque 2F.
+
+**Hallazgos resueltos**:
+
+1. **`CRIT-11` (protección contra corrupción silenciosa por `NaN` y `w_accuracy` binario):** bloqueados `NaN`/`±inf` en `TreeBuilder._partition`, `NaN`/ausentes en `splitting`, truncado silencioso a enteros en `validation`/`reporting`, PDs inválidas en matrices de clasificación y `y` no binario en 1D; poblado `w_accuracy` en el camino binario con paridad exacta sin pesos.
+2. **`CRIT-12` (Hosmer-Lemeshow OOS, `StabilityMonitor` y `Session.evaluate_oot`):** HL tie-preserving 100 % invariante al orden con `hl_df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6` seguro en modo `RESEARCH`; conectados y validados `eps`, corregida normalización de `leaf_psi` para $\sum w < 1$, saneado `covariate_csi` para continuas constantes, `NaN` (`<MISSING>`), `±inf` e intervalos `(a, b]`; y corregido `evaluate_oot()` bajo CV y `gini_train <= 0`.
+3. **Protocolo PyPI:** remediación acumulada en `release/phase2-mrm-fixes` sin `git push` ni publicación en PyPI (`main` en `3516939`, `pyproject.toml` en `1.0.0rc7` y `README*.md` intactos).
+
+**Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **748/748 PASSED** (anterior: `735`; `+13` pruebas nuevas de regresión). Suite dirigida (`test_tree_builder.py`, `test_splitting.py`, `test_validation.py`, `test_reporting.py`, `test_stability.py`, `test_session_state.py`, `test_gui_smoke.py`) → **300/300 PASSED** (Sala Limpia y Caja Blanca en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-11`, `CRIT-12`); Hosmer, Lemeshow & Sturdivant (2013, §5.2.2); `docs/design_decisions.md` §7.2 y §32; `docs/api.md`.

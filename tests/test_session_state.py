@@ -205,8 +205,9 @@ def test_evaluate_oos_e2e_valores_exactos():
         assert math.isclose(m.brier, esperado_bs, rel_tol=1e-9)
         assert math.isclose(m.brier_ref, 0.25, rel_tol=1e-12)
         assert math.isclose(m.brier_skill, 1.0 - esperado_bs / 0.25, rel_tol=1e-9)
-        assert m.hl_df == 1
-        assert math.isclose(m.hl_stat, 24.0 / 85.0, rel_tol=1e-12)
+        assert m.hl_groups == 2
+        assert m.hl_df == 2
+        assert math.isclose(m.hl_stat, 36.0 / 85.0, rel_tol=1e-12)
         # ROC de separacion perfecta: (0,0,inf) -> (0,1,pd_alta) -> (1,1,pd_baja)
         assert m.roc_points[0] == (0.0, 0.0, math.inf)
         assert m.roc_points[1] == (0.0, 1.0, 42.5 / 43.0)
@@ -1709,7 +1710,7 @@ def test_evaluate_oos_k2_parity():
     """Invariante no negociable: K=2 bit a bit igual al pre-3.5.c.
 
     Mismo fixture y parametros que test_evaluate_oos_e2e_valores_exactos:
-    auc = gini = ks = 1; brier = (0.5/43)^2; hl_stat = 24/85.
+    auc = gini = ks = 1; brier = (0.5/43)^2; hl_groups=2, hl_df=2, hl_stat = 36/85.
     """
     with tempfile.TemporaryDirectory() as td:
         s = Session(logger=_quiet_logger())
@@ -1724,7 +1725,8 @@ def test_evaluate_oos_k2_parity():
         assert m.auc == 1.0 and m.gini == 1.0 and m.ks == 1.0
         esperado_bs = (0.5 / 43.0) ** 2
         assert math.isclose(m.brier, esperado_bs, rel_tol=1e-12)
-        assert math.isclose(m.hl_stat, 24.0 / 85.0, rel_tol=1e-12)
+        assert m.hl_groups == 2 and m.hl_df == 2
+        assert math.isclose(m.hl_stat, 36.0 / 85.0, rel_tol=1e-12)
 
 
 def test_evaluate_oot_multiclass_works():
@@ -3173,6 +3175,86 @@ def test_session_train_rejects_invalid_target_type():
         _assert_raises(ValueError, s.train, "CRT", target_type="invalid")
         _assert_raises(ValueError, s.train, "CRT", target_type=123)
         assert s.state.state is FlowState.PARTITIONED
+
+
+def test_evaluate_oot_cv_mode_without_oos_or_after_prune():
+    """CRIT-12: evaluate_oot en modo CV sin evaluate_oos ni _X_test no crashea."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        dev_csv = _csv(tmp)
+        oot_csv = tmp / "oot_cv.csv"
+        pd.read_csv(dev_csv).to_csv(oot_csv, index=False)
+
+        # Caso 1: CV sin evaluate_oos previo
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(dev_csv))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(scheme="cv", k=5, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        assert s._X_test is None
+        s.load_oot(str(oot_csv))
+        st = s.evaluate_oot(n_groups=3)
+        r = st.oot_report
+        assert r is not None
+        assert r.drop.gini_oos is None
+        assert r.drop.drop_oos is None
+        assert r.drop.alert_oos == "UNDETERMINED"
+        assert r.drop.gini_oot is not None
+
+        # Caso 2: CV tras evaluate_oos() + prune() -> load_oot() -> evaluate_oot()
+        s2 = Session(logger=_quiet_logger())
+        s2.load_dataset(str(dev_csv))
+        s2.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s2.partition(scheme="cv", k=5, seed=42)
+        s2.train("CRT", max_depth=4, min_child_size=5)
+        s2.evaluate_oos(n_groups=3)
+        s2.prune(0.0)
+        s2.load_oot(str(oot_csv))
+        st2 = s2.evaluate_oot(n_groups=3)
+        r2 = st2.oot_report
+        assert r2 is not None
+        assert r2.drop.gini_oos is None
+        assert r2.drop.drop_oos is None
+        assert r2.drop.alert_oos == "UNDETERMINED"
+        assert r2.drop.gini_oot is not None
+
+
+def test_evaluate_oot_nonpositive_gini_train_returns_undetermined():
+    """CRIT-12: con gini_train <= 0, drop_oot es None y alert_oot=UNDETERMINED."""
+    from dataclasses import replace as dc_replace
+
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        dev_csv = _csv(tmp)
+        oot_csv = tmp / "oot_inv.csv"
+        pd.read_csv(dev_csv).to_csv(oot_csv, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(dev_csv))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+        s.load_oot(str(oot_csv))
+
+        # Invertir PDs de las hojas en un TreeModel inmutable -> gini_train < 0
+        orig = s.active_tree
+        assert orig is not None
+        inv_nodes = tuple(
+            dc_replace(nd, pd_final=(nd.pd_final[1], nd.pd_final[0]))
+            if nd.is_leaf else nd
+            for nd in orig.nodes
+        )
+        inv_tree = dc_replace(orig, nodes=inv_nodes)
+        s._state = dc_replace(s._state, tree=inv_tree, pruned_tree=None, oos_metrics=None)
+
+        st = s.evaluate_oot(n_groups=3)
+        r = st.oot_report
+        assert r is not None
+        assert r.drop.gini_train < 0.0
+        assert r.drop.drop_oot is None
+        assert r.drop.alert_oot == "UNDETERMINED"
+        assert r.drop.drop_oos is None
+        assert r.drop.alert_oos == "UNDETERMINED"
 
 
 if __name__ == "__main__":
