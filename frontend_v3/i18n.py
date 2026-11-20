@@ -169,8 +169,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
         "step3_cv_k_label": "Folds (k):",
         "step3_none_notice": (
-            "Training without a holdout partition is not available yet; "
-            "the stratified holdout is still applied."
+            "Disabled under MRM governance (SR 11-7): out-of-sample "
+            "validation (Holdout or Cross-validation) is mandatory."
         ),
         "step3_seed_label": "Random seed",
         "step3_train_label": "Train",
@@ -201,6 +201,10 @@ _STRINGS: dict[str, dict[str, str]] = {
             "Misclassification costs (rows: actual class; columns: "
             "predicted class). The diagonal is fixed at 0 and values must "
             "be >= 0. Binary targets only in this phase."
+        ),
+        "adv_costs_invalid": (
+            "Invalid cost matrix cell ({row}, {col}): enter a finite "
+            "non-negative number."
         ),
         "adv_chaid_alpha_merge": "Alpha merge",
         "adv_chaid_alpha_split": "Alpha split",
@@ -371,6 +375,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_matrix_title_multiclass": (
             "Classification matrix (class of interest vs rest)"
         ),
+        "reports_matrix_pred_prefix": "Pred:",
+        "reports_matrix_actual_prefix": "Actual:",
         "tab_gains": "Gains",
         "tab_risks": "Risks",
         "tab_rules": "Rules",
@@ -748,8 +754,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         ),
         "step3_cv_k_label": "Folds (k):",
         "step3_none_notice": (
-            "Entrenar sin partición holdout aún no está disponible; "
-            "la partición estratificada sigue aplicándose."
+            "Deshabilitado bajo gobernanza MRM (SR 11-7): la validación "
+            "fuera de muestra (Holdout o Validación cruzada) es obligatoria."
         ),
         "step3_seed_label": "Semilla aleatoria",
         "step3_train_label": "Entrenamiento",
@@ -782,6 +788,10 @@ _STRINGS: dict[str, dict[str, str]] = {
             "Costes de clasificación errónea (filas: clase real; "
             "columnas: clase predicha). La diagonal se fija a 0 y los "
             "valores deben ser ≥ 0. Solo targets binarios en esta fase."
+        ),
+        "adv_costs_invalid": (
+            "Celda inválida en la matriz de costos ({row}, {col}): ingresa "
+            "un número finito mayor o igual que 0."
         ),
         "adv_chaid_alpha_merge": "Alfa de fusión",
         "adv_chaid_alpha_split": "Alfa de partición",
@@ -952,6 +962,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_matrix_title_multiclass": (
             "Matriz de clasificación (clase de interés vs resto)"
         ),
+        "reports_matrix_pred_prefix": "Pred:",
+        "reports_matrix_actual_prefix": "Real:",
         "tab_gains": "Ganancias",
         "tab_risks": "Riesgos",
         "tab_rules": "Reglas",

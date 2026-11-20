@@ -1101,6 +1101,7 @@ class MainWindow(QMainWindow):
         )
         self._session.train(
             cfg["engine"],
+            target_type=cfg.get("target_type"),
             max_depth=cfg["max_depth"],
             min_child_size=cfg["min_child_size"],
             min_child_weight=cfg["min_child_weight"],

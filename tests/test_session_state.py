@@ -3004,6 +3004,177 @@ def test_intervene_node_depth_ge_3_reindexes_parent_ids_and_invalidates():
                 assert st_int.tree.nodes[cid].parent_id == nd.node_id
 
 
+def test_multiclass_string_target_e2e_holdout_cv_and_oot():
+    """CRIT-08: soporte multiclase K>=3 con target de texto extremo a extremo.
+
+    Verifica holdout, CV, auto-resolucion de target_type=None y string
+    target_type='CATEGORICAL', get_gains_table (n_bad corresponde a 'High'),
+    get_classification_matrix (matriz 3x3 + class_labels en orden canonico)
+    y load_oot/evaluate_oot.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        # 180 filas: 30 High (seg='h'), 60 Mid (seg='m'), 90 Low (seg='l')
+        # Asimetrico para confirmar que n_bad == count('High') != count('Low')
+        segs = ["h"] * 30 + ["m"] * 60 + ["l"] * 90
+        edades = (
+            list(np.linspace(55, 65, 30))
+            + list(np.linspace(35, 45, 60))
+            + list(np.linspace(20, 30, 90))
+        )
+        y_str = ["High"] * 30 + ["Mid"] * 60 + ["Low"] * 90
+        df = pd.DataFrame({"edad": edades, "seg": segs, "riesgo": y_str})
+        csv_dev = tmp / "multi_str_dev.csv"
+        df.to_csv(csv_dev, index=False)
+
+        # --- Holdout + target_type=None (auto-resuelto a CATEGORICAL) ---
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec(
+            "riesgo",
+            target_class="High",
+            class_labels={"High": "High", "Low": "Low", "Mid": "Mid"},
+        )
+        s.partition(train_frac=0.7, seed=42)
+        st = s.train("CRT", max_depth=4, min_child_size=5)
+        assert st.tree is not None
+        assert st.tree.class_labels == ("High", "Low", "Mid")
+        assert s._last_train_params is not None
+        assert s._last_train_params["target_type"] is TargetType.CATEGORICAL
+
+        st_oos = s.evaluate_oos(n_groups=3)
+        assert st_oos.oos_metrics is not None
+        assert st_oos.oos_metrics.auc == 1.0
+        assert st_oos.oos_metrics.gini == 1.0
+
+        # Gains table: n_bad debe contar exactamente 'High' (9 en 30% OOS de 30),
+        # NO 'Low' (27 en 30% OOS de 90) ni 'Mid' (18 en 30% OOS de 60).
+        expected_high_oos = int(np.sum(s._y_test == "High"))
+        assert expected_high_oos == 9
+        gains = s.get_gains_table(partition="oos")
+        assert gains is not None
+        assert gains["n_bad"] == expected_high_oos
+        assert gains["class_labels"] == ("High", "Low", "Mid")
+        assert gains["n_per_class_global"][0] == expected_high_oos
+
+        # Classification matrix: 3x3 con class_labels reales en orden canonico
+        cm_dto = s.get_classification_matrix(partition="oos")
+        assert cm_dto is not None
+        assert cm_dto["class_labels"] == ("High", "Low", "Mid")
+        assert len(cm_dto["confusion_matrix"]) == 3
+        assert all(len(row) == 3 for row in cm_dto["confusion_matrix"])
+        assert cm_dto["accuracy"] == 1.0
+        assert cm_dto["n_bad"] == expected_high_oos
+
+        # OOT con target de texto
+        csv_oot = tmp / "multi_str_oot.csv"
+        df.to_csv(csv_oot, index=False)
+        st_oot_l = s.load_oot(str(csv_oot))
+        assert st_oot_l.state is FlowState.OOT_LOADED
+        st_oot_e = s.evaluate_oot(n_groups=3)
+        assert st_oot_e.oot_report is not None
+        assert st_oot_e.oot_report.metrics is not None
+        assert st_oot_e.oot_report.metrics.auc == 1.0
+
+        # --- CV + target_type="CATEGORICAL" (string plano) ---
+        s_cv = Session(logger=_quiet_logger())
+        s_cv.load_dataset(str(csv_dev))
+        s_cv.fix_spec(
+            "riesgo",
+            target_class="High",
+            class_labels={"High": "High", "Low": "Low", "Mid": "Mid"},
+        )
+        s_cv.partition(scheme="cv", k=3, seed=42)
+        s_cv.train("CRT", target_type="CATEGORICAL", max_depth=4, min_child_size=5)
+        assert s_cv._last_train_params is not None
+        assert s_cv._last_train_params["target_type"] is TargetType.CATEGORICAL
+        cv_rep = s_cv.evaluate_oos(n_groups=3)
+        assert isinstance(cv_rep, dict)
+        assert cv_rep["scheme"] == "cv" and cv_rep["k"] == 3
+        assert cv_rep["metrics_mean"]["auc"] == 1.0
+
+
+def test_get_gains_table_multiclass_int_target_class_2():
+    """CRIT-08: en K=3 entero {0,1,2} con target_class=2, n_bad cuenta clase 2."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        # Conteos asimetricos: 20 de clase 2, 40 de clase 1, 60 de clase 0
+        df = pd.DataFrame({
+            "edad": list(range(20)) + list(range(40, 80)) + list(range(100, 160)),
+            "seg": ["c2"] * 20 + ["c1"] * 40 + ["c0"] * 60,
+            "default": [2] * 20 + [1] * 40 + [0] * 60,
+        })
+        csv_path = tmp / "int_k3_asym.csv"
+        df.to_csv(csv_path, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec(
+            "default",
+            target_class=2,
+            class_labels={0: "Bajo", 1: "Medio", 2: "Alto"},
+        )
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+
+        expected_c2_oos = int(np.sum(s._y_test == 2))
+        expected_c0_oos = int(np.sum(s._y_test == 0))
+        assert expected_c2_oos != expected_c0_oos
+        gains = s.get_gains_table(partition="oos")
+        assert gains is not None
+        assert gains["n_bad"] == expected_c2_oos
+        assert gains["class_labels"] == ("Alto", "Bajo", "Medio")
+        assert gains["n_per_class_global"][0] == expected_c2_oos
+
+
+def test_load_oot_rejects_unseen_target_class_atomically():
+    """CRIT-08: load_oot rechaza clases no vistas en OOT preservando atomicidad."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        df = pd.DataFrame({
+            "edad": np.arange(90),
+            "seg": ["h"] * 30 + ["m"] * 30 + ["l"] * 30,
+            "riesgo": ["High"] * 30 + ["Mid"] * 30 + ["Low"] * 30,
+        })
+        csv_dev = tmp / "dev_str.csv"
+        df.to_csv(csv_dev, index=False)
+
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_dev))
+        s.fix_spec(
+            "riesgo",
+            target_class="High",
+            class_labels={"High": "High", "Low": "Low", "Mid": "Mid"},
+        )
+        s.partition(train_frac=0.7, seed=42)
+        s.train("CRT", max_depth=4, min_child_size=5)
+
+        df_bad_oot = pd.DataFrame({
+            "edad": [10, 20, 30, 40],
+            "seg": ["h", "m", "l", "h"],
+            "riesgo": ["High", "Mid", "Low", "UnknownClass"],
+        })
+        csv_bad = tmp / "oot_unseen_cls.csv"
+        df_bad_oot.to_csv(csv_bad, index=False)
+
+        _assert_raises(ValueError, s.load_oot, str(csv_bad))
+        assert s.state.state is FlowState.TRAINED
+        assert s._X_oot is None and s._y_oot is None and s._df_oot is None
+
+
+def test_session_train_rejects_invalid_target_type():
+    """CRIT-08: Session.train rechaza target_type string o tipo invalido."""
+    with tempfile.TemporaryDirectory() as td:
+        csv_path = _csv(Path(td))
+        s = Session(logger=_quiet_logger())
+        s.load_dataset(str(csv_path))
+        s.fix_spec("default", target_class=1, class_labels={0: "Bueno", 1: "Malo"})
+        s.partition(train_frac=0.7, seed=42)
+        _assert_raises(ValueError, s.train, "CRT", target_type="invalid")
+        _assert_raises(ValueError, s.train, "CRT", target_type=123)
+        assert s.state.state is FlowState.PARTITIONED
+
+
 if __name__ == "__main__":
     tests = [
         obj for name, obj in sorted(globals().items())

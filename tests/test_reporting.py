@@ -810,6 +810,27 @@ def test_binary_gains_table_non_uniform_weights_affect_metrics() -> None:
     assert abs(r1.gini - r0.gini) > 1e-4
 
 
+def test_multiclass_classification_matrix_class_labels_propagation_and_guard() -> None:
+    """CRIT-08: class_labels se propaga en K>=3, valida len==K y queda vacio en K=2."""
+    pd_per_leaf = {0: (0.7, 0.2, 0.1), 1: (0.1, 0.7, 0.2), 2: (0.2, 0.1, 0.7)}
+    assign = np.array([0] * 10 + [1] * 10 + [2] * 10)
+    y = np.array([0] * 10 + [1] * 10 + [2] * 10)
+    m = build_classification_matrix_multiclass(
+        assign, y, pd_per_leaf, class_labels=("High", "Low", "Mid"),
+    )
+    assert m.class_labels == ("High", "Low", "Mid")
+
+    with pytest.raises(ValueError, match="class_labels"):
+        build_classification_matrix_multiclass(
+            assign, y, pd_per_leaf, class_labels=("High", "Low"),
+        )
+
+    m_bin = build_classification_matrix(
+        _standard_assign(), _standard_y(), {0: 0.1, 1: 0.3, 2: 0.6},
+    )
+    assert m_bin.class_labels == ()
+
+
 # ---------------------------------------------------------------------------
 # ejecucion directa
 # ---------------------------------------------------------------------------

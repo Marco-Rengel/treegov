@@ -251,14 +251,15 @@ def test_wizard_finish_emits_config():
     assert len(captured) == 1
     cfg = captured[0]
     assert set(cfg) == {
-        "engine", "target", "predictors", "target_class", "class_labels",
-        "train_frac", "seed", "validation_scheme", "cv_k",
+        "engine", "target", "target_type", "predictors", "target_class",
+        "class_labels", "train_frac", "seed", "validation_scheme", "cv_k",
         "max_depth", "min_child_size", "min_child_weight",
         "governance_mode", "apply_jeffreys", "pd_floor", "weight_col",
         "population_col", "population_ok_values", "cost_matrix",
     }
     assert cfg["engine"] == "CRT"
     assert cfg["target"] == "default"
+    assert cfg["target_type"] == "BINARY"
     assert cfg["predictors"] == ["edad"]
     # sin target_provider: contrato presente pero vacio
     assert cfg["target_class"] is None
@@ -684,33 +685,42 @@ def test_wizard_population_in_current_config():
 
 
 def test_wizard_validation_scheme_radios():
-    """Phase 3.11.a.1 (Paso 3 clásico): tres radios verticales (No validar /
-    Partición / Validación cruzada), Partición por defecto; slider y barra
-    solo habilitados con Partición; aviso al seleccionar CV o No validar.
-    CV ya fluye al backend; NONE conserva el aviso de comportamiento
-    presentacional."""
+    """CRIT-16 (SR 11-7): tres radios verticales; 'No validar' visible pero
+    deshabilitado. Forzar _rb_none programaticamente vuelve isComplete() False
+    y hace que current_config() lance ValueError; HOLDOUT y CV siguen validos."""
     wiz = _make_wizard()
     page = wiz.page_validation
+    assert page._rb_none.isEnabled() is False
     assert page._rb_holdout.isChecked() is True      # default: Partición
+    assert page.isComplete() is True
     assert page._slider.isEnabled() is True
     assert page._split_bar.isEnabled() is True
     assert page._lbl_cv_notice.isHidden() is True
     assert page._lbl_none_notice.isHidden() is True
 
-    page._rb_cv.setChecked(True)                     # CV: aviso Fase 2.1.b
+    page._rb_cv.setChecked(True)                     # CV: valido
+    assert page.isComplete() is True
     assert page._slider.isEnabled() is False
     assert page._split_bar.isEnabled() is False
     assert page._lbl_cv_notice.isHidden() is False
     assert page._lbl_none_notice.isHidden() is True
     assert page.validation_scheme() == "CV"
 
-    page._rb_none.setChecked(True)                   # No validar: aviso
+    page._rb_none.setChecked(True)                   # No validar forzado -> bloqueado
     assert page._slider.isEnabled() is False
     assert page._lbl_none_notice.isHidden() is False
     assert page._lbl_cv_notice.isHidden() is True
     assert page.validation_scheme() == "NONE"
+    assert page.isComplete() is False
+    try:
+        wiz.current_config()
+    except ValueError as exc:
+        assert "validación obligatoria" in str(exc)
+    else:
+        raise AssertionError("current_config() debio lanzar ValueError con NONE")
 
     page._rb_holdout.setChecked(True)                # de vuelta a Partición
+    assert page.isComplete() is True
     assert page._slider.isEnabled() is True
     assert page._split_bar.isEnabled() is True
     assert page.validation_scheme() == "HOLDOUT"
@@ -806,7 +816,7 @@ def test_wizard_advanced_options_update_config():
     assert cfg2["max_depth"] == 8
     assert cfg2["min_child_size"] == 200
     assert cfg2["min_child_weight"] == 3.0
-    assert cfg2["cost_matrix"] == ((0.0, 0.0), (0.0, 0.0))  # 3.11.c.3 wiring
+    assert cfg2["cost_matrix"] == ()  # CRIT-16: sin matriz fantasma todo-ceros
     assert f": 8" in page._lbl_summary.text()        # resumen refrescado
     wiz.close()
     wiz.deleteLater()
@@ -874,24 +884,23 @@ def test_wizard_size_and_title_banner():
 
 
 def test_wizard_cost_matrix_in_config():
-    """Fase 3.11.c.3: current_config() expone 'cost_matrix' (default ()).
-
-    La matriz se edita en AdvancedOptionsDialog (pestaña Costs, N=2 fijo
-    en esta fase) y fluye a Session.fix_spec via MainWindow.
-    """
+    """CRIT-16: tabla todo-ceros devuelve () y celda fuera de diagonal fluye."""
     wiz = _make_wizard()
     cfg = wiz.current_config()
     assert "cost_matrix" in cfg
     assert cfg["cost_matrix"] == ()
     # La pestaña Costs existe en el dialogo de opciones avanzadas y su
-    # matriz por defecto leida es 2x2 con ceros (diagonal incluida).
+    # matriz todo-ceros por defecto devuelve () (sin matriz fantasma).
     from frontend_v3.wizard import AdvancedOptionsDialog
     dlg = AdvancedOptionsDialog(max_depth=4, min_child_size=50,
                                 min_child_weight=0.0)
     tbl = dlg.findChild(type(dlg._tbl_costs), "tblCosts")
     assert tbl is not None and tbl.rowCount() == 2
     assert tbl.columnCount() == 2
-    assert dlg.get_cost_matrix() == ((0.0, 0.0), (0.0, 0.0))
+    assert dlg.get_cost_matrix() == ()
+    # Editar una celda fuera de diagonal activa la matriz 2x2 real.
+    tbl.item(0, 1).setText("5")
+    assert dlg.get_cost_matrix() == ((0.0, 5.0), (0.0, 0.0))
     # La diagonal es de solo lectura (ItemIsEditable desactivado).
     diag_item = tbl.item(0, 0)
     assert not (diag_item.flags() & Qt.ItemFlag.ItemIsEditable)
@@ -902,13 +911,7 @@ def test_wizard_cost_matrix_in_config():
 
 
 def test_wizard_cost_matrix_multiclass():
-    """ZG-2: la pestaña Costs del AdvancedOptionsDialog es N x N dinamica.
-
-    Con un target de 3 clases (target_provider), GovernancePage pasa
-    n_classes=3 al dialogo (via PredictorsPage.n_classes) y la matriz
-    que fluye a _cost_matrix —y de ahi a current_config()— es 3x3 con
-    la diagonal fija a 0.
-    """
+    """ZG-2 + CRIT-16: matriz 3x3 con celda no nula fluye a current_config()."""
     from PySide6.QtWidgets import QDialog
     import frontend_v3.wizard as wz
 
@@ -927,6 +930,8 @@ def test_wizard_cost_matrix_multiclass():
             super().__init__(**kwargs)
 
         def exec(self):
+            self._tbl_costs.item(0, 1).setText("2.5")
+            self.accept()
             return QDialog.DialogCode.Accepted
 
     wz.AdvancedOptionsDialog = _SpyDialog
@@ -940,9 +945,135 @@ def test_wizard_cost_matrix_multiclass():
     assert len(mat) == 3
     assert all(len(fila) == 3 for fila in mat)
     assert all(mat[i][i] == 0.0 for i in range(3))
+    assert mat[0][1] == 2.5
     assert wiz.current_config()["cost_matrix"] == mat
     wiz.close()
     wiz.deleteLater()
+
+
+def test_wizard_current_config_target_type_categorical_k3():
+    """CRIT-08: current_config()['target_type'] == 'CATEGORICAL' con K >= 3."""
+    wiz = _make_wizard_with_provider({"Low": 40, "Mid": 35, "High": 25})
+    _select_target(wiz, "seg")
+    assert wiz.page_predictors.n_classes() == 3
+    cfg = wiz.current_config()
+    assert cfg["target_type"] == "CATEGORICAL"
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_wizard_governance_summary_shows_cv_k():
+    """CRIT-16: el resumen de Step 4 refleja CV con k=7 y NO train_frac (70%)."""
+    wiz = _make_wizard()
+    _select_target(wiz, "default")
+    _select_first_predictor(wiz)
+    wiz.page_validation._rb_cv.setChecked(True)
+    wiz.page_validation._spin_cv_k.setValue(7)
+    wiz.page_governance._refresh_summary()
+    summary = wiz.page_governance._lbl_summary.text()
+    assert "k=7" in summary
+    assert tr("step3_scheme_cv") in summary
+    assert "70%" not in summary
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_advanced_options_rejects_invalid_cost_cells():
+    """CRIT-16: accept() rechaza texto, negativos, inf y nan sin cerrar dialogo."""
+    from PySide6.QtWidgets import QDialog
+
+    _get_app()
+    for bad_text in ("abc", "-3", "inf", "nan", ""):
+        dlg = AdvancedOptionsDialog(
+            max_depth=4, min_child_size=50, min_child_weight=0.0, n_classes=2,
+        )
+        dlg._tbl_costs.item(0, 1).setText(bad_text)
+        dlg.accept()
+        assert dlg.result() != QDialog.DialogCode.Accepted
+        assert dlg._last_cost_error is not None and dlg._last_cost_error != ""
+        dlg.close()
+        dlg.deleteLater()
+
+
+def test_wizard_target_change_clears_stale_cost_matrix():
+    """CRIT-16: cambiar de target limpia automaticamente _cost_matrix a ()."""
+    counts = {
+        "default": {0: 50, 1: 50},
+        "seg": {"A": 20, "B": 30, "C": 50},
+    }
+    wiz = ModelWizard(
+        _COLS, _TYPES,
+        target_provider=lambda col: counts.get(col, {}),
+    )
+    _select_target(wiz, "default")
+    wiz.page_governance._cost_matrix = ((0.0, 4.0), (1.0, 0.0))
+    assert wiz.current_config()["cost_matrix"] == ((0.0, 4.0), (1.0, 0.0))
+
+    # Cambiar target a columna multiclase 'seg' limpia la matriz 2x2 obsoleta
+    _select_target(wiz, "seg")
+    assert wiz.page_governance._cost_matrix == ()
+    assert wiz.current_config()["cost_matrix"] == ()
+    wiz.close()
+    wiz.deleteLater()
+
+
+def test_mainwindow_e2e_multiclass_string_target_renders_3x3_matrix():
+    """CRIT-08 E2E: MainWindow._on_wizard_finished entrena K=3 texto y pinta 3x3."""
+    with tempfile.TemporaryDirectory() as td:
+        df = pd.DataFrame({
+            "edad": (
+                list(np.linspace(55, 65, 40))
+                + list(np.linspace(35, 45, 40))
+                + list(np.linspace(20, 30, 40))
+            ),
+            "seg": ["h"] * 40 + ["m"] * 40 + ["l"] * 40,
+            "riesgo": ["High"] * 40 + ["Mid"] * 40 + ["Low"] * 40,
+        })
+        csv_path = Path(td) / "multi_str_gui.csv"
+        df.to_csv(csv_path, index=False)
+
+        _get_app()
+        w = MainWindow()
+        try:
+            assert w._load_dataset_path(str(csv_path)) is True
+            cfg = {
+                "engine": "CRT",
+                "target": "riesgo",
+                "target_type": "CATEGORICAL",
+                "predictors": ["edad", "seg"],
+                "target_class": "High",
+                "class_labels": {"High": "High", "Low": "Low", "Mid": "Mid"},
+                "weight_col": None,
+                "population_col": None,
+                "population_ok_values": (),
+                "cost_matrix": (),
+                "train_frac": 0.7,
+                "seed": 42,
+                "validation_scheme": "holdout",
+                "cv_k": 5,
+                "max_depth": 4,
+                "min_child_size": 5,
+                "min_child_weight": None,
+                "governance_mode": "BANKING",
+                "apply_jeffreys": True,
+                "pd_floor": 0.0005,
+            }
+            w._on_wizard_finished(cfg)
+            st = w._session.state
+            assert st.state.name == "TRAINED"
+            assert st.tree is not None
+            assert st.tree.class_labels == ("High", "Low", "Mid")
+            tbl = w._reports_panel._matrix_table
+            assert tbl.rowCount() == 3
+            assert tbl.columnCount() == 3
+            assert [tbl.horizontalHeaderItem(c).text() for c in range(3)] == [
+                f"{tr('reports_matrix_pred_prefix')} High",
+                f"{tr('reports_matrix_pred_prefix')} Low",
+                f"{tr('reports_matrix_pred_prefix')} Mid",
+            ]
+        finally:
+            w.close()
+            w.deleteLater()
 
 
 # ---------------------------------------------------------------------------

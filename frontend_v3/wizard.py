@@ -16,6 +16,8 @@ Governance Mode BANKING/RESEARCH of backend_v3.types).
 
 from __future__ import annotations
 
+import html
+import math
 from typing import Callable
 
 from PySide6.QtCore import Qt, Signal
@@ -37,6 +39,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QRadioButton,
@@ -146,6 +149,8 @@ class PredictorsPage(QWizardPage):
     (clean-room: the wizard never touches the DataFrame).
     """
 
+    target_changed = Signal()
+
     def __init__(
         self,
         columns: tuple[str, ...],
@@ -164,6 +169,7 @@ class PredictorsPage(QWizardPage):
         self._target_provider = target_provider
         self._weight_validator = weight_validator
         self._population_provider = population_provider
+        self._last_target: str = ""
 
         # Phase 3.11.a.1: grid layout, three bands (combos / core lists /
         # class table). The old vertical stack crowded the lists; the
@@ -402,6 +408,10 @@ class PredictorsPage(QWizardPage):
         return item
 
     def _on_target_change(self, _index: int) -> None:
+        cur_data = self._combo_target.currentData()
+        cur_target = "" if cur_data is None else str(cur_data)
+        target_did_change = cur_target != self._last_target
+        self._last_target = cur_target
         target = self.target()
         weight = self.weight_col()
         pop = self.population_col()
@@ -424,6 +434,8 @@ class PredictorsPage(QWizardPage):
             # automatically in the backend (Phase 3.10.b, H14).
             self._lst_available.addItem(self._make_item(col))
         self._refresh_class_table()
+        if target_did_change:
+            self.target_changed.emit()
         self.completeChanged.emit()
 
     def _on_weight_change(self, _index: int) -> None:
@@ -771,6 +783,7 @@ class ValidationPage(QWizardPage):
         self._scheme_group.setExclusive(True)
         self._rb_none = QRadioButton()
         self._rb_none.setObjectName("rbSchemeNone")
+        self._rb_none.setEnabled(False)
         self._rb_holdout = QRadioButton()
         self._rb_holdout.setObjectName("rbSchemeHoldout")
         self._rb_cv = QRadioButton()
@@ -892,6 +905,7 @@ class ValidationPage(QWizardPage):
         cv = self._rb_cv.isChecked()
         self._lbl_cv_k.setVisible(cv)
         self._spin_cv_k.setVisible(cv)
+        self.completeChanged.emit()
 
     def _update_split_ui(self, value: int) -> None:
         self._split_bar.setValue(value)
@@ -899,12 +913,13 @@ class ValidationPage(QWizardPage):
         self._lbl_test.setText(f"{tr('step3_test_label')}: {100 - value}%")
 
     def isComplete(self) -> bool:
-        return True  # slider/spinbox ranges are valid by construction
+        return not self._rb_none.isChecked()
 
     def retranslate_ui(self) -> None:
         self.setTitle(tr("step3_title"))
         self.setSubTitle(tr("step3_subtitle"))
         self._rb_none.setText(tr("step3_scheme_none"))
+        self._rb_none.setToolTip(tr("step3_none_notice"))
         self._rb_holdout.setText(tr("step3_scheme_partition"))
         self._rb_cv.setText(tr("step3_scheme_cv"))
         self._lbl_none_notice.setText(tr("step3_none_notice"))
@@ -951,6 +966,7 @@ class AdvancedOptionsDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self._n_classes = n_classes
+        self._last_cost_error: str | None = None
         self.setObjectName("advancedOptionsDialog")
         self.setModal(True)
         self.setWindowTitle(tr("adv_dialog_title"))
@@ -1061,25 +1077,62 @@ class AdvancedOptionsDialog(QDialog):
             float(self._spin_min_child_weight.value()),
         )
 
-    def get_cost_matrix(self) -> tuple[tuple[float, ...], ...]:
-        """Matriz N x N leida de la tabla (tupla de tuplas, inmutable).
+    def _parse_and_validate_cost_matrix(self) -> tuple[tuple[float, ...], ...]:
+        """Valida estrictamente la tabla N x N de costos de clasificación errónea.
 
-        Diagonal forzada a 0.0 y valores no parseables/negativos clampeados
-        a 0.0 (defensa; la validacion estricta vive en Session.fix_spec).
+        Diagonal fija en 0.0; toda celda fuera de la diagonal debe ser un
+        número finito >= 0.0 (rechaza vacío, texto, negativos, NaN y ±inf).
+        Si todas las celdas fuera de diagonal son 0.0, devuelve () para
+        evitar inyectar una matriz fantasma todo-ceros.
         """
         n = self._tbl_costs.rowCount()
         mat: list[tuple[float, ...]] = []
+        has_nonzero = False
         for i in range(n):
             fila: list[float] = []
             for j in range(n):
+                if i == j:
+                    fila.append(0.0)
+                    continue
                 item = self._tbl_costs.item(i, j)
+                raw = item.text().strip() if item is not None else ""
+                if not raw:
+                    raise ValueError(
+                        tr("adv_costs_invalid").format(row=i + 1, col=j + 1)
+                    )
                 try:
-                    v = float(item.text()) if item is not None else 0.0
+                    v = float(raw)
                 except ValueError:
-                    v = 0.0
-                fila.append(0.0 if i == j else max(0.0, v))
+                    raise ValueError(
+                        tr("adv_costs_invalid").format(row=i + 1, col=j + 1)
+                    ) from None
+                if not math.isfinite(v) or v < 0.0:
+                    raise ValueError(
+                        tr("adv_costs_invalid").format(row=i + 1, col=j + 1)
+                    )
+                if v > 0.0:
+                    has_nonzero = True
+                fila.append(v)
             mat.append(tuple(fila))
+        if not has_nonzero:
+            return ()
         return tuple(mat)
+
+    def accept(self) -> None:
+        try:
+            self._parse_and_validate_cost_matrix()
+        except ValueError as exc:
+            self._last_cost_error = str(exc)
+            app = QApplication.instance()
+            if app is not None and app.platformName() != "offscreen":
+                QMessageBox.warning(self, tr("msg_error_title"), str(exc))
+            return
+        self._last_cost_error = None
+        super().accept()
+
+    def get_cost_matrix(self) -> tuple[tuple[float, ...], ...]:
+        """Matriz N x N validada (tupla de tuplas inmutable), o () si todo es 0."""
+        return self._parse_and_validate_cost_matrix()
 
 
 class GovernancePage(QWizardPage):
@@ -1191,15 +1244,24 @@ class GovernancePage(QWizardPage):
         """Piso de MASA PONDERADA por rama (Fase 3.7.c). 0.0 = desactivado."""
         return None if self._min_child_weight <= 0.0 else self._min_child_weight
 
+    def reset_cost_matrix(self) -> None:
+        """Limpia la matriz de costos al cambiar de target o cardinalidad."""
+        self._cost_matrix = ()
+        if self.wizard() is not None:
+            self._refresh_summary()
+
     def _open_advanced_options(self) -> None:
         """Open the modal editor; on Accept the values flow into
         current_config() (via the page getters) and the summary refreshes."""
+        n_classes = self.wizard().page_predictors.n_classes()
+        if self._cost_matrix and len(self._cost_matrix) != n_classes:
+            self._cost_matrix = ()
         dlg = AdvancedOptionsDialog(
             max_depth=self._max_depth,
             min_child_size=self._min_child_size,
             min_child_weight=self._min_child_weight,
             cost_matrix=self._cost_matrix,
-            n_classes=self.wizard().page_predictors.n_classes(),
+            n_classes=n_classes,
             parent=self,
         )
         if dlg.exec() != QDialog.DialogCode.Accepted:
@@ -1221,13 +1283,23 @@ class GovernancePage(QWizardPage):
     # --- Qt overrides ------------------------------------------------------
 
     def initializePage(self) -> None:
+        wiz = self.wizard()
+        if (
+            wiz is not None
+            and self._cost_matrix
+            and len(self._cost_matrix) != wiz.page_predictors.n_classes()
+        ):
+            self._cost_matrix = ()
         self._refresh_summary()
 
     def _refresh_summary(self) -> None:
         wiz = self.wizard()
         if wiz is None:
             return
-        cfg = wiz.current_config()
+        try:
+            cfg = wiz.current_config()
+        except ValueError:
+            return
         gov_key = (
             "step4_govmode_banking_short"
             if cfg["governance_mode"] == "BANKING"
@@ -1243,23 +1315,34 @@ class GovernancePage(QWizardPage):
         # lines keep the colon inside the <b> ("Motor:" / "Engine:" are
         # asserted with the colon attached to the label word).
         accent = "#1A73E8"
-        html = (
+        engine_esc = html.escape(str(cfg["engine"]), quote=True)
+        target_esc = html.escape(str(cfg["target"]), quote=True)
+        if cfg["validation_scheme"] == "cv":
+            validation_line = (
+                f"<li><b>{tr('step3_scheme_cv')}:</b> k={cfg['cv_k']} · "
+                f"<b>{tr('step3_seed_label')}:</b> {cfg['seed']}</li>"
+            )
+        else:
+            validation_line = (
+                f"<li><b>{tr('step3_train_label')}:</b> "
+                f"{int(cfg['train_frac'] * 100)}% · "
+                f"<b>{tr('step3_seed_label')}:</b> {cfg['seed']}</li>"
+            )
+        summary_html = (
             "<ul style='margin:0px; padding-left:16px;'>"
             f"<li><b>{tr('step4_summary_engine')}:</b> "
-            f"<span style='color: {accent};'>{cfg['engine']}</span></li>"
+            f"<span style='color: {accent};'>{engine_esc}</span></li>"
             f"<li><b>{tr('step2_target_label')}</b> "
-            f"<span style='color: {accent};'>{cfg['target']}</span></li>"
+            f"<span style='color: {accent};'>{target_esc}</span></li>"
             f"<li><b>{tr('step2_selected')}:</b> {len(cfg['predictors'])}</li>"
-            f"<li><b>{tr('step3_train_label')}:</b> "
-            f"{int(cfg['train_frac'] * 100)}% · "
-            f"<b>{tr('step3_seed_label')}:</b> {cfg['seed']}</li>"
+            f"{validation_line}"
             f"<li><b>{tr('step4_max_depth')}</b>: {cfg['max_depth']} · "
             f"<b>{tr('step4_min_child')}</b>: {cfg['min_child_size']}</li>"
             f"<li><b>{tr('step4_govmode_title')}:</b> "
             f"<span style='color: {accent};'>{tr(gov_key)}</span></li>"
             "</ul>"
         )
-        self._lbl_summary.setText(html)
+        self._lbl_summary.setText(summary_html)
 
     def isComplete(self) -> bool:
         return True  # spinbox ranges are valid by construction
@@ -1349,6 +1432,9 @@ class ModelWizard(QWizard):
                      self.page_validation, self.page_governance):
             self.addPage(page)
 
+        self.page_predictors.target_changed.connect(
+            self.page_governance.reset_cost_matrix
+        )
         language_bus.language_changed.connect(self._on_language_changed)
         self.retranslate_ui()
 
@@ -1361,9 +1447,19 @@ class ModelWizard(QWizard):
         """Plain-Python snapshot of the 4 steps (the contract to MainWindow)."""
         banking = self.page_governance.is_banking()
         validation_scheme = self.page_validation.validation_scheme()
+        if validation_scheme == "NONE":
+            raise ValueError(
+                "[wizard] validación obligatoria: seleccione Holdout o "
+                "Validación cruzada"
+            )
         return {
             "engine": self.page_engine.selected_engine(),
             "target": self.page_predictors.target(),
+            "target_type": (
+                "CATEGORICAL"
+                if self.page_predictors.n_classes() > 2
+                else "BINARY"
+            ),
             "predictors": self.page_predictors.selected_predictors(),
             "target_class": self.page_predictors.target_class(),
             "class_labels": self.page_predictors.class_labels(),

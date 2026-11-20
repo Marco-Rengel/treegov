@@ -507,24 +507,50 @@ class ReportsPanel(QWidget):
         parts.append("</tbody></table>")
 
         # Classification matrix
-        parts.append(f"<h2>{esc(tr('reports_matrix_title'))}</h2>")
-        parts.append("<table><tbody>")
-        parts.append(
-            f"<tr><td class='label'></td>"
-            f"<td>{esc(self._term_report_label('reports_matrix_pred_good'))}</td>"
-            f"<td>{esc(self._term_report_label('reports_matrix_pred_bad'))}</td></tr>"
-        )
-        parts.append(
-            f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_good'))}</td>"
-            f"<td>{esc(matrix.get('tn'))}</td>"
-            f"<td>{esc(matrix.get('fp'))}</td></tr>"
-        )
-        parts.append(
-            f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_bad'))}</td>"
-            f"<td>{esc(matrix.get('fn'))}</td>"
-            f"<td>{esc(matrix.get('tp'))}</td></tr>"
-        )
-        parts.append("</tbody></table>")
+        cm = matrix.get("confusion_matrix") or ()
+        if cm:
+            k = len(cm)
+            raw_labels = matrix.get("class_labels") or ()
+            labels = (
+                [str(lbl) for lbl in raw_labels]
+                if len(raw_labels) == k
+                else [f"C{i}" for i in range(k)]
+            )
+            pred_prefix = tr("reports_matrix_pred_prefix")
+            actual_prefix = tr("reports_matrix_actual_prefix")
+            parts.append(f"<h2>{esc(tr('reports_matrix_title_multiclass'))}</h2>")
+            parts.append("<table><thead><tr><th></th>")
+            for lbl in labels:
+                parts.append(f"<th>{esc(f'{pred_prefix} {lbl}')}</th>")
+            parts.append("</tr></thead><tbody>")
+            for r, row_vals in enumerate(cm):
+                parts.append(
+                    f"<tr><td class='label'>{esc(f'{actual_prefix} {labels[r]}')}</td>"
+                )
+                for c in range(k):
+                    val = row_vals[c] if c < len(row_vals) else None
+                    parts.append(f"<td>{esc(val)}</td>")
+                parts.append("</tr>")
+            parts.append("</tbody></table>")
+        else:
+            parts.append(f"<h2>{esc(tr('reports_matrix_title'))}</h2>")
+            parts.append("<table><tbody>")
+            parts.append(
+                f"<tr><td class='label'></td>"
+                f"<td>{esc(self._term_report_label('reports_matrix_pred_good'))}</td>"
+                f"<td>{esc(self._term_report_label('reports_matrix_pred_bad'))}</td></tr>"
+            )
+            parts.append(
+                f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_good'))}</td>"
+                f"<td>{esc(matrix.get('tn'))}</td>"
+                f"<td>{esc(matrix.get('fp'))}</td></tr>"
+            )
+            parts.append(
+                f"<tr><td class='label'>{esc(self._term_report_label('reports_matrix_actual_bad'))}</td>"
+                f"<td>{esc(matrix.get('fn'))}</td>"
+                f"<td>{esc(matrix.get('tp'))}</td></tr>"
+            )
+            parts.append("</tbody></table>")
 
         parts.append("<table><tbody>")
         for key in self._MATRIX_METRICS:
@@ -599,25 +625,6 @@ class ReportsPanel(QWidget):
         self._refresh_button.setText(tr("reports_refresh"))
         self._export_button.setText(tr("reports_export_html"))
         self._summary_title.setText(tr("reports_summary_title"))
-        # Fase 3.6.e.2: en RESEARCH las cabeceras de la matriz usan la
-        # terminología neutra (Evento / No evento); en BANKING se
-        # conservan las claves clásicas (paridad visual, diseño §5).
-        if self._mode == "RESEARCH":
-            lbl_no_ev = tr_term("no_event", self._mode)
-            lbl_ev = tr_term("event", self._mode)
-            pred_labels = [lbl_no_ev, lbl_ev]
-            real_labels = [lbl_no_ev, lbl_ev]
-        else:
-            pred_labels = [
-                tr("reports_matrix_pred_good"),
-                tr("reports_matrix_pred_bad"),
-            ]
-            real_labels = [
-                tr("reports_matrix_actual_good"),
-                tr("reports_matrix_actual_bad"),
-            ]
-        self._matrix_table.setHorizontalHeaderLabels(pred_labels)
-        self._matrix_table.setVerticalHeaderLabels(real_labels)
 
         self._retranslate_combo(
             self._partition_combo,
@@ -628,13 +635,12 @@ class ReportsPanel(QWidget):
             {"leaf": tr("reports_view_terminal"), "bucket": tr("reports_view_bucket")},
         )
 
-        # Repaint warning if needed
-        if hasattr(self, "_matrix_warning"):
-            self._repaint_matrix()
         self._table.setHorizontalHeaderLabels(
             [self._term_header(key) for key in self._HEADER_KEYS]
         )
         self._gains_charts.retranslate_ui()
+        # Las cabeceras, celdas y dimensiones de la matriz (2x2 o KxK)
+        # se sincronizan en _repaint_matrix() dentro de refresh().
         self.refresh()
 
     # ------------------------------------------------------------ Painting
@@ -686,28 +692,114 @@ class ReportsPanel(QWidget):
 
     def _repaint_matrix(self) -> None:
         matrix = self._matrix or {}
-        # Titulo dinamico: en K>2 el DTO trae confusion_matrix poblada;
-        # en K=2 llega vacia y se usa el titulo binario clasico.
+        # Titulo y tabla dinamicos: en K>=3 el DTO trae confusion_matrix
+        # poblada (matriz K x K con etiquetas reales); en K=2 llega vacia
+        # y se usa el formato binario clasico 2x2 (paridad intacta).
         cm = matrix.get("confusion_matrix") or ()
         if cm:
             self._matrix_title.setText(tr("reports_matrix_title_multiclass"))
+            k = len(cm)
+            raw_labels = matrix.get("class_labels") or ()
+            labels = (
+                [str(lbl) for lbl in raw_labels]
+                if len(raw_labels) == k
+                else [f"C{i}" for i in range(k)]
+            )
+            pred_prefix = tr("reports_matrix_pred_prefix")
+            actual_prefix = tr("reports_matrix_actual_prefix")
+            self._matrix_table.setRowCount(k)
+            self._matrix_table.setColumnCount(k)
+            self._matrix_table.setHorizontalHeaderLabels(
+                [f"{pred_prefix} {lbl}" for lbl in labels]
+            )
+            self._matrix_table.setVerticalHeaderLabels(
+                [f"{actual_prefix} {lbl}" for lbl in labels]
+            )
+            for r in range(k):
+                row_vals = cm[r]
+                for c in range(k):
+                    val = row_vals[c] if c < len(row_vals) else None
+                    cell = QTableWidgetItem(_fmt(val))
+                    cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                    self._matrix_table.setItem(r, c, cell)
+            if k > 4:
+                self._matrix_table.setVerticalScrollBarPolicy(
+                    Qt.ScrollBarPolicy.ScrollBarAsNeeded
+                )
+                self._matrix_table.setHorizontalScrollBarPolicy(
+                    Qt.ScrollBarPolicy.ScrollBarAsNeeded
+                )
+                self._matrix_table.setMaximumHeight(240)
+                self._matrix_table.setMaximumWidth(16777215)
+            else:
+                self._matrix_table.setVerticalScrollBarPolicy(
+                    Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+                )
+                self._matrix_table.setHorizontalScrollBarPolicy(
+                    Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+                )
+                self._matrix_table.resizeColumnsToContents()
+                self._matrix_table.resizeRowsToContents()
+                self._matrix_table.setMaximumHeight(
+                    self._matrix_table.horizontalHeader().sizeHint().height()
+                    + sum(self._matrix_table.rowHeight(r) for r in range(k))
+                    + 2 * self._matrix_table.frameWidth()
+                )
+                self._matrix_table.setMaximumWidth(
+                    self._matrix_table.verticalHeader().sizeHint().width()
+                    + sum(self._matrix_table.columnWidth(c) for c in range(k))
+                    + 2 * self._matrix_table.frameWidth()
+                )
         else:
             self._matrix_title.setText(tr("reports_matrix_title"))
-        for key, cell in self._matrix_cells.items():
-            cell.setText(_fmt(matrix.get(key)))
-        # La tabla abraza su contenido en ambas dimensiones: sin hueco
-        # vacio bajo la 2a fila ni a la derecha de la 2a columna (el
-        # sizeHint de un QAbstractScrollArea seria ~256x192 siempre).
-        self._matrix_table.setMaximumHeight(
-            self._matrix_table.horizontalHeader().sizeHint().height()
-            + sum(self._matrix_table.rowHeight(r) for r in range(2))
-            + 2 * self._matrix_table.frameWidth()
-        )
-        self._matrix_table.setMaximumWidth(
-            self._matrix_table.verticalHeader().sizeHint().width()
-            + sum(self._matrix_table.columnWidth(c) for c in range(2))
-            + 2 * self._matrix_table.frameWidth()
-        )
+            self._matrix_table.setRowCount(2)
+            self._matrix_table.setColumnCount(2)
+            if self._mode == "RESEARCH":
+                lbl_no_ev = tr_term("no_event", self._mode)
+                lbl_ev = tr_term("event", self._mode)
+                pred_labels = [lbl_no_ev, lbl_ev]
+                real_labels = [lbl_no_ev, lbl_ev]
+            else:
+                pred_labels = [
+                    tr("reports_matrix_pred_good"),
+                    tr("reports_matrix_pred_bad"),
+                ]
+                real_labels = [
+                    tr("reports_matrix_actual_good"),
+                    tr("reports_matrix_actual_bad"),
+                ]
+            self._matrix_table.setHorizontalHeaderLabels(pred_labels)
+            self._matrix_table.setVerticalHeaderLabels(real_labels)
+            self._matrix_cells.clear()
+            for key, row, col in (
+                ("tn", 0, 0),
+                ("fp", 0, 1),
+                ("fn", 1, 0),
+                ("tp", 1, 1),
+            ):
+                cell = QTableWidgetItem(_fmt(matrix.get(key)))
+                cell.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._matrix_table.setItem(row, col, cell)
+                self._matrix_cells[key] = cell
+            self._matrix_table.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            )
+            self._matrix_table.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            )
+            # La tabla abraza su contenido en ambas dimensiones: sin hueco
+            # vacio bajo la 2a fila ni a la derecha de la 2a columna (el
+            # sizeHint de un QAbstractScrollArea seria ~256x192 siempre).
+            self._matrix_table.setMaximumHeight(
+                self._matrix_table.horizontalHeader().sizeHint().height()
+                + sum(self._matrix_table.rowHeight(r) for r in range(2))
+                + 2 * self._matrix_table.frameWidth()
+            )
+            self._matrix_table.setMaximumWidth(
+                self._matrix_table.verticalHeader().sizeHint().width()
+                + sum(self._matrix_table.columnWidth(c) for c in range(2))
+                + 2 * self._matrix_table.frameWidth()
+            )
         for key, label in self._matrix_rows.items():
             label.setText(f"{tr('reports_matrix_' + key)}: {_fmt(matrix.get(key))}")
         recall = matrix.get("recall")

@@ -454,6 +454,12 @@ class Session:
             return self._w_oot
         return None
 
+    def _coerce_target_series(self, series: pd.Series) -> pd.Series:
+        """Preserva int en binario {0, 1} y el dtype original en multiclase (K > 2)."""
+        if len(self._state.target_classes) == 2:
+            return series.astype(int)
+        return series
+
     def _translate_y_to_internal(self, y: np.ndarray) -> np.ndarray:
         """Traduce etiquetas originales (CSV) al orden interno canonico.
 
@@ -511,8 +517,13 @@ class Session:
         leaf_assignment = predict_leaf_assignment(
             tree, X, unseen_policy=unseen_policy
         )
+        y_eval = (
+            self._translate_y_to_internal(y)
+            if len(tree.class_labels) > 2
+            else y
+        )
         result = build_gains_table(
-            tree, leaf_assignment, y,
+            tree, leaf_assignment, y_eval,
             by=by, n_buckets=n_buckets, tie=tie, seed=seed,
             weights=self._partition_weights(partition),
         )
@@ -563,6 +574,7 @@ class Session:
             result = build_classification_matrix_multiclass(
                 leaf_assignment, y_interno, pd_per_leaf,
                 weights=self._partition_weights(partition),
+                class_labels=tree.class_labels,
             )
         self._log.info(
             "[session] get_classification_matrix: partition=%s K=%d",
@@ -969,14 +981,20 @@ class Session:
         X = self._df[[c for c in self._df.columns if c != st.target]]
         X_train = X.iloc[idx_tr].reset_index(drop=True)
         X_test = X.iloc[idx_te].reset_index(drop=True)
-        y_train = self._df[st.target].iloc[idx_tr].astype(int).reset_index(drop=True)
+        y_train = (
+            self._coerce_target_series(self._df[st.target].iloc[idx_tr])
+            .reset_index(drop=True)
+        )
 
         imp = TrainOnlyImputer(logger=get_logger("imputation"))
         imp.fit(X_train, spec_d)               # SOLO train
         self._X_train = imp.transform(X_train)
         self._X_test = imp.transform(X_test)   # aplica reglas de train
         self._y_train = y_train
-        self._y_test = self._df[st.target].iloc[idx_te].astype(int).to_numpy()
+        self._y_test = (
+            self._coerce_target_series(self._df[st.target].iloc[idx_te])
+            .to_numpy()
+        )
         self._imputer = imp                    # retenido: lo usa load_oot (1.3)
         evento = (f"partition:frac={train_frac}|seed={seed}"
                   f"|train={len(idx_tr)}|test={len(idx_te)}")
@@ -1040,7 +1058,8 @@ class Session:
         X = self._df[[c for c in self._df.columns if c != st.target]]
         X_train = X.iloc[ok_indices].reset_index(drop=True)
         y_train = (
-            self._df[st.target].iloc[ok_indices].astype(int).reset_index(drop=True)
+            self._coerce_target_series(self._df[st.target].iloc[ok_indices])
+            .reset_index(drop=True)
         )
         imp = TrainOnlyImputer(logger=get_logger("imputation"))
         imp.fit(X_train, spec_d)
@@ -1080,7 +1099,7 @@ class Session:
         self,
         engine,
         *,
-        target_type: TargetType = TargetType.BINARY,
+        target_type: TargetType | str | None = None,
         max_depth: int = 4,
         min_child_size: int = 50,
         min_child_weight: float | None = None,
@@ -1159,10 +1178,35 @@ class Session:
             for c in sorted(c for c in labels_map if c != target_class)
         )
         class_labels_canonical = (target_label,) + resto
+        # Bloque 2D (CRIT-08): resolucion segura de target_type (None -> auto
+        # desde len(st.target_classes), str -> estricto binary/categorical,
+        # TargetType -> pass-through fail-fast en TreeBuilder).
+        if target_type is None:
+            resolved_target_type = (
+                TargetType.CATEGORICAL
+                if len(st.target_classes) > 2
+                else TargetType.BINARY
+            )
+        elif isinstance(target_type, TargetType):
+            resolved_target_type = target_type
+        elif isinstance(target_type, str):
+            norm = target_type.strip().lower()
+            if norm == "binary":
+                resolved_target_type = TargetType.BINARY
+            elif norm == "categorical":
+                resolved_target_type = TargetType.CATEGORICAL
+            else:
+                raise ValueError(
+                    f"[session] target_type inválido: {target_type!r}"
+                )
+        else:
+            raise ValueError(
+                f"[session] target_type inválido: {target_type!r}"
+            )
         # ZG-3: preparar los parametros de gobernanza (se persisten SOLO tras
         # build() exitoso para preservar atomicidad).
         new_params = {
-            "target_type": target_type,
+            "target_type": resolved_target_type,
             "max_depth": max_depth,
             "min_child_size": min_child_size,
             "min_child_weight": min_child_weight,
@@ -1173,7 +1217,7 @@ class Session:
             copy.deepcopy(engine) if st.validation_scheme == "cv" else None
         )
         builder = TreeBuilder(
-            engine, target_type=target_type, target_class=target_class,
+            engine, target_type=resolved_target_type, target_class=target_class,
             class_labels=class_labels_canonical,
             max_depth=max_depth,
             min_child_size=min_child_size, pd_floor=pd_floor,
@@ -1263,8 +1307,14 @@ class Session:
             idx_val = np.asarray(val_idx, dtype=int)
             X_tr = X.iloc[idx_tr].reset_index(drop=True)
             X_val = X.iloc[idx_val].reset_index(drop=True)
-            y_tr = self._df[st.target].iloc[idx_tr].astype(int).reset_index(drop=True)
-            y_val = self._df[st.target].iloc[idx_val].astype(int).to_numpy()
+            y_tr = (
+                self._coerce_target_series(self._df[st.target].iloc[idx_tr])
+                .reset_index(drop=True)
+            )
+            y_val = (
+                self._coerce_target_series(self._df[st.target].iloc[idx_val])
+                .to_numpy()
+            )
 
             imp = TrainOnlyImputer(logger=get_logger("imputation"))
             imp.fit(X_tr, spec_d)
@@ -2109,14 +2159,22 @@ class Session:
             )
         if not df_oot[st.target].notna().all():
             raise ValueError(f"[session] target OOT con NaN: {st.target!r}")
-        valores = sorted(pd.unique(df_oot[st.target]))
-        # Fase 3.1.d: el target OOT debe cubrir exactamente las clases del
-        # spec (para K=2, target_classes == (0, 1): comportamiento identico
-        # al chequeo pre-3.1 "fuera de 0/1").
-        if set(valores) != set(st.target_classes):
+        if (
+            len(st.target_classes) == 2
+            and pd.api.types.is_bool_dtype(df_oot[st.target])
+        ):
             raise ValueError(
-                f"[session] target OOT no coincide con las clases del "
-                f"spec: {valores!r} vs {sorted(st.target_classes)!r}"
+                f"[session] target OOT binario no puede ser booleano: "
+                f"{st.target!r}"
+            )
+        valores_raw = pd.unique(df_oot[st.target])
+        esperadas_clases = set(st.target_classes)
+        no_vistas = [v for v in valores_raw if v not in esperadas_clases]
+        if no_vistas:
+            raise ValueError(
+                f"[session] target OOT contiene clases no vistas en el spec: "
+                f"{sorted(no_vistas, key=repr)!r} "
+                f"(esperadas: {sorted(st.target_classes, key=repr)!r})"
             )
 
         if self._imputer is None:
@@ -2153,7 +2211,7 @@ class Session:
         spec_order = list(dict(st.spec).keys())
         X_oot = df_oot[spec_order]
         X_oot_imp = self._imputer.transform(X_oot)
-        y_oot_arr = df_oot[st.target].astype(int).to_numpy()
+        y_oot_arr = self._coerce_target_series(df_oot[st.target]).to_numpy()
 
         w_oot_arr: np.ndarray | None = None
         if self._w_col is not None:

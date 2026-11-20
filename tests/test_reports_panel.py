@@ -366,6 +366,72 @@ def test_gains_charts_update_series_render_and_clear():
     panel.deleteLater()
 
 
+def test_multiclass_matrix_table_html_and_binary_restore():
+    """CRIT-08: matriz KxK con etiquetas reales en UI/HTML, toggle EN/ES y vuelta a K=2."""
+    _get_app()
+    previous = get_language()
+    panel = ReportsPanel()
+    try:
+        set_language("en")
+        panel.retranslate_ui()
+        dto_k3 = _sample_matrix_dto()
+        dto_k3["confusion_matrix"] = ((25, 3, 2), (1, 28, 1), (4, 2, 24))
+        dto_k3["class_labels"] = ("High", "Low", "Mid")
+        panel.set_gains_table(_sample_gains_dto())
+        panel.set_classification_matrix(dto_k3)
+
+        tbl = panel._matrix_table
+        assert tbl.rowCount() == 3
+        assert tbl.columnCount() == 3
+        assert [tbl.horizontalHeaderItem(c).text() for c in range(3)] == [
+            "Pred: High", "Pred: Low", "Pred: Mid",
+        ]
+        assert [tbl.verticalHeaderItem(r).text() for r in range(3)] == [
+            "Actual: High", "Actual: Low", "Actual: Mid",
+        ]
+        for r, row_vals in enumerate(dto_k3["confusion_matrix"]):
+            for c, val in enumerate(row_vals):
+                assert tbl.item(r, c).text() == str(val)
+
+        html_en = panel._build_report_html()
+        assert tr("reports_matrix_title_multiclass", "en") in html_en
+        assert "Pred: High" in html_en
+        assert "Actual: Mid" in html_en
+        assert ">28<" in html_en and ">24<" in html_en
+
+        # Cambio EN -> ES mantiene tabla 3x3 y traduce cabeceras reales
+        set_language("es")
+        panel.retranslate_ui()
+        assert tbl.rowCount() == 3 and tbl.columnCount() == 3
+        assert [tbl.horizontalHeaderItem(c).text() for c in range(3)] == [
+            "Pred: High", "Pred: Low", "Pred: Mid",
+        ]
+        assert [tbl.verticalHeaderItem(r).text() for r in range(3)] == [
+            "Real: High", "Real: Low", "Real: Mid",
+        ]
+        html_es = panel._build_report_html()
+        assert tr("reports_matrix_title_multiclass", "es") in html_es
+        assert "Real: High" in html_es
+
+        # Volver a DTO binario K=2 restaura tabla 2x2 y cabeceras clasicas
+        panel.set_classification_matrix(_sample_matrix_dto())
+        assert tbl.rowCount() == 2 and tbl.columnCount() == 2
+        assert [tbl.horizontalHeaderItem(c).text() for c in range(2)] == [
+            tr("reports_matrix_pred_good", "es"),
+            tr("reports_matrix_pred_bad", "es"),
+        ]
+        assert [tbl.verticalHeaderItem(r).text() for r in range(2)] == [
+            tr("reports_matrix_actual_good", "es"),
+            tr("reports_matrix_actual_bad", "es"),
+        ]
+        assert tbl.item(0, 0).text() == "60"
+        assert tbl.item(1, 1).text() == "60"
+    finally:
+        panel.close()
+        panel.deleteLater()
+        set_language(previous)
+
+
 # ---------------------------------------------------------------------------
 # Direct execution without pytest
 # ---------------------------------------------------------------------------

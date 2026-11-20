@@ -237,6 +237,8 @@ class ClassificationMatrix:
     w_recall_per_class: tuple[float | None, ...] = ()
     w_f1_per_class: tuple[float | None, ...] = ()
     w_accuracy: float | None = None
+    # Bloque 2D (CRIT-08): etiquetas canonicas de clase en K>2 (vacio en K=2).
+    class_labels: tuple[str, ...] = ()
 
 
 def _validated_routed(
@@ -705,6 +707,7 @@ def build_classification_matrix_multiclass(
     pd_per_leaf: dict[int, tuple[float, ...]],
     *,
     weights: np.ndarray | None = None,
+    class_labels: tuple[str, ...] = (),
 ) -> ClassificationMatrix:
     """Multiclass classification matrix (Phase 3.5.b, decision D19).
 
@@ -738,6 +741,14 @@ def build_classification_matrix_multiclass(
                 f"[reporting] {who}: pd_per_leaf[{lid}] tiene longitud "
                 f"{len(vec)} != K={K}"
             )
+    resolved_labels: tuple[str, ...] = ()
+    if class_labels:
+        if len(class_labels) != K:
+            raise ValueError(
+                f"[reporting] {who}: class_labels tiene longitud "
+                f"{len(class_labels)} != K={K}"
+            )
+        resolved_labels = tuple(str(lbl) for lbl in class_labels)
 
     routed, leaf_ids, y_r = _validated_routed(
         leaf_assignment, y, who, n_classes=K
@@ -849,4 +860,5 @@ def build_classification_matrix_multiclass(
         w_recall_per_class=tuple(w_recall_c),
         w_f1_per_class=tuple(w_f1_c),
         w_accuracy=w_accuracy,
+        class_labels=resolved_labels,
     )

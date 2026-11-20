@@ -2743,6 +2743,29 @@ comportamiento. La suite final es 660/660.
 
 **Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-02`, `CRIT-15`); `docs/api.md` (`backend_v3.ecl`, `mcp_v3`); `docs/audit_log.md` (cierre del Bloque 2C, 20/11/2026).
 
+---
+
+## §30. Remediación Bloque 2D: soporte multiclase extremo a extremo y endurecimiento del asistente (20/11/2026)
+
+**Contexto.** La auditoría integral MRM (`audit_reports/F1_Informe_Ejecutivo_Final.md`) confirmó dos defectos críticos que abrían la Ola 2 de remediación:
+1. `CRIT-08` (soporte multiclase $K \ge 3$ incompleto extremo a extremo): `Session` ejecutaba seis llamadas forzadas a `.astype(int)` sobre la columna target (`partition`, `_partition_cv`, `_evaluate_oos_cv` y `load_oot`), impidiendo targets multiclase de texto (ej. `"Low"/"Mid"/"High"`, `"01"/"02"/"A3"`); `Session.get_gains_table()` omitía la traducción canónica `_translate_y_to_internal(y)` en $K > 2$ (contando la clase original `0` como evento en lugar de `target_class`); `Session.train()` fijaba por defecto `target_type=TargetType.BINARY`, provocando fallo en GUI/asistente al entrenar $K \ge 3$ porque `ModelWizard` y `MainWindow` no propagaban `target_type`; y `ReportsPanel` renderizaba solo una tabla fija `2 × 2` (UI y HTML) sin propagar ni mostrar las etiquetas reales de clase $K \times K$.
+2. `CRIT-16` (corrupción silenciosa de validación y matriz de costos en `ModelWizard`): la opción `"No validar"` (`_rb_none`) seguía habilitada pero `ModelWizard.current_config()` la colapsaba silenciosamente a `"holdout"`, contraviniendo SR 11-7 y ocultando el esquema real; `GovernancePage._refresh_summary()` mostraba `train_frac` incluso bajo Validación Cruzada (`cv`) e interpolaba `engine`/`target` sin escape HTML; `AdvancedOptionsDialog.get_cost_matrix()` clampeaba silenciosamente entradas inválidas (`"abc"`, negativos, `inf`/`nan`) a `0.0` e inyectaba una matriz fantasma todo-ceros `((0.0, 0.0), (0.0, 0.0))` al editar solo hiperparámetros; y cambiar de target en `PredictorsPage` conservaba una `_cost_matrix` obsoleta de dimensión incompatible.
+
+**Decisiones.**
+
+1. **Coerción condicional del target y atomicidad en `load_oot` (`backend_v3/session_state.py`).** Se introduce `_coerce_target_series(series)`: preserva `series.astype(int)` cuando `len(target_classes) == 2` (paridad exacta `{0, 1}`) y mantiene el `dtype` y valores originales cuando $K > 2$, reemplazando las 6 conversiones forzadas en `partition()`, `_partition_cv()`, `_evaluate_oos_cv()` y `load_oot()`. En `load_oot()`, se valida atómicamente antes de mutar cachés que el target carezca de `NaN` y que todos sus valores observados pertenezcan a `set(st.target_classes)` (`ValueError` descriptivo ante clases no vistas).
+2. **Traducción canónica en `get_gains_table`, propagación de `class_labels` y resolución segura de `target_type`.**
+   - `Session.get_gains_table()` traduce `y` vía `_translate_y_to_internal(y)` cuando `len(tree.class_labels) > 2`, garantizando que `n_bad` e índice `0` correspondan exactamente a `target_class` (paridad intacta para $K = 2$).
+   - `ClassificationMatrix` añade el campo aditivo `class_labels: tuple[str, ...] = ()` (vacío en $K = 2$); `build_classification_matrix_multiclass(..., class_labels=())` valida `len(class_labels) == K` cuando se proporciona y `Session.get_classification_matrix()` propaga `tree.class_labels`.
+   - `Session.train(..., target_type: TargetType | str | None = None)` resuelve `None` automáticamente desde `len(st.target_classes)` (`BINARY` si $K = 2$, `CATEGORICAL` si $K > 2$), acepta estrictamente `"binary"`/`"categorical"` como `str` (rechazando cualquier otro valor con `ValueError`), preserva el pass-through fail-fast de `TargetType` hacia `TreeBuilder` y persiste siempre el `TargetType` resuelto en `_last_train_params["target_type"]`.
+3. **Cableado Sala Limpia y matriz $K \times K$ en presentación.** `ModelWizard.current_config()` expone `"target_type": "CATEGORICAL" if n_classes() > 2 else "BINARY"` (string plano sin importar `backend_v3.types`), reenviado por `MainWindow._train_pipeline()` a `Session.train()`. `ReportsPanel._repaint_matrix()` y `_build_report_html()` renderizan dinámicamente la matriz completa $K \times K$ con etiquetas reales (`Pred: <label>` / `Actual:`|`Real: <label>`, scroll automático si $K > 4$) cuando `confusion_matrix` no está vacía, preservando bit a bit el formato binario `2 × 2` (`BANKING` y `RESEARCH`) y delegando las cabeceras de `retranslate_ui()` a `_repaint_matrix()`.
+4. **Validación obligatoria SR 11-7 y resumen fiel en `ModelWizard`.** `ValidationPage._rb_none` permanece visible pero deshabilitado (`setEnabled(False)`) con aviso/tooltip SR 11-7 (`step3_none_notice`); `ValidationPage.isComplete()` devuelve `not self._rb_none.isChecked()` con señal `completeChanged` en `_sync_scheme_controls()`; y `ModelWizard.current_config()` lanza `ValueError` si `validation_scheme == "NONE"`. `GovernancePage._refresh_summary()` muestra el esquema CV real (`k=<cv_k>`) cuando corresponde y escapa `engine`/`target` con `html.escape(..., quote=True)`.
+5. **Validación estricta de costos, eliminación de matriz fantasma y limpieza al cambiar target.** `AdvancedOptionsDialog._parse_and_validate_cost_matrix()` fija la diagonal en `0.0`, exige floats finitos `>= 0.0` fuera de la diagonal (rechazando vacío, texto, negativos, `NaN`, `±inf`) y devuelve `()` cuando todas las celdas fuera de diagonal son `0.0`. `AdvancedOptionsDialog.accept()` valida antes de cerrar (guardando `_last_cost_error` y avisando con `QMessageBox.warning` fuera de `offscreen`). `PredictorsPage.target_changed` se conecta a `GovernancePage.reset_cost_matrix()`, reforzado con chequeo de dimensión en `initializePage()` y `_open_advanced_options()`.
+
+**Consecuencias.** Los flujos multiclase $K \ge 3$ (enteros y texto) operan de extremo a extremo en `Session`, CV, OOT, `ModelWizard`, `MainWindow`, `ReportsPanel` y exportación HTML sin romper la paridad binaria $K = 2$, y el asistente impide desactivar silenciosamente la validación o contaminar el modelo con matrices de costos fantasma o desalineadas.
+
+**Referencias.** `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-08`, `CRIT-16`); `docs/api.md` (`backend_v3.session_state`, `backend_v3.reporting`); `docs/audit_log.md` (cierre del Bloque 2D, 20/11/2026).
+
 ## Maintenance
 
 This document is authoritative for any decision that affects:
@@ -2793,6 +2816,10 @@ III CRE 32.4 governance classification, `pd_floor < 0.5` guard,
 `population_col` fingerprint propagation; on 20/11/2026 to add §29 — Block 2C
 remediation: IFRS 9 staged ECL/EIR unit parity, Stage 3 `PD = 1.0`,
 `TREEGOV_MCP_ROOT` confinement, fail-fast MCP validation, `RLock`, and
-`treegov_mcp` white-box import guard.)
+`treegov_mcp` white-box import guard; on 20/11/2026 to add §30 — Block 2D
+remediation: end-to-end multiclass K≥3 support (string targets, `get_gains_table`
+translation, `ClassificationMatrix.class_labels`, `Session.train` safe
+`target_type` resolution, K×K `ReportsPanel`/HTML) and `ModelWizard` SR 11-7
+validation/cost-matrix hardening.)
 
 ---

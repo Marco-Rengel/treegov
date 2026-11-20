@@ -254,23 +254,35 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   `weight_col` (Phase 3.2) declares the sample-weight column;
   `population_col` + `population_ok_values` (Phase 3.3) declare the
   opt-in population filter.
-- `Session.train(engine, *, target_type, max_depth, min_child_size,
+- `Session.train(engine, *, target_type=None, max_depth=4, min_child_size=50,
   min_child_weight=None, pd_floor=0.0005, apply_jeffreys=True)` —
   `engine` accepts an engine instance or its name ("CHAID" |
   "CHAID_EXHAUSTIVE" | "CRT" | "QUEST"); `pd_floor=None` +
-  `apply_jeffreys=False` yields Research mode (Phase 2.1). Multiclass
-  targets (K > 2) are supported by all engines since Phase 3.4;
-  downstream metrics, reports and stability monitoring support K > 2
-  since Phase 3.5. `min_child_weight` (Phase 3.7.c) is the weighted-mass
+  `apply_jeffreys=False` yields Research mode (Phase 2.1). Since Block 2D
+  (20/11/2026), `target_type: TargetType | str | None = None` auto-resolves
+  from `len(state.target_classes)` when `None` (`TargetType.BINARY` for
+  `K == 2`, `TargetType.CATEGORICAL` for `K > 2`), accepts strict `"binary"`
+  or `"categorical"` strings (case-insensitive; any other string/type raises
+  `ValueError`), preserves fail-fast `TargetType` pass-through to
+  `TreeBuilder`, and stores the resolved `TargetType` in
+  `_last_train_params`. Multiclass targets (K > 2, including string targets
+  such as `"Low"/"Mid"/"High"` or `"01"/"02"/"A3"` and negative integers) are
+  supported end to end across `partition`, CV, `train`, `evaluate_oos`,
+  `get_gains_table`, `get_classification_matrix`, `load_oot` and
+  `evaluate_oot`. `min_child_weight` (Phase 3.7.c) is the weighted-mass
   floor per branch, complementary to `min_child_size` (which measures
   physical rows); it is only meaningful when a `weight_col` was declared
   in `fix_spec`. `None` (default) disables the check.
 - `Session.get_gains_table(*, partition, by, n_buckets, tie, seed)` —
   flat DTO of a gains table for a routed partition (Phase 2.4.c.1).
-  Supports K > 2 since Phase 3.5.
+  Supports K > 2 since Phase 3.5; since Block 2D (20/11/2026), translates
+  multiclass targets via `_translate_y_to_internal` before calling
+  `build_gains_table` so `n_bad` and index 0 always correspond to
+  `target_class` (including string targets; binary `K == 2` unchanged).
 - `Session.get_classification_matrix(*, partition, threshold)` — flat
   DTO of a classification matrix (Phase 2.4.c.1). Supports K > 2 since
-  Phase 3.5.c (see the extended entry below).
+  Phase 3.5.c and propagates `tree.class_labels` in canonical order since
+  Block 2D (20/11/2026; see the extended entry below).
 - `Session.reset_to_data_loaded()` — back to DATA_LOADED keeping the
   cached DataFrame (no CSV re-read; Phase 2.1).
 - `Session.partition(train_frac=0.7, seed=42, *, scheme="holdout", k=5)`
@@ -291,10 +303,12 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   `_cv_report=None`; Block 2B, 20/11/2026).
 - `Session.load_oot(csv_path, *, time_col=None) -> SessionState` — atomically
   validates and loads an external OOT cohort. Rejects empty cohorts after
-  population filtering, non-finite/non-positive OOT weights, and any missing /
+  population filtering, `NaN` or unseen target classes outside
+  `state.target_classes` (preserving string/non-int multiclass dtypes since
+  Block 2D), non-finite/non-positive OOT weights, and any missing /
   `NaT` values in `time_col` (in development or OOT) before checking
   `t_oot.min() > t_dev.max()`. Failed calls leave `FlowState` and OOT caches
-  untouched (Block 2B, 20/11/2026).
+  untouched (Block 2B/2D, 20/11/2026).
 - `Session.get_univariate_trees(max_depth=3) -> list[dict]` — read-only
   batch univariate trees (Phase 3.11.c.1): trains one depth-`max_depth`
   tree per predictor in the spec using the SAME engine as the trained
@@ -427,21 +441,25 @@ Phase 7.0 public IFRS 9 / ECL contracts (hardened in Block 2C, 20/11/2026):
   min(10, max(3, n // 5))` and returns ks/auc/gini = None when
   n < 15 (D20).
 - `ClassificationMatrix` (frozen dataclass) — extended in Phase 3.5.b
-  with 12 additive fields: `confusion_matrix`, `n_per_class`,
-  `precision_per_class`, `recall_per_class`, `f1_per_class`,
-  `accuracy`, and weighted siblings. `accuracy` is populated in both
-  K=2 and K>2. The binary fields (`tp`, `tn`, `fp`, `fn`, `precision`,
-  `recall`, `f1`, `bad_capture_rate`, `n_good`, `n_bad`) keep their
-  meaning in K>2 by grouping the class of interest (index 0) as
-  positive and the rest as negative (D19).
+  with 12 additive fields (`confusion_matrix`, `n_per_class`,
+  `precision_per_class`, `recall_per_class`, `f1_per_class`, `accuracy`,
+  and weighted siblings) and in Block 2D (20/11/2026) with additive
+  `class_labels: tuple[str, ...] = ()` (empty in `K == 2`, canonical class
+  labels in `K > 2`). `accuracy` is populated in both K=2 and K>2. The
+  binary fields (`tp`, `tn`, `fp`, `fn`, `precision`, `recall`, `f1`,
+  `bad_capture_rate`, `n_good`, `n_bad`) keep their meaning in K>2 by
+  grouping the class of interest (index 0) as positive and the rest as
+  negative (D19).
 - `build_classification_matrix(leaf_assignment, y, pd_per_leaf, *,
   threshold=0.5, weights=None)` — binary, unchanged signature.
   Populates `accuracy` since Phase 3.5.b.
 - `build_classification_matrix_multiclass(leaf_assignment, y,
-  pd_per_leaf: dict[int, tuple[float, ...]], *, weights=None)` — new
-  in Phase 3.5.b. Argmax assignment, K×K matrix, per-class metrics,
-  accuracy, binary legacy fields from class 0 vs rest. `threshold`
-  records NaN.
+  pd_per_leaf: dict[int, tuple[float, ...]], *, weights=None,
+  class_labels=())` — new in Phase 3.5.b; extended in Block 2D (20/11/2026)
+  with optional keyword-only `class_labels: tuple[str, ...] = ()` (validated
+  for `len(class_labels) == K` when non-empty). Argmax assignment, K×K
+  matrix, per-class metrics, accuracy, binary legacy fields from class 0 vs
+  rest. `threshold` records NaN.
 
 ## backend_v3.stability
 
@@ -598,6 +616,17 @@ Nota (Fase 3.12, 14/11/2026): la API pública de consulta gana `get_rules`,
 `node_id=None`. Los nuevos contratos de partición, subárbol y DTO nativo se
 documentan en `backend_v3.session_state` y su justificación en
 `docs/design_decisions.md` §26.
+
+Nota (Bloque 2D, 20/11/2026): en la capa de presentación interna (`frontend_v3`,
+Sala Limpia), `ModelWizard.current_config()` expone `"target_type"` (`"BINARY"`
+o `"CATEGORICAL"` como string plano) y rechaza con `ValueError` el esquema
+`"NONE"` (radio `"No validar"` deshabilitado conforme a SR 11-7);
+`AdvancedOptionsDialog` valida estrictamente celdas finitas `>= 0` y devuelve
+`()` ante tablas todo-ceros; `GovernancePage` limpia `_cost_matrix` al cambiar
+el target y muestra el esquema CV real (`k=<cv_k>`) en su resumen HTML
+escapado; `ReportsPanel` renderiza la matriz $K \times K$ completa con
+etiquetas reales en UI y exportación HTML cuando $K \ge 3$ (paridad `2 × 2`
+intacta para $K = 2$). Ver `docs/design_decisions.md` §30.
 
 > **Maintenance:** this document must be updated after any phase that adds
 > public modules. See `docs/audit_log.md` for the history.
