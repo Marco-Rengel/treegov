@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Version**: 1.0.0rc7
+**Version**: 1.0.0rc8
 **Author**: Marco Rengel
 **License**: Apache 2.0
 **Graphics engine**: PySide6
 **Analytical engine**: Python (NumPy, pandas, scipy.stats)
-**Test suite**: 660/660 passing
+**Test suite**: 752/752 passing
 
 > ⚠️ **Regulatory notice.** TreeGov is under technical validation (Model Risk Management - MRM). **Restricted use: technical MRM validation. Not fit for banking production without regulatory approval.** Any use in a regulated production environment (banking or otherwise) requires independent validation, formal approval, and integration with the institution's model governance framework.
 
@@ -56,7 +56,7 @@ flowchart TB
     BE -.->|Session| FE
     BE -.->|Session| MC
 
-    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 + 3.12 complete<br/>📦 v1.0.0rc7 published on PyPI<br/>🧪 660 / 660 tests PASSED<br/>📅 Nov 14, 2026"]
+    ARQ --> ST["<b>📊 Current status</b><br/>✅ Phases 0 → 7 + 3.12 · 16/16 critical MRM audit findings closed<br/>📦 v1.0.0rc8 (release candidate)<br/>🧪 752 / 752 tests PASSED<br/>📅 Nov 20, 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -80,15 +80,15 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 *   The code: every statistical formula is written explicitly and cited to its original publication.
 *   The decisions: the architecture and *trade-offs* are documented to justify every choice.
 *   The model: every training run generates a unique *fingerprint* that acts as an immutable seal.
-*   The evidence: a transactional log records every step, and a suite of over 600 tests (including validated public *datasets*) guarantees reproducibility.
+*   The evidence: a transactional log records every step, and a suite of over 750 tests (including validated public *datasets*) guarantees reproducibility.
 
 ---
 
 ## Design principles
 
-1. **Clean-room architecture**: strict separation between the analytical backend (`backend_v3/`, no GUI dependencies) and the presentation layer (`frontend_v3/`, no analytical logic).
-2. **White box**: *sklearn*, *statsmodels*, and any other black-box library are forbidden. Every statistical formula is written explicitly in the code, with its bibliographic citation.
-3. **Native governance**: DEBUG-grade transactional logging, immutable configuration (*SplitConfig frozen*), and mathematical invariant validation at construction time.
+1. **Bidirectional clean-room architecture**: strict separation between the analytical backend (`backend_v3/`, zero Qt/GUI dependencies) and the presentation layer (`frontend_v3/`, zero analytical logic), enforced by bidirectional AST guardrails (`test_frontend_clean_room` and `test_backend_clean_room`).
+2. **Expanded white-box enforcement**: *sklearn*, *scikit-learn*, *statsmodels*, *xgboost*, *lightgbm*, *catboost*, *torch*, *optbinning*, *scorecardpy*, *tensorflow*, and *keras* are blocked at the interpreter level by `backend_v3/import_guard.py`, auto-installed across all entry points (`backend_v3`, `frontend_v3`, `mcp_v3`, `treegov.py`, `treegov_gui.py`, `treegov_mcp.py`, `scripts/validate_uci.py`). Every statistical formula is written explicitly in the code, with its bibliographic citation.
+3. **Native governance**: DEBUG-grade transactional logging, immutable configuration (*SplitConfig frozen*), strict Basel III CRE 32.4 mode classification (`BANKING` / `RESEARCH` / `CUSTOM`), mandatory SR 11-7 validation (Holdout or k-fold CV), and mathematical invariant validation at construction time.
 
 ---
 
@@ -96,18 +96,18 @@ The core feature of TreeGov is radical auditability. Absolutely every stage of t
 
 | Capability | Reference | Regulatory anchor | Key characteristics |
 |---|---|---|---|
-| **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991) | — | Iterative category merging with Bonferroni correction, multiclass support, Cochran rule |
-| **C&RT** | Breiman et al. (1984) | — | Gini impurity / variance reduction, surrogate splits, multiclass (K ≥ 2) |
-| **QUEST** | Loh & Shih (1997) | — | Unbiased variable selection, QDA split for K=2, Gini sweep for K > 2 (hybrid C&RT/QUEST approach for multiclass) |
-| **Multiclass Support** | Hand & Till (2001) | — | Training and metrics for K ≥ 2 classes; multiclass Gini and pairwise KS |
+| **CHAID** classic and Exhaustive | Kass (1980); Biggs et al. (1991); Chan, Golub & LeVeque (1983) | — | Iterative category merging with Bonferroni correction, multiclass support, continuous binning via 10 quantile cuts (up to 11 bins, `(a, b]` with `right=True`), centered continuous variance, and Cochran-eligible selection in Exhaustive CHAID |
+| **C&RT** | Breiman et al. (1984); Chan, Golub & LeVeque (1983) | — | Normalized overflow/cancellation-safe Gini impurity / centered variance reduction, surrogate splits, multiclass (K ≥ 2) |
+| **QUEST** | Loh & Shih (1997); Kish (1965) | — | Unbiased variable selection, Kish reliability-weighted variance (scale-invariant and safe with normalized weights) and Citardauq stable quadratic roots for K=2 QDA, Gini sweep for K > 2 (hybrid C&RT/QUEST approach for multiclass) |
+| **Multiclass Support** | Hand & Till (2001) | — | End-to-end K ≥ 3 support (including string targets), canonically translated gains table, multiclass Gini and pairwise KS, and dynamic K × K classification matrix in GUI and HTML |
 | **Sample Weighting** | Heeringa et al. (2010) | SR 11-7 | Sample bias adjustment across engines, tree construction, validation metrics and stability monitoring. Known limitation: the train/test split stratifies by physical row count (not weighted mass) and surrogate agreement in C&RT is not weighted (design_decisions.md §13.3, §13.6.2). The binary gains table's global metrics ARE now weighted (D13 resolved 20/10/2026; see design_decisions.md §13.7). |
-| **Population Categories** | — | — | *Opt-in* filter to exclude categories (Indet, No Perf) before training |
-| **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigation of zero probabilities in low-default portfolios |
-| **Hamilton-Hare partition** | — | — | Exact stratified train/test *split*, no rounding bias |
-| **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) |
-| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing. Interactive and weighted (Phase 3.9): weighted error `r_w(t)` when the tree carries sample weights, exposed via `Session.get_prune_sequence()` and the GUI `PruneDialog`. |
-| **Out-of-Sample (OOS) / Out-of-Time (OOT) validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basel; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; *out-of-time* cohort support |
-| **Stability monitoring** | Siddiqi (2006) | Basel / EBA | Population Stability Index (PSI, leaves), Characteristic Stability Index (CSI, covariates), Gini Drop with traffic lights |
+| **Population Categories** | — | — | *Opt-in* filter to exclude categories (Indet, No Perf) before training (tracked in `params_fingerprint`) |
+| **Jeffreys estimator + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigation of zero probabilities in low-default portfolios; strict `BANKING` classification requires `apply_jeffreys=True` and `pd_floor >= 0.0005` (`0.0` or legacy `0.0003` classify as `CUSTOM`) |
+| **Hamilton-Hare partition** | — | — | Exact stratified train/test *split* (`Q_j = N_j * train_frac`), fail-fast `NaN` rejection, no rounding bias |
+| **Anti-leakage imputation** | — | SR 11-7 | Train-only statistics (`TrainOnlyImputer`) with fail-fast `±inf` rejection |
+| **Cost-complexity pruning** | Breiman et al. (1984) | — | Post-pruning with the α sequence; deterministic node re-indexing; active pruned model (`Session.active_tree`) connected across all downstream consumers and GUI `PruneDialog` with automatic invalidation of stale metrics |
+| **Out-of-Sample (OOS) / Out-of-Time (OOT) validation** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980); Hosmer, Lemeshow & Sturdivant (2013) | Basel; SR 11-7 | Gini, KS, tie-preserving row-order-invariant Hosmer-Lemeshow with external degrees of freedom `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) and `_HL_EPS = 1e-6`, Brier, ROC/AUC, PR-AUC, binary `w_accuracy`, and CV-compatible `evaluate_oot` |
+| **Stability monitoring** | Siddiqi (2006) | Basel / EBA | Population Stability Index (PSI, leaves) and Characteristic Stability Index (CSI, covariates) with configurable/validated `eps`, `(a, b]` intervals (`right=True`), explicit `<MISSING>` bin for `NaN`, constant-continuous drift detection, and undefined `Gini Drop` (`UNDETERMINED`) when `Gini_train <= 0` |
 | **UCI dataset validation** | UCI ML Repository | — | Reproducibility anchored to 6 *datasets* (German Credit, Breast Cancer, etc.) |
 
 ---
@@ -252,7 +252,7 @@ TreeGov/
 | **3.8** | Regulatory attribution correction (BCBS CRE 32.4) + v1.0.0rc2 | Completed |
 | **3.9** | Interactive and Weighted Pruning | Completed |
 | **3.10.a** | UX/UI Redesign: Toolbar, enriched tree nodes, right panel, dark theme hierarchy (H3-H8) | Completed |
-| **3.10.b** | CHAID continuous alignment: automatic decile binning, `bin_edges` in `SplitConfig`, `np.digitize` routing (H14) + visual hotfix (H9, H11-H13) | Completed |
+| **3.10.b** | CHAID continuous alignment: automatic quantile binning (10 cuts, up to 11 bins), `bin_edges` in `SplitConfig`, `np.digitize` routing (H14) + visual hotfix (H9, H11-H13) | Completed |
 | **3.11.a** | Base Redesign: Colab theme, Excel-style full-page tabs, resized Wizard, classic tree-station HTML nodes | Completed |
 | **3.11.a.1** | Visual Hotfix: classic layout (8-menu bar, compact icon-only toolbar, 3-block left panel, bottom Excel-style tabs), QPainter audit-sheet nodes, forced dark/light theme via QPalette, numeric cut labels on edges, TSV clipboard copy in tables, GUI Design System | Completed |
 | **3.11.b.1** | Data Viewer backend: `Session.get_data_preview` (raw CSV preview, native-type JSON-serializable dict, empty-dict idle state — §18.7) | Completed |
@@ -271,8 +271,10 @@ TreeGov/
 | **5** | MCP layer for LLM agents | Completed |
 | **6** | Batch scoring + champion-challenger | Completed |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completed |
+| **Repo Hygiene (Phase 1)** | Workspace cleanup from 3.49 GB → ~6 MB (external clean venv), hardened `.gitignore`/`.aiderignore`, untracking of `archive/legacy_docs/`, path sanitization in `AGENTS.md` | Completed |
+| **MRM Audit Remediation (`2A`–`2H`, `v1.0.0rc8`)** | 16/16 critical audit findings closed (`CRIT-01`–`CRIT-16`): exporter parity & majority leaf, strict Basel III governance, active pruning (`active_tree`), IFRS 9 staged ECL/EIR, `TREEGOV_MCP_ROOT` MCP security, end-to-end multiclass K ≥ 3 & hardened Wizard, engine numerical stability, OOS Hosmer-Lemeshow & PSI/CSI, SR 11-7 methodology alignment, and bidirectional Clean-Room/White-Box guardrails | Completed |
 
-**Test suite: 660/660 passing.**
+**Test suite: 752/752 passing.**
 
 ---
 
@@ -282,6 +284,7 @@ TreeGov/
 - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
 - Brier, G.W. (1950). *Verification of forecasts expressed in terms of probability*. Monthly Weather Review 78(1), 1-3.
 - Brown, M.B. & Forsythe, A.B. (1974). *Robust Tests for the Equality of Variances*. Journal of the American Statistical Association 69(346), 364-367.
+- Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). *Algorithms for Computing the Sample Variance: Analysis and Recommendations*. The American Statistician 37(3), 242-247.
 - Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
 - Davis, J. & Goadrich, M. (2006). *The relationship between Precision-Recall and ROC curves*. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
 - Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). *Multinomial goodness-of-fit tests for logistic regression models*. Statistics in Medicine, 31(30), 4238-4253.
@@ -290,8 +293,10 @@ TreeGov/
 - Hand, D.J. & Till, R.J. (2001). *A simple generalisation of the area under the ROC curve for multiple class classification problems*. Machine Learning, 45(2), 171-186.
 - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). *Applied Survey Data Analysis*. Chapman & Hall/CRC.
 - Hosmer, D.W. & Lemeshow, S. (1980). *A goodness-of-fit test for the multiple logistic regression model*. Communications in Statistics A10, 1043-1069.
+- Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied Logistic Regression* (3rd ed.). Wiley.
 - Jeffreys, H. (1946). *An invariant form for the prior probability in estimation problems*. Proceedings of the Royal Society of London A 186(1007), 453-461.
 - Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
+- Kish, L. (1965). *Survey Sampling*. Wiley.
 - Levene, H. (1960). *Robust tests for equality of variances*. In Contributions to Probability and Statistics, Stanford University Press, 278-292.
 - Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
 - Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
@@ -304,15 +309,19 @@ TreeGov/
 - **Basel (BCBS CRE 32.4)**: regulatory PD floors (0.05% for
   corporate, bank and retail; 0.03% or exempt for sovereign).
 - **EBA/GL/2017/16**: guidelines on the specification, estimation, and validation of PD/LGD parameters in IRB models.
-- **IFRS 9**: Phase 7 implements a simplified, single-scenario ECL calculation (PD × LGD × EAD), deterministic staging and optional EIR discount across backend, GUI and MCP (`docs/7.0_design_ifrs9.md` §5–§6). It does not certify full IFRS 9 compliance; multi-period curves, macroeconomic scenarios and asymmetric threshold optimization remain outside its scope.
+- **IFRS 9**: Phase 7 (hardened in Block 2C) implements a simplified, single-period, single-scenario ECL engine (`PD × LGD × EAD`) with deterministic staging, UI `% -> decimal` EIR conversion, non-negative `eir >= 0`, mandatory `PD = 1.0` in Stage 3 (credit-impaired/default), and combined staged provision (`total_ecl_staged` / `ecl_applicable`) across backend, GUI and MCP (`docs/7.0_design_ifrs9.md` §5–§6; `docs/design_decisions.md` §29). It does not certify full IFRS 9 compliance; multi-period curves, macroeconomic scenarios and asymmetric threshold optimization remain outside its scope.
 - **SR 11-7 / OCC 2011-12**: model risk management (MRM) guidance.
 
 ---
 
-### MCP Layer (Phase 5.0)
+### MCP Layer (Phase 5.0, hardened in Block 2C)
 TreeGov exposes its analytical backend to LLM agents through the Model
 Context Protocol (MCP) standard. The layer is headless (no GUI imports)
-and exposes 27 tools over the same `Session` contract used by the GUI.
+and exposes 27 tools over the same `Session` contract used by the GUI,
+with strict `.csv` path confinement inside `TREEGOV_MCP_ROOT` (defaults
+to `CWD`), anti-overwrite and `output_path == csv_path` blocking in
+`score_batch`, fail-fast parameter/governance validation, and
+`threading.RLock` serialization across all 27 tools.
 Install: `pip install treegov[mcp]`
 Usage: `treegov-mcp` (starts the stdio server).
 

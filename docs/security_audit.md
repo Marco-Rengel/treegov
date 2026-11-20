@@ -62,11 +62,11 @@ This warning is shown once per session to avoid friction, but its presence is re
 
 ### §5. Auditoría de seguridad de la Capa MCP (Fase 5.0)
 
-**Riesgos aceptados:**
-- **Acceso a rutas locales:** `load_dataset` y `load_oot` permiten
-  rutas absolutas. El servidor MCP corre bajo el usuario del SO y
-  tiene los mismos permisos de lectura que la GUI. Se documenta como
-  responsabilidad del analista.
+> **Nota de actualización (Bloque 2C, 20/11/2026):** El riesgo aceptado originalmente en Fase 5.0 sobre acceso sin confinamiento a rutas absolutas locales quedó **cerrado** en el Bloque 2C mediante confinamiento estricto a `TREEGOV_MCP_ROOT`, validación de extensión `.csv` y bloqueo de path traversal/symlinks (ver `§7`).
+
+**Riesgos aceptados (estado histórico Fase 5.0):**
+- **Acceso a rutas locales (cerrado en Bloque 2C):** en Fase 5.0, `load_dataset` y `load_oot` permitían
+  rutas absolutas bajo los permisos del usuario del SO. Desde el Bloque 2C toda ruta queda confinada a `TREEGOV_MCP_ROOT` (ver `§7`).
 - **Transporte:** Solo stdio local (D5). Sin puertos abiertos ni
   telemetría. El protocolo MCP no persiste datos fuera del proceso.
 
@@ -98,3 +98,18 @@ elegir una ruta nueva; no se sobrescribe ningún artefacto existente.
 **Champion-Challenger.** `compare_champion_challenger` no escribe archivos: solo
 lee el CSV de evaluación indicado y devuelve el DTO de comparación en memoria.
 No publica modelos, predicciones ni artefactos adicionales en disco.
+
+## §7. Endurecimiento de seguridad MCP y Caja Blanca (Remediación Fase 2, 20/11/2026)
+
+Como cierre de los hallazgos críticos `CRIT-14` y `CRIT-15` (`audit_reports/F1_Informe_Ejecutivo_Final.md`, Bloques `2C` y `2G`), se implementaron las siguientes defensas en profundidad:
+
+- **Confinamiento estricto `TREEGOV_MCP_ROOT` y extensión `.csv`:** `mcp_v3/server.py` confina toda lectura/escritura de las 5 herramientas con rutas de archivo (`load_dataset`, `load_oot`, `compare_champion_challenger`, `calculate_ecl`, `score_batch`) al directorio existente definido en la variable de entorno `TREEGOV_MCP_ROOT` (o `Path.cwd().resolve()` por defecto). `_resolve_csv_path()` valida `relative_to(allowed_root)`, rechazando *path traversal* (`..`), enlaces simbólicos (*symlinks*) que escapen de la raíz autorizada, bytes nulos (`\x00`) y cualquier extensión distinta de `.csv`.
+- **Bloqueo anti-sobrescritura y colisión entrada/salida en `score_batch`:** `score_batch` bloquea explícitamente `output_path == csv_path` y prohíbe sobrescribir archivos existentes (`forbid_existing=True`), complementando el chequeo atómico de `backend_v3/scoring.py`.
+- **Validación fail-fast, serialización `RLock` y `_jsonable` completo en MCP:**
+  - `train()` exige valores estrictos para `governance_mode` (`"banking"`/`"research"`) con `BASEL_PD_FLOOR_MIN` y `target_type` (`"binary"`/`"categorical"`), eliminando degradaciones silenciosas ante errores tipográficos.
+  - `fix_spec()` rechaza `population_ok_values=[]` y normaliza claves de clase contra los valores observados en `describe_target(target)`, preservando claves de texto (ej. `"01"`), soportando enteros negativos (`"-1"`), evitando fallos ante dígitos Unicode (`"²"`) y rechazando booleanos o colisiones de claves.
+  - Todos los argumentos numéricos de las 27 herramientas validan cotas explícitas y finitud (`math.isfinite`), rechazando `NaN`, `±inf` y `bool`.
+  - Un `threading.RLock()` a nivel de módulo (`_session_lock`) serializa el acceso a la sesión compartida en las 27 herramientas.
+  - `mcp_v3/dto.py::_jsonable()` normaliza también claves de diccionarios (`np.bool_`, `np.integer`, `np.floating` finito, `enum.Enum`) y envuelve todos los retornos dict/list preservando Invariante I-3 (`allow_nan=False`).
+- **Guardia de Caja Blanca ampliada (12 raíces bloqueadas) y auto-instalación:** `backend_v3/import_guard.py` bloquea 12 raíces de librerías de caja negra (`sklearn`, `scikit-learn`, `scikit_learn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`, `torch`, `optbinning`, `scorecardpy`, `tensorflow`, `keras`) y se auto-instala de forma idempotente en `backend_v3`, `frontend_v3`, `mcp_v3`, `treegov.py`, `treegov_gui.py`, `treegov_mcp.py` y `scripts/validate_uci.py`.
+

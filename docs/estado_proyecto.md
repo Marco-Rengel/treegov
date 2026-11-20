@@ -1,6 +1,6 @@
 # TreeGov — Estado del Proyecto y Contexto para Auditoría
 
-**Fecha de última actualización:** 14/11/2026 (cierre de la Fase 3.12; suite 660/660; release 1.0.0rc7 publicada en PyPI; próximo paso: revisión del aplicativo en pantalla real).
+**Fecha de última actualización:** 20/11/2026 (cierre integral de Fase 1 Higiene y Fase 2 Remediación MRM `2A`–`2H`, **16/16 hallazgos críticos cerrados**; suite **752/752 PASSED**; versión **`1.0.0rc8`** preparada para merge a `main` y publicación en PyPI).
 **Autor:** Marco Rengel
 **Propósito:** Resumen ejecutivo del estado técnico, decisiones arquitectónicas
 y trazabilidad del proyecto, apto para:
@@ -14,14 +14,15 @@ y trazabilidad del proyecto, apto para:
 | Campo | Valor |
 |---|---|
 | Nombre | TreeGov — Risk Segmentation Workbench |
-| Versión | 1.0.0rc7 (release candidate) |
+| Versión | 1.0.0rc8 (release candidate preparada para publicación en PyPI) |
 | Licencia | Apache 2.0 |
 | GitHub | github.com/Marco-Rengel/treegov (privado) |
-| PyPI | https://pypi.org/project/treegov/1.0.0rc7/ |
+| PyPI | https://pypi.org/project/treegov/1.0.0rc8/ *(pendiente de upload tras verificación de wheel)* |
 | Autor | Marco Rengel (marcrengel@gmail.com) |
 | Motor gráfico | PySide6 |
 | Motor analítico | Python (NumPy, pandas, scipy.stats) |
-| Modelo de IA en desarrollo | OpenCode v2.2.5 + OpenCode Zen (gratuito): modelo principal `deepseek-v4-flash-free` (200K), rotación `qwen3.6-plus-free` / `nemotron-3-ultra-free`, comodín de pago `moonshotai/kimi-k3` vía Moonshot AI directo (~$7 reservados). Aider 0.86.2 como respaldo documentado (pipx, Python 3.11.9). Histórico: NVIDIA NIM → Moonshot AI directo (03/10/2026) → OpenCode Zen (01/11/2026) |
+| Entorno de desarrollo | Entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311` (Python 3.11.9, fuera del repositorio desde Fase 1 Higiene) |
+| Flujo asistido por IA | Antigravity IDE / OpenCode v2.2.5 (multi-proveedor: `deepseek-v4-flash-free`, rotación `qwen3.6-plus-free` / `nemotron-3-ultra-free`, comodín `moonshotai/kimi-k3`). Aider 0.86.2 como respaldo documentado (`pipx`, Python 3.11.9). Histórico: NVIDIA NIM → Moonshot AI directo (03/10/2026) → OpenCode Zen (01/11/2026) → Antigravity IDE + OpenCode (20/11/2026) |
 
 ---
 
@@ -560,6 +561,8 @@ Cerrados los tres cosméticos del ReportsPanel diferidos a H4 en el cierre 3.5.d
 - **Fase 5** — Capa MCP. Completada (01/11/2026).
 - **Fase 6** — Scoring batch y champion-challenger. Completada (02/11/2026).
 - **Fase 7** — IFRS 9 / ECL (staging + ECL = PD × LGD × EAD). Completada (02/11/2026).
+- **Fase 1 (Limpieza de Repositorio)** — Reducción en disco de 3.49 GB → 6.12 MB (entorno limpio externo `%LOCALAPPDATA%\venvs\treegov-311`), compactación `.git/`, `.gitignore`/`.aiderignore` endurecidos, des-rastreo de `archive/legacy_docs/` y anonimización de rutas en `AGENTS.md`. Completada (20/11/2026, commit `3516939`).
+- **Fase 2 (Remediación Integral MRM `2A`–`2H`, `v1.0.0rc8`)** — Cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`) de `audit_reports/F1_Informe_Ejecutivo_Final.md` y sincronización documental completa. Completada (20/11/2026), suite **752/752 PASSED**.
 
 ### Verificación manual de la GUI (13/10/2026)
 
@@ -693,14 +696,33 @@ f9e1c73, y los de CV e iconos). Dos hitos notables:
 Pendiente formal antes de 1.0.0: decisión de distribución (PyPI solo
 / + PyInstaller / + Inno Setup / + MSI / firma digital).
 
+### Fase 1 — Limpieza e Higiene del Repositorio ✅ Completada (20/11/2026)
+
+Saneamiento estructural ejecutado en `chore/phase1-repo-cleanup` (integrado en `main`, commit `3516939`) a partir de los informes `C1`, `C3` y `F1`:
+- **Reducción de tamaño en disco:** de **3,569.37 MB (3.49 GB)** a **6.12 MB** (99.83% menos) tras migrar la ejecución al entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311` (Python 3.11.9) y eliminar `.venv/`, `.venv_linux/`, `.venv_3.14_backup/`, cachés `__pycache__/`, 85 logs históricos, residuos de Aider/Node y `archive/legacy_ui_sprint3/`.
+- **Compactación Git y trazabilidad:** `git gc --prune=now` (1,225 objetos sueltos → 1 packfile de 1.69 MiB); des-rastreo de `archive/legacy_docs/` del índice Git; endurecimiento de `.gitignore`/`.aiderignore` (`logs/`, `.env*`, `*.pem`, `*.key`, `.venv*/`, `audit_reports/`, `diff_*.txt`) y anonimización de rutas personales en `AGENTS.md`. Suite verificada: **660/660 PASSED**.
+
+### Fase 2 — Remediación Integral MRM (`2A`–`2H`, 16/16 hallazgos críticos cerrados) ✅ Completada (20/11/2026)
+
+Ejecutada sobre la rama `release/phase2-mrm-fixes` cerrando **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` y preparando la release **`v1.0.0rc8`** (**752/752 PASSED**, `+92` tests de regresión respecto a `1.0.0rc7`):
+- **Bloque 2A (`CRIT-01`, `CRIT-04`, `CRIT-12` parcial — §27):** fuente única `validation.select_majority_leaf(model)`; paridad exacta `SQL (SQLite) == Python == predict_pd` con identificadores ANSI `"..."`, `None`/`NaN` sin imports en Python, `WHEN >` + `ELSE` en CHAID fusionado, guardas de finitud/ciclos, transparencia multiclase en exportadores y `unseen_policy` en Champion-Challenger. (673/673)
+- **Bloque 2B (`CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07` — §28):** clasificación estricta Basilea III CRE 32.4 (`BASEL_PD_FLOOR_MIN = 0.0005`, `classify_governance_mode` → `BANKING`/`RESEARCH`/`CUSTOM`, `pd_floor < 0.5`); `Session.active_tree` conectando `pruned_tree` a todos los consumidores y GUI con invalidación de métricas obsoletas; remapeo de `parent_id` en `_reindex_tree`; atomicidad de `fix_spec`/`train`/`load_oot` (exclusión de `weight_col`/`population_col`, rechazo de `NaT`) y propagación de población al `params_fingerprint`. (683/683)
+- **Bloque 2C (`CRIT-02`, `CRIT-15` — §29):** conversión UI `% -> decimal` de EIR en `ECLDialog`, `eir >= 0`, `PD = 1.0` obligatorio en Etapa 3 y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`); confinamiento MCP `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura en `score_batch`, validación fail-fast, `RLock`, `_jsonable` completo con normalización de claves y Caja Blanca en `treegov_mcp.py`. (706/706)
+- **Bloque 2D (`CRIT-08`, `CRIT-16` — §30):** soporte multiclase $K \ge 3$ extremo a extremo (targets de texto, traducción canónica en `get_gains_table`, `ClassificationMatrix.class_labels`, resolución segura de `target_type` en `Session.train`, matriz dinámica $K \times K$ en GUI/HTML) y endurecimiento SR 11-7 de `ModelWizard` (bloqueo de `"No validar"`, resumen CV escapado y validación estricta de matriz de costos sin matriz fantasma). (717/717)
+- **Bloque 2E (`CRIT-09`, `CRIT-10` — §31):** varianza ponderada de confiabilidad de Kish y raíces Citardauq en QUEST (con dominio $[\min(x), \max(x))$ y no secuestro por $F = \infty$), `bonferroni_adjust` logarítmico sin overflow, `_weighted_median` tolerante, rechazo `±inf` en `TrainOnlyImputer`/C&RT/CHAID, Gini normalizado / sumas inversas / varianza centrada (Chan, Golub & LeVeque 1983) y selección Cochran-elegible en Exhaustive CHAID. (735/735)
+- **Bloque 2F (`CRIT-11`, `CRIT-12` — §32):** guardas anti-`NaN`/no-finitos en `TreeBuilder`, `splitting`, `validation` y `reporting`; `w_accuracy` binario; Hosmer-Lemeshow OOS *tie-preserving* invariante al orden con `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6`; `StabilityMonitor` (`eps` conectado/validado, `leaf_psi` invariante a escala, `covariate_csi` `(a, b]` + `<MISSING>` + continuas constantes); `evaluate_oot` compatible con CV y `Gini_train <= 0` → `UNDETERMINED`. (748/748)
+- **Bloque 2G (`CRIT-13`, `CRIT-14` — §33):** sincronización integral SR 11-7 (`docs/methodology.md` con §5.4 Atípicos y §8.9bis, `3.10.b_design_chaid_binning.md`, `design_decisions.md`, `api.md`); `TreeNode.gini_impurity` con etiqueta `Impurity (I_G)`; precalculo backend en `GainsRow` y `oot["csi_worst_flag"]`; guardia Caja Blanca ampliada a 12 raíces auto-instalada; guardrail AST bidireccional de Sala Limpia (`test_frontend_clean_room` + `test_backend_clean_room`); y oráculo matemático manual puro en `test_statistics.py`. (752/752)
+- **Bloque 2H (cierre documental y release `1.0.0rc8`):** bump coordinado de versión (`1.0.0rc7` → `1.0.0rc8`), sincronización de los 12 documentos del proyecto y registro del inventario diferido `MAY-01`–`MAY-10` / `MEN-01`–`MEN-08` para Fase 3 en `docs/roadmap.md`. (752/752)
+
 ---
 
 ## 4. Arquitectura
 
 ### Principio de sala limpia
 
-- `backend_v3/` — capa analítica pura (0 imports Qt)
-- `frontend_v3/` — capa de presentación (placeholder, sin lógica analítica)
+- `backend_v3/` — capa analítica pura (0 imports Qt, verificado por AST en `test_backend_clean_room`)
+- `frontend_v3/` — capa de presentación (sin lógica analítica, verificado por AST en `test_frontend_clean_room`)
+- `mcp_v3/` — capa MCP headless sobre stdio (confinada a `.csv` en `TREEGOV_MCP_ROOT`)
 
 ### Estructura de directorios
 
@@ -713,13 +735,13 @@ TreeGov/
 │ # univariate_dialog, manual_override_dialog, rules_panel,
 │ # summary_panel, gains_charts, scoring_dialogs, ecl_dialog,
 │ # icons, theme, i18n)
-├── mcp_v3/ # Capa MCP headless (Fase 5)
+├── mcp_v3/ # Capa MCP headless (Fase 5, endurecida en Bloque 2C)
 ├── scripts/ # Herramientas operativas del repo (NO van en el wheel)
 │ ├── fetch_datasets.py # Descarga UCI + verificación SHA256 → data/uci
 │ ├── fetch_icons.py # Bootstrap Icons (MIT) → frontend_v3/resources/icons
 │ ├── update_readme_date.py # Sincroniza la fecha de los README (--check)
 │ └── validate_uci.py # Benchmark de 14 pares (dataset, motor) → informe
-├── tests/ # Suite de tests (660 tests)
+├── tests/ # Suite de tests (752 tests)
 ├── docs/ # Documentación bilingüe
 │ ├── methodology.md
 │ ├── design_decisions.md
@@ -863,26 +885,26 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 
 | Módulo | Tests |
 |---|---|
-| statistics.py | 28 |
-| chaid_engine.py | 26 |
-| crt_engine.py | 27 |
-| quest_engine.py | 35 |
-| imputation.py | 5 |
-| splitting.py | 14 |
+| statistics.py | 30 |
+| chaid_engine.py | 30 |
+| crt_engine.py | 31 |
+| quest_engine.py | 41 |
+| imputation.py | 7 |
+| splitting.py | 15 |
 | profiling.py | 3 |
-| tree_builder.py | 39 |
-| session_state.py | 121 |
-| validation.py | 31 |
+| tree_builder.py | 42 |
+| session_state.py | 135 |
+| validation.py | 35 |
 | pruning.py | 7 |
-| stability.py | 18 |
-| reporting.py | 28 |
-| gui_smoke (frontend) | 20 |
+| stability.py | 22 |
+| reporting.py | 32 |
+| gui_smoke (frontend) | 22 |
 | icons (frontend) | 5 |
-| wizard (frontend) | 32 |
-| tree_view (frontend) | 16 |
+| wizard (frontend) | 37 |
+| tree_view (frontend) | 17 |
 | metrics_panel (frontend) | 13 |
 | e2e_mainwindow (frontend) | 12 |
-| reports_panel (frontend) | 17 |
+| reports_panel (frontend) | 18 |
 | prune_dialog (frontend) | 1 |
 | data_viewer (frontend) | 8 |
 | tree_map (frontend) | 7 |
@@ -891,26 +913,26 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 | uci_integration | 14 |
 | univariate_dialog (frontend) | 2 |
 | manual_override (frontend) | 2 |
-| exporters.py | 27 |
+| exporters.py | 38 |
 | session_exporters (backend) | 8 |
 | e2e_exporters_gui (frontend) | 4 |
 | mcp_tools (backend) | 12 |
-| mcp_server (backend) | 3 |
+| mcp_server (backend) | 8 |
 | mcp_parity (backend) | 5 |
 | scoring.py (backend) | 5 |
-| champion_challenger.py (backend) | 5 |
+| champion_challenger.py (backend) | 6 |
 | scoring_dialogs.py (frontend) | 10 |
-| mcp_scoring.py (backend/MCP) | 2 |
-| ecl.py (backend) | 4 |
-| ecl_dialog.py (frontend) | 5 |
+| mcp_scoring.py (backend/MCP) | 3 |
+| ecl.py (backend) | 19 |
+| ecl_dialog.py (frontend) | 7 |
 | mcp_ecl.py (backend/MCP) | 1 |
 | scripts (infraestructura) | 6 |
 | packaging | 4 |
 | rules_panel (frontend) | 12 |
 | summary_panel (frontend) | 11 |
-| **Total** | **660** |
+| **Total** | **752** |
 
-**Ejecución:** `.\.venv\Scripts\python -m pytest tests -q` → 660/660 PASSED
+**Ejecución (entorno limpio externo Python 3.11.9):** `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" -m pytest tests -q` → **752/752 PASSED**
 
 **Filosofía de tests:** valores de referencia verificados a mano, con cita bibliográfica. No se aceptan tests de autoreferencia.
 
@@ -922,7 +944,7 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
   para corporativos, bancos y retail; 0.03% / 3 bps o exención para
   soberanos).
 - **EBA/GL/2017/16** — Validación de parámetros PD/LGD en modelos IRB
-- **IFRS 9 / NIIF 9** — Staging, ECL, optimización de umbrales asimétricos
+- **IFRS 9 / NIIF 9** — Staging determinista, `PD = 1.0` en Etapa 3 y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`; motor simplificado de un periodo y escenario único)
 - **SR 11-7 / OCC 2011-12** — Model Risk Management (MRM)
 
 ---
@@ -933,24 +955,19 @@ Todos los bugs están registrados en `docs/audit_log.md` con trazabilidad numér
 |---|---|
 | GitHub | https://github.com/Marco-Rengel/treegov |
 | PyPI | https://pypi.org/project/treegov/ |
-| PyPI (versión actual) | https://pypi.org/project/treegov/1.0.0rc7/ |
+| PyPI (versión preparada) | https://pypi.org/project/treegov/1.0.0rc8/ |
 | Instalación | `pip install treegov` |
-| Suite de tests | `.\.venv\Scripts\python -m pytest tests -q` |
-| Demo headless | `.\.venv\Scripts\python treegov.py` |
-| Benchmark N=1M | `.\.venv\Scripts\python tests\benchmark_1m.py --n 1000000 --seed 42` |
+| Suite de tests | `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" -m pytest tests -q` |
+| Demo headless | `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" treegov.py` |
+| Benchmark N=1M | `& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" tests\benchmark_1m.py --n 1000000 --seed 42` |
 
 ---
 
 ## 10. Pendientes y decisiones abiertas
 
-**Fase 3.12 cerrada (14/11/2026); release 1.0.0rc7 vigente en PyPI.**
-Suite 660/660. Rules, Summary, Data Viewer por nodo y tres curvas de
-ganancias implementados sobre los nuevos contratos de consulta de `Session`.
-Próximo paso: revisión del aplicativo en pantalla real (CV con datasets
-grandes, iconos SVG en tema oscuro, arranque real en Windows nativo, uso
-prolongado). Después de esa revisión: decisión de distribución (C1: PyPI
-solo / + PyInstaller / + Inno Setup / + MSI / firma digital) y publicación
-de 1.0.0 estable.
+**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2H`) cerradas (20/11/2026); versión `1.0.0rc8` preparada para publicación en PyPI.**
+Suite **752/752 PASSED** (`16/16` hallazgos críticos `CRIT-01`–`CRIT-16` cerrados y verificados en `%LOCALAPPDATA%\venvs\treegov-311`).
+**Próximo paso:** (1) merge de `release/phase2-mrm-fixes` a `main`, verificación del wheel (`AGENTS.md`), tag `v1.0.0rc8` y publicación de **`1.0.0rc8`** en PyPI por el humano; (2) evaluar y planificar la **Fase 3** para la deuda no crítica (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08`, registrada en `docs/roadmap.md` con referencia a `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable.
 
 ### Sesión documental — ✅ Bloque completo (24/09/2026)
 
@@ -1028,7 +1045,7 @@ respaldo con Aider, ver `docs/contexto_para_nueva_sesion.md`.)
 
 3. Primer mensaje sugerido al agente:
 
-> "Retomamos TreeGov. Fases 0 a 7 y Fase 3.12 cerradas; backlog post-Fase 7 resuelto (52 deudas cerradas). Suite 660/660. Próximo paso: revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución (C1) y la publicación de 1.0.0 estable en PyPI quedan pendientes de esa revisión. Herramienta activa: OpenCode v2.2.5 + multi-proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas cortas."
+> "Retomamos TreeGov. Fases 0 a 7, Fase 3.12, Fase 1 (Higiene, 3.49 GB → 6.12 MB) y Fase 2 (Remediación Integral MRM `2A`–`2H`, 16/16 hallazgos críticos cerrados) completadas. Suite **752/752 PASSED** en `%LOCALAPPDATA%\venvs\treegov-311`. Versión **`1.0.0rc8`** preparada en `release/phase2-mrm-fixes`. Próximo paso: publicar `1.0.0rc8` en PyPI y evaluar Fase 3 (`MAY-01`–`MAY-10` / `MEN-01`–`MEN-08` en `docs/roadmap.md`) + decisión de distribución (C1) antes de `1.0.0` estable."
 
 ---
 

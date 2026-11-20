@@ -1,6 +1,6 @@
 # Contexto para Nueva Sesión — TreeGov
 
-**Fecha de última actualización:** 14/11/2026
+**Fecha de última actualización:** 20/11/2026
 **Propósito:** Este documento permite a una IA nueva (o a un colaborador) entender el estado de TreeGov en menos de 5 minutos, sin reconstruir contexto desde cero.
 
 ## Lectura obligatoria (en orden)
@@ -143,26 +143,36 @@ completo en `docs/audit_log.md`, entrada del 10/10/2026 (tarde).
 | 7.0.b | Diálogo GUI ECL + worker + acción Analysis + i18n | ✅ |
 | 7.0.c | Tool MCP `calculate_ecl` + hardening (27 tools totales) | ✅ |
 | **7.0** | **IFRS 9 / ECL (fase completa)** | **✅ Cerrada** |
+| **Fase 1 Higiene** | Limpieza de repositorio (3.49 GB → 6.12 MB), entorno virtual externo limpio, `.gitignore`/`.aiderignore`, des-rastreo `archive/legacy_docs/`, anonimización `AGENTS.md` | **✅ Cerrada (20/11/2026)** |
+| **Fase 2 MRM (`2A`–`2H`)** | Remediación integral de auditoría MRM `F1`: cierre **16/16** hallazgos críticos (`CRIT-01`–`CRIT-16`), sincronización documental y preparación release **`1.0.0rc8`** | **✅ Cerrada (20/11/2026)** |
 
-**Suite de tests:** 660/660 PASSED
+**Suite de tests:** 752/752 PASSED
+
+## Decisiones clave recientes (§27–§33, Remediación Fase 2 — 20/11/2026)
+
+- **§27 (Bloque 2A — `CRIT-01`, `CRIT-04`):** fuente única `validation.select_majority_leaf(model)` (máximo `n` físico, desempate por menor `node_id`); paridad exacta `SQL (SQLite) == Python == predict_pd` con identificadores ANSI SQL `"..."`, `None`/`NaN` sin imports en Python, `WHEN >` + `ELSE` en CHAID fusionado, guardas de finitud/ciclos, transparencia multiclase en exportadores y `unseen_policy` propagada en Champion-Challenger.
+- **§28 (Bloque 2B — `CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07`):** clasificación estricta Basilea III CRE 32.4 (`BASEL_PD_FLOOR_MIN = 0.0005`, `classify_governance_mode` → `BANKING`/`RESEARCH`/`CUSTOM`, `pd_floor < 0.5`); `Session.active_tree` conectando `pruned_tree` a todos los consumidores con invalidación de métricas obsoletas; remapeo de `parent_id` en `_reindex_tree`; atomicidad de `fix_spec`/`train`/`load_oot` (exclusión de `weight_col`/`population_col`, rechazo de `NaT`) y propagación del filtro de población al `params_fingerprint`.
+- **§29 (Bloque 2C — `CRIT-02`, `CRIT-15`):** conversión UI `% -> decimal` de EIR en `ECLDialog`, `eir >= 0`, `PD = 1.0` obligatorio en Etapa 3 y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`); confinamiento MCP `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura en `score_batch`, validación fail-fast, `RLock`, `_jsonable` con normalización de claves y Caja Blanca en `treegov_mcp.py`.
+- **§30 (Bloque 2D — `CRIT-08`, `CRIT-16`):** soporte multiclase $K \ge 3$ extremo a extremo (targets de texto, traducción canónica en `get_gains_table`, `ClassificationMatrix.class_labels`, resolución automática de `target_type` en `Session.train`, matriz dinámica $K \times K$ en GUI/HTML) y endurecimiento SR 11-7 de `ModelWizard` (bloqueo de `"No validar"`, resumen CV escapado, validación estricta de costos sin matriz fantasma).
+- **§31 (Bloque 2E — `CRIT-09`, `CRIT-10`):** varianza ponderada de confiabilidad de Kish y raíces Citardauq en QUEST (con dominio $[\min(x), \max(x))$ y no secuestro por $F = \infty$), `bonferroni_adjust` logarítmico sin overflow, `_weighted_median` tolerante, rechazo `±inf` en `TrainOnlyImputer`/C&RT/CHAID, Gini normalizado / sumas inversas / varianza centrada (Chan, Golub & LeVeque 1983) y selección Cochran-elegible en Exhaustive CHAID.
+- **§32 (Bloque 2F — `CRIT-11`, `CRIT-12`):** guardas anti-`NaN`/no-finitos en `TreeBuilder`, `splitting`, `validation` y `reporting`; `w_accuracy` binario; Hosmer-Lemeshow OOS *tie-preserving* invariante al orden con `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6`; `StabilityMonitor` (`eps` conectado/validado, `leaf_psi` invariante a escala, `covariate_csi` `(a, b]` + `<MISSING>` + continuas constantes); `evaluate_oot` compatible con CV y `Gini_train <= 0` → `UNDETERMINED`.
+- **§33 (Bloque 2G — `CRIT-13`, `CRIT-14`):** coherencia metodológica integral SR 11-7 (`methodology.md` incl. §5.4 Atípicos y §8.9bis, `3.10.b_design_chaid_binning.md`, `api.md`); `TreeNode.gini_impurity` con etiqueta `Impurity (I_G)`; precalculo backend en `GainsRow` y `oot["csi_worst_flag"]`; guardia Caja Blanca ampliada a 12 raíces auto-instalada; guardrail AST bidireccional de Sala Limpia (`test_frontend_clean_room` + `test_backend_clean_room`); oráculo matemático manual puro en `test_statistics.py`.
 
 ## Entorno de desarrollo
 
 ### Plataforma
 
-- **Principal:** Windows nativo con Python 3.11.9 (`.venv/`). Verificado 04/10/2026: 210/210 tests.
-- **Librerías:** numpy 1.26.4, scipy 1.15.3, pandas 3.0.6, PySide6 6.11.2 (degradadas por instalación de Aider; ver audit_log 27/09/2026).
-- **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 (`.venv_linux/`).
-- **Motivo del respaldo:** Windows bloqueó scipy en el pasado (WDAC/Smart App Control). Actualmente funciona sin bloqueo.
+- **Principal (entorno limpio externo desde Fase 1, 20/11/2026):** Windows nativo con Python 3.11.9 en `%LOCALAPPDATA%\venvs\treegov-311` (fuera del repositorio tras la limpieza de 3.49 GB → 6.12 MB). Verificado 20/11/2026: **752/752 tests PASSED**.
+- **Flujo asistido vigente:** Antigravity IDE / OpenCode v2.2.5 (multi-proveedor); Aider 0.86.2 en `pipx` como respaldo documentado.
+- **Respaldo:** WSL2 (Ubuntu) con Python 3.14.4 fuera del árbol del repositorio.
 - **Compatibilidad declarada:** 3.11+ (ver `pyproject.toml`).
 
 ### Comandos por plataforma
 
-Windows (PowerShell):
+Windows (PowerShell — entorno limpio externo):
 
-    .\.venv\Scripts\activate
-    python -m pytest tests -q
-    python treegov.py
+    & "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" -m pytest tests -q
+    & "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" treegov.py
 
 WSL (bash):
 
@@ -266,10 +276,10 @@ entorno. Verificar que el modelo es Kimi K3 y el nivel es `high`.
 
 ## Estado de release
 
-**Última versión publicada:** `treegov 1.0.0rc7` en PyPI (08/11/2026).
-URL: https://pypi.org/project/treegov/1.0.0rc7/
+**Versión vigente del repositorio:** `treegov 1.0.0rc8` (preparada en rama `release/phase2-mrm-fixes` el 20/11/2026, pendiente de merge a `main`, tag `v1.0.0rc8`, verificación de wheel y subida a PyPI por el humano).
+URL objetivo: https://pypi.org/project/treegov/1.0.0rc8/
 
-**Tags de git:** v1.0.0a1, v1.0.0a2, v1.0.0a3, v1.0.0a4, v1.0.0a5, v1.0.0a6, v1.0.0rc1, v1.0.0rc2, v1.0.0rc4, v1.0.0rc5 y v1.0.0rc7 verificados con `git show-ref --tags` (rc5 verificado el 02/11/2026; rc6 verificado el 08/11/2026). El tag git v1.0.0rc3 no existe (nunca se creó), pero la release `1.0.0rc3` sí está en PyPI (subida el 21/10/2026, no yanked); un intento de sobreescribirla con los cambios de D13 falló por inmutabilidad y se publicó rc4 como siguiente release.
+**Histórico de tags de git verificados (`git show-ref --tags`):** `v1.0.0a1` a `v1.0.0a6`, `v1.0.0rc1`, `v1.0.0rc2`, `v1.0.0rc4`, `v1.0.0rc5`, `v1.0.0rc6` (08/11/2026) y `v1.0.0rc7` (14/11/2026, última subida previa en PyPI antes de `1.0.0rc8`). El tag `v1.0.0rc3` no existe (la release `1.0.0rc3` sí está en PyPI del 21/10/2026, no yanked; el intento posterior de sobrescribirla falló por inmutabilidad y se publicó `rc4`).
 
 **Protocolo PyPI (Actualizado 20/10/2026).** PyPI congela el README en el momento
 del upload. Si el README del repositorio cambia después de una
@@ -277,36 +287,24 @@ publicación, la página pública queda desincronizada hasta la
 próxima release. Al modificar el README, decidir explícitamente:
 (a) publicar una nueva versión inmediatamente, o (b) esperar a la
 próxima release con cambios de código. Nunca dejar la decisión
-implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, los cambios puramente cosméticos (fechas, typos, diagramas) NO disparan una nueva release en PyPI; se difieren a la próxima release material y se documentan en `roadmap.md`.
+implícita. *(Actualización 20/10/2026)*: Para evitar inflación de versiones, los cambios puramente cosméticos (fechas, typos, diagramas) NO disparan una nueva release en PyPI; se difieren a la próxima release material y se documentan en `roadmap.md`. La remediación de Fase 2 (`2A`–`2H`) es un **cambio material mayor**, por lo que prepara directamente `1.0.0rc8` con los 12 documentos sincronizados y **752/752 tests PASSED**.
 
-Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI
-PySide6). Verificación de instalación limpia completada.
-
-La espera decidida el 16/10/2026 quedó cerrada definitivamente con las
-releases posteriores. La versión `1.0.0rc3` se subió el 21/10/2026 y
-sigue disponible en PyPI (no yanked); un intento posterior de sobreescribirla
-con los cambios de D13 falló por inmutabilidad, y se publicó `1.0.0rc4` como
-siguiente release. Tras el
-cierre de la Fase 4.0.1 y del backlog post-Fase 7, la versión
-publicada es `1.0.0rc7`. Su README en PyPI conserva el estado de esa
-release (607/607 tests). Tras el cierre de la Fase 3.12, el repositorio
-está en 660/660; la página de PyPI queda congelada hasta la próxima
-release material, conforme al protocolo vigente.
+Contenido del paquete: `backend_v3` (capa analítica) + `frontend_v3` (GUI PySide6 + 22 iconos SVG) + `mcp_v3` (capa MCP) + `treegov.py`/`treegov_gui.py`/`treegov_mcp.py`.
 
 ## Próximos pasos
 
-**Fase 3.12 cerrada (14/11/2026).** Rules y Summary son pestañas
-funcionales; el Data Viewer filtra casos por nodo y partición; la pestaña
-Gains dibuja tres curvas nativas. Backend ganó `get_rules`, `get_summary`
-y `get_node_cases`. Suite 660/660 PASSED. Próxima decisión: método de
-distribución (C1), y después publicación de 1.0.0 estable en PyPI. La
-release 1.0.0rc7 queda vigente hasta esa decisión.
+**Fase 1 (Higiene) y Fase 2 (Remediación Integral MRM `2A`–`2H`) cerradas (20/11/2026).**
+Los **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md` están cerrados y verificados con suite **752/752 PASSED**, versión sincronizada en **`1.0.0rc8`** sobre la rama `release/phase2-mrm-fixes`.
 
-**Deudas diferidas (registradas en `docs/roadmap.md` §Deferred):**
+1. **Publicación de `1.0.0rc8` (acción humana):** revisar el diff en `release/phase2-mrm-fixes`, hacer merge a `main`, crear tag `v1.0.0rc8`, construir el wheel (`pyproject-build`), verificar con el script `zipfile` de `AGENTS.md` los 3 archivos raíz y los 22 SVG, ejecutar `twine check` y publicar en PyPI (`twine upload`).
+2. **Fase 3 previa a `1.0.0` estable (backlog diferido):** evaluar y priorizar la deuda técnica no crítica registrada en `docs/roadmap.md` (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08`, referencia `audit_reports/F1_Informe_Ejecutivo_Final.md`), junto con la revisión en pantalla real y la decisión de distribución (C1).
+
+**Deudas diferidas históricas (registradas en `docs/roadmap.md` §Deferred):**
+- Inventario `F1` Fase 3: `MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` (ver tabla detallada en `docs/roadmap.md`).
 - Fase 2.4.e — *screenshot* automatizado de la GUI.
 - Fase 3.10.b — panel inferior de cortes candidatos (WOE/IV/Odds), requiere backend nuevo.
 - Líneas surrogate punteadas en el canvas (3.11.a §7 punto 3, no implementadas en 3.11.b/d/e).
-- Paleta propia del Tree Map para el tema claro (bloque de iteración #4-#8, sustituido por 3.11.e; el minimapa actual sigue `PALETTES`).
+- Curvas de beneficio y ROI en Gains (diferidas de Fase 3.12 por requerir pantalla de ingresos/gastos).
 
 **Ideas del experto (evaluar en Fase 3+):**
 - Restricciones de monotonicidad.

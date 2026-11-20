@@ -8679,3 +8679,36 @@ beneficio/ROI); `docs/3.11_gui_design_system.md` (i18n, tablas y QPainter).
 **Tests**: `python -m pytest tests -q` (en entorno limpio Python 3.11.9 `$env:LOCALAPPDATA\venvs\treegov-311`) → **752/752 PASSED** (anterior: `748`; `+4` pruebas nuevas de regresión). Suite dirigida (`test_statistics.py`, `test_gui_smoke.py`, `test_tree_view.py`, `test_tree_builder.py`, `test_reporting.py`, `test_metrics_panel.py`, `test_reports_panel.py`, `test_mcp_server.py`) → **182/182 PASSED** (Sala Limpia bidireccional y Caja Blanca extendida en verde).
 
 **Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-13`, `CRIT-14`, cierre 16/16); `docs/methodology.md`; `docs/3.10.b_design_chaid_binning.md`; `docs/design_decisions.md` §33; `docs/api.md`.
+
+---
+
+### 20/11/2026 — Cierre Bloque 2H / Cierre Integral Fase 2: Sincronización de los 12 documentos y preparación de release `1.0.0rc8` (rama `release/phase2-mrm-fixes`)
+
+**Estado**: ✅ Completado (en rama `release/phase2-mrm-fixes`, cierre formal de la **Fase 2 de Remediación MRM** con **16/16 hallazgos críticos** `CRIT-01`–`CRIT-16` cerrados; pendiente de merge a `main`, tag `v1.0.0rc8`, verificación de wheel y publicación en PyPI por el humano; sin `git push` ni `twine upload`).
+
+**Artefactos tocados (rutas exactas)**:
+
+- `pyproject.toml` — bump de versión `1.0.0rc7` → `1.0.0rc8` (conservando intactos `packages`, `py-modules`, `package-data` y `[project.scripts]`; normalizado a UTF-8 sin BOM y LF).
+- `frontend_v3/__init__.py` — bump coordinado `__version__ = "1.0.0rc7"` → `"1.0.0rc8"` (paridad verificada por `tests/test_packaging.py::test_version_matches_between_pyproject_and_frontend`).
+- `README.md` y `README.es.md` — actualización simétrica EN/ES a `1.0.0rc8`, `752/752 passing`, diagrama Mermaid (`Nov 20, 2026` / `20 nov 2026`, `16/16` hallazgos críticos MRM cerrados), Sala Limpia bidireccional y Caja Blanca ampliada (12 raíces en todos los entrypoints), capacidades actualizadas (CHAID 10 cortes cuantiles hasta 11 bins + Cochran en Exhaustive, C&RT estable, QUEST Kish + Citardauq, Multiclase $K \ge 3$ extremo a extremo + matriz $K \times K$, OOS/OOT HL *tie-preserving* con `df = G_eff` y `_HL_EPS = 1e-6` + `w_accuracy` + CV `evaluate_oot`, PSI/CSI `eps`/`(a, b]`/`<MISSING>`/constantes/`Gini_train <= 0`), IFRS 9 staged ECL/EIR y capa MCP confinada (`TREEGOV_MCP_ROOT`, anti-sobrescritura, `RLock`), filas de **Repo Hygiene (Phase 1)** y **MRM Audit Remediation (`2A`–`2H`, `v1.0.0rc8`)**, y referencias académicas `Chan, Golub & LeVeque (1983)`, `Hosmer, Lemeshow & Sturdivant (2013)` y `Kish (1965)`.
+- `docs/philosophy.md` y `docs/philosophy.es.md` — precisión sobre el adaptador MCP local `stdio` (`mcp_v3`, sin red ni telemetría, confinado a `.csv` en `TREEGOV_MCP_ROOT` y anti-sobrescritura), Sala Limpia AST bidireccional, bloqueo ampliado de 12 librerías de caja negra auto-instalado, gobernanza estricta `BANKING`/`RESEARCH`/`CUSTOM` + validación obligatoria SR 11-7, y estado actual `v1.0.0rc8` (`752/752`).
+- `docs/security_audit.md` — nota histórica de cierre en `§5` y nueva sección `§7. Endurecimiento de seguridad MCP y Caja Blanca (Remediación Fase 2, 20/11/2026)` cubriendo `TREEGOV_MCP_ROOT`, `.csv`, anti-sobrescritura en `score_batch`, validación fail-fast, `RLock`, `_jsonable` con normalización de claves y las 12 raíces bloqueadas auto-instaladas.
+- `docs/roadmap.md` — cierre formal de **Fase 1 (Limpieza e Higiene del Repositorio)** y **Fase 2 (Remediación Integral MRM `2A`–`2H`, 16/16 `CRIT`, `v1.0.0rc8`, `752/752`)**, entrada de release `v1.0.0rc8`, cierre de la desincronización de README del 14/11/2026, y registro explícito (Regla #7 `AGENTS.md`) del backlog no crítico diferido a Fase 3 (**`MAY-01`–`MAY-10`** y **`MEN-01`–`MEN-08`**, referencia `audit_reports/F1_Informe_Ejecutivo_Final.md`).
+- `docs/estado_proyecto.md` — cabecera `20/11/2026`, `1.0.0rc8`, entorno externo `%LOCALAPPDATA%\venvs\treegov-311` + flujo Antigravity IDE / OpenCode, bloques narrativos completos de Fase 1 y Fase 2 (`2A`–`2H`), tabla §7 de tests verificada empíricamente con `pytest --collect-only` sumando exactamente **752**, y próximo paso actualizado (normalizado a UTF-8 sin BOM y LF).
+- `docs/contexto_para_nueva_sesion.md` — estado `752/752 PASSED`, versión `1.0.0rc8`, resumen de decisiones clave `§27`–`§33`, entorno limpio externo, estado de release y próximos pasos (publicación `1.0.0rc8` + backlog Fase 3 `MAY-*`/`MEN-*`).
+- `docs/prompt_para_asistente.md` — corrección de referencias obsoletas (`1.0.0rc6`/`1.0.0rc7`/`660/660` → `1.0.0rc8`, `752/752 PASSED`, 16/16 `CRIT` cerrados, 12 raíces bloqueadas, entorno externo `%LOCALAPPDATA%\venvs\treegov-311` y backlog Fase 3 en `docs/roadmap.md`).
+- `docs/api.md` — verificación de coherencia (cero referencias vigentes a `1.0.0rc7`/`660`) y actualización de la nota de vigencia del pie a `Phase 7, Phase 3.12, and Phase 2 MRM Audit Remediation (Blocks 2A–2G, v1.0.0rc8)`.
+- `docs/design_decisions.md` — verificado sin contradicciones vigentes (conservando intactas las menciones históricas por fase en `§25` y `§26`; decisiones `§27`–`§33` ya consolidadas en Bloques `2A`–`2G`).
+- `docs/audit_log.md` — esta entrada de cierre formal del Bloque 2H / Fase 2.
+
+**Hallazgos y verificaciones**:
+
+1. **Checklist documental completo (12 documentos + bump coordinado):** cumplidos los 8 documentos obligatorios de `AGENTS.md` (`audit_log`, `roadmap`, `estado_proyecto`, `contexto_para_nueva_sesion`, `prompt_para_asistente`, `README.md`/`README.es.md`, `api.md`, `design_decisions.md`) más `docs/philosophy.md`, `docs/philosophy.es.md` y `docs/security_audit.md`, junto al bump coordinado a `1.0.0rc8` en `pyproject.toml` y `frontend_v3/__init__.py`.
+2. **Regla #7 (`AGENTS.md`):** inventario no crítico de la auditoría `F1` (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08`) registrado íntegramente en `docs/roadmap.md` (`## Deferred`) para la Fase 3 previa a `1.0.0` estable.
+3. **Integridad de código productivo y tests:** cero cambios de lógica analítica, GUI o tests; `main` intacta en `3516939`; todos los archivos editados verificados en UTF-8 sin BOM y saltos de línea LF (cero CRLF).
+4. **Protocolo PyPI:** versión preparada como `1.0.0rc8` en `release/phase2-mrm-fixes` sin ejecutar `git push`, tags, build ni `twine upload` (pendientes de ejecución humana tras revisión final y verificación de wheel).
+
+**Tests**: `python -m pytest tests/test_packaging.py tests/test_gui_smoke.py -v` y `python -m pytest tests -q` (entorno limpio Python 3.11.9 `%LOCALAPPDATA%\venvs\treegov-311`) → **752/752 PASSED** (paridad de versión `1.0.0rc8`, Sala Limpia bidireccional y Caja Blanca ampliada en verde).
+
+**Referencias cruzadas**: `audit_reports/F1_Informe_Ejecutivo_Final.md` (`CRIT-01`–`CRIT-16`, `MAY-01`–`MAY-10`, `MEN-01`–`MEN-08`); `AGENTS.md` (checklist de 8 documentos, Regla #7, Verificación del wheel); `docs/design_decisions.md` §27–§33; `docs/security_audit.md` §7; `docs/roadmap.md`.
+

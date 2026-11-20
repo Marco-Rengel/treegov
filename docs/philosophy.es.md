@@ -61,7 +61,7 @@ TreeGov no es solo una herramienta que *implementa* MRM; el software en sí mism
 
 TreeGov se desarrolla hoy con datasets públicos (German Credit, UCI) y sintéticos. Durante el desarrollo, la regla de privacidad es estricta: nunca se envían datos reales a APIs de IA de terceros. Solo se comparte código *open source*, documentación pública y datos sintéticos.
 
-Cuando TreeGov se use en producción, el escenario es otro: el analista carga su propio *CSV* con datos reales en su escritorio, y el modelo se entrena y evalúa localmente. Los datos nunca salen del equipo del analista. TreeGov no tiene servidor, ni autenticación remota, ni base de datos, ni conexión a internet en tiempo de ejecución.
+Cuando TreeGov se use en producción, el escenario es otro: el analista carga su propio *CSV* con datos reales en su escritorio, y el modelo se entrena y evalúa localmente. Los datos nunca salen del equipo del analista. TreeGov no tiene servidor remoto, ni autenticación remota, ni base de datos, ni conexión a internet en tiempo de ejecución. Junto a la GUI de escritorio, TreeGov incluye además un adaptador MCP local sobre `stdio` (`mcp_v3`) para clientes LLM — estrictamente local sin red ni telemetría, confinado exclusivamente a archivos `.csv` dentro de `TREEGOV_MCP_ROOT` (por defecto `CWD`), y con bloqueo de sobrescritura en `score_batch`.
 
 Esta distinción tiene consecuencias que el proyecto asume explícitamente:
 
@@ -79,25 +79,34 @@ La filosofía no es abstracta: se traduce en decisiones de diseño
 concretas y auditables en el código.
 
 - Arquitectura de sala limpia → `backend_v3/` no tiene imports de
-  GUI; `frontend_v3/` no tiene lógica analítica. Se verifica con un
-  test basado en AST (`test_frontend_clean_room`).
+  GUI; `frontend_v3/` no tiene lógica analítica. Se verifica mediante
+  guardrails AST bidireccionales (`test_frontend_clean_room` y
+  `test_backend_clean_room`).
 - Matemática de caja blanca → Cada fórmula estadística está escrita
   explícitamente, con citas bibliográficas (Kass 1980, Breiman 1984,
-  Loh & Shih 1997, Cochran 1954). Las librerías de caja negra
-  (sklearn, statsmodels) se bloquean a nivel de intérprete mediante
-  `backend_v3/import_guard.py`.
+  Loh & Shih 1997, Cochran 1954, Kish 1965, Chan, Golub & LeVeque 1983,
+  Hosmer, Lemeshow & Sturdivant 2013). El bloqueo ampliado de librerías
+  de caja negra (`sklearn`, `scikit-learn`, `statsmodels`, `xgboost`,
+  `lightgbm`, `catboost`, `torch`, `optbinning`, `scorecardpy`,
+  `tensorflow`, `keras`) se aplica a nivel de intérprete mediante
+  `backend_v3/import_guard.py` y se auto-instala en `backend_v3`,
+  `frontend_v3`, `mcp_v3` y todos los puntos de entrada (`treegov.py`,
+  `treegov_gui.py`, `treegov_mcp.py`, `scripts/validate_uci.py`).
 - Gobernanza nativa → `SplitConfig` es un *dataclass frozen*
   (evidencia auditable inmutable); `params_fingerprint` identifica cada
   modelo de forma única; el logger transaccional DEBUG registra cada
   decisión.
-- Gobernanza opcional, modo regulatorio por defecto → `GovernanceMode`
-  (BANKING / RESEARCH) hace que la capa regulatoria sea opt-out,
-  abriendo la herramienta a dominios no bancarios (salud, ciencias
-  sociales) sin sacrificar el rigor MRM donde importa. Aunque nació en
-  riesgo de crédito, TreeGov puede utilizarse en cualquier dominio donde
-  la trazabilidad, la explicabilidad y la gobernanza sean importantes.
+- Gobernanza estricta y validación obligatoria SR 11-7 →
+  `classify_governance_mode` impone clasificación estricta `BANKING` /
+  `RESEARCH` / `CUSTOM` (exigiendo `apply_jeffreys=True` y
+  `pd_floor >= 0.0005` bajo BCBS CRE 32.4 para `BANKING`), mientras
+  `ModelWizard` exige validación obligatoria conforme a SR 11-7
+  (Holdout o CV k-fold; la opción sin validación queda bloqueada).
+  Aunque nació en riesgo de crédito, TreeGov puede utilizarse en
+  dominios no bancarios (salud, ciencias sociales) sin sacrificar el
+  rigor MRM donde importa.
 
-**Estado actual:** Fases 0 a 7 y 3.12 completadas (Espacio de Análisis). 660/660 tests PASSED.
+**Estado actual:** Fases 0 a 7, 3.12, Higiene del Repositorio y Remediación de Auditoría MRM completadas (16/16 hallazgos críticos cerrados, v1.0.0rc8). 752/752 tests PASSED.
 
 ---
 *[Read in English](philosophy.md)*

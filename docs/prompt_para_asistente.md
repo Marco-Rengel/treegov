@@ -2,7 +2,7 @@
 
 **Propósito:** Este documento permite a un asistente IA nuevo (chat, no agente de código) entender el proyecto, el usuario y la metodología de trabajo en menos de 2 minutos. NO duplica información del repo; es un bootstrap operativo.
 
-**Última actualización:** 14/11/2026
+**Última actualización:** 20/11/2026
 
 ---
 
@@ -25,7 +25,7 @@
 - **Inspiración:** software estadístico clásico de árboles de decisión (discontinuado), del cual se recupera la capacidad del analista de intervenir manualmente los cortes del árbol por razones de negocio, no solo estadísticas.
 - **Diferenciador:** la gobernanza no es un añadido; es el punto de partida (evidencia auditable, caja blanca matemática, trazabilidad regulatoria).
 - **Stack:** Python 3.11, PySide6 (GUI), numpy/pandas/scipy (solo backend).
-- **Prohibiciones duras:** `sklearn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`. Bloqueados a nivel de intérprete.
+- **Prohibiciones duras:** `sklearn`, `scikit-learn`, `scikit_learn`, `statsmodels`, `xgboost`, `lightgbm`, `catboost`, `torch`, `optbinning`, `scorecardpy`, `tensorflow`, `keras`. Bloqueadas a nivel de intérprete (auto-instalado en `backend_v3`, `frontend_v3`, `mcp_v3` y entrypoints).
 - **Licencia:** Apache 2.0.
 - **GitHub:** github.com/Marco-Rengel/treegov (privado actualmente).
 - **Datos:** NO se manejan datos bancarios reales. Solo *datasets* públicos (German Credit, UCI) o sintéticos.
@@ -91,20 +91,7 @@ Estas son las reglas que **NO debes violar** en tus recomendaciones:
 
 ## 5. Estado actual del proyecto
 
-**Estado vigente (al 14/11/2026).** Fases 0 a 7 y Fase 3.12 cerradas. La
-última incorporación deja funcionales las pestañas Rules y Summary, el Data
-Viewer por nodo/partición y tres curvas de ganancias; `Session` expone
-`get_rules`, `get_summary` y `get_node_cases`. La suite está en
-**660/660 PASSED** y la release vigente es **1.0.0rc6**, publicada en PyPI y
-verificada con hashes e instalación en un *venv* aislado. El registro
-`mcp_v3.tools.TOOLS` expone **27 tools**. Próximo paso: revisión del
-aplicativo en pantalla real (CV con *datasets* grandes, iconos SVG en
-tema oscuro, arranque real en Windows nativo, uso prolongado); después,
-decisión del método de distribución (C1) y publicación de 1.0.0 estable
-en PyPI, ambas pendientes de esa revisión. Herramienta activa: OpenCode
-v2.2.5 con OpenCode Zen (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free),
-Gemini como alternativa y Moonshot Kimi K3.1 Pro como comodín de pago;
-Aider 0.86.2 en `pipx` como respaldo documentado.
+**Estado vigente (al 20/11/2026).** Fases 0 a 7, Fase 3.12, **Fase 1 (Limpieza e Higiene del Repositorio)** y **Fase 2 (Remediación Integral MRM `2A`–`2H`)** cerradas. Quedan cerrados **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** de la auditoría integral `audit_reports/F1_Informe_Ejecutivo_Final.md`. La suite está en **752/752 PASSED** (ejecutada en el entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311`, Python 3.11.9) y la versión vigente preparada en la rama `release/phase2-mrm-fixes` es **`1.0.0rc8`** (lista para merge a `main`, verificación de wheel y publicación en PyPI). El registro `mcp_v3.tools.TOOLS` expone **27 tools** (con confinamiento estricto `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo anti-sobrescritura y `RLock`). Próximo paso: publicar **`1.0.0rc8`** en PyPI y planificar la **Fase 3** (backlog no crítico `MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` registrado en `docs/roadmap.md`), junto con la revisión en pantalla real y la decisión de distribución (C1) previas a `1.0.0` estable. Herramientas de asistencia activas: Antigravity IDE / OpenCode v2.2.5 (multi-proveedor); Aider 0.86.2 en `pipx` como respaldo documentado.
 
 **Narrativa histórica de fases cerradas.** El detalle sub-fase por
 sub-fase, con sus conteos de suite y fechas de cierre, vive en
@@ -165,7 +152,22 @@ sub-fase, con sus conteos de suite y fechas de cierre, vive en
 - **Fase 3.12 (pestañas de consulta del modelo):** cerrada (14/11/2026).
   Tres contratos nuevos (`get_rules`, `get_summary`, `get_node_cases`),
   Rules y Summary funcionales, Data Viewer por nodo/partición y tres curvas
-  QPainter de ganancias. Suite 660/660.
+  QPainter de ganancias.
+- **Fase 1 Higiene del Repositorio:** cerrada (20/11/2026, commit `3516939`).
+  Reducción en disco de 3.49 GB → 6.12 MB (migración al entorno limpio externo
+  `%LOCALAPPDATA%\venvs\treegov-311`), endurecimiento de `.gitignore`/`.aiderignore`,
+  des-rastreo de `archive/legacy_docs/` y anonimización de rutas en `AGENTS.md`.
+- **Fase 2 Remediación Integral MRM (`2A`–`2H`, `v1.0.0rc8`):** cerrada
+  (20/11/2026). Cierre 16/16 de hallazgos críticos (`CRIT-01`–`CRIT-16` del
+  informe `F1`): paridad de exportadores y hoja mayoritaria (`select_majority_leaf`),
+  gobernanza estricta Basilea III CRE 32.4, `Session.active_tree` y poda activa,
+  IFRS 9 staged ECL/EIR (`PD = 1.0` Etapa 3), seguridad MCP `TREEGOV_MCP_ROOT`,
+  multiclase $K \ge 3$ extremo a extremo y `ModelWizard` endurecido SR 11-7,
+  estabilidad numérica de motores (Kish, Citardauq, Chan-Golub-LeVeque, Cochran),
+  Hosmer-Lemeshow OOS (`df = G_eff`) / PSI / CSI / `w_accuracy`, coherencia
+  metodológica SR 11-7 y guardrails bidireccionales de Sala Limpia / Caja Blanca
+  (12 raíces bloqueadas). Suite **752/752 PASSED**. Deuda no crítica
+  (`MAY-01`–`MAY-10`, `MEN-01`–`MEN-08`) diferida a Fase 3 en `docs/roadmap.md`.
 - **Fase 4.0 (exportación a producción SQL / Python / Markdown):** cerrada
   (01/11/2026). Exportadores `sql`, `python` y `markdown`, wrappers en
   Session y tres acciones en el menú Archivo.
@@ -190,9 +192,9 @@ sub-fase, con sus conteos de suite y fechas de cierre, vive en
 ## 6. Herramientas y limitaciones conocidas (importante)
 
 ### Entorno
-- **Principal:** Windows nativo + Python 3.11.9 + `.venv/`.
-- **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 + `.venv_linux/`.
-- **Trabajo actual:** Windows nativo.
+- **Principal:** Windows nativo + Python 3.11.9 en entorno virtual limpio externo `%LOCALAPPDATA%\venvs\treegov-311` (fuera del repositorio desde la Fase 1 de Higiene, 20/11/2026).
+- **Respaldo:** WSL2 (Ubuntu) + Python 3.14.4 fuera del árbol del repo.
+- **Trabajo actual:** Windows nativo (`& "$env:LOCALAPPDATA\venvs\treegov-311\Scripts\python.exe" -m pytest tests -q`).
 
 ### Herramienta activa — OpenCode v2.2.5 + Multi-Proveedor (actualizado 01/11/2026)
 
@@ -413,18 +415,17 @@ En el repo `C:\Riesgos - copia\DecisionTree_Modeler`:
 
 ## 9. Primer mensaje sugerido al iniciar chat nuevo
 
-> "Retomamos TreeGov. Soy Marco. Estado al 14/11/2026: Fases 0 a
-> 7.0 y Fase 3.12 cerradas. Rules y Summary son funcionales, el Data Viewer
-> filtra por nodo/partición y Gains dibuja tres curvas; backend expone
-> `get_rules`, `get_summary` y `get_node_cases`. La Fase 7 entrega backend
-> IFRS 9 / ECL, diálogo GUI y tool MCP `calculate_ecl` (27 tools en total).
-> Suite 660/660. Release 1.0.0rc6 publicada en PyPI (verificada). Backlog post-Fase 7
-> cerrado. Próximo paso: revisión del aplicativo en pantalla real (CV
-> con datasets grandes, iconos SVG en tema oscuro, arranque en Windows
-> nativo, uso prolongado). Herramienta activa: OpenCode v2.2.5 +
-> Multi-Proveedor (DeepSeek V4 Flash Free / GLM-5.3-Flash-Free / Gemini
-> / Kimi K3.1 Pro). Regla operativa: prompts hiper-quirúrgicos, ráfagas
-> cortas."
+> "Retomamos TreeGov. Soy Marco. Estado al 20/11/2026: Fases 0 a 7.0, Fase
+> 3.12, Fase 1 (Higiene del Repositorio, 3.49 GB → 6.12 MB) y Fase 2
+> (Remediación Integral MRM `2A`–`2H`, **16/16 hallazgos críticos**
+> `CRIT-01`–`CRIT-16` cerrados) completadas. Suite **752/752 PASSED** en
+> el entorno limpio externo `%LOCALAPPDATA%\venvs\treegov-311`. Versión
+> **`1.0.0rc8`** preparada en `release/phase2-mrm-fixes` con los 12
+> documentos sincronizados. Backlog de Fase 3 (`MAY-01`–`MAY-10` y
+> `MEN-01`–`MEN-08` de `audit_reports/F1_Informe_Ejecutivo_Final.md`)
+> registrado en `docs/roadmap.md`. Próximo paso: publicar `1.0.0rc8` en
+> PyPI (merge a `main`, verificación de wheel, tag `v1.0.0rc8`) y planificar
+> la Fase 3 y revisión en pantalla real previas a `1.0.0` estable."
 
 ---
 

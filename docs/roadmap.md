@@ -447,11 +447,36 @@ A1–A6: `docs/4.0.1_design_categorical_exporters.md` §5. Decisión:
 **Diseño:** `docs/5.0_design_mcp.md`. **Cierre:** `docs/audit_log.md`
 entrada del 01/11/2026.
 
+### ✅ Repo Hygiene (Phase 1) — Limpieza e Higiene del Repositorio
+**Status**: ✅ Completed (20/11/2026, commit `3516939` en `main`, suite 660/660 en entorno limpio externo).
+
+Saneamiento estructural derivado de la auditoría integral `F1` (`C1`/`C3`):
+- Reducción del espacio en disco de **3.49 GB → 6.12 MB** (99.83% menos) tras migrar la ejecución a un entorno virtual limpio externo (`%LOCALAPPDATA%\venvs\treegov-311`, Python 3.11.9) y eliminar entornos duplicados/contaminados, cachés `__pycache__`, 85 logs históricos, residuos de Aider/Node y el árbol UI legado abandonado (`archive/legacy_ui_sprint3/`).
+- Compactación local de objetos Git (`git gc --prune=now`: 1,225 objetos sueltos → 1 packfile de 1.69 MiB).
+- Endurecimiento de `.gitignore` y `.aiderignore` (`logs/`, `.env*`, `*.pem`, `*.key`, `.venv*/`, `audit_reports/`, `diff_*.txt`, cachés de linters), normalización LF, des-rastreo de `archive/legacy_docs/` del índice Git y anonimización de rutas locales personales en `AGENTS.md`.
+
+### ✅ MRM Audit Remediation (Phase 2 — Blocks `2A`–`2H`, `v1.0.0rc8`)
+**Status**: ✅ Completed (20/11/2026, suite **752/752 PASSED**, release **`v1.0.0rc8`** preparada en rama `release/phase2-mrm-fixes`).
+
+Remediación integral y verificación empírica de **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** del informe `audit_reports/F1_Informe_Ejecutivo_Final.md`:
+
+| Bloque | Hallazgos cerrados | Alcance verificado | Suite |
+|---|---|---|---|
+| **2A** | `CRIT-01`, `CRIT-04`, `CRIT-12` (parcial) | Fuente única `select_majority_leaf`, paridad exacta `SQL (SQLite) == Python == predict_pd`, identificadores ANSI SQL `"..."`, `None`/`NaN` sin imports, guardas de ciclos/finitud, transparencia multiclase en exportadores y propagación de `unseen_policy` en Champion-Challenger (§27). | 673/673 |
+| **2B** | `CRIT-03`, `CRIT-05`, `CRIT-06`, `CRIT-07` | Clasificación estricta Basilea III CRE 32.4 (`BASEL_PD_FLOOR_MIN = 0.0005`, `classify_governance_mode`), cota `pd_floor < 0.5`, `Session.active_tree` conectando `pruned_tree` a todos los consumidores con invalidación de métricas, remapeo de `parent_id` en `_reindex_tree`, atomicidad de `fix_spec`/`train`/`load_oot` (`NaT` y fugas bloqueadas) y propagación de `population_col` al fingerprint (§28). | 683/683 |
+| **2C** | `CRIT-02`, `CRIT-15` | Conversión UI `% -> decimal` en `ECLDialog`, `eir >= 0`, `PD = 1.0` obligatorio en Etapa 3 y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`); confinamiento MCP `TREEGOV_MCP_ROOT` solo `.csv`, bloqueo de sobrescritura en `score_batch`, validación fail-fast, `RLock`, `_jsonable` completo y Caja Blanca en `treegov_mcp.py` (§29). | 706/706 |
+| **2D** | `CRIT-08`, `CRIT-16` | Soporte multiclase $K \ge 3$ extremo a extremo (targets de texto, traducción canónica en `get_gains_table`, `ClassificationMatrix.class_labels`, resolución automática de `target_type` en `Session.train`, matriz dinámica $K \times K$ en GUI/HTML) y endurecimiento SR 11-7 de `ModelWizard` (bloqueo `"No validar"`, resumen CV escapado, validación estricta de matriz de costos sin matriz fantasma) (§30). | 717/717 |
+| **2E** | `CRIT-09`, `CRIT-10` | Varianza ponderada de confiabilidad de Kish y raíces Citardauq en QUEST (con guardas de dominio y no secuestro por $F = \infty$), `bonferroni_adjust` sin overflow en escala logarítmica, `_weighted_median` tolerante, rechazo `±inf` en `TrainOnlyImputer`/C&RT/CHAID, Gini normalizado / sumas inversas / varianza centrada (Chan, Golub & LeVeque 1983) y selección Cochran-elegible en Exhaustive CHAID (§31). | 735/735 |
+| **2F** | `CRIT-11`, `CRIT-12` | Guardas fail-fast anti-`NaN`/no-finitos en `TreeBuilder`, `splitting`, `validation` y `reporting`; `w_accuracy` binario; Hosmer-Lemeshow OOS *tie-preserving* invariante al orden con `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6`; `StabilityMonitor` (`eps` conectado/validado, `leaf_psi` invariante a escala, `covariate_csi` `(a, b]` + `<MISSING>` + continuas constantes); `evaluate_oot` compatible con CV y `Gini_train <= 0` → `UNDETERMINED` (§32). | 748/748 |
+| **2G** | `CRIT-13`, `CRIT-14` | Coherencia metodológica integral SR 11-7 (`methodology.md` incl. §5.4 Atípicos y §8.9bis, `3.10.b_design_chaid_binning.md`, `design_decisions.md`, `api.md`); `TreeNode.gini_impurity` con etiqueta `Impurity (I_G)`; precalculo backend en `GainsRow` y `oot["csi_worst_flag"]`; `import_guard` ampliado a 12 raíces auto-instalado; guardrail AST bidireccional de Sala Limpia; oráculo manual puro en `test_statistics.py` (§33). | 752/752 |
+| **2H** | Cierre documental + release `1.0.0rc8` | Bump coordinado `1.0.0rc7` → `1.0.0rc8` (`pyproject.toml`, `frontend_v3/__init__.py`) y sincronización integral de los 12 documentos del proyecto + registro de deuda diferida `MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` para Fase 3. | 752/752 |
+
+**Referencias:** `audit_reports/F1_Informe_Ejecutivo_Final.md`; `docs/design_decisions.md` §27–§33; `docs/security_audit.md` §7; `docs/audit_log.md` entradas del 20/11/2026.
+
 ## Upcoming phases
 
-No hay fases abiertas: las fases 0 a 7.0 y la Fase 3.12 están cerradas.
-El trabajo pendiente vive en `## Deferred (no blocking current work)` y
-en `## Pending decisions`.
+No hay fases abiertas ni hallazgos críticos pendientes: las fases 0 a 7.0, 3.12, Higiene del Repositorio (Fase 1) y Remediación Integral MRM (Fase 2, 16/16 `CRIT` cerrados) están cerradas.
+La deuda técnica no crítica (`MAY-01`–`MAY-10`, `MEN-01`–`MEN-08`) diferida para la **Fase 3 (previa a `1.0.0` estable)** y los demás pendientes viven en `## Deferred (no blocking current work)` y en `## Pending decisions`.
 
 ## Deferred (no blocking current work)
 
@@ -476,7 +501,32 @@ La publicación de `1.0.0rc4` (20/10/2026, cambio material de la Fase 3.9) actua
 
 **Desincronización registrada (10/11/2026, post-`1.0.0rc6`):** el bloque de sincronización documental de los READMEs es cosmético (árbol de directorios con `exporters.py`/`scoring.py`/`ecl.py`, `mcp_v3/` y `treegov_mcp.py`, documentos de diseño 3.6.e a 7.0, nodo `mcp_v3` en el diagrama Mermaid, filas 3.11.e y 2.1.b de la tabla de fases, "over 600 tests", y traducción al inglés de tres bloques que seguían en español). No se publica una nueva versión: la página de PyPI queda congelada en el README de `1.0.0rc6` hasta la próxima release material, conforme a la regla del 20/10/2026. **Pendiente para la próxima release:** verificar el wheel con el comando de `.treegovrules` §"Wheel verification before release" antes del `twine upload`.
 
-**Desincronización registrada (14/11/2026, Fase 3.12):** los READMEs del repositorio incorporan la Fase 3.12 y la suite 660/660. Son cambios cosméticos de estado; no se publica una nueva versión. PyPI permanece congelado en `1.0.0rc6` hasta la próxima release material, conforme al protocolo PyPI.
+**Desincronización registrada (14/11/2026, Fase 3.12 — RESUELTA en `v1.0.0rc8`, 20/11/2026):** la desincronización de READMEs registrada al cerrar la Fase 3.12 queda resuelta con la preparación de la release material **`v1.0.0rc8`** (remediación MRM Fase 2, 16/16 `CRIT` cerrados, suite 752/752). Antes del `twine upload` de `v1.0.0rc8` (ejecutado por el humano tras el merge a `main`), verificar el wheel con el comando de `.treegovrules` / `AGENTS.md` §"Verificación del wheel antes de release".
+
+### ⏳ Inventario pendiente de Auditoría Integral F1 — Deuda técnica no crítica diferida a Fase 3 (pre-`1.0.0` estable, registrado 20/11/2026)
+
+Cumplimiento de Regla #7 (`AGENTS.md` / `.treegovrules`). Fuente de verdad: `audit_reports/F1_Informe_Ejecutivo_Final.md` (§3 y §4). Tras cerrar **16/16 hallazgos críticos (`CRIT-01`–`CRIT-16`)** en la Fase 2 (`2A`–`2H`), los **10 hallazgos mayores** y **8 hallazgos menores** quedan formalmente registrados como backlog de la **Fase 3** previa a `1.0.0` estable:
+
+| ID | Severidad | Resumen de deuda diferida (fuente: `F1_Informe_Ejecutivo_Final.md`) | Estado |
+|---|---|---|---|
+| `MAY-01` | Mayor | Arquitectura "God Object" y mezcla de responsabilidades (I/O a disco directo en 5 widgets UI; `session_state.py` 2,400+ L, `main_window.py` 1,700+ L, `wizard.py` 1,400+ L; CSV sin protección contra inyección de fórmulas; `QObject` global en `i18n.py`). | ⏳ Fase 3 |
+| `MAY-02` | Mayor | Robustez complementaria en `backend_v3/`: retornos mutables (`get_cv_report`, `ImputationSpec`), timestamps no deterministas en `manual_overrides`, bloqueos de estado post-OOT, limitaciones de `get_univariate_trees` en CV, `dtype` entre chunks en `scoring.py`, tipos `Int64`/categóricos en `imputation.py`/`profiling.py`, validaciones de API directa fuera de `Session`. | ⏳ Fase 3 |
+| `MAY-03` | Mayor | Concurrencia `QThread` sin locks/`wait()`/`deleteLater()` (`BatchWorker`, `CCWorker`, `ECLWorker`), flujos de recarga/cancelación en `MainWindow`, `time_col` en diálogo OOT, controles/validaciones menores en diálogos y guardas `offscreen` en `QMessageBox`. | ⏳ Fase 3 |
+| `MAY-04` | Mayor | Renderizado/escalado en paneles visuales: DFS sin guarda `visited` en `tree_view`/`tree_map`, solapamiento con $K \ge 4$, ordenamiento alfabético de números en `reports_panel`, escala `y_max` en `gains_charts`, fugas de suscripción en `language_bus` (5 widgets) y `tr_term` ante `"CUSTOM"`. | ⏳ Fase 3 |
+| `MAY-05` | Mayor | Desconexión entre `mcp_v3/tools.py` y `mcp_v3/server.py` (metadatos/esquemas), manejo estructurado de errores en herramientas MCP, guarda de ciclos/`DataFrame` en `_jsonable`, paridad de `partition(cv)` y consultas `get_rules`/`get_summary`/`get_node_cases`/`get_cv_report` vía MCP. | ⏳ Fase 3 |
+| `MAY-06` | Mayor | Refactorización de tests tautológicos, oráculos circulares y fixtures residuales heredados en `tests/` (`T1`–`T7`). | ⏳ Fase 3 |
+| `MAY-07` | Mayor | Ampliación de cobertura (E2E real con `QTest`, `ECLWorker`/`CCWorker`, ciclo de vida de widgets Qt sin fugas, corrección de fugas de evaluación sobre CSV de train en tests legados y rediseño de `tests/benchmark_1m.py`). | ⏳ Fase 3 |
+| `MAY-08` | Mayor | Retiro/archivo definitivo de artefactos legacy locales (`archive/legacy_ui_sprint3/` ya eliminado en Fase 1 y `archive/legacy_docs/` ya des-rastreado del índice Git en Fase 1; pendiente definir política de archivo externo definitiva). | 🟡 Parcialmente resuelto en Fase 1 / ⏳ Cierre Fase 3 |
+| `MAY-09` | Mayor | Dependencias declaradas sin uso (`pyarrow`, `openpyxl`), separación de `PySide6` como extra opcional para despliegues headless/MCP, `MANIFEST.in` para `sdist`, entrypoints `treegov`/`treegov-gui` en `[project.scripts]` y endurecimiento de `scripts/*.py`. | ⏳ Fase 3 |
+| `MAY-10` | Mayor | Consolidación de contradicciones internas entre `.treegovrules`, `AGENTS.md`, `CONVENTIONS.md`, citas heredadas en `design_decisions.md` y referencia muerta a `docs/model_risk_assessment.md`. | ⏳ Fase 3 |
+| `MEN-01` | Menor | Peso en disco (3.49 GB → 6.12 MB) y compactación `.git/` — **resuelto operativamente en Fase 1** (commit `3516939`); mantener vigilancia sobre entornos externos y cachés. | ✅ Resuelto en Fase 1 |
+| `MEN-02` | Menor | Brechas de `.gitignore`/`.aiderignore` y LF — parcialmente resuelto en Fase 1 (`3516939`) y Bloque 2H (`pyproject.toml` a LF); pendiente normalizar `styles.qss` a LF, `[tool.pytest.ini_options]`, reubicar `benchmark_1m.py`, limpiar `.aider.conf.yml` y CI `.github/`. | 🟡 Parcialmente resuelto / ⏳ Fase 3 |
+| `MEN-03` | Menor | Rutas absolutas en `AGENTS.md` (anonimizadas en Fase 1) y logs históricos (limpiados en Fase 1); pendiente ruta portable en `test_summary_panel.py` y redacción/rotación de logs `DEBUG` en `imputation.py`. | 🟡 Parcialmente resuelto / ⏳ Fase 3 |
+| `MEN-04` | Menor | Limpieza de `styles.qss` (selector duplicado y `TODO`), caché/HiDPI/saneamiento en `theme.py`/`icons.py` y eliminación de colores hexadecimales/fuentes hardcodeadas en módulos UI. | ⏳ Fase 3 |
+| `MEN-05` | Menor | Completar citas bibliográficas granulares en kernels internos (`splitting.py`, `imputation.py`, `profiling.py`, `reporting.py`, umbrales de `stability.py`/`ecl.py` y tests manuales). | ⏳ Fase 3 |
+| `MEN-06` | Menor | Deduplicación transversal de helpers en `backend_v3/`, `frontend_v3/` (control común de copia TSV, `QThread`, logging vía `log_config`) y fixtures compartidos en `tests/`. | ⏳ Fase 3 |
+| `MEN-07` | Menor | Limpieza de 43 claves duplicadas/huérfanas y textos residuales en `frontend_v3/i18n.py` y literales hardcodeados en UI. | ⏳ Fase 3 |
+| `MEN-08` | Menor | Unificación de idioma inglés en docstrings/excepciones de `backend_v3/`, retiro de código muerto/`assert` en producción y resolución de comentarios `# TODO(zona_gris)` abiertos. | ⏳ Fase 3 |
 
 ### ✅ Phase 2.1.b — Hardening extras — RESUELTO 03/11/2026 (B2a + B2b)
 **Priority: LOW (deferred; resuelto en el bloque del backlog post-Fase 7)**
@@ -902,6 +952,7 @@ consultables vía `Session`). Sin fase asignada.
 
 ## Releases
 
+- **v1.0.0rc8** (20/11/2026 — preparada en rama `release/phase2-mrm-fixes`, pendiente de merge a `main`, tag `v1.0.0rc8`, verificación de wheel y publicación PyPI por el humano) — Release candidate de cierre de remediación integral MRM: Fase 1 (Higiene del Repositorio, 3.49 GB → 6.12 MB) + Fase 2 (Bloques `2A`–`2H`, **16/16 hallazgos críticos `CRIT-01`–`CRIT-16` cerrados**). Suite: **752/752 PASSED** (+92 tests frente a `1.0.0rc7`). URL objetivo: https://pypi.org/project/treegov/1.0.0rc8/
 - **v1.0.0rc7** (14/11/2026) — Release candidate. Cierra la Fase 3.12 (Espacio de Análisis). Incluye las pestañas Reglas y Resumen, visor de casos por nodo, curvas de ganancias y 53 pruebas nuevas. Suite: 660/660. URL: https://pypi.org/project/treegov/1.0.0rc7/
 - **v1.0.0rc6** (08/11/2026) — Release candidate. Cierra el backlog
   post-Fase 7 (52 deudas) e incorpora: Fase 1 (scripts de
@@ -965,5 +1016,6 @@ when a mathematical formula or convention changes.
 
 ## Pending decisions
 
-- **Distribution (C1)**: packaging method (PyInstaller / Inno Setup / MSI installer), digital signature y canal de distribución. **Decisión diferida**: el siguiente paso del proyecto es la revisión del aplicativo en pantalla real (CV con datasets grandes, iconos SVG en tema oscuro, arranque en Windows nativo, uso prolongado). La decisión de distribución y la publicación de 1.0.0 estable en PyPI se toman DESPUÉS de esa revisión.
+- **Release `v1.0.0rc8` & Phase 3 scope**: tras el cierre de la Fase 2 (`16/16 CRIT`), ejecutar merge a `main`, verificación de wheel (`AGENTS.md`), tag `v1.0.0rc8` y publicación en PyPI; a continuación evaluar el alcance de la **Fase 3** (`MAY-01`–`MAY-10` y `MEN-01`–`MEN-08` en `## Deferred`) antes de promover a `1.0.0` estable.
+- **Distribution (C1)**: packaging method (PyInstaller / Inno Setup / MSI installer), digital signature y canal de distribución. **Decisión diferida**: evaluar junto con la revisión en pantalla real y la Fase 3 previa a `1.0.0` estable.
 - **Commercial license format** (if ever considered): the current Apache 2.0 is *open source*; a parallel commercial version would require legal analysis.

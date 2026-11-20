@@ -61,7 +61,7 @@ TreeGov is not just a tool that *implements* MRM; the software itself is *built*
 
 TreeGov is currently developed with public datasets (German Credit, UCI) and synthetic data. During development, the privacy rule is strict: no real data is ever sent to third-party AI APIs. Only *open-source* code, public documentation, and synthetic data are shared.
 
-When TreeGov is used in production, the scenario is different: the analyst loads their own *CSV* with real data on their desktop, and the model is trained and evaluated locally. The data never leaves the analyst's machine. TreeGov has no server, no remote authentication, no database, and no internet connection at runtime.
+When TreeGov is used in production, the scenario is different: the analyst loads their own *CSV* with real data on their desktop, and the model is trained and evaluated locally. The data never leaves the analyst's machine. TreeGov has no remote server, no remote authentication, no database, and no internet connection at runtime. Alongside the desktop GUI, TreeGov also provides a local `stdio` MCP adapter (`mcp_v3`) for LLM clients — strictly local with zero network traffic or telemetry, confined exclusively to `.csv` files inside `TREEGOV_MCP_ROOT` (default `CWD`), and protected against overwriting existing files in `score_batch`.
 
 This distinction has consequences that the project explicitly assumes:
 
@@ -79,24 +79,32 @@ The philosophy is not abstract: it translates into concrete design
 decisions that are auditable in the source code.
 
 - Clean-room architecture → `backend_v3/` has zero GUI imports;
-  `frontend_v3/` has zero analytical logic. Enforced by an AST-based
-  test (`test_frontend_clean_room`).
+  `frontend_v3/` has zero analytical logic. Enforced by bidirectional
+  AST-based guardrails (`test_frontend_clean_room` and
+  `test_backend_clean_room`).
 - White-box mathematics → Every statistical formula is written
   explicitly, with bibliographic citations (Kass 1980, Breiman 1984,
-  Loh & Shih 1997, Cochran 1954). Black-box libraries (sklearn,
-  statsmodels) are blocked at the interpreter level by
-  `backend_v3/import_guard.py`.
+  Loh & Shih 1997, Cochran 1954, Kish 1965, Chan, Golub & LeVeque 1983,
+  Hosmer, Lemeshow & Sturdivant 2013). Expanded black-box library
+  blocking (`sklearn`, `scikit-learn`, `statsmodels`, `xgboost`,
+  `lightgbm`, `catboost`, `torch`, `optbinning`, `scorecardpy`,
+  `tensorflow`, `keras`) is enforced at the interpreter level by
+  `backend_v3/import_guard.py` and auto-installed across `backend_v3`,
+  `frontend_v3`, `mcp_v3`, and all entry points (`treegov.py`,
+  `treegov_gui.py`, `treegov_mcp.py`, `scripts/validate_uci.py`).
 - Native governance → `SplitConfig` is a *frozen dataclass* (immutable
   auditable evidence); `params_fingerprint` identifies every model
   uniquely; the DEBUG transactional logger records each decision.
-- Optional governance, regulatory mode by default → `GovernanceMode`
-  (BANKING / RESEARCH) makes the regulatory layer opt-out, opening the
-  tool to non-banking domains (health, social sciences) without
-  sacrificing MRM rigor where it matters. Although born in credit risk,
-  TreeGov can be used in any domain where traceability, explainability,
-  and governance are important.
+- Strict governance modes & mandatory SR 11-7 validation →
+  `classify_governance_mode` enforces strict `BANKING` / `RESEARCH` /
+  `CUSTOM` classification (requiring `apply_jeffreys=True` and
+  `pd_floor >= 0.0005` under BCBS CRE 32.4 for `BANKING`), while
+  `ModelWizard` enforces mandatory SR 11-7 validation (Holdout or k-fold
+  CV; disabling validation is blocked). Although born in credit risk,
+  TreeGov opens seamlessly to non-banking domains (health, social
+  sciences) without sacrificing MRM rigor where it matters.
 
-**Current Status:** Phases 0 through 7 and 3.12 complete (Analysis Workspace). 660/660 tests passing.
+**Current Status:** Phases 0 through 7, 3.12, Repo Hygiene and MRM Audit Remediation (16/16 critical findings closed, v1.0.0rc8). 752/752 tests passing.
 
 ---
 *[Leer en español](philosophy.es.md)*

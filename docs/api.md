@@ -671,10 +671,10 @@ In particular:
   1/2 factor, blocked Hosmer-Lemeshow, PR-AUC micro, K×K matrix,
   adaptive n_groups): `docs/methodology.md` §8.11 to §8.14.
 
-> **Note:** this list reflects the API as of the close of Phase 3.6
-> (public-dataset validation). Later phases (see `docs/roadmap.md`) will
-> add new public modules, which will be documented here once they
-> stabilize.
+> **Note:** this list reflects the stable 1.x public API through Phase 7,
+> Phase 3.12, and Phase 2 MRM Audit Remediation (Blocks 2A–2G, `v1.0.0rc8`).
+> Later phases (see `docs/roadmap.md`) will add new public modules, which
+> will be documented here once they stabilize.
 
 *Generated against the actual `__all__` of each module (verified at Phase
 2.1). `log_config` and `import_guard` declare no `__all__`; the listing is

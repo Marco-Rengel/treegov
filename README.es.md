@@ -1,11 +1,11 @@
 # TreeGov — Risk Segmentation Workbench
 
-**Versión**: 1.0.0rc7
+**Versión**: 1.0.0rc8
 **Autor**: Marco Rengel
 **Licencia**: Apache 2.0
 **Motor gráfico**: PySide6
 **Motor analítico**: Python (NumPy, pandas, scipy.stats)
-**Suite de tests**: 660/660 passing
+**Suite de tests**: 752/752 passing
 
 > ⚠️ **Aviso regulatorio.** TreeGov está en fase de validación técnica (Model Risk Management - MRM). **Uso restringido: validación técnica MRM. No apto para producción bancaria sin aprobación regulatoria.** Cualquier uso en un entorno productivo regulado (bancario o de otro tipo) requiere validación independiente, aprobación formal e integración con el marco de gobierno de modelos de la institución.
 
@@ -56,7 +56,7 @@ flowchart TB
     BE -.->|Session| FE
     BE -.->|Session| MC
 
-    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 + 3.12 completas<br/>📦 v1.0.0rc7 publicada en PyPI<br/>🧪 660 / 660 tests PASSED<br/>📅 14 nov 2026"]
+    ARQ --> ST["<b>📊 Estado actual</b><br/>✅ Fases 0 → 7 + 3.12 · 16/16 hallazgos críticos MRM cerrados<br/>📦 v1.0.0rc8 (release candidate)<br/>🧪 752 / 752 tests PASSED<br/>📅 20 nov 2026"]
 
     style TG fill:#0D47A1,color:#fff,stroke:#002171,stroke-width:2px
     style P fill:#2E7D32,color:#fff
@@ -80,15 +80,15 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 *   El código: cada fórmula estadística está escrita explícitamente y citada a su publicación original.
 *   Las decisiones: la arquitectura y los *trade-offs* están documentados para justificar cada elección.
 *   El modelo: cada entrenamiento genera un *fingerprint* (huella) único que actúa como sello inmutable.
-*   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 600 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
+*   La evidencia: una bitácora transaccional registra cada paso, y una suite de más de 750 pruebas (incluyendo *datasets* públicos validados) garantiza la reproducibilidad de los resultados.
 
 ---
 
 ## Principios de diseño
 
-1. **Arquitectura de sala limpia**: separación estricta entre el backend analítico (`backend_v3/`, sin dependencias de GUI) y la capa de presentación (`frontend_v3/`, sin lógica analítica).
-2. **Caja blanca**: prohibido el uso de *sklearn*, *statsmodels* o cualquier librería de caja negra. Cada fórmula estadística está escrita explícitamente en el código, con su cita bibliográfica.
-3. **Gobernanza nativa**: logging transaccional DEBUG, configuración inmutable (*SplitConfig frozen*), y validación de invariantes matemáticos en la construcción.
+1. **Arquitectura de sala limpia bidireccional**: separación estricta entre el backend analítico (`backend_v3/`, sin dependencias de Qt/GUI) y la capa de presentación (`frontend_v3/`, sin lógica analítica), protegida por guardrails AST bidireccionales (`test_frontend_clean_room` y `test_backend_clean_room`).
+2. **Caja blanca ampliada**: bloqueo a nivel de intérprete (`backend_v3/import_guard.py`) de *sklearn*, *scikit-learn*, *statsmodels*, *xgboost*, *lightgbm*, *catboost*, *torch*, *optbinning*, *scorecardpy*, *tensorflow* y *keras*, auto-instalado en todos los puntos de entrada (`backend_v3`, `frontend_v3`, `mcp_v3`, `treegov.py`, `treegov_gui.py`, `treegov_mcp.py`, `scripts/validate_uci.py`). Cada fórmula estadística está escrita explícitamente en el código, con su cita bibliográfica.
+3. **Gobernanza nativa**: logging transaccional DEBUG, configuración inmutable (*SplitConfig frozen*), clasificación estricta Basilea III CRE 32.4 (`BANKING` / `RESEARCH` / `CUSTOM`), validación obligatoria SR 11-7 (Holdout o CV k-fold) y validación de invariantes matemáticos en la construcción.
 
 ---
 
@@ -96,18 +96,18 @@ La característica principal de TreeGov es la auditabilidad radical. Absolutamen
 
 | Capacidad | Referencia | Anclaje regulatorio | Características clave |
 |---|---|---|---|
-| **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, regla de Cochran |
-| **C&RT** | Breiman et al. (1984) | — | Impureza de Gini / varianza, *surrogate splits*, multiclase (K ≥ 2) |
-| **QUEST** | Loh & Shih (1997) | — | Selección insesgada de variable, corte QDA para K=2, barrido de Gini para K > 2 (enfoque híbrido C&RT/QUEST para multiclase) |
-| **Soporte Multiclase** | Hand & Till (2001) | — | Entrenamiento y métricas para K ≥ 2 clases; Gini multiclase y KS por pares |
+| **CHAID** clásico y Exhaustive | Kass (1980); Biggs et al. (1991); Chan, Golub & LeVeque (1983) | — | Fusión iterativa de categorías con corrección de Bonferroni, soporte multiclase, binning continuo de 10 cortes cuantiles (hasta 11 bins, `(a, b]` con `right=True`), varianza continua centrada y selección elegible por Cochran en Exhaustive CHAID |
+| **C&RT** | Breiman et al. (1984); Chan, Golub & LeVeque (1983) | — | Impureza de Gini normalizada (a prueba de overflow/cancelación) / reducción de varianza centrada, *surrogate splits*, multiclase (K ≥ 2) |
+| **QUEST** | Loh & Shih (1997); Kish (1965) | — | Selección insesgada de variable, varianza ponderada de confiabilidad de Kish (invariante a escala y segura con pesos normalizados) y raíces cuadráticas estables de Citardauq para QDA en K=2, barrido de Gini para K > 2 (enfoque híbrido C&RT/QUEST para multiclase) |
+| **Soporte Multiclase** | Hand & Till (2001) | — | Soporte extremo a extremo K ≥ 3 (incluyendo targets de texto), tabla de ganancias traducida canónicamente, Gini multiclase, KS por pares y matriz de clasificación dinámica K × K en GUI y HTML |
 | **Ponderación por muestra** | Heeringa et al. (2010) | SR 11-7 | Ajuste de sesgo muestral en motores, construcción del árbol, métricas de validación y monitoreo de estabilidad. Limitación conocida: el split train/test estratifica por conteo físico de filas (no por masa ponderada) y el agreement de surrogates en C&RT no está ponderado (design_decisions.md §13.3, §13.6.2). El Gini/KS/AUC global de la gains table binaria SÍ está ponderado desde la resolución de D13 (20/10/2026; ver design_decisions.md §13.7). |
-| **Categorías de población** | — | — | Filtro *opt-in* para excluir categorías (Indet, No Perf) antes del entrenamiento |
-| **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigación de probabilidades nulas en carteras de bajo impago |
-| **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto, sin sesgo de redondeo |
-| **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) |
-| **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos. Interactiva y ponderada (Fase 3.9): error ponderado `r_w(t)` cuando el árbol lleva pesos de muestra, expuesta vía `Session.get_prune_sequence()` y el diálogo `PruneDialog` de la GUI. |
-| **Validación Out-of-Sample (OOS) / Out-of-Time (OOT)** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980) | Basilea; SR 11-7 | Gini, KS, HL, Brier, ROC/AUC, PR-AUC; cohorte *out-of-time* |
-| **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | Population Stability Index (PSI, hojas), Characteristic Stability Index (CSI, covariables), Gini Drop con semáforos |
+| **Categorías de población** | — | — | Filtro *opt-in* para excluir categorías (Indet, No Perf) antes del entrenamiento (trazado en `params_fingerprint`) |
+| **Estimador de Jeffreys + PD Floor** | Jeffreys (1946) | BCBS CRE 32.4 | Mitigación de probabilidades nulas en carteras de bajo impago; la clasificación estricta `BANKING` exige `apply_jeffreys=True` y `pd_floor >= 0.0005` (`0.0` o el legado `0.0003` se clasifican como `CUSTOM`) |
+| **Partición Hamilton-Hare** | — | — | *Split* train/test estratificado exacto (`Q_j = N_j * train_frac`), rechazo fail-fast de `NaN`, sin sesgo de redondeo |
+| **Imputación anti-leakage** | — | SR 11-7 | Estadísticos ajustados solo sobre train (`TrainOnlyImputer`) con rechazo fail-fast de `±inf` |
+| **Poda coste-complejidad** | Breiman et al. (1984) | — | Post-poda con la secuencia alpha; reindexado determinista de nodos; modelo podado activo (`Session.active_tree`) conectado a todos los consumidores aguas abajo y al diálogo `PruneDialog` de la GUI con invalidación automática de métricas obsoletas |
+| **Validación Out-of-Sample (OOS) / Out-of-Time (OOT)** | Hanley & McNeil (1982); Hosmer & Lemeshow (1980); Hosmer, Lemeshow & Sturdivant (2013) | Basilea; SR 11-7 | Gini, KS, Hosmer-Lemeshow *tie-preserving* invariante al orden de filas con grados de libertad externos `df = G_eff` (Hosmer, Lemeshow & Sturdivant 2013 §5.2.2) y `_HL_EPS = 1e-6`, Brier, ROC/AUC, PR-AUC, `w_accuracy` en binario y `evaluate_oot` compatible con CV |
+| **Monitoreo de estabilidad** | Siddiqi (2006) | Basilea / EBA | Population Stability Index (PSI, hojas) y Characteristic Stability Index (CSI, covariables) con `eps` configurable/validado, intervalos `(a, b]` (`right=True`), bin explícito `<MISSING>` para `NaN`, detección de deriva en continuas constantes y `Gini Drop` indefinido (`UNDETERMINED`) cuando `Gini_train <= 0` |
 | **Validación con datasets UCI** | UCI ML Repository | — | Reproducibilidad anclada a 6 *datasets* (German Credit, Breast Cancer, etc.) |
 
 ---
@@ -252,7 +252,7 @@ TreeGov/
 | **3.8** | Corrección de atribución regulatoria (BCBS CRE 32.4) + v1.0.0rc2 | Completada |
 | **3.9** | Poda Interactiva y Ponderada | Completada |
 | **3.10.a** | Rediseño UX/UI: Toolbar, nodos enriquecidos, panel derecho, jerarquía de tema oscuro (H3-H8) | Completada |
-| **3.10.b** | Alineación CHAID con continuas: binning automático por deciles, `bin_edges` en `SplitConfig`, routing por `np.digitize` (H14) + hotfix visual (H9, H11-H13) | Completada |
+| **3.10.b** | Alineación CHAID con continuas: binning automático por cuantiles (10 cortes, hasta 11 bins), `bin_edges` en `SplitConfig`, routing por `np.digitize` (H14) + hotfix visual (H9, H11-H13) | Completada |
 | **3.11.a** | Rediseño Base: Tema Colab, pestañas tipo Excel a página completa, Wizard redimensionado, nodos HTML estilo estación clásica | Completada |
 | **3.11.a.1** | Hotfix Visual: layout clásico (barra de 8 menús, toolbar compacta icon-only, panel izquierdo de 3 bloques, pestañas inferiores estilo Excel), nodos QPainter "hoja de auditoría", tema claro/oscuro forzado vía QPalette, cortes numéricos en aristas, copia TSV al portapapeles en tablas, Sistema de Diseño GUI | Completada |
 | **3.11.b.1** | Backend del Data Viewer: `Session.get_data_preview` (preview crudo del CSV, dict JSON-serializable de tipos nativos, estado vacío sin excepción — §18.7) | Completada |
@@ -271,8 +271,10 @@ TreeGov/
 | **5** | Capa MCP para agentes LLM | Completada |
 | **6** | Batch scoring + champion-challenger | Completada |
 | **7** | IFRS 9 / ECL (staging, ECL = PD × LGD × EAD) | Completada |
+| **Higiene del Repositorio (Fase 1)** | Limpieza de 3.49 GB → ~6 MB (venv externo limpio), `.gitignore`/`.aiderignore` endurecidos, des-rastreo de `archive/legacy_docs/`, saneamiento de rutas en `AGENTS.md` | Completada |
+| **Remediación Auditoría MRM (`2A`–`2H`, `v1.0.0rc8`)** | Cierre 16/16 de hallazgos críticos (`CRIT-01`–`CRIT-16`): paridad de exportadores y hoja mayoritaria, gobernanza Basilea III estricta, poda activa (`active_tree`), IFRS 9 staged ECL/EIR, seguridad MCP `TREEGOV_MCP_ROOT`, multiclase K ≥ 3 extremo a extremo y Wizard endurecido, estabilidad numérica de motores, Hosmer-Lemeshow OOS y PSI/CSI, coherencia metodológica SR 11-7 y guardrails bidireccionales de Sala Limpia/Caja Blanca | Completada |
 
-**Suite de tests: 660/660 passing.**
+**Suite de tests: 752/752 passing.**
 
 ---
 
@@ -282,6 +284,7 @@ TreeGov/
 - Breiman, L., Friedman, J.H., Olshen, R.A. & Stone, C.J. (1984). *Classification and Regression Trees*. Wadsworth.
 - Brier, G.W. (1950). *Verification of forecasts expressed in terms of probability*. Monthly Weather Review 78(1), 1-3.
 - Brown, M.B. & Forsythe, A.B. (1974). *Robust Tests for the Equality of Variances*. Journal of the American Statistical Association 69(346), 364-367.
+- Chan, T.F., Golub, G.H. & LeVeque, R.J. (1983). *Algorithms for Computing the Sample Variance: Analysis and Recommendations*. The American Statistician 37(3), 242-247.
 - Cochran, W.G. (1954). *Some Methods for Strengthening the Common Chi-2 Tests*. Biometrics 10(4), 417-451.
 - Davis, J. & Goadrich, M. (2006). *The relationship between Precision-Recall and ROC curves*. Proceedings of the 23rd International Conference on Machine Learning (ICML), 233-240.
 - Fagerland, M.W., Hosmer, D.W. & Bofin, A.M. (2012). *Multinomial goodness-of-fit tests for logistic regression models*. Statistics in Medicine, 31(30), 4238-4253.
@@ -290,8 +293,10 @@ TreeGov/
 - Hand, D.J. & Till, R.J. (2001). *A simple generalisation of the area under the ROC curve for multiple class classification problems*. Machine Learning, 45(2), 171-186.
 - Heeringa, S.G., West, B.T. & Berglund, P.A. (2010). *Applied Survey Data Analysis*. Chapman & Hall/CRC.
 - Hosmer, D.W. & Lemeshow, S. (1980). *A goodness-of-fit test for the multiple logistic regression model*. Communications in Statistics A10, 1043-1069.
+- Hosmer, D.W., Lemeshow, S. & Sturdivant, R.X. (2013). *Applied Logistic Regression* (3rd ed.). Wiley.
 - Jeffreys, H. (1946). *An invariant form for the prior probability in estimation problems*. Proceedings of the Royal Society of London A 186(1007), 453-461.
 - Kass, G.V. (1980). *An Exploratory Technique for Investigating Large Quantities of Categorical Data*. Applied Statistics 29(2), 119-127.
+- Kish, L. (1965). *Survey Sampling*. Wiley.
 - Levene, H. (1960). *Robust tests for equality of variances*. In Contributions to Probability and Statistics, Stanford University Press, 278-292.
 - Loh, W.-Y. & Shih, Y.-S. (1997). *Split Selection Methods for Classification Trees*. Statistica Sinica 7(4), 815-840.
 - Pearson, K. (1900). *On the criterion that a given system of deviations from the probable in the case of a correlated system of variables is such that it can be reasonably supposed to have arisen from random sampling*. Philosophical Magazine Ser. 5, 50(302), 157-175.
@@ -304,15 +309,19 @@ TreeGov/
 - **Basilea (BCBS CRE 32.4)**: suelos regulatorios de PD (0.05% para
   corporativos, bancos y retail; 0.03% o exención para soberanos).
 - **EBA/GL/2017/16**: directrices sobre especificación, estimación y validación de parámetros PD/LGD en modelos IRB.
-- **IFRS 9 / NIIF 9**: la Fase 7 implementa un cálculo ECL simplificado y de escenario único (PD × LGD × EAD), staging determinista y descuento EIR opcional en backend, GUI y MCP (`docs/7.0_design_ifrs9.md` §5–§6). No certifica cumplimiento IFRS 9 completo; las curvas multi periodo, los escenarios macroeconómicos y la optimización asimétrica de umbrales quedan fuera de su alcance.
+- **IFRS 9 / NIIF 9**: la Fase 7 (endurecida en el Bloque 2C) implementa un motor ECL simplificado de un periodo y escenario único (`PD × LGD × EAD`) con staging determinista, conversión UI `% -> decimal` de EIR, `eir >= 0`, `PD = 1.0` obligatorio en Etapa 3 (default / deterioro crediticio) y provisión combinada por etapa (`total_ecl_staged` / `ecl_applicable`) en backend, GUI y MCP (`docs/7.0_design_ifrs9.md` §5–§6; `docs/design_decisions.md` §29). No certifica cumplimiento IFRS 9 completo; las curvas multi periodo, los escenarios macroeconómicos y la optimización asimétrica de umbrales quedan fuera de su alcance.
 - **SR 11-7 / OCC 2011-12**: guía de gestión del riesgo de modelos (MRM).
 
 ---
 
-### Capa MCP (Fase 5.0)
+### Capa MCP (Fase 5.0, endurecida en Bloque 2C)
 TreeGov expone su backend analítico a agentes LLM mediante el estándar
 Model Context Protocol (MCP). La capa es headless (sin imports de GUI) y
-expone 27 tools sobre el mismo contrato `Session` que usa la GUI.
+expone 27 tools sobre el mismo contrato `Session` que usa la GUI, con
+confinamiento estricto a archivos `.csv` dentro de `TREEGOV_MCP_ROOT`
+(por defecto `CWD`), bloqueo de sobrescritura y de `output_path == csv_path`
+en `score_batch`, validación fail-fast de gobernanza y parámetros, y
+serialización `threading.RLock` sobre las 27 herramientas.
 Instalación: `pip install treegov[mcp]`
 Uso: `treegov-mcp` (arranca el servidor stdio).
 
